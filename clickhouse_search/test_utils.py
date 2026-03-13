@@ -397,9 +397,9 @@ FAMILY_1_VARIANT = {
     'xpos': 21003343353,
     'rsid': None,
     'familyGuids': ['F000001_1'],
-    'genotypes':  {'I000001_na19675': {
-        'ab': 0.16, 'dp': 45, 'familyGuid': 'F000001_1', 'filters': [], 'gq': 0, 'individualGuid': 'I000001_na19675',
-        'numAlt': 1, 'sampleId': 'NA19675', 'sampleType': 'WES',
+    'genotypes':  {'I000002_na19678': {
+        'ab': 0.16, 'dp': 45, 'familyGuid': 'F000001_1', 'filters': [], 'gq': 0, 'individualGuid': 'I000002_na19678',
+        'numAlt': 1, 'sampleId': 'NA19678', 'sampleType': 'WES',
     }},
     'clinvar': None,
     'hgmd': None,
@@ -1454,7 +1454,7 @@ EXPORT_DATA = [
      '', '', '', '', ''],
     ['21', '3343353', 'GAGA', 'G', 'ENSG00000227232', 'missense_variant', '1', '', '0', '0', '0', '', '', '', '', '', '',
      '', '', '', 'ENST00000257261.10:c.131C>T', 'ENSP00000257261.6:p.Thr44Ile', '', '', '1',
-     'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '', '', '', 'NA19675', '1', '', '0', '0.16', '', '',
+     'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '', '', '', 'NA19678', '1', '', '0', '0.16', '', '',
      '', '', '', '', '', '', '', '', '', '', '', '', ''],
     ['M', '4429', 'G', 'A', 'ENSG00000210112', 'non_coding_transcript_exon_variant', '0', '', '', '', '', '', '', '', '',
      '', '', '', '', 'rs1603219456', 'ENST00000387377.1:n.28G>A', '', 'Uncertain_significance', '1', '2', '', '', '', '',

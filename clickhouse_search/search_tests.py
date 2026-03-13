@@ -1145,27 +1145,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         }
         expected_individuals.update(
             {individual_guid: mock.ANY for individual_guid in ['I000019_na21987', 'I000021_na21654']})
-        url = self._assert_expected_lookup(
+        self._assert_expected_lookup(
             '1-10439-AC-A', lookup_variant, cache_key, expected_individuals=expected_individuals,
             project_guids=['R0001_1kg', 'R0003_test', 'R0004_non_analyst_project'],
             family_guids=['F000002_2', 'F000011_11', 'F000014_14'],
         )
-        # TODO test variant with search context!
-        # expected_body.update({
-            # 'mmeSubmissionsByGuid': {'MS000018_P0004517': mock.ANY},
-            # 'rnaSeqData': {'I000019_na21987': {'outliers': {}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}}},
-            # 'savedVariantsByGuid': {
-            #     'SV0000002_1248367227_r0390_100': mock.ANY, 'SV0000006_1248367227_r0004_non': mock.ANY,
-            # },
-            # 'variantTagsByGuid': {
-            #     'VT1726945_2103343353_r0390_100': mock.ANY, 'VT1726970_2103343353_r0004_tes': mock.ANY,
-            #     'VT1726985_2103343353_r0390_100': mock.ANY, 'VT1726961_2103343353_r0005_tes': mock.ANY,
-            # },
-            # 'variantNotesByGuid': {
-            #     'VN0714935_2103343353_r0390_100': mock.ANY,
-            #     'VN0714937_2103343353_r0390_100': mock.ANY,
-            # },
-        # })
 
         hom_only_lookup_variant = {
             **lookup_variant,
@@ -1184,9 +1168,28 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             individual_guids=[guid for guid in individual_guid_map.keys() if guid != 'I000018_na21234'],
         )
 
-        # TODO test affected_only
+        url = self._assert_expected_lookup(
+            '21-3343353-GAGA-G', FAMILY_1_VARIANT,  'variant_lookup_results__21-3343353-GAGA-G__38', project_guids=['R0001_1kg'],
+            family_guids=['F000001_1'], individual_guids=['I000001_na19675', 'I000002_na19678', 'I000003_na19679'],
+            familyNotesByGuid={'FAN000001_1': mock.ANY, 'FAN000001_2': mock.ANY, 'FAN000001_3': mock.ANY},
+            genesById={'ENSG00000227232': mock.ANY, 'ENSG00000268903': mock.ANY},
+            igvSamplesByGuid={'S000145_na19675': mock.ANY},
+            mmeSubmissionsByGuid={'MS000001_na19675': mock.ANY},
+            phenotypeGeneScores={'I000001_na19675': mock.ANY, 'I000002_na19678': mock.ANY},
+            rnaSeqData={'I000001_na19675': {'outliers': {'ENSG00000268903': mock.ANY}, 'spliceOutliers': {'ENSG00000268903': mock.ANY}}},
+            savedVariantsByGuid={'SV0000001_2103343353_r0390_100': mock.ANY },
+            variantTagsByGuid={'VT1708633_2103343353_r0390_100': mock.ANY, 'VT1726961_2103343353_r0390_100': mock.ANY},
+            variantFunctionalDataByGuid={
+                'VFD0000023_1248367227_r0390_10': mock.ANY, 'VFD0000024_1248367227_r0390_10': mock.ANY,
+                'VFD0000025_1248367227_r0390_10': mock.ANY, 'VFD0000026_1248367227_r0390_10': mock.ANY,
+            },
+        )
 
-        url = url.replace('1-10439-AC-A', '1-91511686-TCA-G')
+        response = self.client.get(url + '&affectedOnly=true')
+        self.assertEqual(response.status_code, 404)
+        self.assertDictEqual(response.json(), {'error': 'Variant not present in seqr'})
+
+        url = url.replace('21-3343353-GAGA-G', '1-91511686-TCA-G')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
         self.assertDictEqual(response.json(), {'error': 'Variant not present in seqr'})
