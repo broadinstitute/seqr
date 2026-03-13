@@ -130,64 +130,46 @@ def _get_search_cache_key(search_model, sort=None):
     return 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
 
 
-def _get_any_sort_cached_results(search_model):
-    cache_key = _get_search_cache_key(search_model, sort='*')
-    return safe_redis_get_wildcard_json(cache_key)
-
-
-def _validate_export_variant_count(total_variants):
+def export_variants(search_model, user):
+    previous_search_results, genome_version = _query_variants(search_model, user)
+    total_variants = previous_search_results['total_results']
     if total_variants > MAX_EXPORT_VARIANTS:
         raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
+    return format_clickhouse_results(previous_search_results['all_results'], genome_version)
 
 
-def _get_previous_search_results(search_model, sort, page, num_results, load_all, genome_version):
-    cache_key = _get_search_cache_key(search_model, sort=sort)
-    previous_search_results = safe_redis_get_json(cache_key) or {}
+def _get_previous_search_results(search_model, sort):
+    previous_search_results = None
+    if sort:
+        cache_key = _get_search_cache_key(search_model, sort=sort)
+        previous_search_results = safe_redis_get_json(cache_key) or {}
     if not previous_search_results:
-        unsorted_results = _get_any_sort_cached_results(search_model)
-        if unsorted_results:
+        wildcard_cache_key = _get_search_cache_key(search_model, sort='*')
+        previous_search_results = safe_redis_get_wildcard_json(wildcard_cache_key)
+        if previous_search_results and sort:
             previous_search_results = get_clickhouse_cache_results(
-                unsorted_results['all_results'], sort, family_guid=search_model.families.first().guid,
+                previous_search_results['all_results'], sort, family_guid=search_model.families.first().guid,
             )
             cache_key = _get_search_cache_key(search_model, sort=sort)
             safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
-
-    total_results = previous_search_results.get('total_results')
-    if load_all:
-        num_results = total_results or MAX_EXPORT_VARIANTS
-        _validate_export_variant_count(num_results)
-    start_index = (page - 1) * num_results
-    end_index = page * num_results
-    if total_results is not None:
-        end_index = min(end_index, total_results)
-
-    cached_page = None
-    loaded_results = previous_search_results.get('all_results') or []
-    if len(loaded_results) >= end_index:
-        cached_page = format_clickhouse_results(loaded_results[start_index:end_index], genome_version)
-
-    return previous_search_results, cached_page, num_results
+    return previous_search_results
 
 
-def query_variants(search_model, sort=XPOS_SORT_KEY, load_all=False, user=None, page=1, num_results=100):
+def query_variants(search_model, sort, page, num_results, user):
+    previous_search_results, genome_version = _query_variants(search_model, user, sort=sort)
+
+    all_results = previous_search_results.get('all_results') or []
+    results_page = format_clickhouse_results(all_results[(page-1)*num_results:page*num_results], genome_version)
+
+    return results_page, previous_search_results.get('total_results')
+
+
+def _query_variants(search_model, user, sort=None, **kwargs):
     genome_version = _get_search_genome_version(search_model)
-    previous_search_results, cached_page, num_results = _get_previous_search_results(
-        search_model, sort, page, num_results, load_all, genome_version,
-    )
-    if cached_page is not None:
-        return cached_page, previous_search_results.get('total_results')
+    previous_search_results = _get_previous_search_results(search_model, sort) or {}
+    if previous_search_results:
+        return previous_search_results, genome_version
 
-    variants, total_results = _query_variants(
-        search_model, user, previous_search_results, genome_version, sort=sort, page=page, num_results=num_results,
-    )
-
-    if load_all:
-        _validate_export_variant_count(total_results)
-
-    return variants, total_results
-
-
-def _query_variants(search_model, user, previous_search_results, genome_version, sort=None, num_results=100, **kwargs):
     search = deepcopy(search_model.variant_search.search)
 
     families = search_model.families.all()
@@ -200,7 +182,6 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     if locus and exclude_locations:
         raise InvalidSearchException('Cannot specify both Location and Excluded Genes/Intervals')
 
-    variant_ids = None
     parsed_search = {**search}
     genes, intervals, invalid_items = parse_locus_list_items(locus or exclude, genome_version=genome_version, additional_model_fields=['id'])
     if invalid_items:
@@ -216,9 +197,6 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
             raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
         parsed_search.update({'variant_ids': variant_ids, 'parsed_variant_ids': parsed_variant_ids})
 
-    if variant_ids:
-        num_results = len(variant_ids)
-
     exclude.pop('rawItems', None)
     if exclude.get('clinvar') and (search.get('pathogenicity') or {}).get('clinvar'):
         duplicates = set(search['pathogenicity']['clinvar']).intersection(exclude['clinvar'])
@@ -228,7 +206,7 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
     exclude.pop('previousSearch', None)
     exclude_previous_hash = exclude.pop('previousSearchHash', None)
     if exclude_previous_hash:
-        parsed_search.update(_get_clickhouse_exclude_keys(exclude_previous_hash, user, genome_version))
+        parsed_search.update(_get_clickhouse_exclude_keys(exclude_previous_hash, user))
 
     for annotation_key in ['annotations', 'annotations_secondary']:
         if parsed_search.get(annotation_key):
@@ -249,23 +227,20 @@ def _query_variants(search_model, user, previous_search_results, genome_version,
 
     _validate_search(parsed_search, samples, previous_search_results)
 
-    variant_results = get_clickhouse_variants(
+    get_clickhouse_variants(
         samples, parsed_search, user, previous_search_results, genome_version,
-        sort=sort, num_results=num_results, **kwargs,
+        sort=sort, **kwargs,
     )
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
 
-    return variant_results, previous_search_results.get('total_results')
+    return previous_search_results, genome_version
 
 
-def _get_clickhouse_exclude_keys(search_hash, user, genome_version):
+def _get_clickhouse_exclude_keys(search_hash, user):
     previous_search_model = VariantSearchResults.objects.get(search_hash=search_hash)
-    cached_results = _get_any_sort_cached_results(previous_search_model)
-    if not cached_results:
-        cached_results = {}
-        _query_variants(previous_search_model, user, cached_results, genome_version)
+    cached_results, genome_version = _query_variants(previous_search_model, user)
     results = cached_results['all_results']
     exclude_keys = defaultdict(list)
     exclude_key_pairs = defaultdict(list)
@@ -289,11 +264,7 @@ def variant_dataset_type(variant):
 
 
 def get_variant_query_gene_counts(search_model, user):
-    previous_search_results = _get_any_sort_cached_results(search_model) or {}
-    if len(previous_search_results.get('all_results', [])) != previous_search_results.get('total_results'):
-        genome_version = _get_search_genome_version(search_model)
-        _query_variants(search_model, user, previous_search_results, genome_version)
-
+    previous_search_results, genome_version = _query_variants(search_model, user)
     flat_variants = [
         v for variants in previous_search_results['all_results'] for v in (variants if isinstance(variants, list) else [variants])
     ]

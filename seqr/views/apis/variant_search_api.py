@@ -14,9 +14,8 @@ import re
 
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
-from seqr.utils.gene_utils import get_gene
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
-    variant_lookup, parse_variant_id
+    variant_lookup, parse_variant_id, export_variants
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.xpos_utils import get_xpos
@@ -280,7 +279,7 @@ def export_variants_handler(request, search_hash):
     families = results_model.families.all()
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
-    variants, _ = query_variants(results_model, page=1, load_all=True, user=request.user)
+    variants = export_variants(results_model, request.user)
     variants = _flatten_variants(variants)
 
     saved_variants, variants_by_id = _get_saved_variant_models(variants, families)
