@@ -223,7 +223,7 @@ VARIANT_FAMILY_EXPORT_DATA = [
 VARIANT_SAMPLE_DATA = [
     {'header': 'sample', 'value_path': 'sampleId'},
     {'header': 'num_alt_alleles', 'value_path': 'numAlt'},
-    {'header': 'filters', 'process': lambda val: ';'.join(val or []), 'variant_value_path': '[genotypeFilters][*]'},
+    {'header': 'filters', 'process': lambda val: ';'.join(val or [])},
     {'header': 'gq'},
     {'header': 'ab'},
 ]
@@ -308,7 +308,7 @@ def export_variants_handler(request, search_hash):
 
         genotypes = [genotype for _, genotype in sorted(variant['genotypes'].items())]
         for genotype in genotypes:
-            row += [_get_field_value(genotype, config, variant=variant) for config in VARIANT_SAMPLE_DATA]
+            row += [_get_field_value(genotype, config) for config in VARIANT_SAMPLE_DATA]
         row += ['' for i in range(len(VARIANT_SAMPLE_DATA) * (max_samples_per_variant - len(genotypes)))]
         rows.append(row)
 
@@ -323,10 +323,8 @@ def export_variants_handler(request, search_hash):
     return export_table('search_results_{}'.format(search_hash), header, rows, file_format, titlecase_header=False)
 
 
-def _get_field_value(value, config, variant=None):
+def _get_field_value(value, config):
     field_value = jmespath.search(config.get('value_path', config['header']), value)
-    if config.get('variant_value_path') and not field_value: # TODO clean up this special case
-        field_value = jmespath.search(config['variant_value_path'], variant)
     if config.get('process'):
         field_value = config['process'](field_value)
     return field_value
