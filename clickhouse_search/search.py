@@ -331,6 +331,25 @@ def get_clickhouse_cache_results(results, sort, family_guid):
     return {'all_results': sorted_results, 'total_results': total_results}
 
 
+def format_clickhouse_export_results(results, genome_version):
+    formatted_results = [variant for result in results for variant in (result if isinstance(result, list) else [result])]
+    keys_with_no_details = {result['key'] for result in formatted_results if not 'transcripts' in result}
+    detail_qs = _get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details)
+    details_by_key = {
+        detail['key']: detail for detail in detail_qs.values(
+            'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
+            **detail_qs.split_variant_id_annotations(),
+        )
+    }
+    for result in formatted_results:
+        if 'transcripts' in result:
+            result['mainTranscript'] = next((gene_transcripts[0] for gene_transcripts in result['transcripts'].values()), {})
+        else:
+            result.update(details_by_key.get(result['key'], {}))
+
+    return formatted_results
+
+
 def format_clickhouse_results(results, genome_version):
     keys_with_no_details = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant

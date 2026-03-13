@@ -181,20 +181,13 @@ MUTTASTR_MAP = {
 }
 
 
-def _get_variant_main_transcript_field_val(parsed_variant):
-    # TODO
-    return next(
-        (t for t in parsed_variant['transcripts'] if t['transcriptId'] == parsed_variant['mainTranscriptId']), {}
-    ).get('value')
-
-
 VARIANT_EXPORT_DATA = [
     {'header': 'chrom'},
     {'header': 'pos'},
     {'header': 'ref'},
     {'header': 'alt'},
-    {'header': 'gene', 'value_path': '{transcripts: transcripts.*[].{value: geneSymbol || geneId, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'worst_consequence', 'value_path': '{transcripts: transcripts.*[].{value: majorConsequence, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
+    {'header': 'gene', 'value_path': 'mainTranscript.geneId'},
+    {'header': 'worst_consequence', 'value_path': 'mainTranscript.majorConsequence'},
     {'header': 'callset_freq', 'value_path': 'populations.seqr.ac'}, #TODO rename
     {'header': 'exac_freq', 'value_path': 'populations.exac.af'},  # TODO remove
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
@@ -209,8 +202,8 @@ VARIANT_EXPORT_DATA = [
     {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': MUTTASTR_MAP.get},
     {'header': 'fathmm', 'value_path': 'predictions.fathmm'},
     {'header': 'rsid', 'value_path': 'rsid'},
-    {'header': 'hgvsc', 'value_path': '{transcripts: transcripts.*[].{value: hgvsc, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'hgvsp', 'value_path': '{transcripts: transcripts.*[].{value: hgvsp, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
+    {'header': 'hgvsc', 'value_path': 'mainTranscript.hgvsc'},
+    {'header': 'hgvsp', 'value_path': 'mainTranscript.hgvsp'},
     {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.pathogenicity'},
     {'header': 'clinvar_gold_stars', 'value_path': 'clinvar.goldStars'},
 ]
@@ -261,7 +254,6 @@ def export_variants_handler(request, search_hash):
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
     variants = export_variants(results_model, request.user)
-    variants = _flatten_variants(variants)
 
     saved_variants, variants_by_id = _get_saved_variant_models(variants, families)
     json_saved_variants = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=families[0].project.genome_version)
