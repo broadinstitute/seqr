@@ -1129,32 +1129,19 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self.login_manager()
-        individual_guid_map = [ # TODO clean up
-            ('I000006_hg00733', 'I0_F0_1-10439-AC-A', {'sampleId': 'HG00733', 'familyGuid': 'F000002_2'}),
-            ('I000005_hg00732', 'I1_F0_1-10439-AC-A', {'sampleId': 'HG00732', 'familyGuid': 'F000002_2'}),
-            ('I000004_hg00731', 'I2_F0_1-10439-AC-A', {'sampleId': 'HG00731', 'familyGuid': 'F000002_2'}),
-            ('I000015_na20885', 'I0_F1_1-10439-AC-A', {'sampleId': 'NA20885', 'familyGuid': 'F000011_11'}),
-            ('I000018_na21234', 'I0_F2_1-10439-AC-A', {'sampleId': 'NA21234', 'familyGuid': 'F000014_14'}),
-        ]
-        expected_variant.update({
-            'lookupFamilyGuids': ['F000002_2', 'F000011_11', 'F000014_14'],
-            'liftedFamilyGuids': ['F000014_14'],
-            'genotypes': {
-                individual_guid: [
-                    {**sample_genotype, **genotype, 'individualGuid': individual_guid} for sample_genotype in
-                    expected_variant['genotypes'][anon_individual_guid]
-                ] if isinstance(expected_variant['genotypes'][anon_individual_guid], list) else {
-                    **expected_variant['genotypes'][anon_individual_guid], **genotype,
-                    'individualGuid': individual_guid,
-                } for individual_guid, anon_individual_guid, genotype in individual_guid_map
-            },
-        })
+        individual_guid_map = {
+            'I000006_hg00733': 'I0_F0_1-10439-AC-A',
+            'I000005_hg00732': 'I1_F0_1-10439-AC-A',
+            'I000004_hg00731': 'I2_F0_1-10439-AC-A',
+            'I000015_na20885': 'I0_F1_1-10439-AC-A',
+            'I000018_na21234': 'I0_F2_1-10439-AC-A',
+        }
         expected_individuals = {
             individual_guid: {
                 **{k: mock.ANY for k in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']},
                 **{k: v for k, v in expected_individuals[anon_individual_guid].items()
                    if k not in {'individualGuid', 'familyGuid', 'features', 'vlmContactEmail'}},
-            } for individual_guid, anon_individual_guid, _ in individual_guid_map
+            } for individual_guid, anon_individual_guid in individual_guid_map.items()
         }
         expected_individuals.update(
             {individual_guid: mock.ANY for individual_guid in ['I000019_na21987', 'I000021_na21654']})
@@ -1184,8 +1171,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             **lookup_variant,
             'genotypes': {
                 **lookup_variant['genotypes'],
-                **{guid: next(gt for gt in expected_variant['genotypes'][guid] if gt['sampleType'] == 'WGS')
-                   for guid in ['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733']},
+                **{guid: VARIANT1_BOTH_SAMPLE_TYPES['genotypes'][guid][1] for guid in [
+                    'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733',
+                ]},
             },
         }
         del hom_only_lookup_variant['liftedFamilyGuids']
@@ -1193,7 +1181,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_lookup(
             '1-10439-AC-A', hom_only_lookup_variant, f'{cache_key}__hom', hom_only=True,
             project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
-            individual_guids=[guid for guid, _, _ in individual_guid_map if guid != 'I000018_na21234'],
+            individual_guids=[guid for guid in individual_guid_map.keys() if guid != 'I000018_na21234'],
         )
 
         # TODO test affected_only
@@ -1244,7 +1232,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_lookup(
             '1-439-AC-A', lookup_variant, 'variant_lookup_results__1-439-AC-A__37', genome_version='37',
             project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
-            individual_guids=[guid for guid, _, _ in individual_guid_map if guid != 'I000018_na21234'],
+            individual_guids=[guid for guid in individual_guid_map.keys() if guid != 'I000018_na21234'],
         )
         mock_liftover.assert_called_with('hg19', 'hg38')
         mock_convert_coordinate.assert_called_with('chr1', 439)
@@ -1254,7 +1242,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 **lookup_variant, 'genotypes': hom_only_lookup_variant['genotypes'],
             }, 'variant_lookup_results__1-439-AC-A__37__hom', genome_version='37', hom_only=True,
             project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
-            individual_guids=[guid for guid, _, _ in individual_guid_map if guid != 'I000018_na21234'],
+            individual_guids=[guid for guid in individual_guid_map.keys() if guid != 'I000018_na21234'],
         )
 
         url = self._assert_expected_lookup(
