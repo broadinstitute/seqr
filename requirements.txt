@@ -15,13 +15,13 @@ cachetools==5.3.0
 certifi==2024.7.4
     # via
     #   requests
-cffi==1.15.1
+cffi==2.0.0
     # via cryptography
 charset-normalizer==3.0.1
     # via requests
 clickhouse-driver==0.2.9
     # via django-clickhouse-backend
-cryptography==44.0.1
+cryptography==46.0.5
     # via social-auth-core
 defusedxml==0.7.1
     # via
@@ -170,8 +170,10 @@ tenacity==8.3.0
     # via -r requirements.in
 tqdm==4.66.3
     # via -r requirements.in
-typing-extensions==4.12.2
-    # via psycopg
+typing-extensions==4.15.0
+    # via
+    #   cryptography
+    #   psycopg
 tzlocal==5.3.1
     # via clickhouse-driver
 urllib3==2.6.3
