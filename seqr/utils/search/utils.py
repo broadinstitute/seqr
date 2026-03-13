@@ -240,7 +240,7 @@ def _query_variants(search_model, user, sort=None, **kwargs):
 
 def _get_clickhouse_exclude_keys(search_hash, user):
     previous_search_model = VariantSearchResults.objects.get(search_hash=search_hash)
-    cached_results, genome_version = _query_variants(previous_search_model, user)
+    cached_results, _ = _query_variants(previous_search_model, user)
     results = cached_results['all_results']
     exclude_keys = defaultdict(list)
     exclude_key_pairs = defaultdict(list)
@@ -264,7 +264,7 @@ def variant_dataset_type(variant):
 
 
 def get_variant_query_gene_counts(search_model, user):
-    previous_search_results, genome_version = _query_variants(search_model, user)
+    previous_search_results, _ = _query_variants(search_model, user)
     flat_variants = [
         v for variants in previous_search_results['all_results'] for v in (variants if isinstance(variants, list) else [variants])
     ]
