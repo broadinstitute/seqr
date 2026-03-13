@@ -188,8 +188,7 @@ VARIANT_EXPORT_DATA = [
     {'header': 'alt'},
     {'header': 'gene', 'value_path': 'mainTranscript.geneId'},
     {'header': 'worst_consequence', 'value_path': 'mainTranscript.majorConsequence'},
-    {'header': 'callset_freq', 'value_path': 'populations.seqr.ac'}, #TODO rename
-    {'header': 'exac_freq', 'value_path': 'populations.exac.af'},  # TODO remove
+    {'header': 'seqr_ac', 'value_path': 'populations.seqr.ac'},
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
     {'header': 'gnomad_exomes_freq', 'value_path': 'populations.gnomad_exomes.af'},
     {'header': 'topmed_freq', 'value_path': 'populations.topmed.af'},
