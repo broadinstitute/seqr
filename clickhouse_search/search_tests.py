@@ -1,7 +1,6 @@
 import re
 from collections import defaultdict
 from datetime import timedelta
-from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.db import connections
 from django.urls.base import reverse
@@ -123,13 +122,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.mock_results_guid.return_value = random.randint(1000, 10000)  # nosec
         self.addCleanup(patcher.stop)
 
-        # TODO remove
-        self.families = Family.objects.filter(guid__in=['F000003_3', 'F000002_2', 'F000005_5'])
-        self.user = User.objects.get(username='test_user')
-        self.search_model = VariantSearch.objects.create(search={'inheritance': {'mode': 'de_novo'}, 'freqs': {'callset': {'ac': 1000}}})
-        self.results_model = VariantSearchResults.objects.create(variant_search=self.search_model)
-        self.results_model.families.set(self.families)
-
         super().setUp()
 
     def set_cache(self, cache_key, cached):
@@ -138,8 +130,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             key for key in list(self.MOCK_CACHE.keys()) if re.match(pattern, key)
         ]
 
-    def assert_cached_results(self, expected_results, sort='xpos', cache_key=None):
-        cache_key = cache_key or f'search_results__{self.results_model.guid}__{sort}'
+    def assert_cached_results(self, expected_results, cache_key):
         self.mock_redis.set.assert_any_call(cache_key, mock.ANY)
         call_index = next(i for i, call in enumerate(self.mock_redis.set.call_args_list) if call.args[0] == cache_key)
         self.assertEqual(json.loads(self.mock_redis.set.call_args_list[call_index].args[1]), expected_results)
@@ -197,7 +188,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         if not skip_cache_check:
             cache_key = f'search_results__VRS{search_hash:07d}__{sort}'
             cached_variants = self._format_cached_variants(expected_results, cached_variant_fields=cached_variant_fields)
-            self.assert_cached_results(cached_variants, sort=sort, cache_key=cache_key)
+            self.assert_cached_results(cached_variants, cache_key)
 
         if gene_counts:
             self._assert_expected_gene_counts(search_hash, gene_counts)
@@ -1337,7 +1328,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                     for family_guid, gts in family_genotypes.items()
                 },
             })
-        self.assert_cached_results(parsed_cached_variants, cache_key=cache_key)
+        self.assert_cached_results(parsed_cached_variants, cache_key)
         return url
 
     def test_get_single_variant(self):
