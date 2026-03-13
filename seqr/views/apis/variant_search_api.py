@@ -14,9 +14,8 @@ import re
 
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
-from seqr.utils.gene_utils import get_gene
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
-    variant_lookup, parse_variant_id
+    variant_lookup, parse_variant_id, export_variants
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.xpos_utils import get_xpos
@@ -174,19 +173,6 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
     return response_json
 
 
-PREDICTION_MAP = {
-    'D': 'damaging',
-    'T': 'tolerated',
-}
-
-
-POLYPHEN_MAP = {
-    'D': 'probably_damaging',
-    'P': 'possibly_damaging',
-    'B': 'benign',
-}
-
-
 MUTTASTR_MAP = {
     'A': 'disease_causing',
     'D': 'disease_causing',
@@ -195,28 +181,15 @@ MUTTASTR_MAP = {
 }
 
 
-def _get_prediction_val(prediction):
-    try:
-        return float(prediction or '')
-    except ValueError:
-        return PREDICTION_MAP.get(prediction[0]) if prediction else None
-
-
-def _get_variant_main_transcript_field_val(parsed_variant):
-    return next(
-        (t for t in parsed_variant['transcripts'] if t['transcriptId'] == parsed_variant['mainTranscriptId']), {}
-    ).get('value')
-
-
 VARIANT_EXPORT_DATA = [
     {'header': 'chrom'},
     {'header': 'pos'},
     {'header': 'ref'},
     {'header': 'alt'},
-    {'header': 'gene', 'value_path': '{transcripts: transcripts.*[].{value: geneSymbol || geneId, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'worst_consequence', 'value_path': '{transcripts: transcripts.*[].{value: majorConsequence, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'callset_freq', 'value_path': 'populations.callset.af || populations.seqr.ac'},
-    {'header': 'exac_freq', 'value_path': 'populations.exac.af'},
+    {'header': 'gene', 'value_path': 'mainTranscript.geneId'},
+    {'header': 'gene_symbol', 'value_path': 'geneSymbol'},
+    {'header': 'worst_consequence', 'value_path': 'mainTranscript.majorConsequence'},
+    {'header': 'seqr_ac', 'value_path': 'populations.seqr.ac'},
     {'header': 'gnomad_genomes_freq', 'value_path': 'populations.gnomad_genomes.af'},
     {'header': 'gnomad_exomes_freq', 'value_path': 'populations.gnomad_exomes.af'},
     {'header': 'topmed_freq', 'value_path': 'populations.topmed.af'},
@@ -224,14 +197,14 @@ VARIANT_EXPORT_DATA = [
     {'header': 'revel', 'value_path': 'predictions.revel'},
     {'header': 'eigen', 'value_path': 'predictions.eigen'},
     {'header': 'splice_ai', 'value_path': 'predictions.splice_ai'},
-    {'header': 'polyphen', 'value_path': 'predictions.polyphen', 'process': _get_prediction_val},
-    {'header': 'sift', 'value_path': 'predictions.sift', 'process': _get_prediction_val},
-    {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': _get_prediction_val},
-    {'header': 'fathmm', 'value_path': 'predictions.fathmm', 'process': _get_prediction_val},
+    {'header': 'polyphen', 'value_path': 'predictions.polyphen'},
+    {'header': 'sift', 'value_path': 'predictions.sift'},
+    {'header': 'muttaster', 'value_path': 'predictions.mut_taster', 'process': MUTTASTR_MAP.get},
+    {'header': 'fathmm', 'value_path': 'predictions.fathmm'},
     {'header': 'rsid', 'value_path': 'rsid'},
-    {'header': 'hgvsc', 'value_path': '{transcripts: transcripts.*[].{value: hgvsc, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'hgvsp', 'value_path': '{transcripts: transcripts.*[].{value: hgvsp, transcriptId: transcriptId}, mainTranscriptId: mainTranscriptId}', 'process': _get_variant_main_transcript_field_val},
-    {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.clinicalSignificance || clinvar.pathogenicity'},
+    {'header': 'hgvsc', 'value_path': 'mainTranscript.hgvsc'},
+    {'header': 'hgvsp', 'value_path': 'mainTranscript.hgvsp'},
+    {'header': 'clinvar_clinical_significance', 'value_path': 'clinvar.pathogenicity'},
     {'header': 'clinvar_gold_stars', 'value_path': 'clinvar.goldStars'},
 ]
 
@@ -250,7 +223,7 @@ VARIANT_FAMILY_EXPORT_DATA = [
 VARIANT_SAMPLE_DATA = [
     {'header': 'sample', 'value_path': 'sampleId'},
     {'header': 'num_alt_alleles', 'value_path': 'numAlt'},
-    {'header': 'filters', 'process': lambda val: ';'.join(val or []), 'variant_value_path': '[genotypeFilters][*]'},
+    {'header': 'filters', 'process': lambda val: ';'.join(val or [])},
     {'header': 'gq'},
     {'header': 'ab'},
 ]
@@ -280,8 +253,7 @@ def export_variants_handler(request, search_hash):
     families = results_model.families.all()
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
-    variants, _ = query_variants(results_model, page=1, load_all=True, user=request.user)
-    variants = _flatten_variants(variants)
+    variants = export_variants(results_model, request.user)
 
     saved_variants, variants_by_id = _get_saved_variant_models(variants, families)
     json_saved_variants = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=families[0].project.genome_version)
@@ -336,7 +308,7 @@ def export_variants_handler(request, search_hash):
 
         genotypes = [genotype for _, genotype in sorted(variant['genotypes'].items())]
         for genotype in genotypes:
-            row += [_get_field_value(genotype, config, variant=variant) for config in VARIANT_SAMPLE_DATA]
+            row += [_get_field_value(genotype, config) for config in VARIANT_SAMPLE_DATA]
         row += ['' for i in range(len(VARIANT_SAMPLE_DATA) * (max_samples_per_variant - len(genotypes)))]
         rows.append(row)
 
@@ -351,10 +323,8 @@ def export_variants_handler(request, search_hash):
     return export_table('search_results_{}'.format(search_hash), header, rows, file_format, titlecase_header=False)
 
 
-def _get_field_value(value, config, variant=None):
+def _get_field_value(value, config):
     field_value = jmespath.search(config.get('value_path', config['header']), value)
-    if config.get('variant_value_path') and not field_value:
-        field_value = jmespath.search(config['variant_value_path'], variant)
     if config.get('process'):
         field_value = config['process'](field_value)
     return field_value
