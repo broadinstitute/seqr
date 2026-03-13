@@ -170,6 +170,17 @@ def _query_variants(search_model, user, sort=None, **kwargs):
     if previous_search_results:
         return previous_search_results, genome_version
 
+    parsed_search, samples = _parse_search(search_model, genome_version, user, sort)
+    _validate_search(parsed_search, samples, previous_search_results)
+    get_clickhouse_variants(samples, parsed_search, user, previous_search_results, genome_version, sort=sort, **kwargs)
+
+    cache_key = _get_search_cache_key(search_model, sort=sort)
+    safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
+
+    return previous_search_results, genome_version
+
+
+def _parse_search(search_model, genome_version, user, sort):
     search = deepcopy(search_model.variant_search.search)
 
     families = search_model.families.all()
@@ -225,17 +236,7 @@ def _query_variants(search_model, user, sort=None, **kwargs):
     if parsed_search.get('inheritance'):
         samples = _parse_inheritance(parsed_search, samples)
 
-    _validate_search(parsed_search, samples, previous_search_results)
-
-    get_clickhouse_variants(
-        samples, parsed_search, user, previous_search_results, genome_version,
-        sort=sort, **kwargs,
-    )
-
-    cache_key = _get_search_cache_key(search_model, sort=sort)
-    safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
-
-    return previous_search_results, genome_version
+    return parsed_search, samples
 
 
 def _get_clickhouse_exclude_keys(search_hash, user):
