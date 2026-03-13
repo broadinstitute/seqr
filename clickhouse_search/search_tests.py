@@ -1119,13 +1119,14 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
             },
         }
+        sv_genes = {
+            'ENSG00000184986': mock.ANY, 'ENSG00000275023': mock.ANY, 'ENSG00000277258': mock.ANY,
+        }
         self._assert_expected_lookup(
             'phase2_DEL_chr14_4640', expected_sv_variant, 'variant_lookup_results__phase2_DEL_chr14_4640__38',
             additional_variant=expected_gcnv_variant, cached_variants=[SV_VARIANT4, GCNV_VARIANT4], skip_fields={
                 'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
-            }, expected_individuals=expected_sv_individuals, sample_type='WGS', locusListsByGuid={}, genesById={
-                'ENSG00000184986': mock.ANY, 'ENSG00000275023': mock.ANY, 'ENSG00000277258': mock.ANY,
-            },
+            }, expected_individuals=expected_sv_individuals, sample_type='WGS', locusListsByGuid={}, genesById=sv_genes,
         )
 
         self.login_manager()
@@ -1195,6 +1196,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
             individual_guids=[guid for guid, _, _ in individual_guid_map if guid != 'I000018_na21234'],
         )
+
+        # TODO test affected_only
 
         url = url.replace('1-10439-AC-A', '1-91511686-TCA-G')
         response = self.client.get(url)
@@ -1286,57 +1289,20 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json(), {'error': 'Sample type must be specified to look up a structural variant'})
 
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        expected_gcnv_variant.update({
-            'lookupFamilyGuids': GCNV_VARIANT4['familyGuids'],
-            'genotypes': GCNV_VARIANT4['genotypes'],
-        })
-        expected_sv_variant.update({
-            'lookupFamilyGuids': SV_VARIANT4['familyGuids'],
-            'genotypes': SV_VARIANT4['genotypes'],
-        })
-        expected_individuals = {
-            i: {k: mock.ANY for k in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']} for i in [
-                'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000018_na21234', 'I000019_na21987',
-                'I000021_na21654',
-            ]
-        }
-        expected_body = self._expected_lookup_body(
-            expected_individuals,
-            [expected_gcnv_variant, expected_sv_variant],
-            project_guids=[PROJECT_GUID, 'R0004_non_analyst_project'],
-            family_guids=['F000002_2', 'F000014_14'],
-            include_context=True,
+        self._assert_expected_lookup(
+            'phase2_DEL_chr14_4640', SV_VARIANT4, 'variant_lookup_results__phase2_DEL_chr14_4640__38',
+            additional_variant=GCNV_VARIANT4,  sample_type='WGS', genesById=sv_genes,
+            project_guids=['R0001_1kg', 'R0004_non_analyst_project'], family_guids=['F000002_2', 'F000014_14'],
+            individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000018_na21234', 'I000019_na21987', 'I000021_na21654'],
         )
-        del expected_body['transcriptsById']
-        self.assertDictEqual(response.json(), expected_body)
-        mock_variant_lookup.assert_called_with(self.manager_user, 'phase2_DEL_chr14_4640', '37', sample_type='WGS',
-                                               affected_only=False, hom_only=False, )
-
-        variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS')
-        cache_key = 'variant_lookup_results__phase2_DEL_chr14_4640__38'
-        self.assert_cached_results([SV_LOOKUP_VARIANT, GCNV_LOOKUP_VARIANT], cache_key=cache_key)
-
-        affected_only_lookup_variant = {
-            **GCNV_LOOKUP_VARIANT,
-            'familyGenotypes': {
-                family_guid: gts for family_guid, gts in GCNV_LOOKUP_VARIANT['familyGenotypes'].items() if family_guid != 'F000002_2_x'
-            },
-        }
-        variants = variant_lookup(self.user, 'phase2_DEL_chr14_4640', '38', sample_type='WGS', affected_only=True)
-        self.assert_cached_results([SV_LOOKUP_VARIANT, affected_only_lookup_variant], cache_key=f'{cache_key}__affected')
 
         # reciprocal overlap does not meet the threshold for smaller events
-        variants = variant_lookup(self.user, 'suffix_140608_DUP', '38', sample_type='WES')
-        cache_key = 'variant_lookup_results__suffix_140608_DUP__38'
-        self.assert_cached_results([GCNV_LOOKUP_VARIANT], cache_key=cache_key)
-
-        variants = variant_lookup(self.user, 'suffix_140608_DUP', '38', sample_type='WES', affected_only=True)
-        self.assert_cached_results([affected_only_lookup_variant], cache_key=f'{cache_key}__affected')
-
-        variants = variant_lookup(self.user, 'suffix_140593_DUP', '38', sample_type='WES')
-        self.assert_cached_results([GCNV_LOOKUP_VARIANT_3], cache_key='variant_lookup_results__suffix_140593_DUP__38')
+        self._assert_expected_lookup(
+            'suffix_140608_DUP', GCNV_VARIANT4, 'variant_lookup_results__suffix_140608_DUP__38',
+            sample_type='WES', genesById={'ENSG00000275023': mock.ANY, 'ENSG00000277258': mock.ANY},
+            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+            individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733'],
+        )
 
     def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, expected_individuals=None, skip_fields=None, cached_variants=None, additional_variant=None, sample_type=None, **kwargs):
         url = f'{reverse(variant_lookup_handler)}?variantId={variant_id}&genomeVersion={genome_version}'
