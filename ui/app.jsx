@@ -51,7 +51,7 @@ ReactDOM.render(
           <Route path="/create_project_from_workspace/:workspaceNamespace/:workspaceName" component={LoadWorkspaceData} />
           <Route path="/workspace/:workspaceNamespace/:workspaceName" component={WorkspaceAccessError} />
           <Route path="/variant_search" component={VariantSearch} />
-          <Route path="/variant_lookup" component={VariantLookup} />
+          <Route path="/variant_lookup/:gene?" component={VariantLookup} />
           <Route path="/data_management" component={DataManagement} />
           <Route path="/report" component={Report} />
           <Route path="/summary_data" component={SummaryData} />
