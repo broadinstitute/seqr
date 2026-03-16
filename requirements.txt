@@ -116,7 +116,7 @@ pyasn1-modules==0.2.8
     # via google-auth
 pycparser==2.21
     # via cffi
-pyjwt==2.8.0
+pyjwt==2.12.0
     # via social-auth-core
 pyliftover==0.4
     # via -r requirements.in
