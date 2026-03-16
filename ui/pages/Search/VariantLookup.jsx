@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Grid, Header, Label, Table } from 'semantic-ui-react'
+import { Grid, Header, Icon, Label, Popup, Table } from 'semantic-ui-react'
 
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
@@ -317,6 +317,22 @@ const GENE_LOOKUP_HEADER = {
       <br />
       Variants are only returned if they have a gnomAD Allele Frequency &lt; 3%
       and have a seqr global Allele Count &lt; 3000.
+      <br />
+      For more granular control over the returned variants, we recommend using the main Search page instead of this
+      lookup &nbsp;
+      <Popup
+        trigger={<Icon name="question circle outline" />}
+        content={
+          'On the Search page, select your desired genome build in the "Include All Projects" section, select the ' +
+          '"Include External Projects" checkbox next to it, and enter your gene of interest in the "Location" search ' +
+          'box along with your other desired search filters.'
+        }
+        hoverable
+      />
+      <br />
+
+      <br />
+
     </Header.Subheader>
   ),
 }
