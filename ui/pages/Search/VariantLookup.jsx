@@ -1,6 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
+import { Route, Switch } from 'react-router-dom'
 import { Grid, Header, Label, Table } from 'semantic-ui-react'
 
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
@@ -14,8 +15,10 @@ import { BaseSemanticInput, InlineToggle } from 'shared/components/form/Inputs'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTags'
 import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
+import { Error404 } from 'shared/components/page/Errors'
 import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
 import { GENOME_VERSION_FIELD, GENOME_VERSION_37, GENOME_VERSION_38 } from 'shared/utils/constants'
+import GeneVariantLookup from './components/GeneVariantLookup'
 import { sendVlmContactEmail } from './reducers'
 import { getVlmDefaultContactEmails, getVlmFamiliesByContactEmail } from './selectors'
 
@@ -205,6 +208,8 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams, vlmEnabled
     <Grid.Row>
       <Grid.Column width={5} />
       <Grid.Column width={6}>
+        <Header />
+        <Header dividing size="medium" content="Lookup Variant" />
         <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
       </Grid.Column>
       <Grid.Column width={5} />
@@ -273,4 +278,18 @@ WrappedVariantLookup.propTypes = {
   vlmEnabled: PropTypes.bool,
 }
 
-export default connect(mapGlobalStateToProps, mapDispatchToProps)(WrappedVariantLookup)
+const ConnectedVariantLookup = connect(mapGlobalStateToProps, mapDispatchToProps)(WrappedVariantLookup)
+
+const VariantLookupRoute = ({ match }) => (
+  <Switch>
+    <Route path={`${match.url}/gene`} component={GeneVariantLookup} />
+    <Route path={match.url} exact component={ConnectedVariantLookup} />
+    <Route component={Error404} />
+  </Switch>
+)
+
+VariantLookupRoute.propTypes = {
+  match: PropTypes.object,
+}
+
+export default VariantLookupRoute

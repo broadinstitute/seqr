@@ -21,8 +21,8 @@ import {
   VEP_GROUP_EXTENDED_SPLICE_SITE,
 } from 'shared/utils/constants'
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
-import { loadGeneVariantLookup } from '../reducers'
-import { getGeneVariantLookupLoading, getGeneVariantLookupResults } from '../selectors'
+// import { loadGeneVariantLookup } from '../reducers'
+// import { getGeneVariantLookupLoading, getGeneVariantLookupResults } from '../selectors'
 
 const validateAnnotations = (value, { annotations }) => (
   value || Object.values(annotations || {}).some(val => val.length) ? undefined : 'At least one consequence filter is required'
@@ -118,12 +118,12 @@ GeneVariantLookup.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  loading: getGeneVariantLookupLoading(state),
-  results: getGeneVariantLookupResults(state),
+  // loading: getGeneVariantLookupLoading(state),
+  // results: getGeneVariantLookupResults(state),
 })
 
 const mapDispatchToProps = {
-  onSubmit: loadGeneVariantLookup,
+  // onSubmit: loadGeneVariantLookup,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(GeneVariantLookup)
