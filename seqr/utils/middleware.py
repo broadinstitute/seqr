@@ -11,7 +11,7 @@ from social_core.exceptions import AuthException
 import json
 import traceback
 
-from seqr.utils.search.utils import SEARCH_EXCEPTION_ERROR_MAP
+from seqr.utils.search.utils import InvalidSearchException
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import TerraAPIException
@@ -33,12 +33,12 @@ EXCEPTION_ERROR_MAP = {
     ObjectDoesNotExist: 404,
     Http404: 404,
     ErrorsWarningsException: 400,
+    InvalidSearchException: 400,
     AuthException: 401,
     HTTPError: lambda e: int(e.response.status_code),
     TerraAPIException: lambda e: e.status_code,
     AnymailError: lambda e: getattr(e, 'status_code', None) or 400,
 }
-EXCEPTION_ERROR_MAP.update(SEARCH_EXCEPTION_ERROR_MAP)
 
 EXCEPTION_JSON_MAP = {
     ErrorsWarningsException: lambda e: {'errors': e.errors, 'warnings': e.warnings}
@@ -54,11 +54,8 @@ def _get_exception_status_code(exception):
     if isinstance(status, int):
         return status
 
-    try:
-        return status(exception)
-    except Exception:
-        # TODO
-        return 500
+    return status(exception)
+
 
 def _get_core_exception_json(exception):
     exception_json_formatter = next((f for exc, f in EXCEPTION_JSON_MAP.items() if isinstance(exception, exc)), None)

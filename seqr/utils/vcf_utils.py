@@ -79,7 +79,6 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
     vcf_filename = _validate_valid_vcf_name(data_path, user, allowed_exts)
 
     if vcf_filename is None:
-        # TODO
         return None
 
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)

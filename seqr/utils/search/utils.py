@@ -20,10 +20,6 @@ class InvalidSearchException(Exception):
     pass
 
 
-SEARCH_EXCEPTION_ERROR_MAP = {
-    InvalidSearchException: 400,
-}
-
 DATASET_TYPES_LOOKUP = {
     data_types[0]: data_types for data_types in [
         [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS],
