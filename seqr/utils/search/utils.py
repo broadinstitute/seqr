@@ -52,22 +52,6 @@ def get_search_samples(projects, active_only=True):
     return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
-def _get_families_search_data(families, dataset_type, include_no_access_projects=False, sample_filter=None):
-    samples = _get_filtered_search_samples(sample_filter or {'individual__family__in': families})
-    if len(samples) < 1:
-        if include_no_access_projects:
-            return samples
-        raise InvalidSearchException('No search data found for families {}'.format(
-            ', '.join([f.family_id for f in families])))
-
-    if dataset_type:
-        samples = samples.filter(dataset_type__in=DATASET_TYPES_LOOKUP[dataset_type])
-        if not samples:
-            raise InvalidSearchException(f'Unable to search against dataset type "{dataset_type}"')
-
-    return samples
-
-
 def _get_search_genome_version(search_model):
     projects = Project.objects.filter(family__in=search_model.families.all()).values_list('genome_version', 'name').distinct()
     project_versions = defaultdict(set)
@@ -89,7 +73,9 @@ def _get_search_genome_version(search_model):
 def get_single_variant(family, variant_id, user=None):
     parsed_variant_id = parse_variant_id(variant_id)
     dataset_type = _variant_ids_dataset_type([parsed_variant_id])
-    samples = _get_families_search_data([family], dataset_type, sample_filter={'individual__family_id': family.id})
+    samples = _get_filtered_search_samples({'individual__family_id': family.id})
+    if len(samples) < 1:
+        raise InvalidSearchException(f'No search data found for families {family.family_id}')
     variant = get_clickhouse_variant_by_id(
         variant_id, parsed_variant_id, samples, family.project.genome_version, DATASET_TYPES_LOOKUP[dataset_type][0],
     )
@@ -176,8 +162,37 @@ def _query_variants(search_model, user, sort=None, **kwargs):
 
     parsed_search = _parse_search(search, genome_version, user)
     search_dataset_type = _parse_dataset_type(parsed_search, genome_version)
-    samples = _get_search_samples(parsed_search, families, search_dataset_type)
-    _validate_search(parsed_search, samples, previous_search_results)
+
+    _validate_search(parsed_search, families)
+
+    samples = _get_filtered_search_samples({'individual__family__in': families})
+    if len(samples) < 1:
+        if parsed_search.get('no_access_project_genome_version'):
+            return samples
+        raise InvalidSearchException('No search data found for families {}'.format(
+            ', '.join([f.family_id for f in families])))
+    if search_dataset_type:
+        samples = samples.filter(dataset_type__in=DATASET_TYPES_LOOKUP[search_dataset_type])
+        if not samples:
+            raise InvalidSearchException(f'Unable to search against dataset type "{search_dataset_type}"')
+    if parsed_search.get('inheritance_mode') == X_LINKED_RECESSIVE:
+        samples = samples.exclude(dataset_type=Sample.DATASET_TYPE_MITO_CALLS)
+    if parsed_search.get('inheritance_mode') or parsed_search.get('inheritance_filter'):
+        samples = samples.select_related('individual')
+        if samples:
+            skipped_samples = _filter_inheritance_family_samples(samples, parsed_search['inheritance_filter'])
+            if skipped_samples:
+                samples = samples.exclude(id__in=[s.id for s in skipped_samples])
+
+    if (parsed_search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET}) and parsed_search['secondary_dataset_type']:
+        invalid_type = next((
+            dt for dt in [parsed_search['dataset_type'], parsed_search['secondary_dataset_type']]
+            if dt and dt != ALL_DATA_TYPES and samples.filter(dataset_type__in=DATASET_TYPES_LOOKUP[dt]).count() < 1
+        ), None)
+        if invalid_type:
+            raise InvalidSearchException(
+                f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
+            )
 
     get_clickhouse_variants(samples, parsed_search, user, previous_search_results, genome_version, sort=sort, **kwargs)
 
@@ -225,6 +240,9 @@ def _parse_search(search, genome_version, user):
         if parsed_search.get(annotation_key):
             parsed_search[annotation_key] = {k: v for k, v in parsed_search[annotation_key].items() if v}
 
+    if parsed_search.get('inheritance'):
+        _parse_inheritance(parsed_search)
+
     return parsed_search
 
 def _parse_dataset_type(parsed_search, genome_version):
@@ -237,13 +255,6 @@ def _parse_dataset_type(parsed_search, genome_version):
         elif dataset_type == Sample.DATASET_TYPE_SV_CALLS:
             search_dataset_type = DATASET_TYPE_NO_MITO
     return search_dataset_type
-
-
-def _get_search_samples(parsed_search, families, search_dataset_type):
-    samples = _get_families_search_data(families, dataset_type=search_dataset_type, include_no_access_projects=bool(parsed_search.get('no_access_project_genome_version')))
-    if parsed_search.get('inheritance'):
-        samples = _parse_inheritance(parsed_search, samples)
-    return samples
 
 
 def _get_clickhouse_exclude_keys(search_hash, user):
@@ -374,7 +385,7 @@ def _annotation_dataset_type(annotations, chroms, pathogenicity=None, exclude_sv
     return ALL_DATA_TYPES
 
 
-def _parse_inheritance(search, samples):
+def _parse_inheritance(search):
     inheritance = search.pop('inheritance')
     inheritance_mode = inheritance.get('mode')
     inheritance_filter = inheritance.get('filter') or {}
@@ -383,55 +394,29 @@ def _parse_inheritance(search, samples):
         inheritance_mode = None
 
     search.update({'inheritance_mode': inheritance_mode, 'inheritance_filter': inheritance_filter})
-    if not (inheritance_mode or inheritance_filter):
-        return samples
 
     if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
         raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
-    if inheritance_mode == X_LINKED_RECESSIVE:
-        samples = samples.exclude(dataset_type=Sample.DATASET_TYPE_MITO_CALLS)
 
-    samples = samples.select_related('individual')
-    if samples:
-        skipped_samples = _filter_inheritance_family_samples(samples, inheritance_filter)
-        if skipped_samples:
-            search['skipped_samples'] = skipped_samples
-            samples = samples.exclude(id__in=[s.id for s in skipped_samples])
-
-    return samples
-
-
-def _validate_search(search, samples, previous_search_results):
-    has_comp_het_search = search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET} and not previous_search_results.get('grouped_results')
+def _validate_search(search, families):
+    has_comp_het_search = search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET}
     has_location_filter = any(search.get(field) for field in ['genes', 'intervals', 'variant_ids'])
     if has_comp_het_search:
         if not search.get('annotations'):
             raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
-        family_ids = {s.individual.family_id for s in samples.select_related('individual')}
-        if not has_location_filter and len(family_ids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
+        if not has_location_filter and len(families) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
             raise InvalidSearchException(
                 'Location must be specified to search for compound heterozygous variants across many families')
-
-        if search['secondary_dataset_type']:
-            invalid_type = next((
-                dt for dt in [search['dataset_type'], search['secondary_dataset_type']]
-                if dt and dt != ALL_DATA_TYPES and samples.filter(dataset_type__in=DATASET_TYPES_LOOKUP[dt]).count() < 1
-            ), None)
-            if invalid_type:
-                raise InvalidSearchException(
-                    f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
-                )
 
         if search.get('no_access_project_genome_version'):
             raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
 
-    variant_samples = samples.filter(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-    if not has_location_filter and variant_samples.values('individual__family__project_id').distinct().count() > 1:
+    if not has_location_filter and families.values('project_id').distinct().count() > 1:
         raise InvalidSearchException('Location must be specified to search across multiple projects')
     seqr_ac_filter = search.get('freqs', {}).get('callset', {}).get('ac') or (MIN_MULTI_FAMILY_SEQR_AC + 1)
-    if seqr_ac_filter > MIN_MULTI_FAMILY_SEQR_AC and variant_samples.values('individual__family_id').distinct().count() > 1:
+    if seqr_ac_filter > MIN_MULTI_FAMILY_SEQR_AC and len(families) > 1:
         raise InvalidSearchException(
             f'seqr AC frequency of at least {MIN_MULTI_FAMILY_SEQR_AC} must be specified to search across multiple families'
         )

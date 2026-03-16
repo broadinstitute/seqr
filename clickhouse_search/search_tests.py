@@ -218,6 +218,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     def _assert_expected_search_error(self, error, **kwargs):
         response, search_hash, _ = self._execute_search(**kwargs)
+        if response.status_code != 400:
+            import pdb; pdb.set_trace()
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': error})
         return search_hash
@@ -897,9 +899,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search_error('Annotations must be specified to search for compound heterozygous variants', inheritance_mode='recessive')
 
+        annotations = {'frameshift': ['frameshift_variant']}
         self._assert_expected_search_error(
             'Location must be specified to search for compound heterozygous variants across many families',
-            annotations={'frameshift': ['frameshift_variant']}, inheritance_mode='recessive',
+            annotations=annotations, inheritance_mode='recessive',
         )
 
         self._assert_expected_search_error(
@@ -912,6 +915,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search_error(
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
             inheritance_mode='recessive', project_families=[{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000005_5']}],
+            annotations=annotations,
         )
 
         no_sv_project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000003_3']}]
@@ -928,6 +932,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search_error(
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
             inheritance_mode='recessive', inheritance_filter={'affected': {'I000007_na20870': 'N'}}, project_families=no_sv_project_families,
+            annotations=annotations,
         )
 
         self._assert_expected_search_error('Inheritance must be specified if custom affected status is set', inheritance_filter={'affected': {'I000007_na20870': 'N'}})
