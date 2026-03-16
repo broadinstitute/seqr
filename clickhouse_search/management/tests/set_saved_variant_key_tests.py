@@ -8,184 +8,7 @@ MOCK_GCNV_DATA = [
     b'chr\tstart\tend\tname\tsample\tsample_fix\tsvtype\tGT\tCN\tNP\tQA\tQS\tQSE\tQSS\tploidy\tstrand\tvariant_name\tID\trmsstd\tdefragmented\tvaf\tvac\tlt100_raw_calls\tlt10_highQS_rare_calls\tPASS_SAMPLE\tPASS_FREQ\tPASS_QS\tHIGH_QUALITY\tgenes_any_overlap\tgenes_any_overlap_exonsPerGene\tgenes_any_overlap_totalExons\tgenes_strict_overlap\tgenes_strict_overlap_exonsPerGene\tgenes_strict_overlap_totalExons\tgenes_CG\tgenes_LOF\tgenes_any_overlap_Ensemble_ID\tidentical\tpartial_ovl\tany_ovl\tno_ovl\tsource',
     b'chr10\t122599967\t122600191\tCASE_7_Y_cnv_57308\tC1933_010-001_v1_Exome_GCP\t010-001_v1_Exome_C1933\tDEL\t1\t1\t1\t7\t7\t7\t72\t\t-\tprefix_70191\t326536\t0\tFALSE\t0.05066805\t1077\tTRUE\tTRUE\tTRUE\tFALSE\tFALSE\tFALSE\tDMBT1\t1\t1\tNA\t0\t0\tNA\tDMBT1\tENSG00000187908.19\tcluster_10_CASE_cnv_46117\tcluster_10_CASE_cnv_46117\tcluster_10_CASE_cnv_46117;prefix_19107\tFALSE\tround2',
 ]
-#
-# SAVED_VARIANT_JSON = {
-#     'SV0000002_1248367227_r0390_100': {
-#             "clinvar": {
-#                 "pathogenicity": "Uncertain_significance",
-#                 "alleleId": 12345,
-#                 "assertions": null,
-#                 "conditions": null,
-#                 "conflictingPathogenicities": null,
-#                 "submitters": null,
-#                 "goldStars": null
-#             },
-#             "liftedOverGenomeVersion": "38",
-#             "familyGuids": [
-#                 "F000001_1"
-#             ],
-#             "liftedOverPos": "",
-#             "populations": {
-#                 "callset": {
-#                     "ac": null,
-#                     "an": null,
-#                     "af": null
-#                 },
-#                 "g1k": {
-#                     "ac": null,
-#                     "an": null,
-#                     "af": 0.0
-#                 },
-#                 "gnomad_genomes": {
-#                     "hemi": null,
-#                     "ac": null,
-#                     "an": null,
-#                     "hom": null,
-#                     "af": 0.00012925741614425127
-#                 },
-#                 "gnomad_exomes": {
-#                     "hemi": null,
-#                     "ac": null,
-#                     "an": null,
-#                     "hom": null,
-#                     "af": 6.505916317651364e-05
-#                 },
-#                 "exac": {
-#                     "hemi": null,
-#                     "ac": null,
-#                     "an": null,
-#                     "hom": null,
-#                     "af": 0.0006726888333653661
-#                 },
-#                 "topmed": {
-#                     "ac": null,
-#                     "an": null,
-#                     "af": null
-#                 }
-#             },
-#             "genomeVersion": "37",
-#             "pos": 248367227,
-#             "predictions": {
-#                 "eigen": null,
-#                 "revel": null,
-#                 "sift": null,
-#                 "cadd": "27.2",
-#                 "metasvm": "",
-#                 "mpc": null,
-#                 "splice_ai": null,
-#                 "phastcons_100_vert": null,
-#                 "mut_taster": null,
-#                 "fathmm": null,
-#                 "polyphen": null,
-#                 "dann": null,
-#                 "primate_ai": null,
-#                 "gerp_rs": null
-#             },
-#             "hgmd": {
-#                 "accession": null,
-#                 "class": null
-#             },
-#             "rsid": null,
-#             "liftedOverChrom": "",
-#             "transcripts": {
-#                 "ENSG00000135953": [
-#                     {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000135953"}
-#                 ],
-#                 "ENSG00000240361": []
-#             },
-#             "chrom": "1",
-#             "genotypes": {
-#                 "I000004_hg00731": {
-#                     "numAlt": 2
-#                 },
-#                 "I000005_hg00732": {
-#                     "numAlt": 1
-#                 }
-#             },
-#             "CAID": "CA1501729"
-#         },
-#     'SV0000006_1248367227_r0003_tes': {
-#             "clinvar": {
-#                 "pathogenicity": "Uncertain_significance",
-#                 "alleleId": 12345,
-#                 "assertions": null,
-#                 "conditions": null,
-#                 "conflictingPathogenicities": null,
-#                 "submitters": null,
-#                 "goldStars": null
-#             },
-#             "liftedOverGenomeVersion": "38",  "liftedOverPos": "",
-#             "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0},
-#                 "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.00012925741614425127},
-#                 "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 6.505916317651364e-05},
-#                 "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0006726888333653661},
-#                 "topmed": {"ac": null, "an": null, "af": null}},
-#             "genomeVersion": "37", "pos": 248367227, "predictions": {
-#                 "eigen": null, "revel": null, "sift": null, "cadd": "27.2", "metasvm": "", "mpc": null,
-#                 "splice_ai": null, "phastcons_100_vert": null, "mut_taster": null, "fathmm": null, "polyphen": null,
-#                 "dann": null, "primate_ai": null, "gerp_rs": null},
-#             "hgmd": {"accession": null, "class": null}, "rsid": null, "liftedOverChrom": "",
-#              "mainTranscriptId": "ENST00000505820", "transcripts": {
-#                 "ENSG00000135953": [
-#                     {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
-#                 ],
-#                 "ENSG00000240361": [
-#                     {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding",
-#                         "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1,
-#                         "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg",
-#                         "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000240361",
-#                         "aminoAcids": "V/M", "cdnaPosition": "3955"}
-#                 ]
-#             }, "chrom": "1", "genotypes": {
-#                 "I000002_na19675": {"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1},
-#                 "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}
-#             },
-#             "CAID": "CA1501729"
-#         },
-#     'SV0000006_1248367227_r0004_non': {
-#             "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
-#             "transcripts": {}, "chrom": "1", "genotypes": {
-#                 "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}
-#             },
-#             "CAID": "CA1501729"
-#         },
-#     'SV0000009_25000014783_r0004_no': {
-#             "variantId": "M-14783-T-C", "chrom": "M", "pos": 14783, "ref": "T", "alt": "C", "xpos": 25000014783,
-#             "genomeVersion": "38", "liftedOverGenomeVersion": "37", "liftedOverChrom": "MT", "liftedOverPos": 14783,
-#             "rsid": "rs193302982", "familyGuids": ["F000002_2"], "genotypes": {
-#                 "I000018_na21234": {"sampleId": "NA20885", "numAlt": 2, "dp": 3943, "hl": 1.0, "mitoCn": 214, "contamination": 0.0, "filters": ["artifact_prone_site"]}
-#             }, "populations": {"seqr": {"af": 0.019480518996715546, "ac": 3, "an": 154}, "seqr_heteroplasmy": {"af": 0.006493506487458944, "ac": 1, "an": 154},
-#                 "gnomad_mito": {"af": 0.05534649267792702, "ac": 3118, "an": 56336}, "gnomad_mito_heteroplasmy": {"af": 5.3251918870955706e-05, "ac": 3, "an": 56336, "max_hl": 1.0},
-#                 "helix": {"af": 0.04884607344865799, "ac": 9573, "an": 195983}, "helix_heteroplasmy": {"af": 9.184470400214195e-05, "ac": 18, "an": 195983, "max_hl": 0.962689995765686}},
-#             "predictions": {"apogee": null, "haplogroup_defining": "Y", "hmtvar": null, "mitotip": null, "mut_taster": null, "sift": null, "mlc": 0.7514},
-#             "commonLowHeteroplasmy": true, "mitomapPathogenic": true, "clinvar": null, "transcripts": {
-#                 "ENSG00000198727": [{"aminoAcids": "L", "canonical": 1, "codons": "Tta/Cta", "geneId": "ENSG00000198727", "hgvsc": "ENST00000361789.2:c.37T>C", "hgvsp": "ENSP00000354554.2:p.Leu13=", "transcriptId": "ENST00000361789", "isLofNagnag": null, "transcriptRank": 0, "biotype": "protein_coding", "lofFilters": null, "majorConsequence": "synonymous_variant", "consequenceTerms": ["synonymous_variant"]}]},
-#             "mainTranscriptId": "ENST00000361789", "selectedMainTranscriptId": null
-#         },
-#     'SV0000013_prefix_19107_DEL_r00': {
-#             "liftedOverGenomeVersion": null,
-#             "pos": 249045487,
-#             "end": 249045898,
-#             "xpos": 1249045487,
-#             "predictions": {"strvctvre": 0.374},
-#             "alt": null,
-#             "numExon": 2,
-#             "genotypeFilters": [],
-#             "ref": null,
-#             "genotypes": {
-#                 "I000018_na21234": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
-#             },
-#             "liftedOverPos": null,
-#             "liftedOverChrom": null,
-#             "svType": "DEL",
-#             "variantId": "suffix_19107_DEL",
-#             "chrom": "1",
-#             "endChrom": "1",
-#             "genomeVersion": "37",
-#             "populations": {"sv_callset":  {}},
-#             "transcripts": {"ENSG00000240361": [], "ENSG00000135953": [], "ENSG00000223972":  []}
-#         }
-# }
+
 
 class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'report_variants', 'clickhouse_saved_variants']
@@ -196,6 +19,13 @@ class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
     def setUpTestData(cls):
         Project.objects.filter(id=3).update(genome_version='38')
         Sample.objects.filter(guid='S000154_na20889').update(dataset_type='SV', is_active=True)
+        for sv in SavedVariant.objects.filter(key__isnull=False):
+            sv.saved_variant_json = {
+                'genotypes': sv.genotypes, 'populations': {'gnomad': {'af': 0.01}},
+            }
+            if sv.guid == 'SV0000009_25000014783_r0004_no':
+                sv.saved_variant_json['populations']['seqr'] = {'af': 0.019480518996715546, 'ac': 3, 'an': 154}
+            sv.save()
         SavedVariant.objects.update(key=None)
 
     @mock.patch('clickhouse_search.management.commands.set_saved_variant_key.BATCH_SIZE', 2)
