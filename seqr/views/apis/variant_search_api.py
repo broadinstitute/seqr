@@ -114,7 +114,6 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         search_dict = search_context.get('search', {})
         if search_context.get('previousSearchHash') and (search_dict.get('exclude') or {}).get('previousSearch'):
-            # TODO test
             search_dict['exclude']['previousSearchHash'] = search_context['previousSearchHash']
         if search_context.get('includeNoAccessProjects'):
             search_dict['no_access_project_genome_version'] = all_project_genome_version
