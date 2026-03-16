@@ -14,7 +14,7 @@ from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
-from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
+from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Individual
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
@@ -31,7 +31,7 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, **kwargs):
+def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version, sort=None, **kwargs):
     inheritance_mode = search.get('inheritance_mode')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
@@ -96,8 +96,6 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     previous_search_results.update(cache_results)
 
     logger.info(f'Total results: {cache_results["total_results"]}', user)
-
-    return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results], genome_version)
 
 def get_search_queryset(genome_version, dataset_type, sample_data, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
@@ -331,6 +329,34 @@ def get_clickhouse_cache_results(results, sort, family_guid):
     ], key=sort_key)
     total_results = len(sorted_results)
     return {'all_results': sorted_results, 'total_results': total_results}
+
+
+def format_clickhouse_export_results(results, genome_version):
+    formatted_results = [variant for result in results for variant in (result if isinstance(result, list) else [result])]
+    keys_with_no_details = {result['key'] for result in formatted_results if not 'transcripts' in result}
+    detail_qs = _get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details)
+    details_by_key = {
+        detail['key']: detail for detail in detail_qs.values(
+            'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
+            **detail_qs.split_variant_id_annotations(),
+        )
+    }
+
+    gene_ids = set()
+    for result in formatted_results:
+        if 'transcripts' in result:
+            result['mainTranscript'] = next((gene_transcripts[0] for gene_transcripts in result['transcripts'].values()), {})
+        else:
+            result.update(details_by_key.get(result['key'], {}))
+        if result.get('mainTranscript'):
+            gene_ids.add(result['mainTranscript']['geneId'])
+
+    gene_id_map = dict(GeneInfo.objects.filter(gene_id__in=gene_ids).values_list('gene_id', 'gene_symbol'))
+    for result in formatted_results:
+        if result.get('mainTranscript'):
+            result['geneSymbol'] = gene_id_map.get(result['mainTranscript']['geneId'])
+
+    return formatted_results
 
 
 def format_clickhouse_results(results, genome_version):
@@ -730,7 +756,7 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type,
 
 def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_only):
     lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
-    if not lifted_entry_cls:
+    if not (lifted_entry_cls and variant.get('liftedOverChrom') and variant.get('liftedOverPos')):
         return
     lifted_id = (variant['liftedOverChrom'], variant['liftedOverPos'], *variant_id[2:])
     lifted_entries = lifted_entry_cls.objects.filter_locus(parsed_variant_ids=[lifted_id])
