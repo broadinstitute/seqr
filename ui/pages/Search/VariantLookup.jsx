@@ -72,8 +72,8 @@ const LOOKUP_FIELDS = [
   },
 ]
 
-const validateAnnotations = (value, { annotations }) => (
-  value || Object.values(annotations || {}).some(val => val.length) ? undefined : 'At least one consequence filter is required'
+const validateAnnotations = (value, { search }) => (
+  value || Object.values(search.annotations || {}).some(val => val.length) ? undefined : 'At least one consequence filter is required'
 )
 
 const CONSEQUENCE_FILEDS = [
@@ -85,7 +85,7 @@ const CONSEQUENCE_FILEDS = [
   VEP_GROUP_SYNONYMOUS,
   VEP_GROUP_EXTENDED_SPLICE_SITE,
 ].map((group, i) => ({
-  name: `annotations.${group}`,
+  name: `search.annotations.${group}`,
   component: AlignedCheckboxGroup,
   groupLabel: snakecaseToTitlecase(group),
   options: GROUPED_VEP_CONSEQUENCES[group],
@@ -95,9 +95,9 @@ const CONSEQUENCE_FILEDS = [
 }))
 
 const GENE_LOOKUP_FIELDS = [
-  { validate: validators.required, ...GENOME_VERSION_FIELD },
+  { validate: validators.required, ...GENOME_VERSION_FIELD, name: 'allGenomeProjectFamilies' },
   {
-    name: 'geneId',
+    name: 'search.locus.rawItems',
     label: 'Gene',
     control: AwesomeBarFormInput,
     categories: ['genes'],
@@ -108,7 +108,10 @@ const GENE_LOOKUP_FIELDS = [
   ...CONSEQUENCE_FILEDS,
 ]
 
-const INITIAL_GENE_LOOKUP_VALUES = { freqs: GENE_SEARCH_FREQUENCIES }
+const INITIAL_GENE_LOOKUP_VALUES = {
+  includeNoAccessProjects: true,
+  search: { freqs: GENE_SEARCH_FREQUENCIES },
+}
 
 const VlmDisplay = ({ vlmMatches }) => (
   <Table basic collapsing definition>
