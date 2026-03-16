@@ -1922,100 +1922,7 @@
             }
         },
         "gene_ids": ["ENSG00000240361", "ENSG00000135953"],
-        "saved_variant_json": {
-            "clinvar": {
-                "pathogenicity": "Uncertain_significance",
-                "alleleId": 12345,
-                "assertions": null,
-                "conditions": null,
-                "conflictingPathogenicities": null,
-                "submitters": null,
-                "goldStars": null
-            },
-            "liftedOverGenomeVersion": "38",
-            "familyGuids": [
-                "F000001_1"
-            ],
-            "liftedOverPos": "",
-            "populations": {
-                "callset": {
-                    "ac": null,
-                    "an": null,
-                    "af": null
-                },
-                "g1k": {
-                    "ac": null,
-                    "an": null,
-                    "af": 0.0
-                },
-                "gnomad_genomes": {
-                    "hemi": null,
-                    "ac": null,
-                    "an": null,
-                    "hom": null,
-                    "af": 0.00012925741614425127
-                },
-                "gnomad_exomes": {
-                    "hemi": null,
-                    "ac": null,
-                    "an": null,
-                    "hom": null,
-                    "af": 6.505916317651364e-05
-                },
-                "exac": {
-                    "hemi": null,
-                    "ac": null,
-                    "an": null,
-                    "hom": null,
-                    "af": 0.0006726888333653661
-                },
-                "topmed": {
-                    "ac": null,
-                    "an": null,
-                    "af": null
-                }
-            },
-            "genomeVersion": "37",
-            "pos": 248367227,
-            "predictions": {
-                "eigen": null,
-                "revel": null,
-                "sift": null,
-                "cadd": "27.2",
-                "metasvm": "",
-                "mpc": null,
-                "splice_ai": null,
-                "phastcons_100_vert": null,
-                "mut_taster": null,
-                "fathmm": null,
-                "polyphen": null,
-                "dann": null,
-                "primate_ai": null,
-                "gerp_rs": null
-            },
-            "hgmd": {
-                "accession": null,
-                "class": null
-            },
-            "rsid": null,
-            "liftedOverChrom": "",
-            "transcripts": {
-                "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000135953"}
-                ],
-                "ENSG00000240361": []
-            },
-            "chrom": "1",
-            "genotypes": {
-                "I000004_hg00731": {
-                    "numAlt": 2
-                },
-                "I000005_hg00732": {
-                    "numAlt": 1
-                }
-            },
-            "CAID": "CA1501729"
-        },
+        "saved_variant_json": {},
         "selected_main_transcript_id": "ENST00000371839",
         "family": 2
     }
@@ -2166,44 +2073,7 @@
             "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}
         },
         "gene_ids": ["ENSG00000240361", "ENSG00000135953"],
-        "saved_variant_json": {
-            "clinvar": {
-                "pathogenicity": "Uncertain_significance",
-                "alleleId": 12345,
-                "assertions": null,
-                "conditions": null,
-                "conflictingPathogenicities": null,
-                "submitters": null,
-                "goldStars": null
-            },
-            "liftedOverGenomeVersion": "38",  "liftedOverPos": "",
-            "populations": {"callset": {"ac": null, "an": null, "af": null}, "g1k": {"ac": null, "an": null, "af": 0.0},
-                "gnomad_genomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.00012925741614425127},
-                "gnomad_exomes": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 6.505916317651364e-05},
-                "exac": {"hemi": null, "ac": null, "an": null, "hom": null, "af": 0.0006726888333653661},
-                "topmed": {"ac": null, "an": null, "af": null}},
-            "genomeVersion": "37", "pos": 248367227, "predictions": {
-                "eigen": null, "revel": null, "sift": null, "cadd": "27.2", "metasvm": "", "mpc": null,
-                "splice_ai": null, "phastcons_100_vert": null, "mut_taster": null, "fathmm": null, "polyphen": null,
-                "dann": null, "primate_ai": null, "gerp_rs": null},
-            "hgmd": {"accession": null, "class": null}, "rsid": null, "liftedOverChrom": "",
-             "mainTranscriptId": "ENST00000505820", "transcripts": {
-                "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000228198"}
-                ],
-                "ENSG00000240361": [
-                    {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding",
-                        "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1,
-                        "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg",
-                        "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000240361",
-                        "aminoAcids": "V/M", "cdnaPosition": "3955"}
-                ]
-            }, "chrom": "1", "genotypes": {
-                "I000002_na19675": {"sampleId": "NA19675", "ab": 0.5555556, "ad": null, "gq": 99, "dp": 9, "pl": null, "numAlt": 1},
-                "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}
-            },
-            "CAID": "CA1501729"
-        },
+        "saved_variant_json": {},
         "family": 12
     }
 },
@@ -2264,13 +2134,7 @@
         "genotypes": {
             "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}
         },
-        "saved_variant_json": {
-            "liftedOverGenomeVersion": "37",  "liftedOverPos": "", "genomeVersion": "38", "pos": 248367227,
-            "transcripts": {}, "chrom": "1", "genotypes": {
-                "I000018_na21234": {"sampleId": "NA20885", "ab": 0.0, "gq": 99.0, "numAlt": 1}
-            },
-            "CAID": "CA1501729"
-        },
+        "saved_variant_json": {},
         "family": 14
     }
 },

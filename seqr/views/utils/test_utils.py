@@ -593,9 +593,6 @@ class AnvilAuthenticationTestMixin(AuthenticationTestMixin):
         self.mock_get_group_members.side_effect = get_group_members_side_effect
         self.addCleanup(patcher.stop)
         super().set_up_test()
-        if self.CLICKHOUSE_HOSTNAME and not self.SKIP_RESET_VARIANT_JSON:
-            # TODO update fixture data to match
-            SavedVariant.objects.filter(key__isnull=False).update(saved_variant_json={})
 
     @classmethod
     def add_additional_user_groups(cls):
