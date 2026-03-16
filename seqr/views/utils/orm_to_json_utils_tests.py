@@ -142,6 +142,10 @@ class JSONUtilsTest(object):
             self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_1])
         for tag_guid in v2_tag_guids:
             self.assertListEqual(json['variantTagsByGuid'][tag_guid]['variantGuids'], [variant_guid_2])
+        self.assertDictEqual(
+            json['variantTagsByGuid']['VT1726985_2103343353_r0390_100']['structuredMetadata'],
+            {'4': {'date': '2023-11-15', 'name': 'de Novo'}, 'support': {'date': '2023-11-15', 'name': 'High in Silico Scores'}},
+        )
 
         self.assertSetEqual(set(json['variantNotesByGuid'].keys()), set(v2_note_guids))
         self.assertSetEqual(set(json['variantNotesByGuid'][v2_note_guids[0]].keys()), VARIANT_NOTE_FIELDS)

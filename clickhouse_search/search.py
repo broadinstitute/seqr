@@ -730,7 +730,7 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type,
 
 def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_only):
     lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
-    if not lifted_entry_cls:
+    if not (lifted_entry_cls and variant.get('liftedOverChrom') and variant.get('liftedOverPos')):
         return
     lifted_id = (variant['liftedOverChrom'], variant['liftedOverPos'], *variant_id[2:])
     lifted_entries = lifted_entry_cls.objects.filter_locus(parsed_variant_ids=[lifted_id])
