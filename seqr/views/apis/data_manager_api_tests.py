@@ -506,12 +506,8 @@ class DataManagerAPITest(AirtableTest):
             (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
         ]
         if additional_logs:
-            if additional_logs_offset:
-                for log in reversed(additional_logs):
-                    expected_logs.insert(additional_logs_offset, log)
-            else:
-                # TODO
-                expected_logs += additional_logs
+            for log in reversed(additional_logs):
+                expected_logs.insert(additional_logs_offset, log)
 
         self.assert_json_logs(user, expected_logs)
 

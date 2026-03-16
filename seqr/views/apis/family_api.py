@@ -166,7 +166,6 @@ def edit_families_handler(request, project_guid):
     family_guids = [f.get('familyGuid') for f in modified_families]
     family_models = {f.guid: f for f in Family.objects.filter(project=project, guid__in=family_guids)}
     if len(family_models) != len(family_guids):
-        # TODO
         missing_guids = set(family_guids) - set(family_models.keys())
         return create_json_response({'error': 'Invalid family guids: {}'.format(', '.join(missing_guids))}, status=400)
 
