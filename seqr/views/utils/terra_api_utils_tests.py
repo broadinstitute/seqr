@@ -97,8 +97,7 @@ class TerraApiUtilsCallsCase(AuthenticationTestCase):
             with self.assertRaises(exception) as ec:
                 _ = func(*args, **kwargs)
             self.assertEqual(str(ec.exception), message.format(path=path))
-            if isinstance(exception, TerraAPIException):
-                # TODO
+            if status == 401:
                 self.assertEqual(ec.exception.status_code, status)
 
         self.assert_no_logs()
