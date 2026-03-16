@@ -148,6 +148,7 @@ def families_discovery_tags(families, genome_version, project=None):
 
 
 def _get_transcripts_selected_gene(selected_main_transcript_id, transcripts):
+    # TODO
     return next((
         gene_id for gene_id, gene_transcripts in (transcripts or {}).items()
         if any(t.get('transcriptId') == selected_main_transcript_id for t in gene_transcripts)

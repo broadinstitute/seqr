@@ -242,6 +242,7 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
     }
     if additional_values:
+        # TODO
         family_additional_values.update(additional_values)
     if add_individual_guids_field:
         family_additional_values.update(INDIVIDUAL_GUIDS_VALUES)
@@ -287,6 +288,7 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, family_
         {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
     ]
     if family_fields:
+        # TODO
         for field in family_fields:
             nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
 
@@ -343,6 +345,7 @@ def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid
             {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
         ]}
     else:
+        # TODO
         additional_kwargs = {'additional_model_fields': ['individual_id']}
     return {'guid_key': 'sampleGuid', **additional_kwargs, **kwargs}
 

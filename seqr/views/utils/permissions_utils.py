@@ -161,6 +161,7 @@ def _map_anvil_seqr_permission(anvil_permission):
 
 def anvil_has_perm(user, permission_level, project):
     if not project_has_anvil(project):
+        # TODO
         return False
     return has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
 

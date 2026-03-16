@@ -380,6 +380,7 @@ def _gene_value(val):
 
 def _gene_list_value(val):
     if isinstance(val, list):
+        # TODO
         return val
     seperator_escaped_val = ''.join(m.replace(',', ';') if not m.startswith('(') else m for m in re.split('(\([^)]+\))', val))
     return [_gene_value(o) for o in seperator_escaped_val.split(';')]
@@ -410,6 +411,7 @@ INDIVIDUAL_METADATA_FIELDS = {
 }
 
 def _get_year(val):
+    # TODO
     return datetime.strptime(val, '%Y-%m-%d').year
 
 def _nested_val(nested_key):
@@ -417,6 +419,7 @@ def _nested_val(nested_key):
 
 def _get_phenotips_features(observed):
     def get_observed_features(features):
+        # TODO
         return [{'id': feature['id']} for feature in features if feature['observed'] == observed]
     return get_observed_features
 
@@ -454,6 +457,7 @@ PHENOTIPS_JSON_FIELD_MAP = {
 }
 
 def _parse_phenotips_record(row):
+    # TODO
     record = {}
     for k, formatters in PHENOTIPS_JSON_FIELD_MAP.items():
         val = row.get(k)
@@ -634,6 +638,7 @@ def _get_record_individual(record, individual_lookup):
         if not individual:
             individual = individual_lookup['{}_{}'.format(family_id, individual_id)].get(family_id)
     else:
+        # TODO
         individual = next((i for i in individuals.values()), None)
     return individual, individual_id
 

@@ -764,6 +764,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
 
     @classmethod
     def _clinvar_path_q(cls, pathogenicity):
+        # TODO
         return None
 
     @staticmethod
@@ -1312,6 +1313,7 @@ class BaseEntriesManager(SearchQuerySet):
             if annotate_num_families:
                 entries = entries.annotate(numFamilies=Count('family_guid'))
             elif skip_entry_fields:
+                # TODO
                 entries = entries.distinct('key')
             else:
                 gt_field, gt_expression = self.genotype_expression(sample_data)

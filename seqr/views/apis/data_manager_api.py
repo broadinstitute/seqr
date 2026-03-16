@@ -94,6 +94,7 @@ def update_rna_seq(request):
 
 
 def _get_sample_file_path(file_dir, sample_guid):
+    # TODO
     return os.path.join(file_dir, f'{sample_guid}.json.gz')
 
 

@@ -507,6 +507,7 @@ class HgmdMvMeta(RefreshableMaterializedViewMeta):
 HGMD_INFO_STRUCTURE = 'CHROM String, POS UInt32, ID String, REF String, ALT String, QUAL String, FILTER String, INFO String'
 
 def _hgmd_source(url):
+    # TODO
     if not url:
         return f"null('{HGMD_INFO_STRUCTURE}')"
     return f"gcs(pipeline_data_access, url='{url}', format='TSV', structure='{HGMD_INFO_STRUCTURE}')"

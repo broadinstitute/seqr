@@ -57,6 +57,7 @@ def _get_exception_status_code(exception):
     try:
         return status(exception)
     except Exception:
+        # TODO
         return 500
 
 def _get_core_exception_json(exception):

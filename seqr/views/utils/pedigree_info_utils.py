@@ -49,6 +49,7 @@ def parse_pedigree_table(parsed_file, filename, user, project):
         if not user_is_pm(user):
             raise ValueError('Unsupported file format')
         if not project:
+            # TODO
             raise ValueError('Project argument required for parsing sample manifest')
         header, rows = _parse_merged_pedigree_sample_manifest_rows(parsed_file[1:])
     else:
@@ -306,6 +307,7 @@ def validate_fam_file_records(project, records, errors=None, clear_invalid_value
                     sex=Individual.SEX_LOOKUP[r[JsonConstants.SEX_COLUMN]]
                 )
                 if clear_invalid_values:
+                    # TODO
                     r[JsonConstants.PROBAND_RELATIONSHIP] = None
                     warnings.append(f'Skipped {message}')
                 else:

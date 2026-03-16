@@ -140,6 +140,7 @@ def update_project_handler(request, project_guid):
 @pm_required
 def update_project_workspace(request, project_guid):
     if not is_anvil_authenticated(request.user):
+        # TODO
         raise PermissionDenied()
 
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)

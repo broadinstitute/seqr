@@ -510,6 +510,7 @@ class DataManagerAPITest(AirtableTest):
                 for log in reversed(additional_logs):
                     expected_logs.insert(additional_logs_offset, log)
             else:
+                # TODO
                 expected_logs += additional_logs
 
         self.assert_json_logs(user, expected_logs)
