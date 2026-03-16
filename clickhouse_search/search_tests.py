@@ -164,7 +164,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         return response, search_hash, search_body
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, skip_cache_check=False, response_search=None, project_families=None, additional_response=None, export_data=None, **kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, skip_cache_check=False, response_search=None, project_families=None, additional_response=None, export_data=None, cache_sort=None, **kwargs):
         response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
@@ -186,7 +186,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertDictEqual(response.json(), expected_response)
 
         if not skip_cache_check:
-            cache_key = f'search_results__VRS{search_hash:07d}__{sort}'
+            cache_key = f'search_results__VRS{search_hash:07d}__{cache_sort or sort}'
             cached_variants = self._format_cached_variants(expected_results, cached_variant_fields=cached_variant_fields)
             self.assert_cached_results(cached_variants, cache_key)
 
@@ -668,7 +668,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search(
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3],
             inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
-            exclude=exclude, cached_variant_fields=[
+            exclude=exclude,  cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}],
                 [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
                 {}, {},
@@ -1907,9 +1907,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [VARIANT1, MITO_VARIANT3, VARIANT2, MITO_VARIANT1, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT2], sort='pathogenicity', annotations=None,
         )
 
+        self.login_analyst_user()
         self._assert_expected_search(
             [VARIANT1, MITO_VARIANT3, VARIANT2, MITO_VARIANT1, VARIANT3, VARIANT4,  GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT2],
-            sort='pathogenicity_hgmd', project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
+            sort='pathogenicity', cache_sort='pathogenicity_hgmd', project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
         sorted_variants = [MITO_VARIANT1, MITO_VARIANT2, VARIANT4, VARIANT2, VARIANT3, MITO_VARIANT3, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4]
@@ -1977,6 +1978,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [GCNV_VARIANT1, GCNV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT3, VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], sort='size', locus=None,
         )
 
+        self.login_manager()
         self._assert_expected_search(
             [SV_VARIANT4, SV_VARIANT1, SV_VARIANT3, SV_VARIANT2], sort='size', project_families=SV_PROJECT_FAMILIES,
         )
