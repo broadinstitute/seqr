@@ -16,8 +16,8 @@ import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTag
 import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
 import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
 import { GENOME_VERSION_FIELD, GENOME_VERSION_37, GENOME_VERSION_38 } from 'shared/utils/constants'
-import { sendVlmContactEmail } from '../reducers'
-import { getVlmDefaultContactEmails, getVlmFamiliesByContactEmail } from '../selectors'
+import { sendVlmContactEmail } from './reducers'
+import { getVlmDefaultContactEmails, getVlmFamiliesByContactEmail } from './selectors'
 
 const FIELDS = [
   {
@@ -205,7 +205,6 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams, vlmEnabled
     <Grid.Row>
       <Grid.Column width={5} />
       <Grid.Column width={6}>
-        <Header dividing size="medium" content="Lookup Variant" />
         <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
       </Grid.Column>
       <Grid.Column width={5} />

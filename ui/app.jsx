@@ -10,6 +10,7 @@ import Dashboard from 'pages/Dashboard/Dashboard'
 import Project from 'pages/Project/Project'
 import LoadWorkspaceData, { WorkspaceAccessError } from 'pages/AnvilWorkspace/LoadWorkspaceData'
 import VariantSearch from 'pages/Search/VariantSearch'
+import VariantLookup from 'pages/Search/VariantLookup'
 import DataManagement from 'pages/DataManagement/DataManagement'
 import Report from 'pages/Report/Report'
 import SummaryData from 'pages/SummaryData/SummaryData'
@@ -50,6 +51,7 @@ ReactDOM.render(
           <Route path="/create_project_from_workspace/:workspaceNamespace/:workspaceName" component={LoadWorkspaceData} />
           <Route path="/workspace/:workspaceNamespace/:workspaceName" component={WorkspaceAccessError} />
           <Route path="/variant_search" component={VariantSearch} />
+          <Route path="/variant_lookup" component={VariantLookup} />
           <Route path="/data_management" component={DataManagement} />
           <Route path="/report" component={Report} />
           <Route path="/summary_data" component={SummaryData} />

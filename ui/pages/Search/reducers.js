@@ -219,6 +219,11 @@ export const loadGeneBreakdown = searchHash => (dispatch, getState) => {
   }
 }
 
+// TODO update url path
+export const sendVlmContactEmail = values => () => new HttpRequestHelper(
+  '/api/summary_data/send_vlm_email',
+).post(values)
+
 // reducers
 
 export const reducers = {

@@ -158,6 +158,7 @@ react_app_pages = [
     'gene_info/.*',
     'gene_lists/.*',
     'variant_search/.*',
+    'variant_lookup/.*',
     'report/.*',
     'data_management/.*',
     'summary_data/.*',

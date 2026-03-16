@@ -26,6 +26,7 @@ const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit }) => {
       <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
       {Object.keys(user).length ? [
         <Menu.Item key="search" as={Link} to="/variant_search" content="Search" />,
+        <Menu.Item key="variant_lookup" as={Link} to="/variant_lookup" content="Variant Lookup" />,
         <Menu.Item key="summary_data" as={Link} to="/summary_data" content="Summary Data" />,
         (user.isAnalyst || user.isPm) ? <Menu.Item key="report" as={Link} to="/report" content="Reports" /> : null,
         (user.isDataManager || user.isPm) ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
