@@ -88,7 +88,7 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     if search.get('no_access_project_genome_version'):
         logger.info('Looking up variants in projects with no user access', user)
         results += _get_search_results(
-        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **search, sample_data=None, skip_entry_fields=True, annotate_num_families=True,
+        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **search, sample_data=None, skip_entry_fields=True,
             exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
         )
 

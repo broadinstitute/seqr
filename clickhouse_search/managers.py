@@ -40,10 +40,6 @@ class SearchQuerySet(QuerySet):
         )
 
     @classmethod
-    def _clinvar_path_q(cls, pathogenicity):
-        return cls._clinvar_filter_q(pathogenicity, allowed_filters=CLINVAR_PATH_SIGNIFICANCES)
-
-    @classmethod
     def _clinvar_filter_q(cls, pathogenicity, allowed_filters=None):
         clinvar_filters = (pathogenicity or {}).get(CLINVAR_KEY)
         if allowed_filters:
@@ -762,11 +758,6 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
         annotations['transcripts'] = annotations.pop(self.model.sorted_gene_consequences.field.db_column)
         return annotations
 
-    @classmethod
-    def _clinvar_path_q(cls, pathogenicity):
-        # TODO
-        return None
-
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
         expressions = [f'x.{index}', f'sample_{col}']
@@ -1019,6 +1010,10 @@ class BaseEntriesManager(SearchQuerySet):
     @property
     def callset_filter_field(self):
         return 'callset'
+
+    @classmethod
+    def _clinvar_path_q(cls, pathogenicity):
+        return cls._clinvar_filter_q(pathogenicity, allowed_filters=CLINVAR_PATH_SIGNIFICANCES)
 
     def search(self, sample_data, exclude_keys=None, **kwargs):
         entries = self.filter_locus(**kwargs)
@@ -1302,7 +1297,7 @@ class BaseEntriesManager(SearchQuerySet):
             fields.append('seqrPop')
         return fields
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, annotate_num_families=False, override_annotations=None, **kwargs):
+    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, override_annotations=None, **kwargs):
         if annotate_hom_alts:
             entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
 
@@ -1310,11 +1305,8 @@ class BaseEntriesManager(SearchQuerySet):
 
         if multi_sample_type_families or sample_data is None or sample_data['num_families'] > 1:
             entries = entries.values(*fields)
-            if annotate_num_families:
+            if skip_entry_fields:
                 entries = entries.annotate(numFamilies=Count('family_guid'))
-            elif skip_entry_fields:
-                # TODO
-                entries = entries.distinct('key')
             else:
                 gt_field, gt_expression = self.genotype_expression(sample_data)
                 entries = entries.annotate(
