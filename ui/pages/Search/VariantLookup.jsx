@@ -250,6 +250,11 @@ VariantDisplay.propTypes = {
   variants: PropTypes.arrayOf(PropTypes.object),
 }
 
+const onQueryParamSubmit = (updateQueryParams, data) => {
+  updateQueryParams(data)
+  return Promise.resolve()
+}
+
 const passThroughResponse = response => response
 
 const BaseVariantLookupResults = ({ queryParams, receiveData, vlmEnabled }) => ([
@@ -337,7 +342,7 @@ const GENE_LOOKUP_HEADER = {
   ),
 }
 
-const VariantLookupRoute = ({ match, formProps, onSubmit, ...props }) => (
+const BaseVariantLookup = ({ match, formProps, onSubmit, ...props }) => (
   <Grid divided="vertically" centered>
     <Grid.Row>
       <Grid.Column width={16}>
@@ -357,11 +362,11 @@ const VariantLookupRoute = ({ match, formProps, onSubmit, ...props }) => (
       </Grid.Column>
       <Grid.Column width={match.params.gene ? 1 : 5} />
     </Grid.Row>
-    {match.params.gene ? JSON.stringify(props) : <VariantLookupResults {...props} />}
+    {!match.params.gene && <VariantLookupResults {...props} />}
   </Grid>
 )
 
-VariantLookupRoute.propTypes = {
+BaseVariantLookup.propTypes = {
   match: PropTypes.object,
   formProps: PropTypes.object,
   onSubmit: PropTypes.func,
@@ -379,11 +384,6 @@ const mapStateToProps = (state, ownProps) => ({
   },
 })
 
-const onQueryParamSubmit = (updateQueryParams, data) => {
-  updateQueryParams(data)
-  return Promise.resolve()
-}
-
 const mapDispatchToProps = (dispatch, ownProps) => ({
   onSubmit: data => (ownProps.match.params.gene ?
     dispatch(navigateSavedHashedSearch(data)) :
@@ -391,10 +391,10 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
   ),
 })
 
-const ConnectedVariantLookup = connect(mapStateToProps, mapDispatchToProps)(VariantLookupRoute)
+const VariantLookup = connect(mapStateToProps, mapDispatchToProps)(BaseVariantLookup)
 
 export default props => (
   <QueryParamsEditor {...props}>
-    <ConnectedVariantLookup />
+    <VariantLookup />
   </QueryParamsEditor>
 )
