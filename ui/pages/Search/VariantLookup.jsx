@@ -76,7 +76,7 @@ const validateAnnotations = (value, { search }) => (
   value || Object.values(search.annotations || {}).some(val => val.length) ? undefined : 'At least one consequence filter is required'
 )
 
-const CONSEQUENCE_FILEDS = [
+const CONSEQUENCE_FIELDS = [
   VEP_GROUP_NONSENSE,
   VEP_GROUP_ESSENTIAL_SPLICE_SITE,
   VEP_GROUP_FRAMESHIFT,
@@ -105,7 +105,7 @@ const GENE_LOOKUP_FIELDS = [
     placeholder: 'Search for gene',
     validate: validators.required,
   },
-  ...CONSEQUENCE_FILEDS,
+  ...CONSEQUENCE_FIELDS,
 ]
 
 const INITIAL_GENE_LOOKUP_VALUES = {
@@ -317,7 +317,7 @@ const GENE_LOOKUP_HEADER = {
   content: 'Lookup Variants in Gene',
   subheader: (
     <Header.Subheader>
-      Lookup up all rare variants is seqr in a given gene, regardless of whether or not they are in your
+      Lookup up all rare variants in seqr in a given gene, regardless of whether or not they are in your
       projects.
       <br />
       Variants are only returned if they have a gnomAD Allele Frequency &lt; 3%
