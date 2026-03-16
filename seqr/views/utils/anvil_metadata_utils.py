@@ -471,7 +471,6 @@ def _get_variant_main_transcript(variant_model):
             main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
             if main_transcript:
                 if 'geneId' not in main_transcript:
-                    # TODO
                     main_transcript['geneId'] = gene_id
                 return main_transcript
     elif len(variant.get('transcripts', {})) == 1:

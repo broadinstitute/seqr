@@ -141,7 +141,6 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
 
     # Update the parent ids last, so if they are referencing updated individuals they will check for the correct ID
     if 'father' in record or 'mother' in record:
-        # TODO
         parent_updates.append({
             'individual': individual,
             'mother': record.pop('mother', None),

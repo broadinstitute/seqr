@@ -529,7 +529,6 @@ def _get_saved_variant_models(variants, families):
         for family_guid in variant.get('familyGuids', []):
             variant_ids_by_family[family_guid].add(variant['variantId'])
         if variant.get('liftedOverGenomeVersion') == GENOME_VERSION_GRCh37 and hg37_family_guids:
-            # TODO
             variant_hg37_families = [family_guid for family_guid in variant['familyGuids'] if family_guid in hg37_family_guids]
             if variant_hg37_families:
                 lifted_xpos = get_xpos(variant['liftedOverChrom'], variant['liftedOverPos'])
