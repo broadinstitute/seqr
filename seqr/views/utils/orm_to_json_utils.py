@@ -267,18 +267,6 @@ INDIVIDUAL_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'indi
 
 def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sample_guids_field=False,
                               add_hpo_details=False, is_analyst=None, has_case_review_perm=False):
-    """Returns a JSON representation for the given list of Individuals.
-
-    Args:
-        individuals (array): array of django models for the individual.
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-        project_guid (string): An optional field to use as the projectGuid instead of querying the DB
-        family_guid (boolean): An optional field to use as the familyGuid instead of querying the DB
-        add_sample_guids_field (boolean): A flag to indicate weather sample ids should be added
-    Returns:
-        array: array of json objects
-    """
-
     additional_model_fields = _get_case_review_fields(individuals.model, has_case_review_perm)
     nested_fields = [
         {'fields': ('family', 'guid')},
