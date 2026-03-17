@@ -425,18 +425,18 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
      and transcript.get('spliceregion', {}).get('extended_intronic_splice_region_variant') == minimal_transcript.get('extendedIntronicSpliceRegionVariant'))
 
 
-def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, has_comp_het=False, secondary_dataset_types=None, inheritance_mode=None, inheritance_filter=None):
+def _get_valid_samples(families, dataset_types, secondary_dataset_types, allow_no_samples):
     samples = Sample.objects.filter(individual__family__in=families, is_active=True)
     if not samples.exists():
         if allow_no_samples:
-            return {}
+            return None
         raise InvalidSearchException(f'No search data found for families {", ".join([f.family_id for f in families])}')
 
     if dataset_types:
         samples = samples.filter(dataset_type__in={*dataset_types, *(secondary_dataset_types or [])})
         if not samples and not allow_no_samples:
             if allow_no_samples:
-                return {}
+                return None
             raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')
 
     mismatch_affected_samples = samples.values('sample_id', 'dataset_type').annotate(
@@ -448,6 +448,13 @@ def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid
             'The following samples are incorrectly configured and have different affected statuses in different projects: ' +
             ', '.join([f'{agg["sample_id"]} ({"/ ".join(agg["projects"])})' for agg in mismatch_affected_samples]),
         )
+
+    return samples
+
+def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, has_comp_het=False, secondary_dataset_types=None, inheritance_mode=None, inheritance_filter=None):
+    samples = _get_valid_samples(families, dataset_types, secondary_dataset_types, allow_no_samples)
+    if not samples:
+        return {}
 
     skip_individual_guid = (
         skip_multi_project_individual_guid and samples.values('individual__family__project_id').distinct().count() > 1
@@ -525,6 +532,15 @@ def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid
             'num_families': len(set().union(*data['sample_type_families'].values())),
         }
 
+    _validate_dataset_types(
+        samples_by_dataset_type, dataset_types, secondary_dataset_types, has_comp_het, genotype_filter,
+    )
+    _add_missing_multi_type_samples(samples, samples_by_dataset_type)
+
+    return samples_by_dataset_type
+
+
+def _validate_dataset_types(samples_by_dataset_type, dataset_types, secondary_dataset_types, has_comp_het, genotype_filter):
     if not samples_by_dataset_type:
         raise InvalidSearchException(
             'Invalid custom inheritance' if genotype_filter else
@@ -543,10 +559,6 @@ def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid
             raise InvalidSearchException(
                 f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
             )
-
-    _add_missing_multi_type_samples(samples, samples_by_dataset_type)
-
-    return samples_by_dataset_type
 
 
 def _add_missing_multi_type_samples(samples, samples_by_dataset_type):
