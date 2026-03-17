@@ -130,6 +130,7 @@ def _get_previous_search_results(search_model, sort):
 
 
 def query_variants(search_model, sort, page, num_results, user):
+    resp = _query_variants(search_model, user, sort=sort)
     previous_search_results, genome_version = _query_variants(search_model, user, sort=sort)
 
     all_results = previous_search_results.get('all_results') or []
@@ -154,13 +155,12 @@ def _query_variants(search_model, user, sort=None, **kwargs):
 
     samples = Sample.objects.filter(individual__family__in=families, is_active=True)
     if len(samples) < 1:
-        if parsed_search.get('no_access_project_genome_version'):
-            return samples
-        raise InvalidSearchException('No search data found for families {}'.format(
-            ', '.join([f.family_id for f in families])))
+        if not parsed_search.get('no_access_project_genome_version'):
+            raise InvalidSearchException('No search data found for families {}'.format(
+                ', '.join([f.family_id for f in families])))
     if dataset_types:
         samples = samples.filter(dataset_type__in={*dataset_types, *(secondary_dataset_types or [])})
-        if not samples:
+        if not samples and not parsed_search.get('no_access_project_genome_version'):
             raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')
     if parsed_search.get('inheritance_mode') or parsed_search.get('inheritance_filter'):
         samples = samples.select_related('individual')
@@ -325,8 +325,11 @@ def _search_dataset_type(search, genome_version):
         if secondary_dataset_types and len(dataset_types) == 0 and dataset_types[0] == Sample.DATASET_TYPE_SV_CALLS:
             secondary_dataset_types = [dt for dt in secondary_dataset_types if dt != Sample.DATASET_TYPE_MITO_CALLS]
 
-    if search.get('inheritance_mode') == X_LINKED_RECESSIVE and Sample.DATASET_TYPE_MITO_CALLS in dataset_types:
-        dataset_types.remove(Sample.DATASET_TYPE_MITO_CALLS)
+    if search.get('inheritance_mode') == X_LINKED_RECESSIVE:
+        if not dataset_types:
+            dataset_types = [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_SV_CALLS]
+        elif Sample.DATASET_TYPE_MITO_CALLS in dataset_types:
+            dataset_types.remove(Sample.DATASET_TYPE_MITO_CALLS)
 
     return dataset_types, secondary_dataset_types
 
