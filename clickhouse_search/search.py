@@ -532,11 +532,13 @@ def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid
         )
 
     if has_comp_het and secondary_dataset_types:
+        sample_dataset_types = {
+            Sample.DATASET_TYPE_SV_CALLS if dt.startswith(Sample.DATASET_TYPE_SV_CALLS) else dt
+            for dt in samples_by_dataset_type
+        }
         invalid_type = next((
-            dts[0] for dts in [dataset_types, secondary_dataset_types] if dts and not any(
-            dt for dt in dts if (Sample.DATASET_TYPE_SV_CALLS if dt.startswith(Sample.DATASET_TYPE_SV_CALLS) else dt)
-            in samples_by_dataset_type
-        )), None)
+            dts[0] for dts in [dataset_types, secondary_dataset_types] if dts and not sample_dataset_types.intersection(dts)
+        ), None)
         if invalid_type:
             raise InvalidSearchException(
                 f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
