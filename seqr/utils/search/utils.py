@@ -150,6 +150,8 @@ def _query_variants(search_model, user, sort=None, **kwargs):
 
     parsed_search = _parse_search(search, genome_version, user)
     search_dataset_types, comp_het_dts = _search_dataset_type(parsed_search, genome_version)
+    if parsed_search.get('inheritance_mode') == X_LINKED_RECESSIVE and Sample.DATASET_TYPE_MITO_CALLS in search_dataset_types:
+        search_dataset_types.remove(Sample.DATASET_TYPE_MITO_CALLS)
 
     _validate_search(parsed_search, families)
 
@@ -163,8 +165,6 @@ def _query_variants(search_model, user, sort=None, **kwargs):
         samples = samples.filter(dataset_type__in=search_dataset_types)
         if not samples:
             raise InvalidSearchException(f'Unable to search against dataset type "{search_dataset_types[0]}"')
-    if parsed_search.get('inheritance_mode') == X_LINKED_RECESSIVE:
-        samples = samples.exclude(dataset_type=Sample.DATASET_TYPE_MITO_CALLS)
     if parsed_search.get('inheritance_mode') or parsed_search.get('inheritance_filter'):
         samples = samples.select_related('individual')
         if samples:
