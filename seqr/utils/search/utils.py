@@ -5,7 +5,7 @@ from datetime import timedelta
 from pyliftover.liftover import LiftOver
 
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
-    get_clickhouse_cache_results, clickhouse_variant_lookup, get_clickhouse_variant_by_id
+    get_clickhouse_cache_results, clickhouse_variant_lookup, get_clickhouse_variant_by_id, InvalidSearchException
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Individual, Project, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
@@ -16,9 +16,6 @@ from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
 
 logger = SeqrLogger(__name__)
-
-class InvalidSearchException(Exception):
-    pass
 
 
 SEARCH_EXCEPTION_ERROR_MAP = {

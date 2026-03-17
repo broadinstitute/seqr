@@ -24,6 +24,9 @@ from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
 logger = SeqrLogger(__name__)
 
+class InvalidSearchException(Exception):
+    pass
+
 BATCH_SIZE = 10000
 
 TRANSCRIPT_CONSEQUENCES_FIELD = 'sortedTranscriptConsequences'
@@ -111,7 +114,6 @@ def _get_search_results(*args, skip_entry_fields=False, **search_kwargs):
 def _evaluate_results(result_q, is_comp_het=False):
     results = [list(result[1:]) if is_comp_het else result for result in result_q[:MAX_VARIANTS + 1]]
     if len(results) > MAX_VARIANTS:
-        from seqr.utils.search.utils import InvalidSearchException
         raise InvalidSearchException('This search returned too many results')
     return results
 
@@ -423,7 +425,6 @@ def _get_sample_data(samples, skip_multi_project_individual_guid=False, annotate
         affected=ArrayAgg('individual__affected', distinct=True),
     ).filter(affected__len__gt=1)
     if mismatch_affected_samples:
-        from seqr.utils.search.utils import InvalidSearchException
         raise InvalidSearchException(
             'The following samples are incorrectly configured and have different affected statuses in different projects: ' +
             ', '.join([f'{agg["sample_id"]} ({"/ ".join(agg["projects"])})' for agg in mismatch_affected_samples]),
