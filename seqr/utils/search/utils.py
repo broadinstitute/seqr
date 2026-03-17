@@ -148,10 +148,7 @@ def _query_variants(search_model, user, sort=None, **kwargs):
     _validate_sort(sort, families)
 
     parsed_search = _parse_search(search, genome_version, user)
-    search_dataset_types, comp_het_dts = _search_dataset_type(parsed_search, genome_version)
-    if parsed_search.get('inheritance_mode') == X_LINKED_RECESSIVE and Sample.DATASET_TYPE_MITO_CALLS in search_dataset_types:
-        search_dataset_types.remove(Sample.DATASET_TYPE_MITO_CALLS)
-
+    dataset_types, secondary_dataset_types = _search_dataset_type(parsed_search, genome_version)
     _validate_search(parsed_search, families)
 
     samples = _get_filtered_search_samples({'individual__family__in': families})
@@ -160,10 +157,10 @@ def _query_variants(search_model, user, sort=None, **kwargs):
             return samples
         raise InvalidSearchException('No search data found for families {}'.format(
             ', '.join([f.family_id for f in families])))
-    if search_dataset_types:
-        samples = samples.filter(dataset_type__in=search_dataset_types)
+    if dataset_types:
+        samples = samples.filter(dataset_type__in={*dataset_types, *(secondary_dataset_types or [])})
         if not samples:
-            raise InvalidSearchException(f'Unable to search against dataset type "{search_dataset_types[0]}"')
+            raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')
     if parsed_search.get('inheritance_mode') or parsed_search.get('inheritance_filter'):
         samples = samples.select_related('individual')
         if samples:
@@ -171,9 +168,10 @@ def _query_variants(search_model, user, sort=None, **kwargs):
             if skipped_samples:
                 samples = samples.exclude(id__in=[s.id for s in skipped_samples])
 
-    if (parsed_search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET}) and comp_het_dts:
+    if (parsed_search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET}) and secondary_dataset_types:
         invalid_type = next((
-            dts[0] for dts in comp_het_dts if samples.filter(dataset_type__in=dts).count() < 1
+            dts[0] for dts in [dataset_types, secondary_dataset_types]
+            if dts and samples.filter(dataset_type__in=dts).count() < 1
         ), None)
         if invalid_type:
             raise InvalidSearchException(
@@ -314,25 +312,22 @@ def _validate_sort(sort, families):
 
 def _search_dataset_type(search, genome_version):
     parsed_variant_ids = search.get('parsed_variant_ids')
-    comp_het_dts = []
+    secondary_dataset_types = None
     if parsed_variant_ids:
-        search_dataset_types = _chromosome_filter_dataset_types([vid[0] for vid in parsed_variant_ids])
+        dataset_types = _chromosome_filter_dataset_types([vid[0] for vid in parsed_variant_ids])
     else:
         chroms = [gene[f'chromGrch{genome_version}'] for gene in (search.get('genes') or {}).values()] + [
             interval['chrom'] for interval in (search.get('intervals') or [])
         ] if not search.get('exclude_locations') else None
         dataset_types = _annotation_dataset_type(search.get('annotations'), chroms, pathogenicity=search.get('pathogenicity'), exclude_svs=search.pop('exclude_svs', False))
         secondary_dataset_types = _annotation_dataset_type(search['annotations_secondary'], chroms) if search.get('annotations_secondary') else None
+        if secondary_dataset_types and len(dataset_types) == 0 and dataset_types[0] == Sample.DATASET_TYPE_SV_CALLS:
+            secondary_dataset_types = [dt for dt in secondary_dataset_types if dt != Sample.DATASET_TYPE_MITO_CALLS]
 
-        search_dataset_types = dataset_types
-        if dataset_types and secondary_dataset_types and dataset_types != secondary_dataset_types:
-            if len(dataset_types) == 0 and dataset_types[0] == Sample.DATASET_TYPE_SV_CALLS:
-                secondary_dataset_types = [dt for dt in secondary_dataset_types if dt != Sample.DATASET_TYPE_MITO_CALLS]
-            search_dataset_types = {*dataset_types, *secondary_dataset_types}
+    if search.get('inheritance_mode') == X_LINKED_RECESSIVE and Sample.DATASET_TYPE_MITO_CALLS in dataset_types:
+        dataset_types.remove(Sample.DATASET_TYPE_MITO_CALLS)
 
-            comp_het_dts = [dataset_types, secondary_dataset_types]
-
-    return search_dataset_types, comp_het_dts
+    return dataset_types, secondary_dataset_types
 
 
 def _variant_id_dataset_type(parsed_variant_id):
