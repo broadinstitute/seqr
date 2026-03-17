@@ -1,6 +1,8 @@
 from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
+
+from pyarrow.dataset import dataset
 from pyliftover.liftover import LiftOver
 
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
@@ -339,20 +341,21 @@ def _search_dataset_type(search, genome_version):
 
 def _variant_ids_dataset_types(all_variant_ids):
     variant_ids = [v for v in all_variant_ids if v]
-    any_sv = len(variant_ids) < len(all_variant_ids)
-    if len(variant_ids) == 0:
-        return [Sample.DATASET_TYPE_SV_CALLS]
-    return  _chromosome_filter_dataset_types([vid[0] for vid in variant_ids], any_sv)
+    dataset_types = []
+    if len(variant_ids) < len(all_variant_ids):
+        dataset_types.append(Sample.DATASET_TYPE_SV_CALLS)
+    if variant_ids:
+        dataset_types += _chromosome_filter_dataset_types([vid[0] for vid in variant_ids])
+    return  dataset_types
 
-def _chromosome_filter_dataset_types(chroms, any_sv):
+
+def _chromosome_filter_dataset_types(chroms):
     has_mito = [chrom for chrom in chroms if chrom.replace('chr', '').startswith('M')]
     if len(has_mito) == len(chroms):
         return [Sample.DATASET_TYPE_MITO_CALLS]
     dataset_types = [Sample.DATASET_TYPE_VARIANT_CALLS]
     if has_mito:
         dataset_types.append(Sample.DATASET_TYPE_MITO_CALLS)
-    if any_sv:
-        dataset_types.append(Sample.DATASET_TYPE_SV_CALLS)
     return dataset_types
 
 
@@ -364,12 +367,13 @@ def _annotation_dataset_type(annotations, chroms, pathogenicity=None, exclude_sv
     if annotations and annotation_types.issubset(SV_ANNOTATION_TYPES) and not pathogenicity:
         return [Sample.DATASET_TYPE_SV_CALLS]
 
+    dataset_types = _chromosome_filter_dataset_types(chroms) if chroms else [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS]
+
     no_svs = exclude_svs or (annotations and annotation_types.isdisjoint(SV_ANNOTATION_TYPES))
-    if chroms:
-        return _chromosome_filter_dataset_types(chroms, any_sv=not no_svs)
-    elif no_svs:
-        return [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS]
-    return None
+    if not no_svs:
+        dataset_types.append(Sample.DATASET_TYPE_SV_CALLS)
+
+    return dataset_types
 
 
 def _parse_inheritance(search):
