@@ -130,7 +130,6 @@ def _get_previous_search_results(search_model, sort):
 
 
 def query_variants(search_model, sort, page, num_results, user):
-    resp = _query_variants(search_model, user, sort=sort)
     previous_search_results, genome_version = _query_variants(search_model, user, sort=sort)
 
     all_results = previous_search_results.get('all_results') or []
