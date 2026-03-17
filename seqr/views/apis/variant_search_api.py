@@ -12,15 +12,15 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
-from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
     variant_lookup, parse_variant_id, export_variants
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.search.utils import InvalidSearchException
-from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
+from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
@@ -31,6 +31,8 @@ from seqr.views.utils.permissions_utils import check_project_permissions, get_pr
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variants_response
 from seqr.views.utils.vlm_utils import vlm_lookup
+
+logger = SeqrLogger(__name__)
 
 
 GENOTYPE_AC_LOOKUP = {
@@ -544,12 +546,12 @@ def variant_lookup_handler(request):
         (i['familyGuid'], i['individualId']): i['individualGuid'] for i in response['individualsByGuid'].values()
     }
     for variant in variants:
-        _update_lookup_variant(variant, response, individual_guid_map)
+        _update_lookup_variant(variant, response, individual_guid_map, request.user)
 
     return create_json_response(response)
 
 
-def _update_lookup_variant(variant, response, individual_guid_map):
+def _update_lookup_variant(variant, response, individual_guid_map, user):
     no_access_families = set(variant['familyGenotypes']) - set(variant['familyGuids'])
     individual_summary_map = {
         (i.pop('family__guid'), i.pop('individual_id')): (i.pop('guid'), i)
@@ -565,7 +567,13 @@ def _update_lookup_variant(variant, response, individual_guid_map):
     variant['familyGuids'] = []
     for family_guid in variant['lookupFamilyGuids']:
         for genotype in variant['familyGenotypes'].pop(family_guid):
-            individual_guid = individual_guid_map[(family_guid, genotype['sampleId'])]
+            individual_guid = individual_guid_map.get((family_guid, genotype['sampleId']))
+            if not individual_guid:
+                logger.error(
+                    f'Unable to map sample {genotype["sampleId"]} in family {family_guid} to an individual for variant {variant["variantId"]}',
+                    user,
+                )
+                continue
             genotype = {**genotype, 'individualGuid': individual_guid}
             if individual_guid in variant['genotypes']:
                 genotype = [variant['genotypes'][individual_guid], genotype]
