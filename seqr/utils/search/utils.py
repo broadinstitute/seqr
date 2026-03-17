@@ -57,14 +57,14 @@ def _get_search_genome_version(search_model):
     return next(iter(project_versions.keys()))
 
 
-def get_single_variant(family, variant_id, user=None):
+def get_single_variant(family, variant_id):
     parsed_variant_id = parse_variant_id(variant_id)
     dataset_type = _variant_id_dataset_type(parsed_variant_id)
     samples = _get_filtered_search_samples({'individual__family_id': family.id})
     if len(samples) < 1:
         raise InvalidSearchException(f'No search data found for families {family.family_id}')
     variant = get_clickhouse_variant_by_id(
-        variant_id, parsed_variant_id, samples, family.project.genome_version, dataset_type,
+        variant_id, parsed_variant_id, family, dataset_type,
     )
     if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
@@ -82,7 +82,6 @@ def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_
     if variants:
         return variants
 
-    # TODO move into search helper func
     parsed_variant_id = parse_variant_id(variant_id)
     dataset_type = _variant_id_dataset_type(parsed_variant_id)
     _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version)
@@ -152,33 +151,7 @@ def _query_variants(search_model, user, sort=None, **kwargs):
     dataset_types, secondary_dataset_types = _search_dataset_type(parsed_search, genome_version)
     _validate_search(parsed_search, families)
 
-    samples = Sample.objects.filter(individual__family__in=families, is_active=True)
-    if len(samples) < 1:
-        if not parsed_search.get('no_access_project_genome_version'):
-            raise InvalidSearchException('No search data found for families {}'.format(
-                ', '.join([f.family_id for f in families])))
-    if dataset_types:
-        samples = samples.filter(dataset_type__in={*dataset_types, *(secondary_dataset_types or [])})
-        if not samples and not parsed_search.get('no_access_project_genome_version'):
-            raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')
-    if parsed_search.get('inheritance_mode') or parsed_search.get('inheritance_filter'):
-        samples = samples.select_related('individual')
-        if samples:
-            skipped_samples = _filter_inheritance_family_samples(samples, parsed_search['inheritance_filter'])
-            if skipped_samples:
-                samples = samples.exclude(id__in=[s.id for s in skipped_samples])
-
-    if (parsed_search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET}) and secondary_dataset_types:
-        invalid_type = next((
-            dts[0] for dts in [dataset_types, secondary_dataset_types]
-            if dts and samples.filter(dataset_type__in=dts).count() < 1
-        ), None)
-        if invalid_type:
-            raise InvalidSearchException(
-                f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
-            )
-
-    get_clickhouse_variants(samples, parsed_search, user, previous_search_results, genome_version, sort=sort, **kwargs)
+    get_clickhouse_variants(families, dataset_types, secondary_dataset_types, parsed_search, user, previous_search_results, genome_version, sort=sort, **kwargs)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
@@ -403,31 +376,6 @@ def _validate_search(search, families):
         raise InvalidSearchException(
             f'seqr AC frequency of at least {MIN_MULTI_FAMILY_SEQR_AC} must be specified to search across multiple families'
         )
-
-
-def _filter_inheritance_family_samples(samples, inheritance_filter):
-    family_groups = defaultdict(set)
-    individual_affected_status = inheritance_filter.get('affected') or {}
-    genotype_filter = None if inheritance_filter.get(Individual.AFFECTED_STATUS_AFFECTED) else inheritance_filter.get('genotype')
-    for sample in samples:
-        if genotype_filter:
-            is_filtered_family = sample.individual.guid in genotype_filter
-        else:
-            affected_status = individual_affected_status.get(sample.individual.guid) or sample.individual.affected
-            is_filtered_family = affected_status == Individual.AFFECTED_STATUS_AFFECTED
-
-        if is_filtered_family:
-            family_groups[sample.individual.family_id].add(sample.dataset_type)
-
-    if not family_groups:
-        raise InvalidSearchException(
-            'Invalid custom inheritance' if genotype_filter else
-            'Inheritance based search is disabled in families with no data loaded for affected individuals'
-        )
-
-    return [
-        s for s in samples if s.dataset_type not in family_groups[s.individual.family_id]
-    ]
 
 
 LIFTOVERS = {

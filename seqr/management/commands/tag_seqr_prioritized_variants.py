@@ -466,7 +466,7 @@ class Command(BaseCommand):
             )
 
         self._run_multi_data_type_comp_het_search(
-            updates, search_counts, samples_by_dataset_type, family_guid_map, project, sample_qs, genes=gene_by_moi[RECESSIVE_MOI],
+            updates, search_counts, samples_by_dataset_type, family_guid_map, project, genes=gene_by_moi[RECESSIVE_MOI],
         )
 
         new_tag_keys = updates['new_tag_keys']
@@ -526,7 +526,7 @@ class Command(BaseCommand):
             )
             run_search_func = cls._run_comp_het_search if config_search['inheritance_mode'] == COMPOUND_HET else cls._run_search
             num_results = run_search_func(
-                search_name, family_variant_data, family_guid_map, dataset_type, sample_data, sample_qs,
+                search_name, family_variant_data, family_guid_map, dataset_type, sample_data,
                 exclude_locations=exclude_locations, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
             )
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
@@ -567,7 +567,7 @@ class Command(BaseCommand):
         return wrapped
 
     @classmethod
-    def _run_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
+    def _run_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, **kwargs):
         results_qs = get_search_queryset(GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs)
 
         variant_fields = []
@@ -579,7 +579,7 @@ class Command(BaseCommand):
             variant_fields += ['familyGenotypes']
 
         results = results_qs.values(*variant_fields, 'key', 'familyGuids', **variant_values)
-        add_individual_guids(results, samples, encode_genotypes_json=True)
+        add_individual_guids(results, encode_genotypes_json=True)
 
         for variant in results:
             for family_guid in variant.pop('familyGuids'):
@@ -590,16 +590,16 @@ class Command(BaseCommand):
         return len(results)
 
     @classmethod
-    def _run_comp_het_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, samples, **kwargs):
+    def _run_comp_het_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, **kwargs):
         queryset = get_data_type_comp_het_results_queryset(
             GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs,
         )
         return cls._execute_comp_het_search(
-            queryset, search_name, family_variant_data, family_guid_map, samples,
+            queryset, search_name, family_variant_data, family_guid_map,
         )
 
     @classmethod
-    def _run_multi_data_type_comp_het_search(cls, updates, search_counts, samples_by_dataset_type, family_guid_map, project, samples, genes):
+    def _run_multi_data_type_comp_het_search(cls, updates, search_counts, samples_by_dataset_type, family_guid_map, project, genes):
         sv_dataset_type = next(dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV'))
         sample_type = sv_dataset_type.split('_')[-1]
         families = set(samples_by_dataset_type[sv_dataset_type].keys()).intersection(samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].keys())
@@ -623,16 +623,16 @@ class Command(BaseCommand):
                 GENOME_VERSION_GRCh38, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families=len(families),
                 genes=genes, **config_search, **ALL_SEARCHES_CRITERIA,
             )
-            num_results = cls._execute_comp_het_search(queryset, search_name, family_variant_data, family_guid_map, samples)
+            num_results = cls._execute_comp_het_search(queryset, search_name, family_variant_data, family_guid_map)
             logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
 
         cls._bulk_tag_variants(family_variant_data, updates)
 
     @classmethod
-    def _execute_comp_het_search(cls, queryset, search_name, family_variant_data, family_guid_map, samples):
+    def _execute_comp_het_search(cls, queryset, search_name, family_variant_data, family_guid_map):
         results = [list(v[1:]) for v in queryset]
-        add_individual_guids(results, samples, encode_genotypes_json=True)
+        add_individual_guids(results, encode_genotypes_json=True)
         for pair in results:
             for family_guid in pair[0]['familyGuids']:
                 for variant, support_id in [(pair[0], pair[1]['key']), (pair[1], pair[0]['key'])]:
