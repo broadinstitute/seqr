@@ -2,7 +2,6 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
 
-from pyarrow.dataset import dataset
 from pyliftover.liftover import LiftOver
 
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
