@@ -1280,7 +1280,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733'],
         )
 
-        # Test error handling when sample is present in clickhouse but absent in postgres
+        # Test error handling when the ClickHouse sampleId cannot be mapped to any Postgres Individual
         self.reset_logs()
         Individual.objects.filter(guid='I000006_hg00733').update(individual_id='unmapped_id')
         missing_gt_variant = {
