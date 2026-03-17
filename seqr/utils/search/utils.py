@@ -62,12 +62,12 @@ def _get_search_genome_version(search_model):
 
 def get_single_variant(family, variant_id, user=None):
     parsed_variant_id = parse_variant_id(variant_id)
-    dataset_types = _variant_ids_dataset_types([parsed_variant_id])
+    dataset_type = _variant_id_dataset_type(parsed_variant_id)
     samples = _get_filtered_search_samples({'individual__family_id': family.id})
     if len(samples) < 1:
         raise InvalidSearchException(f'No search data found for families {family.family_id}')
     variant = get_clickhouse_variant_by_id(
-        variant_id, parsed_variant_id, samples, family.project.genome_version, dataset_types[0],
+        variant_id, parsed_variant_id, samples, family.project.genome_version, dataset_type,
     )
     if not variant:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
@@ -85,8 +85,9 @@ def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_
     if variants:
         return variants
 
+    # TODO move into search helper func
     parsed_variant_id = parse_variant_id(variant_id)
-    dataset_type = _variant_ids_dataset_types([parsed_variant_id])[0]
+    dataset_type = _variant_id_dataset_type(parsed_variant_id)
     _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version)
 
     variants = clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type, sample_type, genome_version, affected_only, hom_only)
@@ -317,10 +318,9 @@ def _validate_sort(sort, families):
 
 def _search_dataset_type(search, genome_version):
     parsed_variant_ids = search.get('parsed_variant_ids')
-    rsids = search.get('rs_ids')
     comp_het_dts = []
-    if parsed_variant_ids or rsids:
-        search_dataset_types = [Sample.DATASET_TYPE_VARIANT_CALLS] if rsids else _variant_ids_dataset_types(parsed_variant_ids)
+    if parsed_variant_ids:
+        search_dataset_types = _chromosome_filter_dataset_types([vid[0] for vid in parsed_variant_ids])
     else:
         chroms = [gene[f'chromGrch{genome_version}'] for gene in (search.get('genes') or {}).values()] + [
             interval['chrom'] for interval in (search.get('intervals') or [])
@@ -339,14 +339,12 @@ def _search_dataset_type(search, genome_version):
     return search_dataset_types, comp_het_dts
 
 
-def _variant_ids_dataset_types(all_variant_ids):
-    variant_ids = [v for v in all_variant_ids if v]
-    dataset_types = []
-    if len(variant_ids) < len(all_variant_ids):
-        dataset_types.append(Sample.DATASET_TYPE_SV_CALLS)
-    if variant_ids:
-        dataset_types += _chromosome_filter_dataset_types([vid[0] for vid in variant_ids])
-    return  dataset_types
+def _variant_id_dataset_type(parsed_variant_id):
+    if not parsed_variant_id:
+        return Sample.DATASET_TYPE_SV_CALLS
+    if parsed_variant_id[0].replace('chr', '').startswith('M'):
+        return Sample.DATASET_TYPE_MITO_CALLS
+    return Sample.DATASET_TYPE_VARIANT_CALLS
 
 
 def _chromosome_filter_dataset_types(chroms):
