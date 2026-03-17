@@ -8,7 +8,6 @@ from django.contrib.postgres.aggregates import ArrayAgg
 import requests
 from typing import Callable, Iterable
 
-from clickhouse_search.backend.functions import ArrayFilter
 from clickhouse_search.search import get_variants_queryset, get_variant_main_transcripts_by_key
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
@@ -16,7 +15,6 @@ from seqr.models import Project, Family, Individual, Sample, SavedVariant, Varia
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
@@ -284,7 +282,7 @@ def _get_all_project_individual_samples(projects):
 
 
 def _get_sorted_search_samples(projects):
-    return get_search_samples(projects, active_only=False).order_by('-loaded_date')
+    return Sample.objects.filter(individual__family__project__in=projects).order_by('-loaded_date')
 
 
 HET = 'Heterozygous'

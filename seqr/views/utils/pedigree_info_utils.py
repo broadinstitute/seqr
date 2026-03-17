@@ -13,10 +13,9 @@ from reference_data.models import HumanPhenotypeOntology
 from seqr.utils.communication_utils import send_html_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.utils import get_search_samples
 from seqr.views.utils.json_utils import _to_snake_case, _to_title_case
 from seqr.views.utils.permissions_utils import user_is_pm, get_pm_user_emails
-from seqr.models import Individual
+from seqr.models import Individual, Sample
 
 logger = SeqrLogger(__name__)
 
@@ -364,7 +363,7 @@ def get_validated_related_individuals(project, records_by_id, errors, related_gu
         affected = records_by_id[individual_id].get(JsonConstants.AFFECTED_COLUMN, Individual.AFFECTED_STATUS_UNKNOWN)
         affected_status_by_family[family_id].append(affected)
 
-    search_samples = get_search_samples([project])
+    search_samples =  Sample.objects.filter(individual__family__project=project, is_active=True)
 
     sample_type = None
     if search_dataset_type:

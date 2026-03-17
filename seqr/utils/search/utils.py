@@ -7,7 +7,7 @@ from pyliftover.liftover import LiftOver
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
     get_clickhouse_cache_results, clickhouse_variant_lookup, get_clickhouse_variant_by_id, InvalidSearchException
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Sample, Individual, Project, VariantSearchResults
+from seqr.models import Sample, Project, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
@@ -25,18 +25,6 @@ SEARCH_EXCEPTION_ERROR_MAP = {
 
 MAX_GENES_FOR_FILTER = 10000
 MIN_MULTI_FAMILY_SEQR_AC = 5000
-
-
-def _get_filtered_search_samples(search_filter, active_only=True):
-    # TODO clean up
-    samples = Sample.objects.filter(**search_filter)
-    if active_only:
-        samples = samples.filter(is_active=True)
-    return samples
-
-
-def get_search_samples(projects, active_only=True):
-    return _get_filtered_search_samples({'individual__family__project__in': projects}, active_only=active_only)
 
 
 def _get_search_genome_version(search_model):
@@ -60,9 +48,6 @@ def _get_search_genome_version(search_model):
 def get_single_variant(family, variant_id):
     parsed_variant_id = parse_variant_id(variant_id)
     dataset_type = _variant_id_dataset_type(parsed_variant_id)
-    samples = _get_filtered_search_samples({'individual__family_id': family.id})
-    if len(samples) < 1:
-        raise InvalidSearchException(f'No search data found for families {family.family_id}')
     variant = get_clickhouse_variant_by_id(
         variant_id, parsed_variant_id, family, dataset_type,
     )
