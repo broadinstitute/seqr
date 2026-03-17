@@ -218,8 +218,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     def _assert_expected_search_error(self, error, **kwargs):
         response, search_hash, _ = self._execute_search(**kwargs)
-        if response.status_code != 400:
-            import pdb; pdb.set_trace()
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': error})
         return search_hash

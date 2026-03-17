@@ -45,7 +45,6 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
     family_guid = None
     exclude_keys = search.pop('exclude_keys', None) or {}
     exclude_key_pairs = search.pop('exclude_key_pairs', None) or {}
-    search.pop('dataset_type', None)
     for dataset_type, sample_data in sample_data_by_dataset_type.items():
         logger.info(f'Loading {dataset_type} data for {sample_data["num_families"]} families', user)
 
