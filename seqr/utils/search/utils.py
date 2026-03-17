@@ -28,6 +28,7 @@ MIN_MULTI_FAMILY_SEQR_AC = 5000
 
 
 def _get_filtered_search_samples(search_filter, active_only=True):
+    # TODO clean up
     samples = Sample.objects.filter(**search_filter)
     if active_only:
         samples = samples.filter(is_active=True)
@@ -151,7 +152,7 @@ def _query_variants(search_model, user, sort=None, **kwargs):
     dataset_types, secondary_dataset_types = _search_dataset_type(parsed_search, genome_version)
     _validate_search(parsed_search, families)
 
-    samples = _get_filtered_search_samples({'individual__family__in': families})
+    samples = Sample.objects.filter(individual__family__in=families, is_active=True)
     if len(samples) < 1:
         if parsed_search.get('no_access_project_genome_version'):
             return samples
