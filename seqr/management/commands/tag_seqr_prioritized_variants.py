@@ -596,7 +596,7 @@ class Command(BaseCommand):
         else:
             variant_fields += ['familyGenotypes']
 
-        results = results_qs.values(*variant_fields, 'key', 'familyGuids', **variant_values)
+        results = results_qs.values(*variant_fields, 'key', 'familyGuids', 'xpos', **variant_values)
         add_individual_guids(results, samples, encode_genotypes_json=True)
 
         for variant in results:

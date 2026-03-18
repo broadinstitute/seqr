@@ -37,7 +37,9 @@ def parse_saved_variant_json(variant_json, family_id, variant_id=None, dataset_t
     ref = variant_json.get('ref')
     var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
     variant_id = variant_json.get('variantId', variant_id)
-    gene_ids = sorted(variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json))
+    gene_ids = sorted(
+        variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json)
+    ) if 'transcripts' in variant_json else variant_json['gene_ids']
     return {
         'key': variant_json['key'],
         'xpos': xpos,
