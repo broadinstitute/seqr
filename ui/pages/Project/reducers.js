@@ -145,6 +145,13 @@ export const loadFamilySavedVariants = familyGuid => loadSavedVariants({ familyG
 
 export const unloadProject = () => dispatch => dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
 
+export const createManualVariant = values => dispatch => new HttpRequestHelper(
+  '/api/saved_variant/create_manual',
+  (responseJson) => {
+    dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+  },
+).post(values)
+
 export const updateFamilies = values => (dispatch, getState) => {
   const action = values.delete ? 'delete' : 'edit'
   return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_families`,

@@ -46,6 +46,72 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
     return create_json_response(response)
 
+"""
+familyGuid: "F027408_wal_oth17000"
+tags: [{name: "Tier 1 - Novel mode of inheritance"}]
+variant: [...]
+---
+chrom: "1"
+end: 456
+genomeVersion: "38"
+genotypes: {I0072323_wal_oth17001a_3028568: {cn: 4}}
+pos: 123
+svName: "DEL123"
+svType: "INS"
+transcripts: {ENSG00000169083: []}
+variantId: "DEL123"
+---
+alt: "CG"
+chrom: "3"
+genomeVersion: "38"
+genotypes: {I0072323_wal_oth17001a_3028568: {numAlt: 2}}
+pos: 123
+ref: "A"
+transcripts: {ENSG00000180210: []}
+variantId: "3-123-A-CG"
+---
+alt: "T"
+chrom: "4"
+end: 5678
+genomeVersion: "38"
+genotypes: {I0072323_wal_oth17001a_3028568: {numAlt: 1}}
+mainTranscriptId: "ENST12344"
+pos: 11234
+ref: "A"
+transcripts: {ENSG00000169083: [{transcriptId: "ENST12344", hgvsc: "1234.c", hgvsp: "123.p"}]}
+variantId: "4-11234-A-T"
+"""
+@login_and_policies_required
+def create_manual_saved_variant_handler(request):
+    variant_json = json.loads(request.body)
+    family_guid = variant_json['familyGuid']
+
+    family = Family.objects.get(guid=family_guid)
+    check_project_permissions(family.project, request.user)
+
+    variants_json = variant_json['variant']
+    if not isinstance(variant_json['variant'], list):
+        variants_json = [variants_json]
+
+    saved_variant_guids = []
+    for single_variant_json in variants_json:
+        try:
+            create_json, update_json = parse_saved_variant_json(single_variant_json, family.id)
+        except ValueError as e:
+            return create_json_response({'error': str(e)}, status=400)
+        saved_variant, _ = get_or_create_model_from_json(
+            SavedVariant, create_json=create_json, update_json=update_json,
+            user=request.user, update_on_create_only=True)
+        saved_variant_guids.append(saved_variant.guid)
+    saved_variants = SavedVariant.objects.filter(guid__in=saved_variant_guids)
+
+    response = {}
+    if variant_json.get('tags'):
+        _update_tags(saved_variants, variant_json, request.user)
+
+    response.update(get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=family.project.genome_version))
+    return create_json_response(response)
+
 
 @login_and_policies_required
 def create_saved_variant_handler(request):

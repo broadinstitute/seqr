@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Divider, Accordion } from 'semantic-ui-react'
 
-import { updateVariantTags } from 'redux/rootReducer'
 import { getUser, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
@@ -13,6 +12,7 @@ import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import { GENOME_VERSION_FIELD, SV_TYPES } from 'shared/utils/constants'
 
 import { TAG_FORM_FIELD, TAG_FIELD_NAME } from '../constants'
+import { createManualVariant } from '../reducers'
 import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions, getCurrentProject } from '../selectors'
 import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
@@ -265,7 +265,7 @@ const mapDispatchToProps = (dispatch, ownProps) => ({
       variant: [variant, ...variants],
     }
 
-    return dispatch(updateVariantTags(formattedValues))
+    return dispatch(createManualVariant(formattedValues))
   },
 })
 
