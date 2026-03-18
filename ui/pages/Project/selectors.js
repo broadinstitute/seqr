@@ -207,6 +207,7 @@ export const getProjectAnalysisGroupMmeSubmissionDetails = createSelector(
   },
 )
 
+// TODO genes, svType, genotypes, xpos
 export const getTaggedVariantsByFamily = createSelector(
   getSavedVariantsByGuid,
   getGenesById,
@@ -608,6 +609,7 @@ export const getMmeResultsBySubmission = createSelector(
   }, { }),
 )
 
+// TODO uses genotypes, genes, alt, ref, chrom, pos, end, genomeVersion, mainTranscript
 export const getMmeDefaultContactEmail = createSelector(
   getMmeResultsByGuid,
   getMmeSubmissionsByGuid,

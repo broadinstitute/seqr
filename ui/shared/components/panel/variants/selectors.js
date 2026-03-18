@@ -65,8 +65,8 @@ export const getSavedVariantTableState = state => (
 
 const matchingVariants = (variants, matchFunc) => variants.filter(o => (Array.isArray(o) ? o : [o]).some(matchFunc))
 
-// sorts manual variants to top of list, as manual variants are missing all populations
-const sortCompHet = (a, b) => (a.populations ? 1 : 0) - (b.populations ? 1 : 0)
+// sorts manual variants to top of list
+const sortCompHet = (a, b) => (a.key ? 1 : 0) - (b.key ? 1 : 0)
 
 const getProjectSavedVariantsSelection = createSelector(
   (state, props) => props.match.params,
@@ -129,6 +129,7 @@ const getSummaryDataSavedVariantsSelection = createSelector(
   },
 )
 
+// TODO geneIds
 export const getPairedSelectedSavedVariants = createSelector(
   getProjectSavedVariantsSelection,
   getSummaryDataSavedVariantsSelection,
@@ -228,6 +229,7 @@ export const getSavedVariantVisibleIndices = createSelector(
   ({ page = 1, recordsPerPage = 25 }) => ([(page - 1) * recordsPerPage, page * recordsPerPage]),
 )
 
+// TODO full data for sort
 export const getVisibleSortedSavedVariants = createSelector(
   getPairedFilteredSavedVariants,
   getSavedVariantTableState,
@@ -256,6 +258,7 @@ export const getSavedVariantTotalPages = createSelector(
   ),
 )
 
+// TODO full data for export
 const getSavedVariantExportData = createSelector(
   getPairedFilteredSavedVariants,
   getFamiliesByGuid,
