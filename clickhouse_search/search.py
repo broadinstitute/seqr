@@ -434,9 +434,7 @@ def _get_valid_samples(families, dataset_types, secondary_dataset_types, allow_n
 
     if dataset_types:
         samples = samples.filter(dataset_type__in={*dataset_types, *(secondary_dataset_types or [])})
-        # After filtering by dataset type(s), there may be no matching samples even though
-        # the families have active samples. Honor allow_no_samples in this case.
-        if not samples.exists():
+        if not samples and not allow_no_samples:
             if allow_no_samples:
                 return None
             raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')

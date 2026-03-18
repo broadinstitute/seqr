@@ -279,7 +279,7 @@ def _search_dataset_type(search, genome_version):
         ] if not search.get('exclude_locations') else None
         dataset_types = _annotation_dataset_type(search.get('annotations'), chroms, pathogenicity=search.get('pathogenicity'), exclude_svs=search.pop('exclude_svs', False))
         secondary_dataset_types = _annotation_dataset_type(search['annotations_secondary'], chroms) if search.get('annotations_secondary') else None
-        if secondary_dataset_types and dataset_types == [Sample.DATASET_TYPE_SV_CALLS]:
+        if secondary_dataset_types and len(dataset_types) == 0 and dataset_types[0] == Sample.DATASET_TYPE_SV_CALLS:
             secondary_dataset_types = [dt for dt in secondary_dataset_types if dt != Sample.DATASET_TYPE_MITO_CALLS]
 
     if search.get('inheritance_mode') == X_LINKED_RECESSIVE:
