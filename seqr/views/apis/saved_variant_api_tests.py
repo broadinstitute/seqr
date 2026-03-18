@@ -99,10 +99,11 @@ CREATE_VARIANT_JSON = {
         'topmed': {'ac': 0, 'af': 0.0, 'an': 0, 'het': 0, 'hom': 0},
     },
     'pos': 61413835,
+    'xpos': 2061413835,
     'liftedOverGenomeVersion': '38',
     'liftedOverChrom': None,
     'liftedOverPos': None,
-    'predictions': {'cadd': 21.9,
+    'predictions': {'cadd': None,
                     'eigen': None,
                     'fathmm': None,
                     'mpc': None,
@@ -380,36 +381,25 @@ class SavedVariantAPITest(object):
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
 
-        create_variant_json = CREATE_VARIANT_JSON
         create_variant_request_body = {
             'searchHash': 'd380ed0fd28c3127d07a64ea2ba907d7',
             'familyGuid': 'F000001_1',
             'tags': [{'name': 'Review', 'metadata': 'a note'}],
             'note': '',
             'functionalData': [],
-            'variant': create_variant_json,
+            'variant': CREATE_VARIANT_JSON,
         }
-
-        invalide_create_variant_request_body = deepcopy(create_variant_request_body)
-        invalide_create_variant_request_body['variant']['chrom'] = '27'
-        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(
-            invalide_create_variant_request_body))
-        self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': 'Invalid chromosome: 27'})
-
-        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(
-            create_variant_request_body))
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(create_variant_request_body))
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(len(response.json()['savedVariantsByGuid']), 1)
         variant_guid = next(iter(response.json()['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
-        variant_json = {'xpos': 2061413835}
-        variant_json.update(create_variant_json)
-        self._assert_created_variant(saved_variant, variant_json, gene_ids=['ENSG00000277258', 'ENSG00000177000'])
+        self._assert_created_variant(saved_variant, CREATE_VARIANT_JSON, gene_ids=['ENSG00000277258', 'ENSG00000177000'])
 
-        variant_json.update({
+        variant_json = {
+            **CREATE_VARIANT_JSON,
             'variantGuid': variant_guid,
             'familyGuids': ['F000001_1'],
             'acmgClassification': None,
@@ -418,7 +408,7 @@ class SavedVariantAPITest(object):
             'functionalDataGuids': [],
             'transcripts': mock.ANY,
             'mainTranscriptId': mock.ANY,
-        })
+        }
         response_json = response.json()
         response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
         tag_guids = response_variant_json.pop('tagGuids')
@@ -578,7 +568,7 @@ class SavedVariantAPITest(object):
             'tags': [{'name': 'Review'}],
             'alt': 'A',
             'ref': 'GAG',
-            'chrom': '7',
+            'chrom': '27',
             'pos': 53417465,
             'mainTranscriptId': 'ENST00000459627',
             'geneId': 'ENSG00000277258',
@@ -590,6 +580,11 @@ class SavedVariantAPITest(object):
                 'I000003_na19679': {'numAlt': 0},
             },
         }
+        response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(manual_variant_request_body))
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {'error': 'Invalid chromosome: 27'})
+
+        manual_variant_request_body['chrom'] = '7'
         response = self.client.post(create_saved_variant_url, content_type='application/json', data=json.dumps(manual_variant_request_body))
         self.assertEqual(response.status_code, 200)
 

@@ -114,7 +114,7 @@ def create_saved_variant_handler(request):
     saved_variant_guids = []
     for single_variant_json in variants_json:
         parsed_json = parse_saved_variant_json(single_variant_json, family.id)
-        create_json = {field: parsed_json[field] for field in ['key', 'dataset_type', 'family_id']}
+        create_json = {field: parsed_json[field] for field in ['key', 'xpos', 'variant_id', 'family_id']}
         saved_variant, _ = get_or_create_model_from_json(
             SavedVariant, create_json=create_json, update_json=parsed_json,
             user=request.user, update_on_create_only=True)
