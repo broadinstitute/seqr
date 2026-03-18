@@ -145,8 +145,8 @@ export const loadFamilySavedVariants = familyGuid => loadSavedVariants({ familyG
 
 export const unloadProject = () => dispatch => dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
 
-export const createManualVariant = values => dispatch => new HttpRequestHelper(
-  '/api/saved_variant/create_manual',
+export const createManualVariant = (familyGuid, values) => dispatch => new HttpRequestHelper(
+  `/api/saved_variant/create_manual/${familyGuid}`,
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },

@@ -266,7 +266,7 @@ api_endpoints = {
     'saved_search/(?P<saved_search_guid>[^/]+)/delete': delete_saved_search_handler,
 
     'saved_variant/create': create_saved_variant_handler,
-    'saved_variant/create_manual': create_manual_saved_variant_handler,
+    'saved_variant/create_manual/(?P<family_guid>[\w.|-]+)': create_manual_saved_variant_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/update_tags': update_variant_tags_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/update_acmg_classification': update_variant_acmg_classification_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/update_functional_data': update_variant_functional_data_handler,
