@@ -783,15 +783,15 @@ def get_clickhouse_variant_by_id(variant_id, parsed_variant_id, samples, genome_
     return None
 
 
-def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, samples):
+def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, samples, additional_fields=None):
     sample_data = _get_sample_data(samples.filter(individual__family__guid__in=family_guids))[dataset_type]
     entries = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter(
         project_guid=project_guid, family_guid__in=family_guids, key__in=keys,
     )
     gt_field, gt_expr = entries.genotype_expression(sample_data)
     return {
-        key: _clickhouse_genotypes_json(genotypes) for key, genotypes in
-        entries.annotate(**{gt_field: gt_expr}).values_list('key', 'genotypes')
+        e['key']: {**e, 'genotypes': _clickhouse_genotypes_json(e['genotypes'])} for e in
+        entries.annotate(**{gt_field: gt_expr}).values('key', 'genotypes', *(additional_fields or []))
     }
 
 

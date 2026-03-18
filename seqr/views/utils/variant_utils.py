@@ -219,11 +219,12 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     for project_guid, family_guids in families_by_project.items():
         genotype_keys = get_clickhouse_genotypes(
             project_guid, family_guids, genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variants_by_key.keys(),
-            samples,
+            samples, additional_fields=['xpos']
         )
-        for key, genotypes in genotype_keys.items():
-            variants_by_key[key]['genotypes'].update(genotypes)
-            variants_by_key[key]['familyGuids'] += sorted({g['familyGuid'] for g in genotypes.values()})
+        for key, entry_data in genotype_keys.items():
+            variants_by_key[key]['xpos'] = entry_data['xpos']
+            variants_by_key[key]['genotypes'].update(entry_data['genotypes'])
+            variants_by_key[key]['familyGuids'] += sorted({g['familyGuid'] for g in entry_data['genotypes'].values()})
 
     return list(variants_by_key.values())
 
