@@ -103,7 +103,7 @@ CREATE_VARIANT_JSON = {
     'liftedOverGenomeVersion': '38',
     'liftedOverChrom': None,
     'liftedOverPos': None,
-    'predictions': {'cadd': None,
+    'predictions': {'cadd':  21.9,
                     'eigen': None,
                     'fathmm': None,
                     'mpc': None,
@@ -460,6 +460,7 @@ class SavedVariantAPITest(object):
             'svType': 'DUP',
             'variantId': 'batch_123_DUP',
             'acmgClassification': None,
+            'xpos': 2061413835,
         }
 
         request_body = {
@@ -480,7 +481,6 @@ class SavedVariantAPITest(object):
         variant_guid = next(iter(response_json['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
-        variant_json.update({'xpos': 2061413835})
         self._assert_created_variant(saved_variant, variant_json, dataset_type='SV_WES', gene_ids=['ENSG00000240361'])
         self.assertEqual(saved_variant.xpos_end, 2061414175)
 
@@ -763,7 +763,7 @@ class SavedVariantAPITest(object):
         request_body = {
             'variant': [COMPOUND_HET_4_JSON, {
                 'variantId': '21-3343353-GAGA-G', 'xpos': 21003343353, 'ref': 'GAGA', 'alt': 'G',
-                'variantGuid': 'SV0000001_2103343353_r0390_100',
+                'variantGuid': 'SV0000001_2103343353_r0390_100', 'transcripts': {}, 'key': None,
                 'tagGuids': ['VT1708633_2103343353_r0390_100', 'VT1726961_2103343353_r0390_100'], 'noteGuids': []},
             ],
             'note': 'one_saved_one_not_saved_compount_hets_note',
@@ -1155,7 +1155,7 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
 
     def test_create_saved_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
-        assert_no_list_ws_has_al(self, 4)
+        assert_no_list_ws_has_al(self, 3)
 
     def test_create_saved_sv_variant(self):
         super(AnvilSavedVariantAPITest, self).test_create_saved_sv_variant()
