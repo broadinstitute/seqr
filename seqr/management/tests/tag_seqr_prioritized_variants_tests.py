@@ -29,6 +29,8 @@ SNV_INDEL_MATCHES = {
     'High Splice AI - De Novo/ Dominant Confirmed': 0,
     'High Splice AI - Recessive': 0,
     'High Splice AI - Recessive Confirmed': 0,
+    'High Splice AI - X-Linked Recessive': 0,
+    'High Splice AI - X-Linked Recessive Confirmed': 0,
     'Recessive': 1,
     'X-Linked Recessive': 0,
 }
