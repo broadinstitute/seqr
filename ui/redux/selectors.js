@@ -181,7 +181,7 @@ export const getActiveDatasetsByFamily = createSelector(
   getFamiliesByGuid,
   getActiveDatasetsByIndividual,
   (familiesByGuid, activeDatasetsByIndividual) => Object.entries(familiesByGuid).reduce(
-    (acc, [familyGuid, { individualGuids }]) => ({
+    (acc, [familyGuid, { individualGuids = [] }]) => ({
       ...acc,
       [familyGuid]: individualGuids.reduce(
         (familyAcc, individualGuid) => [...familyAcc, ...(activeDatasetsByIndividual[individualGuid] || [])], [],
