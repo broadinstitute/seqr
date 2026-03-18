@@ -323,6 +323,24 @@ SEARCHES = {
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
+        'High Splice AI - X-Linked Recessive': {
+            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            **HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
+            'family_filter': {
+                AFFECTED_MALE_FAMILY_FILTER: True,
+                CONFIRMED_FAMILY_FILTER: False,
+            },
+        },
+        'High Splice AI - X-Linked Recessive Confirmed': {
+            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
+            **RECESSIVE_SEARCH_NO_IN_SILICO,
+            'family_filter': {
+                AFFECTED_MALE_FAMILY_FILTER: True,
+                CONFIRMED_FAMILY_FILTER: True,
+            },
+        },
         'Recessive': {
             'inheritance_mode': HOMOZYGOUS_RECESSIVE,
             'annotations': HIGH_MODERATE_ANNOTATIONS,
