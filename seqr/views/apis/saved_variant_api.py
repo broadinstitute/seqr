@@ -65,6 +65,7 @@ def create_manual_saved_variant_handler(request, family_guid):
 
     variant_id = variant_json.get('svName') or f"{variant_json['chrom']}-{variant_json['pos']}-{variant_json['ref']}-{variant_json['alt']}"
     variant_json.update({
+        'key': None,
         'genomeVersion': genome_version,
         'transcripts': {},
         'variantId': variant_id,
@@ -81,15 +82,14 @@ def create_manual_saved_variant_handler(request, family_guid):
                 'hgvsp': variant_json.pop('hgvsp'),
             })
 
-    var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else 0
-    saved_variant = create_model_from_json(SavedVariant, {
-        'family': family,
-        'xpos_end': xpos + var_length,
-        'variant_id': variant_id,
-        'gene_ids': [gene_id] if gene_id else [],
-        'saved_variant_json': variant_json,
-        **{field: variant_json.get(field) for field in ['xpos', 'ref', 'alt']},
-    }, request.user)
+    model_json = parse_saved_variant_json(
+        variant_json,
+        family.id,
+        dataset_type=Sample.DATASET_TYPE_SV_CALLS if variant_json.get('svName') else Sample.DATASET_TYPE_VARIANT_CALLS,
+    )
+    model_json['saved_variant_json'] = variant_json
+
+    saved_variant = create_model_from_json(SavedVariant, model_json, request.user)
     saved_variant_guids.add(saved_variant.guid)
 
     saved_variants = SavedVariant.objects.filter(guid__in=saved_variant_guids)
@@ -113,12 +113,10 @@ def create_saved_variant_handler(request):
 
     saved_variant_guids = []
     for single_variant_json in variants_json:
-        try:
-            create_json, update_json = parse_saved_variant_json(single_variant_json, family.id)
-        except ValueError as e:
-            return create_json_response({'error': str(e)}, status=400)
+        parsed_json = parse_saved_variant_json(single_variant_json, family.id)
+        create_json = {field: parsed_json[field] for field in ['key', 'dataset_type', 'family_id']}
         saved_variant, _ = get_or_create_model_from_json(
-            SavedVariant, create_json=create_json, update_json=update_json,
+            SavedVariant, create_json=create_json, update_json=parsed_json,
             user=request.user, update_on_create_only=True)
         saved_variant_guids.append(saved_variant.guid)
     saved_variants = SavedVariant.objects.filter(guid__in=saved_variant_guids)

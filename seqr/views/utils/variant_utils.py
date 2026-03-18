@@ -33,34 +33,23 @@ OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
 def parse_saved_variant_json(variant_json, family_id, variant_id=None, dataset_type=None):
-    if 'xpos' not in variant_json:
-        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
     xpos = variant_json['xpos']
     ref = variant_json.get('ref')
-    alt = variant_json.get('alt')
     var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
     variant_id = variant_json.get('variantId', variant_id)
-    # TODO clean up
-    if variant_json.get('key'):
-        update_json = {
-            'key': variant_json['key'],
-            'genotypes': variant_json.get('genotypes', {}),
-            'dataset_type': dataset_type or variant_dataset_type({'variantId': variant_id, **variant_json}),
-        }
-    else:
-        update_json = {'saved_variant_json': variant_json}
-    if 'transcripts' in variant_json:
-        update_json['gene_ids'] = sorted(variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json))
-    elif 'gene_ids' in variant_json:
-        update_json['gene_ids'] = variant_json['gene_ids']
+    gene_ids = sorted(variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json))
     return {
+        'key': variant_json['key'],
         'xpos': xpos,
         'xpos_end': xpos + var_length,
         'ref': ref,
-        'alt': alt,
+        'alt': variant_json.get('alt'),
         'family_id': family_id,
         'variant_id': variant_id,
-    }, update_json
+        'genotypes': variant_json.get('genotypes', {}),
+        'dataset_type': dataset_type or variant_dataset_type({'variantId': variant_id, **variant_json}),
+        'gene_ids': gene_ids,
+    }
 
 
 def _transcript_sort(gene_id, saved_variant_json):
@@ -92,8 +81,10 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
         new_variant_models = []
         for (family_id, variant_id), variant in new_variant_data.items():
-            create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id, dataset_type=dataset_type)
-            new_variant_models.append(SavedVariant(**create_json, **update_json))
+            variant_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id, dataset_type=dataset_type)
+            if not variant.get('key'):
+                variant_json['saved_variant_json'] = variant
+            new_variant_models.append(SavedVariant(**variant_json))
 
         saved_variant_map.update({
             (v.family_id, getattr(v, primary_id_field)): v for v in SavedVariant.bulk_create(user, new_variant_models)
