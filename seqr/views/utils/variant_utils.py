@@ -32,11 +32,10 @@ DISCOVERY_CATEGORY = 'CMG Discovery Tags'
 OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
-def parse_saved_variant_json(variant_json, family_id, variant_id=None, dataset_type=None):
+def parse_saved_variant_json(variant_json, family_id, dataset_type=None):
     xpos = variant_json['xpos']
     ref = variant_json.get('ref')
     var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
-    variant_id = variant_json.get('variantId', variant_id)
     gene_ids = sorted(
         variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json)
     ) if 'transcripts' in variant_json else variant_json['gene_ids']
@@ -47,9 +46,9 @@ def parse_saved_variant_json(variant_json, family_id, variant_id=None, dataset_t
         'ref': ref,
         'alt': variant_json.get('alt'),
         'family_id': family_id,
-        'variant_id': variant_id,
+        'variant_id': variant_json['variantId'],
         'genotypes': variant_json.get('genotypes', {}),
-        'dataset_type': dataset_type or variant_dataset_type({'variantId': variant_id, **variant_json}),
+        'dataset_type': dataset_type or variant_dataset_type(variant_json),
         'gene_ids': gene_ids,
     }
 
@@ -82,8 +81,8 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
             )
 
         new_variant_models = []
-        for (family_id, variant_id), variant in new_variant_data.items():
-            variant_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id, dataset_type=dataset_type)
+        for (family_id, _), variant in new_variant_data.items():
+            variant_json = parse_saved_variant_json(variant, family_id, dataset_type=dataset_type)
             if not variant.get('key'):
                 variant_json['saved_variant_json'] = variant
             new_variant_models.append(SavedVariant(**variant_json))
@@ -104,7 +103,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
     new_tag_keys = {}
     skipped_tag_keys = set()
     for key, variant in sorted(family_variant_data.items()):
-        metadata = get_metadata(variant)
+        metadata = get_metadata(variant, key=key)
         comp_het_metadata = get_comp_het_metadata(variant) if get_comp_het_metadata else None
         updated_tag = _set_updated_tags(
             key, metadata, comp_het_metadata, variant.get('support_vars', []), saved_variant_map, existing_tags, tag_type, user,

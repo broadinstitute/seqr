@@ -1219,9 +1219,7 @@ class IndividualAPITest(object):
         saved_variants = SavedVariant.objects.filter(
             varianttag__variant_tag_type__name='GREGoR Finding'
         ).order_by('family_id', 'variant_id').distinct().values(
-            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json__genomeVersion',
-            'saved_variant_json__transcripts', 'saved_variant_json__genotypes', 'saved_variant_json__mainTranscriptId',
-            'saved_variant_json__hgvsc', 'key', 'dataset_type', 'genotypes', 'gene_ids',
+            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json', 'key', 'dataset_type', 'genotypes', 'gene_ids',
         )
         self.assertEqual(len(saved_variants), 4)
         self.assertDictEqual(saved_variants[0], {
@@ -1229,11 +1227,7 @@ class IndividualAPITest(object):
             'variant_id': '1-248367227-TC-T',
             'xpos': 1248367227,
             'family__guid': 'F000012_12',
-            'saved_variant_json__genomeVersion': None,
-            'saved_variant_json__transcripts': None,
-            'saved_variant_json__genotypes': None,
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
+            'saved_variant_json': {},
             'key': 100,
             'dataset_type': 'SNV_INDEL',
             'genotypes': mock.ANY,
@@ -1245,16 +1239,25 @@ class IndividualAPITest(object):
             'variant_id': '1-249045487-A-G',
             'xpos': 1249045487,
             'family__guid': 'F000012_12',
-            'saved_variant_json__genomeVersion': '37',
-            'saved_variant_json__transcripts': {
-                'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+            'saved_variant_json': {
+                'alt': 'G',
+                'chrom': '1',
+                'genomeVersion': '37',
+                'genotypes': {created_individual_guid: {'numAlt': 1}},
+                'key': None,
+                'mainTranscriptId': None,
+                'pos': 249045487,
+                'ref': 'A',
+                'variantId': '1-249045487-A-G',
+                'xpos': 1249045487,
+                'transcripts': {
+                    'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+                },
+                'support_vars': ['1-248367227-TC-T'],
             },
-            'saved_variant_json__genotypes': {created_individual_guid: {'numAlt': 1}},
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
             'key': None,
-            'dataset_type': None,
-            'genotypes': {},
+            'dataset_type': 'SNV_INDEL',
+            'genotypes': {created_individual_guid: {'numAlt': 1}},
             'gene_ids': ['ENSG00000240361'],
         })
         new_family_genotypes = {new_family_individual_guid: {'numAlt': 2}}
@@ -1263,11 +1266,7 @@ class IndividualAPITest(object):
             'variant_id': '1-248367227-TC-T',
             'xpos': 1248367227,
             'family__guid': new_family_guid,
-            'saved_variant_json__genomeVersion': None,
-            'saved_variant_json__transcripts': None,
-            'saved_variant_json__genotypes': None,
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
+            'saved_variant_json': {},
             'key': 100,
             'dataset_type': 'SNV_INDEL',
             'genotypes': new_family_genotypes,

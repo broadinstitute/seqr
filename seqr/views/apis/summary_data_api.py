@@ -216,7 +216,7 @@ def _load_aip_data(data: dict, user: User):
     today = datetime.now().strftime('%Y-%m-%d')
     new_keys, update_keys, skipped_keys = bulk_create_tagged_variants(
         family_variant_data, tag_name=AIP_TAG_TYPE, user=user, load_new_variant_data=True,
-        get_metadata=lambda pred:  {category: {'name': category_map[category], 'date': today} for category in pred['categories']},
+        get_metadata=lambda pred, **kwargs: {category: {'name': category_map[category], 'date': today} for category in pred['categories']},
     )
 
     summary_message = f'Loaded {len(new_keys)} new and {len(update_keys)} updated AIP tags for {len(family_id_map)} families'

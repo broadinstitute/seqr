@@ -580,7 +580,7 @@ class Command(BaseCommand):
 
     @staticmethod
     def _get_metadata(today, metadata_key):
-        def wrapped(v):
+        def wrapped(v, **kwargs):
             return {name: today for name in v[metadata_key]} if v[metadata_key] else None
         return wrapped
 
