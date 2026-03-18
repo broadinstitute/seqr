@@ -451,21 +451,14 @@ def _get_valid_samples(families, dataset_types, secondary_dataset_types, allow_n
 
     return samples
 
-def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, has_comp_het=False, secondary_dataset_types=None, inheritance_mode=None, inheritance_filter=None):
-    samples = _get_valid_samples(families, dataset_types, secondary_dataset_types, allow_no_samples)
-    if not samples:
-        return {}
 
+def _get_grouped_samples(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males):
     skip_individual_guid = (
         skip_multi_project_individual_guid and samples.values('individual__family__project_id').distinct().count() > 1
     )
-    individual_affected_status = (inheritance_filter or {}).get('affected')
-    genotype_filter = (inheritance_filter or {}).get('genotype')
-    affected_family_only = inheritance_mode and not individual_affected_status
     family_array_kwargs = {'distinct': True}
     if affected_family_only:
         family_array_kwargs['filter'] = Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED)
-
     annotations = {
         'project_guids': ArrayAgg('individual__family__project__guid', distinct=True),
         'family_guids': ArrayAgg('individual__family__guid', **family_array_kwargs),
@@ -480,12 +473,25 @@ def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid
             ))
     else:
         annotations['samples'] = ArrayAgg(JSONObject(
-            affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', family_guid=F('individual__family__guid'), individual_guid=F('individual__guid'),
+            affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type',
+            family_guid=F('individual__family__guid'), individual_guid=F('individual__guid'),
         ))
 
     sample_data = samples.values('dataset_type', 'sample_type').annotate(**annotations)
     if affected_family_only:
         sample_data = sample_data.filter(family_guids__len__gt=0)
+    return sample_data
+
+
+def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, has_comp_het=False, secondary_dataset_types=None, inheritance_mode=None, inheritance_filter=None):
+    samples = _get_valid_samples(families, dataset_types, secondary_dataset_types, allow_no_samples)
+    if not samples:
+        return {}
+
+    individual_affected_status = (inheritance_filter or {}).get('affected')
+    genotype_filter = (inheritance_filter or {}).get('genotype')
+    affected_family_only = inheritance_mode and not individual_affected_status
+    sample_data = _get_grouped_samples(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males)
 
     samples_by_dataset_type = {}
     for data in sample_data:
