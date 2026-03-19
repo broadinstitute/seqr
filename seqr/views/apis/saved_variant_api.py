@@ -60,10 +60,10 @@ def create_manual_saved_variant_handler(request, family_guid):
     genome_version = family.project.genome_version
     try:
         xpos = get_xpos(variant_json['chrom'], variant_json['pos'])
-    except ValueError as e:
+        variant_id = variant_json.get('svName') or f"{variant_json['chrom']}-{variant_json['pos']}-{variant_json['ref']}-{variant_json['alt']}"
+    except (KeyError, ValueError) as e:
         return create_json_response({'error': str(e)}, status=400)
 
-    variant_id = variant_json.get('svName') or f"{variant_json['chrom']}-{variant_json['pos']}-{variant_json['ref']}-{variant_json['alt']}"
     variant_json.update({
         'genomeVersion': genome_version,
         'transcripts': {},
@@ -91,7 +91,7 @@ def create_manual_saved_variant_handler(request, family_guid):
     saved_variant = create_model_from_json(SavedVariant, model_json, request.user)
     saved_variant_guids.add(saved_variant.guid)
 
-    saved_variants = SavedVariant.objects.filter(guid__in=saved_variant_guids)
+    saved_variants = SavedVariant.objects.filter(family=family, guid__in=saved_variant_guids)
     _update_tags(saved_variants, {'tags': tags}, request.user)
 
     response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=genome_version)
