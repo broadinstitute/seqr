@@ -65,7 +65,6 @@ def create_manual_saved_variant_handler(request, family_guid):
 
     variant_id = variant_json.get('svName') or f"{variant_json['chrom']}-{variant_json['pos']}-{variant_json['ref']}-{variant_json['alt']}"
     variant_json.update({
-        'key': None,
         'genomeVersion': genome_version,
         'transcripts': {},
         'variantId': variant_id,
@@ -82,13 +81,13 @@ def create_manual_saved_variant_handler(request, family_guid):
                 'hgvsp': variant_json.pop('hgvsp'),
             })
 
-    model_json = parse_saved_variant_json(
-        variant_json,
-        family.id,
-        dataset_type=Sample.DATASET_TYPE_SV_CALLS if variant_json.get('svName') else Sample.DATASET_TYPE_VARIANT_CALLS,
-    )
-    model_json['saved_variant_json'] = variant_json
+    variant_json['saved_variant_json'] = {**variant_json}
+    variant_json.update({
+        'key': None,
+        'dataset_type': Sample.DATASET_TYPE_SV_CALLS if variant_json.get('svName') else Sample.DATASET_TYPE_VARIANT_CALLS,
+    })
 
+    model_json = parse_saved_variant_json(variant_json, family.id)
     saved_variant = create_model_from_json(SavedVariant, model_json, request.user)
     saved_variant_guids.add(saved_variant.guid)
 

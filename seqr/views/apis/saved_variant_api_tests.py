@@ -594,7 +594,6 @@ class SavedVariantAPITest(object):
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
         variant_json = {
             'xpos': 7053417465,
-            'key': None,
             'variantId': '7-53417465-GAG-A',
             'genomeVersion': '37',
             'transcripts': {'ENSG00000277258': [{'hgvsc': 'c.156GAG>A', 'hgvsp': 'p.Leu52Phe', 'transcriptId': 'ENST00000459627'}]},
@@ -647,7 +646,6 @@ class SavedVariantAPITest(object):
 
         saved_sv_variant = SavedVariant.objects.get(guid=sv_variant_guid, family__guid='F000001_1')
         sv_variant_json = {
-            'key': None,
             'xpos': 7010417443,
             'genomeVersion': '37',
             'variantId': 'Deletion:chr7:(?_10417443)_(11719832_?)',
