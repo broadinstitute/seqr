@@ -147,22 +147,8 @@ def families_discovery_tags(families, genome_version, project=None):
     }
 
 
-def _get_transcripts_selected_gene(selected_main_transcript_id, transcripts):
-    return next((
-        gene_id for gene_id, gene_transcripts in (transcripts or {}).items()
-        if any(t.get('transcriptId') == selected_main_transcript_id for t in gene_transcripts)
-    ), None)
-
-
 def _get_clickhouse_selected_transcript_gene_id(family_discovery_genes, discovery_variants, genome_version):
-    family_discovery_genes += [
-        (family_guid, _get_transcripts_selected_gene(selected_main_transcript_id, transcripts))
-        for family_guid, selected_main_transcript_id, transcripts in discovery_variants.filter(key__isnull=True).values_list(
-            'family_guid', 'selected_main_transcript_id', 'saved_variant_json__transcripts',
-        )
-    ]
-
-    tags_by_dataset_type = discovery_variants.filter(key__isnull=False).values('dataset_type').annotate(
+    tags_by_dataset_type = discovery_variants.values('dataset_type').annotate(
         keys=ArrayAgg('key', distinct=True),
         variants=ArrayAgg(JSONObject(key='key', family_guid='family_guid', selected_main_transcript_id='selected_main_transcript_id')),
     )

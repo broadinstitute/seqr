@@ -11,7 +11,7 @@ from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, pa
     get_submission_json_for_external_match, parse_mme_features, get_submission_gene_variants, get_mme_matches, \
     get_gene_ids_for_feature, validate_patient_data, get_hpo_terms_by_id, MME_DISCLAIMER
 from seqr.models import Individual, SavedVariant
-from seqr.utils.communication_utils import safe_post_to_slack
+from seqr.utils.communication_utils import safe_post_to_slack, set_email_message_stream
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.xpos_utils import get_chrom_pos
@@ -24,7 +24,7 @@ from seqr.views.utils.permissions_utils import check_mme_permissions, check_proj
     has_project_permissions, login_and_policies_required, get_project_and_check_permissions
 
 from settings import BASE_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
-    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL
+    MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL, VLM_SEND_EMAIL
 
 logger = SeqrLogger(__name__)
 
@@ -559,3 +559,25 @@ def _generate_notification_for_seqr_match(submission, results):
         from_email=MME_DEFAULT_CONTACT_EMAIL,
     )
     email_message.send()
+
+
+@login_and_policies_required
+def send_vlm_email(request):
+    request_json = json.loads(request.body)
+    email_message = EmailMessage(
+        subject=request_json['subject'],
+        body=request_json['body'],
+        bcc=[s.strip() for s in request_json['to'].split(',')],
+        cc=[request.user.email],
+        reply_to=[request.user.email],
+        to=[VLM_SEND_EMAIL],
+        from_email=VLM_SEND_EMAIL,
+    )
+    set_email_message_stream(email_message, 'vlm')
+
+    try:
+        email_message.send()
+    except Exception as e:
+        logger.error(f'VLM Email Error: {e}', request.user, detail=request_json)
+
+    return create_json_response({'success': True})
