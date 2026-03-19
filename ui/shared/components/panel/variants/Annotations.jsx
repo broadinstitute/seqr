@@ -352,7 +352,7 @@ const variantSearchLinks = (variant, mainTranscript, genesById, user) => {
 
   const seqrSearchLink = (
     <NavLink
-      to={`/summary_data/variant_lookup?variantId=${variantId}&genomeVersion=${genomeVersion}&sampleType=${getSampleType(genotypes)}`}
+      to={`/variant_lookup?variantId=${variantId}&genomeVersion=${genomeVersion}&sampleType=${getSampleType(genotypes)}`}
       target="_blank"
     >
       Variant Lookup

@@ -1,25 +1,41 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import PropTypes from 'prop-types'
-import { Grid, Header, Label, Table } from 'semantic-ui-react'
+import { Grid, Header, Icon, Label, Popup, Table } from 'semantic-ui-react'
 
 import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
+import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { getVlmEnabled } from 'redux/selectors'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import SendEmailButton from 'shared/components/buttons/SendEmailButton'
 import FormWrapper from 'shared/components/form/FormWrapper'
-import { helpLabel } from 'shared/components/form/FormHelpers'
-import { BaseSemanticInput, InlineToggle } from 'shared/components/form/Inputs'
+import { helpLabel, validators } from 'shared/components/form/FormHelpers'
+import { BaseSemanticInput, InlineToggle, AlignedCheckboxGroup } from 'shared/components/form/Inputs'
+import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import FamilyVariantTags from 'shared/components/panel/variants/FamilyVariantTags'
 import Variants, { Variant, StyledVariantRow } from 'shared/components/panel/variants/Variants'
 import { FamilyVariantIndividuals } from 'shared/components/panel/variants/VariantIndividuals'
-import { GENOME_VERSION_FIELD, GENOME_VERSION_37, GENOME_VERSION_38 } from 'shared/utils/constants'
-import { sendVlmContactEmail } from '../reducers'
-import { getVlmDefaultContactEmails, getVlmFamiliesByContactEmail } from '../selectors'
+import {
+  GENOME_VERSION_FIELD,
+  GENOME_VERSION_37,
+  GENOME_VERSION_38,
+  GENE_SEARCH_FREQUENCIES,
+  GROUPED_VEP_CONSEQUENCES,
+  VEP_GROUP_NONSENSE,
+  VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+  VEP_GROUP_FRAMESHIFT,
+  VEP_GROUP_MISSENSE,
+  VEP_GROUP_INFRAME,
+  VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_EXTENDED_SPLICE_SITE,
+} from 'shared/utils/constants'
+import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
+import { sendVlmContactEmail } from './reducers'
+import { getVlmDefaultContactEmails, getVlmFamiliesByContactEmail, getSearchedVariantsIsLoading } from './selectors'
 
-const FIELDS = [
+const LOOKUP_FIELDS = [
   {
     name: 'variantId',
     label: helpLabel('Variant ID', (
@@ -55,6 +71,47 @@ const FIELDS = [
     color: 'grey',
   },
 ]
+
+const validateAnnotations = (value, { search }) => (
+  value || Object.values(search.annotations || {}).some(val => val.length) ? undefined : 'At least one consequence filter is required'
+)
+
+const CONSEQUENCE_FIELDS = [
+  VEP_GROUP_NONSENSE,
+  VEP_GROUP_ESSENTIAL_SPLICE_SITE,
+  VEP_GROUP_FRAMESHIFT,
+  VEP_GROUP_MISSENSE,
+  VEP_GROUP_INFRAME,
+  VEP_GROUP_SYNONYMOUS,
+  VEP_GROUP_EXTENDED_SPLICE_SITE,
+].map((group, i) => ({
+  name: `search.annotations.${group}`,
+  component: AlignedCheckboxGroup,
+  groupLabel: snakecaseToTitlecase(group),
+  options: GROUPED_VEP_CONSEQUENCES[group],
+  format: value => value || [],
+  inline: true,
+  validate: i === 0 ? validateAnnotations : undefined,
+}))
+
+const GENE_LOOKUP_FIELDS = [
+  { validate: validators.required, ...GENOME_VERSION_FIELD, name: 'allGenomeProjectFamilies' },
+  {
+    name: 'search.locus.rawItems',
+    label: 'Gene',
+    control: AwesomeBarFormInput,
+    categories: ['genes'],
+    fluid: true,
+    placeholder: 'Search for gene',
+    validate: validators.required,
+  },
+  ...CONSEQUENCE_FIELDS,
+]
+
+const INITIAL_GENE_LOOKUP_VALUES = {
+  includeNoAccessProjects: true,
+  search: { freqs: GENE_SEARCH_FREQUENCIES },
+}
 
 const VlmDisplay = ({ vlmMatches }) => (
   <Table basic collapsing definition>
@@ -178,12 +235,12 @@ BaseLookupVariant.propTypes = {
   vlmDefaultContactEmails: PropTypes.object,
 }
 
-const mapStateToProps = (state, ownProps) => ({
+const mapVariantStateToProps = (state, ownProps) => ({
   familiesByContactEmail: getVlmFamiliesByContactEmail(state, ownProps),
   vlmDefaultContactEmails: getVlmDefaultContactEmails(state, ownProps),
 })
 
-const LookupVariant = connect(mapStateToProps)(BaseLookupVariant)
+const LookupVariant = connect(mapVariantStateToProps)(BaseLookupVariant)
 
 const VariantDisplay = ({ variants }) => (
   (variants || [])[0]?.lookupFamilyGuids ? <LookupVariant variant={variants[0]} /> : <Variants variants={variants} />
@@ -193,47 +250,37 @@ VariantDisplay.propTypes = {
   variants: PropTypes.arrayOf(PropTypes.object),
 }
 
-const onSubmit = updateQueryParams => (data) => {
+const onQueryParamSubmit = (updateQueryParams, data) => {
   updateQueryParams(data)
   return Promise.resolve()
 }
 
 const passThroughResponse = response => response
 
-const VariantLookup = ({ queryParams, receiveData, updateQueryParams, vlmEnabled }) => (
-  <Grid divided="vertically" centered>
-    <Grid.Row>
-      <Grid.Column width={5} />
-      <Grid.Column width={6}>
-        <Header dividing size="medium" content="Lookup Variant" />
-        <FormWrapper noModal fields={FIELDS} initialValues={queryParams} onSubmit={onSubmit(updateQueryParams)} />
+const BaseVariantLookupResults = ({ queryParams, receiveData, vlmEnabled }) => ([
+  ...(vlmEnabled ? [(
+    <Grid.Row key="vlm">
+      <Grid.Column width={6} textAlign="right" verticalAlign="middle">
+        <Header size="large" content="External Variant-Level Matching (VLM)" />
       </Grid.Column>
-      <Grid.Column width={5} />
+      <Grid.Column width={10}>
+        <StateDataLoader
+          url={queryParams.variantId && '/api/vlm_lookup'}
+          query={queryParams}
+          parseResponse={passThroughResponse}
+          childComponent={VlmDisplay}
+        />
+      </Grid.Column>
     </Grid.Row>
-    {vlmEnabled && (
-      <Grid.Row>
-        <Grid.Column width={6} textAlign="right" verticalAlign="middle">
-          <Header size="large" content="External Variant-Level Matching (VLM)" />
-        </Grid.Column>
-        <Grid.Column width={10}>
-          <StateDataLoader
-            url={queryParams.variantId && '/api/vlm_lookup'}
-            query={queryParams}
-            parseResponse={passThroughResponse}
-            childComponent={VlmDisplay}
-          />
-        </Grid.Column>
-      </Grid.Row>
-    )}
-    {vlmEnabled && (
-      <Grid.Row>
-        <Grid.Column width={6} textAlign="right" verticalAlign="middle">
-          <Header size="large" content="Internal seqr Variants" />
-        </Grid.Column>
-        <Grid.Column width={10} />
-      </Grid.Row>
-    )}
-    <Grid.Row>
+  ), (
+    <Grid.Row key="internal_header">
+      <Grid.Column width={6} textAlign="right" verticalAlign="middle">
+        <Header size="large" content="Internal seqr Variants" />
+      </Grid.Column>
+      <Grid.Column width={10} />
+    </Grid.Row>
+  )] : []), (
+    <Grid.Row key="results">
       <Grid.Column width={16}>
         <StateDataLoader
           url={queryParams.variantId && '/api/variant_lookup'}
@@ -243,35 +290,111 @@ const VariantLookup = ({ queryParams, receiveData, updateQueryParams, vlmEnabled
         />
       </Grid.Column>
     </Grid.Row>
-  </Grid>
-)
+  ),
+])
 
-VariantLookup.propTypes = {
+BaseVariantLookupResults.propTypes = {
   receiveData: PropTypes.func,
-  updateQueryParams: PropTypes.func,
   queryParams: PropTypes.object,
   vlmEnabled: PropTypes.bool,
 }
 
-const mapGlobalStateToProps = state => ({
+const mapResultsStateToProps = state => ({
   vlmEnabled: getVlmEnabled(state),
 })
 
-const mapDispatchToProps = dispatch => ({
+const mapResultsDispatchToProps = dispatch => ({
   receiveData: (updatesById) => {
     dispatch({ type: RECEIVE_DATA, updatesById })
     return updatesById
   },
 })
 
-const WrappedVariantLookup = ({ vlmEnabled, ...props }) => (
-  <QueryParamsEditor {...props}>
-    <VariantLookup vlmEnabled={vlmEnabled} />
-  </QueryParamsEditor>
-)
+const VariantLookupResults = connect(mapResultsStateToProps, mapResultsDispatchToProps)(BaseVariantLookupResults)
 
-WrappedVariantLookup.propTypes = {
-  vlmEnabled: PropTypes.bool,
+const LOOKUP_HEADER = { content: 'Lookup Variant' }
+const GENE_LOOKUP_HEADER = {
+  content: 'Lookup Variants in Gene',
+  subheader: (
+    <Header.Subheader>
+      Lookup up all rare variants in seqr in a given gene, regardless of whether or not they are in your
+      projects.
+      <br />
+      Variants are only returned if they have a gnomAD Allele Frequency &lt; 3%
+      and have a seqr global Allele Count &lt; 3000.
+      <br />
+      For more granular control over the returned variants, we recommend using the main Search page instead of this
+      lookup &nbsp;
+      <Popup
+        trigger={<Icon name="question circle outline" />}
+        content={
+          'On the Search page, select your desired genome build in the "Include All Projects" section, select the ' +
+          '"Include External Projects" checkbox next to it, and enter your gene of interest in the "Location" search ' +
+          'box along with your other desired search filters.'
+        }
+        hoverable
+      />
+      <br />
+
+      <br />
+
+    </Header.Subheader>
+  ),
 }
 
-export default connect(mapGlobalStateToProps, mapDispatchToProps)(WrappedVariantLookup)
+const BaseVariantLookup = ({ match, formProps, onSubmit, ...props }) => (
+  <Grid divided="vertically" centered>
+    <Grid.Row>
+      <Grid.Column width={16}>
+        <Header />
+        <Header textAlign="center" {...(match.params.gene ? GENE_LOOKUP_HEADER : LOOKUP_HEADER)} />
+      </Grid.Column>
+    </Grid.Row>
+    <Grid.Row>
+      <Grid.Column width={match.params.gene ? 1 : 5} />
+      <Grid.Column width={match.params.gene ? 14 : 6}>
+        <FormWrapper
+          {...formProps}
+          onSubmit={onSubmit}
+          noModal
+          verticalAlign="top"
+        />
+      </Grid.Column>
+      <Grid.Column width={match.params.gene ? 1 : 5} />
+    </Grid.Row>
+    {!match.params.gene && <VariantLookupResults {...props} />}
+  </Grid>
+)
+
+BaseVariantLookup.propTypes = {
+  match: PropTypes.object,
+  formProps: PropTypes.object,
+  onSubmit: PropTypes.func,
+}
+
+const mapStateToProps = (state, ownProps) => ({
+  formProps: ownProps.match.params.gene ? {
+    showErrorPanel: true,
+    loading: getSearchedVariantsIsLoading(state),
+    initialValues: INITIAL_GENE_LOOKUP_VALUES,
+    fields: GENE_LOOKUP_FIELDS,
+  } : {
+    fields: LOOKUP_FIELDS,
+    initialValues: ownProps.queryParams,
+  },
+})
+
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  onSubmit: data => (ownProps.match.params.gene ?
+    dispatch(navigateSavedHashedSearch(data)) :
+    onQueryParamSubmit(ownProps.updateQueryParams, data)
+  ),
+})
+
+const VariantLookup = connect(mapStateToProps, mapDispatchToProps)(BaseVariantLookup)
+
+export default props => (
+  <QueryParamsEditor {...props}>
+    <VariantLookup />
+  </QueryParamsEditor>
+)
