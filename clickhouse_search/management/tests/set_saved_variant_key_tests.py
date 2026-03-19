@@ -13,13 +13,19 @@ MOCK_GCNV_DATA = [
 class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project', 'report_variants', 'clickhouse_saved_variants']
 
-    SKIP_RESET_VARIANT_JSON = True
     MOCK_GCNV_DATA = MOCK_GCNV_DATA
 
     @classmethod
     def setUpTestData(cls):
         Project.objects.filter(id=3).update(genome_version='38')
         Sample.objects.filter(guid='S000154_na20889').update(dataset_type='SV', is_active=True)
+        for sv in SavedVariant.objects.filter(key__isnull=False):
+            sv.saved_variant_json = {
+                'genotypes': sv.genotypes, 'populations': {'gnomad': {'af': 0.01}},
+            }
+            if sv.guid == 'SV0000009_25000014783_r0004_no':
+                sv.saved_variant_json['populations']['seqr'] = {'af': 0.019480518996715546, 'ac': 3, 'an': 154}
+            sv.save()
         SavedVariant.objects.update(key=None)
 
     @mock.patch('clickhouse_search.management.commands.set_saved_variant_key.BATCH_SIZE', 2)
