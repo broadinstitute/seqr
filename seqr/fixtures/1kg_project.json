@@ -1869,7 +1869,9 @@
         "ref": "GAGA",
         "alt": "G",
         "variant_id": "21-3343353-GAGA-G",
+        "dataset_type": "SNV_INDEL",
         "gene_ids": ["ENSG00000135953"],
+        "main_transcript": {"transcriptId": "ENST00000258436", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "MFSD9", "majorConsequence": "inframe_deletion", "canonical": "YES", "hgvsp": "ENSP00000258436.5:p.Leu126del", "lof": "", "lofFlags": "", "codons": "ctTCTc/ctc", "hgvsc": "ENST00000258436.5:c.375_377delTCT", "transcriptRank": 0, "geneId": "ENSG00000135953", "aminoAcids": "LL/L", "cdnaPosition": "419-421"},
         "saved_variant_json": {
             "variantId": "21-3343353-GAGA-G",
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
@@ -1923,6 +1925,7 @@
         },
         "gene_ids": ["ENSG00000240361", "ENSG00000135953"],
         "saved_variant_json": {},
+        "main_transcript": {"aminoAcids": null, "biotype": "protein_coding", "canonical": 1, "codons": null, "consequenceTerms": [], "geneId": "ENSG00000135953", "hgvsc": null, "hgvsp": null, "loftee": [null, []], "majorConsequence": null, "transcriptId": "ENST00000371839", "transcriptRank": 1},
         "selected_main_transcript_id": "ENST00000371839",
         "family": 2
     }
@@ -1940,7 +1943,9 @@
         "ref": "G",
         "alt": "A",
         "variant_id": "1-46859832-G-A",
+        "dataset_type": "SNV_INDEL",
         "gene_ids": ["ENSG00000197530"],
+        "main_transcript": {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "CELSR1", "majorConsequence": "splice_region_variant", "canonical": "YES", "hgvs": "ENST00000505820.2:c.1067-4G>A", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000505820.2:c.1067-4G>A", "transcriptRank": 0, "geneId": "ENSG00000197530", "aminoAcids": "V/M", "cdnaPosition": "3955"},
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",
@@ -1981,7 +1986,9 @@
         "ref": "G",
         "alt": "CA",
         "variant_id": "1-1562437-G-CA",
+        "dataset_type": "SNV_INDEL",
         "gene_ids": ["ENSG00000197530"],
+        "main_transcript": {"transcriptId": "ENST00000505820", "lofFilter": "", "biotype": "protein_coding", "geneSymbol": "MIB2", "majorConsequence": "intron_variant", "canonical": 1, "hgvsp": "ENST00000505820.2:c.1586-17C>G", "lof": "", "lofFlags": "", "codons": "Gtg/Atg", "hgvsc": "ENST00000262738.3:c.3955G>A", "transcriptRank": 0, "geneId": "ENSG00000197530", "aminoAcids": "V/M", "cdnaPosition": "3955"},
         "saved_variant_json": {
             "clinvar": {"clinicalSignificance": "", "alleleId": null, "variationId": null, "goldStars": null},
             "liftedOverGenomeVersion": "38",
@@ -2090,7 +2097,9 @@
         "ref": null,
         "alt": null,
         "variant_id": "prefix_19107_DEL",
+        "dataset_type": "SV",
         "gene_ids": ["ENSG00000135953", "ENSG00000223972", "ENSG00000240361"],
+        "sv_type": "DEL",
         "saved_variant_json": {
             "liftedOverGenomeVersion": null,
             "pos": 249045487,
