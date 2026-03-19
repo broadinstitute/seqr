@@ -2,7 +2,8 @@ from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup, Inde
 from django.db.models import Func, Subquery, lookups, BooleanField, Aggregate
 from django.db.models.sql.datastructures import BaseTable, Join
 
-from clickhouse_search.backend.fields import NestedField
+from clickhouse_search.backend.fields import NestedField, NamedTupleField
+
 
 class Array(Func):
     function = 'array'
@@ -124,9 +125,9 @@ class ArrayFilter(lookups.Transform):
 
 
 class ArrayIndex(IndexTransform):
-    def __init__(self, index, *args, **kwargs):
+    def __init__(self, index, *args, base_field=None, **kwargs):
         super().__init__(index+1, None, *args, **kwargs)
-        self.base_field = self.source_expressions[0].output_field.base_field
+        self.base_field = base_field or self.source_expressions[0].output_field.base_field
 
 
 @ArrayField.register_lookup

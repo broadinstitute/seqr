@@ -159,6 +159,7 @@ SV_DROPPED_IDS = {
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
+        # TODO
         num_updated = SavedVariant.objects.filter(
             genotypes={}, saved_variant_json__genotypes__isnull=False,
         ).exclude(saved_variant_json__genotypes={}).update(genotypes=F('saved_variant_json__genotypes'))
