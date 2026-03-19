@@ -54,7 +54,7 @@ def create_manual_saved_variant_handler(request, family_guid):
     check_project_permissions(family.project, request.user)
 
     variant_json = json.loads(request.body)
-    tags = variant_json.pop('tags')
+    tags = variant_json.pop('tags', [])
     saved_variant_guids = {guid for guid, is_selected in variant_json.pop('variants', {}).items() if is_selected}
 
     genome_version = family.project.genome_version
@@ -77,8 +77,8 @@ def create_manual_saved_variant_handler(request, family_guid):
         if variant_json.get('mainTranscriptId'):
             variant_json['transcripts'][gene_id].append({
                 'transcriptId': variant_json['mainTranscriptId'],
-                'hgvsc': variant_json.pop('hgvsc'),
-                'hgvsp': variant_json.pop('hgvsp'),
+                'hgvsc': variant_json.pop('hgvsc', None),
+                'hgvsp': variant_json.pop('hgvsp', None),
             })
 
     variant_json['saved_variant_json'] = {**variant_json}
