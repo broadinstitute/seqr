@@ -58,7 +58,7 @@ def family_page_data(request, family_guid):
 
     discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY).values(
         'xpos', 'xpos_end', 'gene_ids', 'key', 'dataset_type',
-        svType=F('saved_variant_json__svType')
+        svType=F('sv_type')
     )
     gene_ids = {gene_id for variant in discovery_variants for gene_id in variant['gene_ids']}
     discovery_variant_intervals = [dict(zip(
