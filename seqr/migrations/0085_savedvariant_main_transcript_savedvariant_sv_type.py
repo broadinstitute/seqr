@@ -49,19 +49,19 @@ def populate_clickhouse_main_transcript(apps, schema_editor):
 
     for genome_version in ['38', '37']:
         output_field = VARIANT_DETAILS_CLASS_MAP[genome_version].transcripts.field.clone()
+        _update_field_from_clickhouse(
+            SavedVariant, db_alias, 'main_transcript', 'SNV_INDEL', genome_version=genome_version,
+            family__project__genome_version=genome_version,
+            expression=ArrayIndex(0, ArrayObjectSort('transcripts', sort_field='transcriptRank'), base_field=NamedTupleField(output_field.base_fields)),
+        )
+
         output_field.group_by_key = 'transcriptId'
         output_field.flatten_groups = True
         _update_field_from_clickhouse(
             SavedVariant, db_alias, 'main_transcript', 'SNV_INDEL', genome_version=genome_version,
             family__project__genome_version=genome_version, selected_main_transcript_id__isnull=False,
             expression=ArrayObjectSort('transcripts', sort_field='transcriptId', output_field=output_field),
-            process_value=lambda transcripts, variant: transcripts.get(variant.selected_main_transcript_id, {}),
-        )
-
-        _update_field_from_clickhouse(
-            SavedVariant, db_alias, 'main_transcript', 'SNV_INDEL', genome_version=genome_version,
-            family__project__genome_version=genome_version, selected_main_transcript_id__isnull=True,
-            expression=ArrayIndex(0, ArrayObjectSort('transcripts', sort_field='transcriptRank'), base_field=NamedTupleField(output_field.base_fields)),
+            process_value=lambda transcripts, variant: transcripts.get(variant.selected_main_transcript_id, variant.main_transcript),
         )
 
 
