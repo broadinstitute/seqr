@@ -1,10 +1,9 @@
 from collections import defaultdict
 from django.db.models import Count, Q, F, prefetch_related_objects
-from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models.functions import Coalesce, JSONObject
+from django.db.models.functions import Coalesce
 
 from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
-    VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote, Sample
+    VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, get_json_for_queryset, \

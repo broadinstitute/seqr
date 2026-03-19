@@ -2,7 +2,7 @@ from clickhouse_backend.models.fields.array import ArrayField, ArrayLookup, Inde
 from django.db.models import Func, Subquery, lookups, BooleanField, Aggregate
 from django.db.models.sql.datastructures import BaseTable, Join
 
-from clickhouse_search.backend.fields import NestedField, NamedTupleField
+from clickhouse_search.backend.fields import NestedField
 
 
 class Array(Func):
