@@ -272,11 +272,7 @@ def _search_new_saved_variants(family_variant_ids, *args, **kwargs):
 
 
 def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, dict], family_variant_ids: set[tuple[int, str]], genome_version: str) -> list[dict]:
-    variant_data = get_saved_variant_annotations(
-        {variant_id: {'genotypes': {}, 'familyGuids': []} for  variant_id in family_variant_ids}, genome_version=genome_version,
-    )
-    variants_by_key = {variant['key']: variant for variant in variant_data.values() if variant.get('key')}
-
+    variants_by_key = get_saved_variant_annotations(family_variant_ids, genome_version=genome_version, group_by_field='key')
     families_by_project = defaultdict(list)
     for family in families_by_id.values():
         families_by_project[family['project__guid']].append(family['guid'])
@@ -287,8 +283,11 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
         )
         for key, entry_data in genotype_keys.items():
             variants_by_key[key]['xpos'] = entry_data['xpos']
-            variants_by_key[key]['genotypes'].update(entry_data['genotypes'])
-            variants_by_key[key]['familyGuids'] += sorted({g['familyGuid'] for g in entry_data['genotypes'].values()})
+            variants_by_key[key]['genotypes'] = {**entry_data['genotypes'], **variants_by_key[key].get('genotypes', {})}
+            variants_by_key[key]['familyGuids'] = sorted([
+                *{g['familyGuid'] for g in entry_data['genotypes'].values()},
+                *(variants_by_key[key].get('familyGuids', [])),
+            ])
 
     return list(variants_by_key.values())
 

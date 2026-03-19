@@ -885,14 +885,18 @@ def import_gregor_metadata(request, project_guid):
 def _parse_new_aip_saved_variants(new_variant_keys, family_variant_data):
     family_id = next(family_id for family_id, _ in new_variant_keys)
     genome_version = Family.objects.filter(id=family_id).values_list('project__genome_version', flat=True).first()
-    new_variant_data = get_saved_variant_annotations(
-        {k: v for k, v in family_variant_data.items() if k in new_variant_keys}, genome_version,
-    )
-    for variant in new_variant_data.values():
-        if not variant.get('key'):
+    variants_by_id = get_saved_variant_annotations(new_variant_keys, genome_version)
+    new_variant_data = {}
+    for key in new_variant_keys:
+        variant = family_variant_data[key]
+        variant_id = key[1]
+        if variant_id in variants_by_id:
+            variant.update(variants_by_id[variant_id])
+        else:
             variant.update({'key': None, 'saved_variant_json': {k: v for k, v in variant.items() if k in {
                 'chrom', 'pos', 'ref', 'alt', 'variantId', 'xpos', 'genomeVersion', 'genotypes', 'transcripts', 'mainTranscriptId',
             }}})
+        new_variant_data[key] = variant
     return new_variant_data
 
 

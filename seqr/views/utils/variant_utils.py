@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, abc
 from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -160,12 +160,9 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
     return updated_tag
 
 
-def get_saved_variant_annotations(variant_data: dict[tuple[int, str], dict], genome_version: str, primary_id_field: str = 'variant_id', dataset_type: str = None) -> dict[tuple[int, str], dict]:
+def get_saved_variant_annotations(variant_keys: abc.Iterable[tuple[int, str]], genome_version: str, primary_id_field: str = 'variant_id', group_by_field=None, dataset_type: str = None) -> dict[str, dict]:
     dataset_type = dataset_type or Sample.DATASET_TYPE_VARIANT_CALLS
-    variant_ids = {
-        variant_id for (_, variant_id), variant in variant_data.items()
-        if not (variant.get('key') and variant.get('variantId'))
-    }
+    variant_ids = {variant_id for _, variant_id in variant_keys}
     keys = None
     if primary_id_field == 'key':
         keys = variant_ids
@@ -186,12 +183,7 @@ def get_saved_variant_annotations(variant_data: dict[tuple[int, str], dict], gen
         variant_fields += ['chrom', 'pos', 'end']
     else:
         variant_values.update(qs.split_variant_id_annotations())
-    variants_by_id = {v[key_field]: v for v in qs.join_variant_id().values(*variant_fields, **variant_values)}
-    for (_, variant_id), variant in variant_data.items():
-        if variant_id in variants_by_id:
-            variant.update(variants_by_id[variant_id])
-            variant['dataset_type'] = dataset_type
-    return variant_data
+    return {v[group_by_field or key_field]: v for v in qs.join_variant_id().values(*variant_fields, **variant_values)}
 
 
 def reset_cached_search_results(project, reset_index_metadata=False):

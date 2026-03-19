@@ -587,10 +587,15 @@ class Command(BaseCommand):
     @staticmethod
     def _parse_new_saved_variants(dataset_type):
         def wrapped(new_variant_keys, family_variant_data):
-            return get_saved_variant_annotations(
-                {k: v for k, v in family_variant_data.items() if k in new_variant_keys},
+            new_variant_data = {k: v for k, v in family_variant_data.items() if k in new_variant_keys}
+            variants_by_id = get_saved_variant_annotations(
+                {k for k, v in new_variant_data.items() if not (v.get('key') and v.get('variantId'))},
                 dataset_type=dataset_type, genome_version=GENOME_VERSION_GRCh38, primary_id_field='key',
             )
+            return {
+                k: {**v, 'dataset_type': dataset_type, **(variants_by_id.get(k[1], {}))}
+                for k, v in family_variant_data.items() if k in new_variant_keys
+            }
         return wrapped
 
     @classmethod
