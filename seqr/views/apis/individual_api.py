@@ -28,7 +28,7 @@ from seqr.views.utils.permissions_utils import get_project_and_check_permissions
     pm_or_data_manager_required, check_workspace_perm
 from seqr.views.utils.project_context_utils import add_project_tag_type_counts
 from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
-from seqr.views.utils.variant_utils import bulk_create_tagged_variants
+from seqr.views.utils.variant_utils import bulk_create_tagged_variants, get_saved_variant_annotations
 
 
 @login_and_policies_required
@@ -823,8 +823,7 @@ def import_gregor_metadata(request, project_guid):
 
     family_variant_data = {}
     finding_id_map = {}
-    metadata = {}
-    genes = {}
+    genes = set()
     for row in _iter_metadata_table(
         metadata_files_path, FINDINGS_TABLE, request.user,
             lambda r: r['participant_id'] in participant_individual_map and r['variant_type'] in {'SNV/INDEL', 'SNV', 'INDEL'},
@@ -832,31 +831,28 @@ def import_gregor_metadata(request, project_guid):
         individual = participant_individual_map[row['participant_id']]
         variant_id = '-'.join([row[col] for col in ['chrom', 'pos', 'ref', 'alt']])
         key = (individual['family_id'], variant_id)
-        row = {k: v for k, v in row.items() if v and v != 'NA'}
-        variant = {k: row.get(k) for k in ['chrom', 'pos', 'ref', 'alt', 'linked_variant']}
+        variant = {k: v for k, v in row.items() if v and v != 'NA'}
         pos = int(variant['pos'])
         variant.update({
-            'key': None,
             'variantId': variant_id,
             'xpos': get_xpos(variant['chrom'], pos),
             'pos': pos,
-            'genomeVersion': row['variant_reference_assembly'].replace('GRCh', ''),
+            'genomeVersion': variant['variant_reference_assembly'].replace('GRCh', ''),
             'transcripts': {},
             'transcript': {
-                config.get('seqr_field', k): row.pop(k, None) for k, config in TRANSCRIPT_FIELDS.items()
+                config.get('seqr_field', k): variant.pop(k, None) for k, config in TRANSCRIPT_FIELDS.items()
             },
-            'genotypes': {individual['guid']: {'numAlt': 2 if row['zygosity'] == 'Homozygous' else 1}},
+            'genotypes': {individual['guid']: {'numAlt': 2 if variant['zygosity'] == 'Homozygous' else 1}},
             'support_vars': [],
         })
         family_variant_data[key] = variant
-        genes[key] = row[GENE_COLUMN]
-        finding_id_map[row['genetic_findings_id']] = variant_id
-        metadata[key] = {k: row[k] for k in FINDING_METADATA_COLUMNS if k in row}
+        genes.add(variant[GENE_COLUMN])
+        finding_id_map[variant['genetic_findings_id']] = variant_id
 
-    gene_symbols_to_ids = {k: v[0] for k, v in get_gene_ids_for_gene_symbols(genes.values(), genome_version=project.genome_version).items()}
+    gene_symbols_to_ids = {k: v[0] for k, v in get_gene_ids_for_gene_symbols(genes, genome_version=project.genome_version).items()}
     missing_genes = set()
-    for key, variant in family_variant_data.items():
-        gene = genes[key]
+    for variant in family_variant_data.values():
+        gene = variant[GENE_COLUMN]
         transcript = variant.pop('transcript')
         if gene in gene_symbols_to_ids:
             variant.update({
@@ -865,16 +861,15 @@ def import_gregor_metadata(request, project_guid):
             })
         else:
             missing_genes.add(gene)
-        linked_variant = variant.pop('linked_variant', None)
-        if linked_variant in finding_id_map:
-            variant['support_vars'].append(finding_id_map[linked_variant])
+        if variant.get('linked_variant') in finding_id_map:
+            variant['support_vars'].append(finding_id_map[variant['linked_variant']])
 
     if missing_genes:
         warnings.append(f'The following unknown genes were omitted in the findings tags: {", ".join(sorted(missing_genes))}')
 
     new_keys, update_keys, skipped_keys = bulk_create_tagged_variants(
         family_variant_data, tag_name=GREGOR_FINDING_TAG_TYPE, user=request.user, project=project,
-        get_metadata=lambda v, key=None: metadata[key],
+        get_metadata=lambda v: {k: v[k] for k in FINDING_METADATA_COLUMNS if k in v}, parse_new_saved_variants=_parse_new_aip_saved_variants,
     )
     loaded_info = f'Loaded {len(new_keys)} new and {len(update_keys)} updated findings tags'
     if skipped_keys:
@@ -885,6 +880,20 @@ def import_gregor_metadata(request, project_guid):
 
     response_json['importStats'] = {'gregorMetadata': {'info': info, 'warnings': warnings}}
     return create_json_response(response_json)
+
+
+def _parse_new_aip_saved_variants(new_variant_keys, family_variant_data):
+    family_id = next(family_id for family_id, _ in new_variant_keys)
+    genome_version = Family.objects.filter(id=family_id).values_list('project__genome_version', flat=True).first()
+    new_variant_data = get_saved_variant_annotations(
+        {k: v for k, v in family_variant_data.items() if k in new_variant_keys}, genome_version,
+    )
+    for variant in new_variant_data.values():
+        if not variant.get('key'):
+            variant.update({'key': None, 'saved_variant_json': {k: v for k, v in variant.items() if k in {
+                'chrom', 'pos', 'ref', 'alt', 'variantId', 'xpos', 'genomeVersion', 'genotypes', 'transcripts', 'mainTranscriptId',
+            }}})
+    return new_variant_data
 
 
 def _iter_metadata_table(file_path, table_name, user, filter_row):

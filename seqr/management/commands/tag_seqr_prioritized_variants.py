@@ -15,7 +15,7 @@ from seqr.utils.gene_utils import get_genes
 from seqr.utils.search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO
 from seqr.utils.search.utils import get_search_samples, COMPOUND_HET
 from seqr.views.utils.orm_to_json_utils import SEQR_TAG_TYPE
-from seqr.views.utils.variant_utils import bulk_create_tagged_variants
+from seqr.views.utils.variant_utils import bulk_create_tagged_variants, get_saved_variant_annotations
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 import logging
@@ -580,8 +580,17 @@ class Command(BaseCommand):
 
     @staticmethod
     def _get_metadata(today, metadata_key):
-        def wrapped(v, **kwargs):
+        def wrapped(v):
             return {name: today for name in v[metadata_key]} if v[metadata_key] else None
+        return wrapped
+
+    @staticmethod
+    def _parse_new_saved_variants(dataset_type):
+        def wrapped(new_variant_keys, family_variant_data):
+            return get_saved_variant_annotations(
+                {k: v for k, v in family_variant_data.items() if k in new_variant_keys},
+                dataset_type=dataset_type, genome_version=GENOME_VERSION_GRCh38, primary_id_field='key',
+            )
         return wrapped
 
     @classmethod
@@ -667,7 +676,7 @@ class Command(BaseCommand):
         new_tag_keys, update_tag_keys, skipped_tag_keys = bulk_create_tagged_variants(
             family_variant_data, tag_name=SEQR_TAG_TYPE, get_metadata=cls._get_metadata(today, 'matched_searches'),
             get_comp_het_metadata=cls._get_metadata(today, 'matched_comp_het_searches'), user=None,
-            remove_missing_metadata=False, primary_id_field='key', dataset_type=dataset_type, genome_version=GENOME_VERSION_GRCh38,
+            remove_missing_metadata=False, primary_id_field='key', parse_new_saved_variants=cls._parse_new_saved_variants(dataset_type),
         )
         updates['new_tag_keys'].update(new_tag_keys)
         updates['update_tag_keys'].update(update_tag_keys - updates['new_tag_keys'])

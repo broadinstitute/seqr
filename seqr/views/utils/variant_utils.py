@@ -70,17 +70,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, parse_new_saved_v
 
     new_variant_keys = set(family_variant_data.keys()) - set(saved_variant_map.keys())
     if new_variant_keys:
-        new_variant_data = parse_new_saved_variants(new_variant_keys)
-        # TODO
-        # if load_new_variant_data:
-        #     genome_version = Family.objects.filter(id__in=all_family_ids).values_list('project__genome_version', flat=True).first()
-        #     new_variant_data = _search_new_saved_variants(new_variant_keys, genome_version)
-        # else:
-        #     new_variant_data = {k: v for k, v in family_variant_data.items() if k in new_variant_keys}
-        #     new_variant_data = _get_clickhouse_variant_annotations(
-        #         new_variant_data, primary_id_field, project=project, dataset_type=dataset_type, **kwargs,
-        #     )
-
+        new_variant_data = parse_new_saved_variants(new_variant_keys, family_variant_data)
         new_variant_models = [
             SavedVariant(**parse_saved_variant_json(variant, family_id))
             for (family_id, _), variant in new_variant_data.items()
@@ -101,7 +91,7 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, parse_new_saved_v
     new_tag_keys = {}
     skipped_tag_keys = set()
     for key, variant in sorted(family_variant_data.items()):
-        metadata = get_metadata(variant, key=key)
+        metadata = get_metadata(variant)
         comp_het_metadata = get_comp_het_metadata(variant) if get_comp_het_metadata else None
         updated_tag = _set_updated_tags(
             key, metadata, comp_het_metadata, variant.get('support_vars', []), saved_variant_map, existing_tags, tag_type, user,
@@ -170,7 +160,7 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
     return updated_tag
 
 
-def get_saved_variant_annotations(variant_data: dict[tuple[int, str], dict], primary_id_field: str = 'variant_id', genome_version: str = None, project: Project = None, dataset_type: str = None) -> dict[tuple[int, str], dict]:
+def get_saved_variant_annotations(variant_data: dict[tuple[int, str], dict], genome_version: str, primary_id_field: str = 'variant_id', dataset_type: str = None) -> dict[tuple[int, str], dict]:
     dataset_type = dataset_type or Sample.DATASET_TYPE_VARIANT_CALLS
     variant_ids = {
         variant_id for (_, variant_id), variant in variant_data.items()
@@ -181,7 +171,7 @@ def get_saved_variant_annotations(variant_data: dict[tuple[int, str], dict], pri
         keys = variant_ids
         variant_ids = None
     qs = get_variants_queryset(
-        genome_version or project.genome_version, dataset_type, keys=keys, variant_ids=variant_ids,
+        genome_version, dataset_type, keys=keys, variant_ids=variant_ids,
     )
     key_field = 'variantId' if primary_id_field == 'variant_id' else primary_id_field
     variant_fields = ['key']
@@ -200,6 +190,7 @@ def get_saved_variant_annotations(variant_data: dict[tuple[int, str], dict], pri
     for (_, variant_id), variant in variant_data.items():
         if variant_id in variants_by_id:
             variant.update(variants_by_id[variant_id])
+            variant['dataset_type'] = dataset_type
     return variant_data
 
 

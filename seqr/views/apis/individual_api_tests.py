@@ -1244,7 +1244,6 @@ class IndividualAPITest(object):
                 'chrom': '1',
                 'genomeVersion': '37',
                 'genotypes': {created_individual_guid: {'numAlt': 1}},
-                'key': None,
                 'mainTranscriptId': None,
                 'pos': 249045487,
                 'ref': 'A',
@@ -1253,7 +1252,6 @@ class IndividualAPITest(object):
                 'transcripts': {
                     'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
                 },
-                'support_vars': ['1-248367227-TC-T'],
             },
             'key': None,
             'dataset_type': 'SNV_INDEL',
