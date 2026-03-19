@@ -3,7 +3,6 @@ import json
 
 from django.db.models import Q
 
-from clickhouse_search.search import get_variant_main_transcripts_by_key
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project, Sample
 from seqr.utils.xpos_utils import get_xpos
@@ -122,7 +121,7 @@ def create_saved_variant_handler(request):
 
     response = {}
     if variant_json.get('note'):
-        _, response = _create_variant_note(saved_variants, variant_json, request.user, family.project.genome_version)
+        _, response = _create_variant_note(saved_variants, variant_json, request.user)
     elif variant_json.get('tags'):
         _update_tags(saved_variants, variant_json, request.user)
 
@@ -149,7 +148,7 @@ def create_variant_note_handler(request, variant_guids):
         return create_json_response({'error': 'Note is required'}, status=400)
 
     # update saved_variants
-    note, response = _create_variant_note(saved_variants, request_json, request.user, family.project.genome_version)
+    note, response = _create_variant_note(saved_variants, request_json, request.user)
     note_json = get_json_for_variant_note(note)
     note_json['variantGuids'] = all_variant_guids
     response.update({
@@ -162,7 +161,7 @@ def create_variant_note_handler(request, variant_guids):
     return create_json_response(response)
 
 
-def _create_variant_note(saved_variants, note_json, user, genome_version):
+def _create_variant_note(saved_variants, note_json, user):
     note = create_model_from_json(VariantNote, {
         'note': note_json.get('note'),
         'report': note_json.get('report') or False,
@@ -172,21 +171,15 @@ def _create_variant_note(saved_variants, note_json, user, genome_version):
 
     response = {}
     if note_json.get('saveAsGeneNote'):
-        gene_id = _variant_gene_id(saved_variants[0], genome_version)
+        variant = saved_variants[0]
+        gene_id = variant.gene_ids[0] if len(variant.gene_ids) == 1 or not variant.selected_main_transcript_id \
+            else variant.main_transcript.get('geneId')
         create_model_from_json(GeneNote, {'note': note_json.get('note'), 'gene_id': gene_id}, user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], user)[gene_id],
         }}
 
     return note, response
-
-
-def _variant_gene_id(variant, genome_version):
-    if len(variant.gene_ids) == 1 or not variant.selected_main_transcript_id:
-        return variant.gene_ids[0]
-    return get_variant_main_transcripts_by_key(
-        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, {variant.key: [variant.selected_main_transcript_id]},
-    )[variant.key]['main_transcripts'][variant.selected_main_transcript_id].get('geneId')
 
 
 @login_and_policies_required
