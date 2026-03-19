@@ -1,7 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
 from django.core.exceptions import PermissionDenied
-from django.core.mail.message import EmailMessage
 from django.contrib.auth.models import User
 from django.db.models import CharField, F, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
@@ -11,10 +10,10 @@ from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissio
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Project, Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy, Sample
+from seqr.models import Project, Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.file_utils import load_uploaded_file
-from seqr.utils.communication_utils import safe_post_to_slack, set_email_message_stream
+from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.json_utils import create_json_response
@@ -26,7 +25,7 @@ from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, bulk_create_tagged_variants, DISCOVERY_CATEGORY
-from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL, VLM_SEND_EMAIL
+from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
 
@@ -335,25 +334,3 @@ def _get_airtable_collaborator_names(user, collaborator_ids):
         collaborator_id: collaborator_map.get(collaborator_id, {}).get('CollaboratorID')
         for collaborator_id in collaborator_ids
     }
-
-
-@login_and_policies_required
-def send_vlm_email(request):
-    request_json = json.loads(request.body)
-    email_message = EmailMessage(
-        subject=request_json['subject'],
-        body=request_json['body'],
-        bcc=[s.strip() for s in request_json['to'].split(',')],
-        cc=[request.user.email],
-        reply_to=[request.user.email],
-        to=[VLM_SEND_EMAIL],
-        from_email=VLM_SEND_EMAIL,
-    )
-    set_email_message_stream(email_message, 'vlm')
-
-    try:
-        email_message.send()
-    except Exception as e:
-        logger.error(f'VLM Email Error: {e}', request.user, detail=request_json)
-
-    return create_json_response({'success': True})

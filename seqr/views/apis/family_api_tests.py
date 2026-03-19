@@ -251,6 +251,12 @@ class FamilyAPITest(object):
         self.assertEqual(response.reason_phrase, "'families' not specified")
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'families': [
+            {'familyGuid': '2', 'familyId': '2', 'description': 'Test description 1'}
+        ]}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Invalid family guids: 2')
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'families': [
             {'familyGuid': FAMILY_GUID, 'familyId': '2', 'description': 'Test description 1'}
         ]}))
         self.assertEqual(response.status_code, 400)

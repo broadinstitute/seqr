@@ -18,10 +18,6 @@ from seqr.utils.xpos_utils import get_xpos, format_chrom
 logger = SeqrLogger(__name__)
 
 
-SEARCH_EXCEPTION_ERROR_MAP = {
-    InvalidSearchException: 400,
-}
-
 
 MAX_GENES_FOR_FILTER = 10000
 MIN_MULTI_FAMILY_SEQR_AC = 5000

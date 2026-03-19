@@ -96,7 +96,7 @@ def get_clickhouse_variants(families, dataset_types, secondary_dataset_types, se
     if search.get('no_access_project_genome_version'):
         logger.info('Looking up variants in projects with no user access', user)
         results += _get_search_results(
-        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **search, sample_data=None, skip_entry_fields=True, annotate_num_families=True,
+        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **search, sample_data=None, skip_entry_fields=True,
             exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
         )
 
@@ -934,7 +934,8 @@ def _main_transcript(selected_transcript_id, sorted_transcripts):
 
 
 def delete_clickhouse_project(project, dataset_type, sample_type=None):
-    dataset_type = _clickhouse_dataset_type(dataset_type, sample_type)
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES:
+        dataset_type = 'GCNV'
     table_base = f'{GENOME_VERSION_LOOKUP[project.genome_version]}/{dataset_type}'
     with connections['clickhouse_write'].cursor() as cursor:
         cursor.execute(f'ALTER TABLE "{table_base}/entries" DROP PARTITION %s', [project.guid])
@@ -943,13 +944,3 @@ def delete_clickhouse_project(project, dataset_type, sample_type=None):
             PROJECT_GT_STATS_VIEW_CLASS_MAP[project.genome_version][dataset_type].refresh()
             ENTRY_CLASS_MAP[project.genome_version][dataset_type].gt_stats.rel.related_model.reload()
     return f'Deleted all {dataset_type} search data for project {project.name}'
-
-
-SV_DATASET_TYPES = {
-    Sample.SAMPLE_TYPE_WGS: Sample.DATASET_TYPE_SV_CALLS,
-    Sample.SAMPLE_TYPE_WES: 'GCNV',
-}
-def _clickhouse_dataset_type(dataset_type, sample_type):
-    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
-        dataset_type = SV_DATASET_TYPES[sample_type]
-    return dataset_type

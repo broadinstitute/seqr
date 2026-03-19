@@ -10,7 +10,7 @@ from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, Matchmak
 from matchmaker.matchmaker_utils import MME_DISCLAIMER
 from matchmaker.views.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
     update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email, \
-    get_mme_nodes, search_local_individual_mme_matches, finalize_mme_search, \
+    get_mme_nodes, search_local_individual_mme_matches, finalize_mme_search, send_vlm_email, \
     update_mme_contact_note, update_mme_project_contact
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS
 
@@ -870,4 +870,49 @@ class MatchmakerAPITest(AuthenticationTestCase):
         self.assertListEqual(existing_submission.contacts, [
             {'name': 'Baylor UDN Clinical Site', 'email': 'UDNCC@hms.harvard.edu'},
             {'name': '', 'email': 'matchmaker@phenomecentral.org'},
+        ])
+
+
+    @mock.patch('matchmaker.views.matchmaker_api.EmailMessage')
+    def test_send_vlm_email(self, mock_email):
+        url = reverse(send_vlm_email)
+        self.check_require_login(url)
+
+        self.reset_logs()
+        body = {
+            'to': 'test@test.com , other_test@gmail.com',
+            'body': 'some email content',
+            'subject': 'some email subject'
+        }
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._assert_expected_vlm_email(response, mock_email)
+
+        self.reset_logs()
+        mock_email.return_value.send.side_effect = Exception('Send failed')
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self._assert_expected_vlm_email(response, mock_email, additional_logs=[
+            ('VLM Email Error: Send failed', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                'detail': body,
+            }),
+        ])
+
+    def _assert_expected_vlm_email(self, response, mock_email, additional_logs=None):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+
+        mock_email.assert_called_with(
+            subject='some email subject',
+            body='some email content',
+            bcc=['test@test.com', 'other_test@gmail.com'],
+            cc=['test_user_no_access@test.com'],
+            reply_to=['test_user_no_access@test.com'],
+            to=['vlm-noreply@broadinstitute.org'],
+            from_email='vlm-noreply@broadinstitute.org')
+        self.assertDictEqual(mock_email.return_value.esp_extra, {'MessageStream': 'vlm'})
+        mock_email.return_value.send.assert_called()
+
+        self.assert_json_logs(self.no_access_user, (additional_logs or []) + [
+            (None, {'httpRequest': mock.ANY, 'requestBody': mock.ANY})
         ])

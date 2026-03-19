@@ -47,8 +47,6 @@ def parse_pedigree_table(parsed_file, filename, user, project):
     if is_merged_pedigree_sample_manifest:
         if not user_is_pm(user):
             raise ValueError('Unsupported file format')
-        if not project:
-            raise ValueError('Project argument required for parsing sample manifest')
         header, rows = _parse_merged_pedigree_sample_manifest_rows(parsed_file[1:])
     else:
         header = None

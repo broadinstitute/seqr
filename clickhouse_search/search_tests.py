@@ -38,7 +38,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
     format_cached_variant
 from reference_data.models import Omim
-from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults, SavedVariant
+from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults, SavedVariant, Individual
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
     SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
@@ -1284,6 +1284,25 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733'],
         )
 
+        # Test error handling when the ClickHouse sampleId cannot be mapped to any Postgres Individual
+        self.reset_logs()
+        Individual.objects.filter(guid='I000006_hg00733').update(individual_id='unmapped_id')
+        missing_gt_variant = {
+            **GRCH37_VARIANT, 'genotypes': {k: v for k, v in GRCH37_VARIANT['genotypes'].items() if k != 'I000006_hg00733'},
+        }
+        self._assert_expected_lookup(
+            '7-143270172-A-G', missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT], genome_version='37',
+            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+            individual_guids=['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']
+        )
+        self.assert_json_logs(self.manager_user, [
+            ('Looking up variant 7-143270172-A-G with data type SNV_INDEL', None),
+            ('Unable to map sample HG00733 in family F000002_2 to an individual for variant 7-143270172-A-G', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
+        ])
+
     def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, expected_individuals=None, skip_fields=None, cached_variants=None, additional_variant=None, sample_type=None, **kwargs):
         url = f'{reverse(variant_lookup_handler)}?variantId={variant_id}&genomeVersion={genome_version}'
         if hom_only:
@@ -2401,8 +2420,9 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         self.check_data_manager_login(url)
 
         Project.objects.filter(guid='R0001_1kg').update(genome_version='38')
+        body = {'project': 'R0001_1kg', 'datasetType': 'SNV_INDEL'}
         response = self.client.post(
-            url, content_type='application/json', data=json.dumps({'project': 'R0001_1kg', 'datasetType': 'SNV_INDEL'})
+            url, content_type='application/json', data=json.dumps(body)
         )
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
@@ -2430,5 +2450,17 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         project_samples = Sample.objects.filter(individual__family__project__guid='R0001_1kg', is_active=True)
         self.assertEqual(project_samples.filter(dataset_type='SNV_INDEL').count(), 0)
         self.assertEqual(project_samples.count(), 4)
+
+        body['datasetType'] = 'SV'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': [
+                'Deactivated search for 3 individuals',
+                'Deleted all GCNV search data for project 1kg project n\xe5me with uni\xe7\xf8de',
+            ],
+        })
+        self.assertEqual(project_samples.filter(dataset_type='SV').count(), 0)
+        self.assertEqual(project_samples.count(), 1)
 
 
