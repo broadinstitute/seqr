@@ -93,10 +93,6 @@ def update_rna_seq(request):
     return create_json_response(response_json, status=status)
 
 
-def _get_sample_file_path(file_dir, sample_guid):
-    return os.path.join(file_dir, f'{sample_guid}.json.gz')
-
-
 def _notify_phenotype_prioritization_loaded(project, tool, num_samples):
     send_project_notification(
         project,
