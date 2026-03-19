@@ -1219,8 +1219,9 @@ class IndividualAPITest(object):
         saved_variants = SavedVariant.objects.filter(
             varianttag__variant_tag_type__name='GREGoR Finding'
         ).order_by('family_id', 'variant_id').distinct().values(
-            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json', 'key', 'dataset_type', 'genotypes', 'gene_ids',
+            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json', 'key', 'dataset_type', 'genotypes', 'gene_ids', 'main_transcript',
         )
+        self.maxDiff = None
         self.assertEqual(len(saved_variants), 4)
         self.assertDictEqual(saved_variants[0], {
             'guid': 'SV0000006_1248367227_r0003_tes',
@@ -1232,6 +1233,7 @@ class IndividualAPITest(object):
             'dataset_type': 'SNV_INDEL',
             'genotypes': mock.ANY,
             'gene_ids': ['ENSG00000240361', 'ENSG00000135953'],
+            'main_transcript': {},
         })
         self.assertEqual(len(saved_variants[0]['genotypes']), 2)
         self.assertDictEqual(saved_variants[1], {
@@ -1253,6 +1255,7 @@ class IndividualAPITest(object):
                     'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
                 },
             },
+            'main_transcript': {},
             'key': None,
             'dataset_type': 'SNV_INDEL',
             'genotypes': {created_individual_guid: {'numAlt': 1}},
@@ -1269,6 +1272,7 @@ class IndividualAPITest(object):
             'dataset_type': 'SNV_INDEL',
             'genotypes': new_family_genotypes,
             'gene_ids': ['ENSG00000135953'],
+            'main_transcript':  {'hgvsc': 'c.3955G>A','hgvsp': 'c.1586-17C>G', 'transcriptId': 'ENST00000505820'},
         })
 
         variant_tags = VariantTag.objects.filter(variant_tag_type__name='GREGoR Finding')

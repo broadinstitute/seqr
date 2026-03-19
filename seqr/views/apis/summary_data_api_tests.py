@@ -645,6 +645,12 @@ class SummaryDataAPITest(AirtableTest):
                 'familyGuid': 'F000002_2', 'individualGuid': 'I000006_hg00733', 'sampleType': 'WES',
             },
         })
+        self.assertDictEqual(new_saved_variant.main_transcript, {
+            'aminoAcids': None, 'biotype': 'protein_coding', 'canonical': 1, 'codons': None,
+            'consequenceTerms': ['inframe_deletion'], 'geneId': 'ENSG00000135953', 'hgvsc': 'ENST00000262738.3:c.3955G>A',
+            'hgvsp': 'ENST00000505820.2:c.1586-17C>G', 'loftee': {'isLofNagnag': None, 'lofFilters': None},
+            'majorConsequence': 'inframe_deletion', 'transcriptId': 'ENST00000505820', 'transcriptRank': 0,
+        })
 
     def _has_expected_metadata_response(self, response, expected_individuals, has_airtable=False, has_duplicate=False):
         self.assertEqual(response.status_code, 200)

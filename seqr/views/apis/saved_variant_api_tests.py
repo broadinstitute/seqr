@@ -396,7 +396,10 @@ class SavedVariantAPITest(object):
         variant_guid = next(iter(response.json()['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
-        self._assert_created_variant(saved_variant, CREATE_VARIANT_JSON, gene_ids=['ENSG00000277258', 'ENSG00000177000'])
+        self._assert_created_variant(
+            saved_variant, CREATE_VARIANT_JSON, gene_ids=['ENSG00000277258', 'ENSG00000177000'],
+            main_transcript=CREATE_VARIANT_JSON['transcripts']['ENSG00000277258'][0],
+        )
 
         variant_json = {
             **CREATE_VARIANT_JSON,
@@ -426,12 +429,14 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(list(response.json()['savedVariantsByGuid'].keys()), [variant_guid])
 
-    def _assert_created_variant(self, saved_variant, variant_json, gene_ids=None, dataset_type='SNV_INDEL', has_saved_variant_json=False):
+    def _assert_created_variant(self, saved_variant, variant_json, gene_ids=None, dataset_type='SNV_INDEL', sv_type=None, main_transcript=None, has_saved_variant_json=False):
         for field in ['xpos', 'ref', 'alt', 'key']:
             self.assertEqual(variant_json.get(field), getattr(saved_variant, field, None))
         self.assertEqual(saved_variant.gene_ids, gene_ids or [])
         self.assertDictEqual(variant_json['genotypes'], saved_variant.genotypes)
         self.assertEqual(dataset_type, saved_variant.dataset_type)
+        self.assertEqual(sv_type, saved_variant.sv_type)
+        self.assertDictEqual(main_transcript or {}, saved_variant.main_transcript)
         self.assertDictEqual(variant_json if has_saved_variant_json else {}, saved_variant.saved_variant_json)
 
     def test_create_saved_sv_variant(self):
@@ -481,7 +486,7 @@ class SavedVariantAPITest(object):
         variant_guid = next(iter(response_json['savedVariantsByGuid']))
 
         saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
-        self._assert_created_variant(saved_variant, variant_json, dataset_type='SV_WES', gene_ids=['ENSG00000240361'])
+        self._assert_created_variant(saved_variant, variant_json, dataset_type='SV_WES', sv_type='DUP', gene_ids=['ENSG00000240361'])
         self.assertEqual(saved_variant.xpos_end, 2061414175)
 
         variant_json.update({
@@ -599,7 +604,9 @@ class SavedVariantAPITest(object):
             'transcripts': {'ENSG00000277258': [{'hgvsc': 'c.156GAG>A', 'hgvsp': 'p.Leu52Phe', 'transcriptId': 'ENST00000459627'}]},
             **{k: v for k, v in manual_variant_request_body.items() if k in {'alt', 'ref', 'chrom', 'pos', 'genotypes', 'mainTranscriptId'}},
         }
-        self._assert_created_variant(saved_variant, variant_json, gene_ids=['ENSG00000277258'], has_saved_variant_json=True)
+        self._assert_created_variant(saved_variant, variant_json, gene_ids=['ENSG00000277258'], has_saved_variant_json=True, main_transcript={
+            'hgvsc': 'c.156GAG>A', 'hgvsp': 'p.Leu52Phe', 'transcriptId': 'ENST00000459627',
+        })
         self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
         base_variant_json = {
@@ -652,7 +659,7 @@ class SavedVariantAPITest(object):
             'transcripts': {'ENSG00000240361': []},
             **{k: v for k, v in manual_variant_request_body.items() if k in {'chrom', 'pos', 'end', 'svName', 'svType', 'genotypes'}},
         }
-        self._assert_created_variant(saved_sv_variant, sv_variant_json, gene_ids=['ENSG00000240361'], dataset_type='SV', has_saved_variant_json=True)
+        self._assert_created_variant(saved_sv_variant, sv_variant_json, gene_ids=['ENSG00000240361'], dataset_type='SV', sv_type='DEL', has_saved_variant_json=True)
 
         sv_variant_json.update(base_variant_json)
         sv_variant_json.update({

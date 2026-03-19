@@ -287,7 +287,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
     @property
     def variant_detail_field(self):
-        return next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('variantdetails'))
+        return next((obj.name for obj in self.model._meta.related_objects if obj.name.startswith('variantdetails')), None)
 
     @property
     def entry_field(self):
