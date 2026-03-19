@@ -159,12 +159,6 @@ SV_DROPPED_IDS = {
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
-        # TODO
-        num_updated = SavedVariant.objects.filter(
-            genotypes={}, saved_variant_json__genotypes__isnull=False,
-        ).exclude(saved_variant_json__genotypes={}).update(genotypes=F('saved_variant_json__genotypes'))
-        logger.info(f'Updated genotypes for {num_updated} variants')
-
         variant_ids = SavedVariant.objects.filter(
             key__isnull=True, family__project__genome_version=GENOME_VERSION_GRCh38,
             saved_variant_json__populations__isnull=False, # Omit manual variants
@@ -226,7 +220,6 @@ class Command(BaseCommand):
 
         mapped_variant_ids = list(variant_key_map.keys())
 
-        update_fields = ['key', 'dataset_type']
         total_num_updated = 0
         for i in range(0, len(mapped_variant_ids), BATCH_SIZE):
             batch_ids = mapped_variant_ids[i:i + BATCH_SIZE]
@@ -235,8 +228,7 @@ class Command(BaseCommand):
             )
             for variant in saved_variants:
                 variant.key = variant_key_map[variant.variant_id]
-                variant.dataset_type = dataset_type
-            num_updated = SavedVariant.objects.bulk_update(saved_variants, update_fields)
+            num_updated = SavedVariant.objects.bulk_update(saved_variants, ['key'])
             logger.info(f'Updated batch of {num_updated}')
             total_num_updated += num_updated
 
