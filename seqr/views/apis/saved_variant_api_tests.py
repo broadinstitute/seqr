@@ -1094,13 +1094,15 @@ class SavedVariantAPITest(object):
         update_main_transcript_url = reverse(update_variant_main_transcript, args=[VARIANT_GUID, transcript_id])
         self.check_manager_login(update_main_transcript_url)
 
-        response = self.client.post(update_main_transcript_url)
+        transcript = {'transcriptId': transcript_id, 'majorConsequence': 'intron_variant'}
+        response = self.client.post(update_main_transcript_url, content_type='application/json', data=json.dumps(transcript))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'savedVariantsByGuid': {VARIANT_GUID: {'selectedMainTranscriptId': transcript_id}}})
 
         saved_variants = SavedVariant.objects.filter(guid=VARIANT_GUID)
         self.assertEqual(len(saved_variants), 1)
         self.assertEqual(saved_variants.first().selected_main_transcript_id, transcript_id)
+        self.assertDictEqual(saved_variants.first().main_transcript, transcript)
         self.assertEqual(get_json_for_saved_variants(saved_variants, add_details=True)[0]['selectedMainTranscriptId'], transcript_id)
 
     def test_update_variant_acmg_classification(self):

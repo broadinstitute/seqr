@@ -345,8 +345,10 @@ def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=Vari
 def update_variant_main_transcript(request, variant_guid, transcript_id):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_project_permissions(saved_variant.family.project, request.user, can_edit=True)
-    # TODO
 
-    update_model_from_json(saved_variant, {'selected_main_transcript_id': transcript_id}, request.user)
+    update_model_from_json(saved_variant, {
+        'selected_main_transcript_id': transcript_id,
+        'main_transcript': json.loads(request.body),
+    }, request.user)
 
     return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})
