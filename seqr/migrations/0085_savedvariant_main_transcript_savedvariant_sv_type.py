@@ -6,7 +6,7 @@ from django.db import migrations, models
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import ArrayIndex, ArrayObjectSort
 from clickhouse_search.models.search_models import VARIANT_DETAILS_CLASS_MAP
-from clickhouse_search.search import _get_variant_details_queryset
+from clickhouse_search.search import get_variant_details_queryset
 import seqr.views.utils.json_utils
 
 BATCH_SIZE = 10000
@@ -84,7 +84,7 @@ def _update_field_from_clickhouse(SavedVariant, db_alias, field, dataset_type, g
     print(f'Populating {field} for {len(all_keys)} {dataset_type} ({genome_version}) clickhouse variants')
     for i in range(0, len(all_keys), BATCH_SIZE):
         batch_keys = all_keys[i:i + BATCH_SIZE]
-        clickhouse_qs = _get_variant_details_queryset(genome_version, dataset_type, batch_keys)
+        clickhouse_qs = get_variant_details_queryset(genome_version, dataset_type, batch_keys)
         to_update = []
         if expression:
             clickhouse_qs = clickhouse_qs.annotate(**{field: expression})

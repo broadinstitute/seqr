@@ -2,14 +2,13 @@ from collections import defaultdict
 from datetime import datetime
 
 from django.db.models import F, Q, Value, CharField, Aggregate
-from django.db.models.functions import Replace
+from django.db.models.functions import Coalesce, Replace
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 import requests
 from typing import Callable, Iterable
 
-from clickhouse_search.backend.functions import ArrayFilter
-from clickhouse_search.search import get_variants_queryset, get_variant_main_transcripts_by_key
+from clickhouse_search.search import get_variant_details_queryset
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
@@ -352,7 +351,7 @@ def _get_parsed_saved_discovery_variants_by_family(
         variant_json = variant_json_by_guid[variant.guid]
         main_transcript = variant_json['main_transcript']
         gene_ids.add(variant_json['gene_id'])
-        sv_type = variant_json.get('svType')
+        sv_type = variant_json.get('sv_type')
         variant_type = next(
             (variant_type for variant_type, has_type in VARIANT_TYPES if has_type(variant.ref, variant.alt)),
             'INDEL')
@@ -407,79 +406,34 @@ def _get_variant_json_by_guid(saved_variants, include_clinvar):
     variant_json_by_guid = {}
     variant_keys_by_search_type = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     for v in saved_variants:
-        if v.key:
-            end_chrom, end = get_chrom_pos(v.xpos_end)
-            variant_json_by_guid[v.guid] = {'genotypes': v.genotypes, 'endChrom': end_chrom, 'end': end, 'gene_ids': v.gene_ids}
-            variant_keys_by_search_type[v.genome_version][v.dataset_type][v.key].append((v.guid, v.selected_main_transcript_id))
-        else:
-            main_transcript = _get_variant_main_transcript(v)
-            gene_id = main_transcript.get('geneId')
-            gene_ids = [gene_id] if gene_id else v.gene_ids
-            variant_json_by_guid[v.guid] = {
-                **v.saved_variant_json, 'main_transcript': main_transcript, 'gene_id': gene_id, 'gene_ids': gene_ids,
-            }
+        end_chrom, end = get_chrom_pos(v.xpos_end)
+        variant_json_by_guid[v.guid] = {
+            'genotypes': v.genotypes, 'endChrom': end_chrom, 'end': end, 'gene_ids': v.gene_ids,
+            'main_transcript': v.main_transcript, 'gene_id': Coalesce('main_transcript__geneId', 'gene_ids__0'),
+            'sv_type': v.sv_type, 'CAID': None,
+        }
+        if include_clinvar:
+            variant_json_by_guid[v.guid]['clinvar'] = None
+        if not v.dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS):
+            variant_keys_by_search_type[v.genome_version][v.dataset_type][v.key].append(v.guid)
 
     for genome_version, keys_by_dataset_type in variant_keys_by_search_type.items():
         for dataset_type, key_map in keys_by_dataset_type.items():
-            set_json_func = _set_clickhouse_sv_json if dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) else _set_clickhouse_snv_indel_json
-            set_json_func(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar)
+            _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar)
 
     return variant_json_by_guid
 
 
-def _set_clickhouse_sv_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
-    annotations = get_variants_queryset(genome_version, dataset_type, key_map.keys()).values(
-        'key', svType=F('sv_type'),
-    )
-    defaults = {'CAID': None, 'gene_id': None, 'main_transcript': {}}
-    if include_clinvar:
-        defaults['clinvar'] = None
-    for anns in annotations:
-        for guid, _ in key_map[anns['key']]:
-            variant_json_by_guid[guid].update({**anns, **defaults})
-
-
 def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
-    annotation_values = {field: Value(None, output_field=CharField()) for field in ['CAID', 'svType']}
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        annotation_values['CAID'] = F('caid')
-
-    selected_transcripts_by_key = {
-        key: [transcript_id for (_, transcript_id) in variants] for key, variants in key_map.items()
-    }
-    annotations_by_key = get_variant_main_transcripts_by_key(
-        genome_version, dataset_type, selected_transcripts_by_key, include_clinvar=include_clinvar, additional_values=annotation_values,
-    )
-    for key, anns in annotations_by_key.items():
-        for guid, selected_main_transcript_id in key_map[key]:
-            main_transcript = anns['main_transcripts'][selected_main_transcript_id]
-            gene_id = main_transcript.get('geneId')
-            variant_json_by_guid[guid].update({
-                **anns,
-                'main_transcript': main_transcript,
-                'gene_id': gene_id,
-            })
-            if gene_id:
-                variant_json_by_guid[guid]['gene_ids'] = [gene_id]
-
-
-def _get_variant_main_transcript(variant_model):
-    variant = variant_model.saved_variant_json
-    main_transcript_id = variant_model.selected_main_transcript_id or variant.get('mainTranscriptId')
-    if main_transcript_id:
-        for gene_id, transcripts in variant.get('transcripts', {}).items():
-            main_transcript = next((t for t in transcripts if t['transcriptId'] == main_transcript_id), None)
-            if main_transcript:
-                if 'geneId' not in main_transcript:
-                    main_transcript['geneId'] = gene_id
-                return main_transcript
-    elif len(variant.get('transcripts', {})) == 1:
-        gene_id = next(k for k in variant['transcripts'].keys())
-        #  Handle manually created SNPs
-        if variant['transcripts'][gene_id] == []:
-            return {'geneId': gene_id}
-    return {}
-
+    qs = get_variant_details_queryset(genome_version, dataset_type, key_map.keys())
+    fields = ['key']
+    if include_clinvar:
+        fields.append('clinvar')
+        qs = qs.join_clinvar()
+    caid_expr = F('caid') if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else Value(None, output_field=CharField())
+    for anns in qs.values(*fields, CAID=caid_expr):
+        for guid in key_map[anns['key']]:
+            variant_json_by_guid[guid].update(anns)
 
 def _get_transcript_field(field, config, transcript):
     value = transcript.get(config.get('seqr_field', field))

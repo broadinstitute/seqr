@@ -37,6 +37,7 @@ def parse_saved_variant_json(variant_json, family_id):
     gene_ids = sorted(
         variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json)
     ) if 'transcripts' in variant_json else variant_json['gene_ids']
+    # TODO save sv_type and main_transcript
     return {
         'key': variant_json['key'],
         'xpos': xpos,

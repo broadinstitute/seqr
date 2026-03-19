@@ -9,7 +9,7 @@ import json
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple, \
-    ArrayMap, Modulo, ArrayObjectSort
+    ArrayMap, Modulo
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, \
@@ -334,7 +334,7 @@ def get_clickhouse_cache_results(results, sort, family_guid):
 def format_clickhouse_export_results(results, genome_version):
     formatted_results = [variant for result in results for variant in (result if isinstance(result, list) else [result])]
     keys_with_no_details = {result['key'] for result in formatted_results if not 'transcripts' in result}
-    detail_qs = _get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details)
+    detail_qs = get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details)
     details_by_key = {
         detail['key']: detail for detail in detail_qs.values(
             'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
@@ -365,7 +365,7 @@ def format_clickhouse_results(results, genome_version):
     }
     details_by_key = {
         detail['key']: detail for detail in
-        _get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details).result_values()
+        get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details).result_values()
     }
 
     formatted_results = []
@@ -806,14 +806,14 @@ def get_variants_queryset(genome_version, dataset_type, keys, variant_ids=None):
     return variants_cls.objects.filter(key__in=keys)
 
 
-def _get_variant_details_queryset(genome_version, dataset_type, keys):
+def get_variant_details_queryset(genome_version, dataset_type, keys):
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         return VARIANT_DETAILS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
     return get_variants_queryset(genome_version, dataset_type, keys)
 
 
 def get_clickhouse_variant_annotations(genome_version, dataset_type, keys):
-    qs = _get_variant_details_queryset(genome_version, dataset_type, keys)
+    qs = get_variant_details_queryset(genome_version, dataset_type, keys)
     return qs.join_annotations().result_values(skip_entry_fields=True)
 
 
@@ -825,38 +825,6 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
         batch = variants_ids[i:i + BATCH_SIZE]
         lookup.update(dict(key_lookup_class.objects.filter(variant_id__in=batch).values_list(*fields)))
     return lookup
-
-
-def get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_transcripts_by_key, include_clinvar=False, additional_values=None):
-    qs = _get_variant_details_queryset(genome_version, dataset_type, selected_transcripts_by_key.keys())
-    if hasattr(qs.model, 'transcripts'):
-        transcript_field = 'transcripts'
-        expr = ArrayObjectSort
-        expr_kwargs = {'sort_field': 'transcriptRank'}
-    else:
-        transcript_field = qs.TRANSCRIPT_FIELD
-        expr = ArrayMap
-        expr_kwargs = {'mapped_expression': 'x'}
-    output_field = getattr(qs.model, transcript_field).field.clone()
-    output_field.group_by_key = None
-    qs = qs.annotate(sorted_transcripts=expr(transcript_field, output_field=output_field, **expr_kwargs))
-
-    fields = ['key', 'sorted_transcripts']
-    if include_clinvar:
-        fields.append('clinvar')
-        qs = qs.join_clinvar()
-
-    variants_by_key = {}
-    for variant in qs.values(*fields, **(additional_values or {})):
-        key = variant['key']
-        transcripts = variant.pop('sorted_transcripts')
-        variant['main_transcripts'] = {
-            selected_transcript_id: _main_transcript(selected_transcript_id, transcripts)
-            for selected_transcript_id in selected_transcripts_by_key[key]
-        }
-        variants_by_key[key] = variant
-
-    return variants_by_key
 
 
 def _main_transcript(selected_transcript_id, sorted_transcripts):
