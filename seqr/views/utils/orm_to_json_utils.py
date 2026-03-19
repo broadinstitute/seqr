@@ -235,14 +235,12 @@ INDIVIDUAL_GUIDS_VALUES = {
 
 
 def _get_json_for_families(families, user=None, add_individual_guids_field=False, project_guid=None, is_analyst=None,
-                           has_case_review_perm=False, additional_values=None):
+                           has_case_review_perm=False):
 
     family_additional_values = {
         **FAMILY_ADDITIONAL_VALUES,
         'pedigreeImage': NullIf(Concat(Value(MEDIA_URL), 'pedigree_image', output_field=CharField()), Value(MEDIA_URL)),
     }
-    if additional_values:
-        family_additional_values.update(additional_values)
     if add_individual_guids_field:
         family_additional_values.update(INDIVIDUAL_GUIDS_VALUES)
 
@@ -267,28 +265,13 @@ def get_json_for_family_note(note):
 INDIVIDUAL_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'individual_id', output_field=CharField())
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, family_guid=None, add_sample_guids_field=False,
-                              family_fields=None, add_hpo_details=False, is_analyst=None, has_case_review_perm=False):
-    """Returns a JSON representation for the given list of Individuals.
-
-    Args:
-        individuals (array): array of django models for the individual.
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-        project_guid (string): An optional field to use as the projectGuid instead of querying the DB
-        family_guid (boolean): An optional field to use as the familyGuid instead of querying the DB
-        add_sample_guids_field (boolean): A flag to indicate weather sample ids should be added
-    Returns:
-        array: array of json objects
-    """
-
+def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sample_guids_field=False,
+                              add_hpo_details=False, is_analyst=None, has_case_review_perm=False):
     additional_model_fields = _get_case_review_fields(individuals.model, has_case_review_perm)
     nested_fields = [
-        {'fields': ('family', 'guid'), 'value': family_guid},
+        {'fields': ('family', 'guid')},
         {'fields': ('family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
     ]
-    if family_fields:
-        for field in family_fields:
-            nested_fields.append({'fields': ('family', field), 'key': _to_camel_case(field)})
 
     if add_hpo_details:
         additional_model_fields += [
@@ -335,16 +318,13 @@ def add_individual_hpo_details(parsed_individuals):
                 feature.update({'category': hpo.category_id, 'label': hpo.name})
 
 
-def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid=None, skip_nested=False, **kwargs):
-    if project_guid or not skip_nested:
-        additional_kwargs = {'nested_fields': [
-            {'fields': ('individual', 'guid'), 'value': individual_guid},
-            {'fields': ('individual', 'family', 'guid'), 'key': 'familyGuid', 'value': family_guid},
-            {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
-        ]}
-    else:
-        additional_kwargs = {'additional_model_fields': ['individual_id']}
-    return {'guid_key': 'sampleGuid', **additional_kwargs, **kwargs}
+def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid=None, **kwargs):
+    nested_fields = [
+        {'fields': ('individual', 'guid'), 'value': individual_guid},
+        {'fields': ('individual', 'family', 'guid'), 'key': 'familyGuid', 'value': family_guid},
+        {'fields': ('individual', 'family', 'project', 'guid'), 'key': 'projectGuid', 'value': project_guid},
+    ]
+    return {'guid_key': 'sampleGuid', 'nested_fields': nested_fields, **kwargs}
 
 
 def get_json_for_samples(samples, **kwargs):

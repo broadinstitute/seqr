@@ -33,6 +33,7 @@ export const GenePageHeader = connect(mapGeneStateToProps)(BaseGenePageHeader)
 
 const NO_HEADER_PAGES = [
   '/dashboard', '/create_project_from_workspace', '/workspace', '/users', '/login', '/accept_policies', ...PUBLIC_PAGES,
+  '/variant_lookup',
 ]
 
 const NO_HEADER_PAGE_TITLES = {

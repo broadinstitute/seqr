@@ -2416,8 +2416,9 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         self.check_data_manager_login(url)
 
         Project.objects.filter(guid='R0001_1kg').update(genome_version='38')
+        body = {'project': 'R0001_1kg', 'datasetType': 'SNV_INDEL'}
         response = self.client.post(
-            url, content_type='application/json', data=json.dumps({'project': 'R0001_1kg', 'datasetType': 'SNV_INDEL'})
+            url, content_type='application/json', data=json.dumps(body)
         )
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
@@ -2445,5 +2446,17 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         project_samples = Sample.objects.filter(individual__family__project__guid='R0001_1kg', is_active=True)
         self.assertEqual(project_samples.filter(dataset_type='SNV_INDEL').count(), 0)
         self.assertEqual(project_samples.count(), 4)
+
+        body['datasetType'] = 'SV'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': [
+                'Deactivated search for 3 individuals',
+                'Deleted all GCNV search data for project 1kg project n\xe5me with uni\xe7\xf8de',
+            ],
+        })
+        self.assertEqual(project_samples.filter(dataset_type='SV').count(), 0)
+        self.assertEqual(project_samples.count(), 1)
 
 
