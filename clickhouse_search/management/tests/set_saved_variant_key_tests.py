@@ -118,7 +118,7 @@ class SetSavedVariantKeyFailedMappingTest(SetSavedVariantKeyTest):
             ('Found 0 keys', None),
             ('Finding keys for 2 SV_WES (GRCh38) variant ids', None),
             ('Found 0 keys', None),
-            ('2 SV variants have no key, 0 of which have no search data, 0 of which are known to have dropped out of the callset.', None),
+            ('2 SV variants have no key, 0 of which have no search data', None),
             ('1 remaining SV WES variants prefix_19107_DEL - 12', None),
             ('1 remaining SV WGS variants suffix_19107_DEL_013746 - fam14', None),
             ('Finding keys for 7 SNV_INDEL (GRCh37) variant ids', None),
