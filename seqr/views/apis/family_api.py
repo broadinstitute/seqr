@@ -127,7 +127,7 @@ def family_variant_tag_summary(request, family_guid):
     project = family.project
     check_project_permissions(project, request.user)
 
-    response = families_discovery_tags([{'familyGuid': family_guid}], genome_version=project.genome_version)
+    response = families_discovery_tags([{'familyGuid': family_guid}])
 
     tags = VariantTag.objects.filter(saved_variants__family=family)
     family_tag_type_counts = tags.values('variant_tag_type__name').annotate(count=Count('*'))

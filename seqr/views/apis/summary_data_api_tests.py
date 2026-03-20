@@ -187,7 +187,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'phenotype_contribution-3': 'Full',
     'partial_contribution_explained-3': '',
     'pos-3': 249045487,
-    'chrom_end-3': '1',
+    'chrom_end-3': None,
     'pos_end-3': 249045898,
     'ref-3': None,
     'copy_number-3': 1,
@@ -710,7 +710,6 @@ class SummaryDataAPITest(AirtableTest):
         rows = response.json()['rows']
         self.assertEqual(len(rows), 3)
         test_row = next(r for r in rows if r['participant_id'] == 'NA21234')
-        self.maxDiff = None
         self.assertDictEqual(test_row, EXPECTED_NO_GENE_SAMPLE_METADATA_ROW)
 
         # Test analyst access

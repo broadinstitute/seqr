@@ -1,6 +1,6 @@
 from collections import defaultdict
-from django.db.models import Count, Q, F, prefetch_related_objects
-from django.db.models.functions import Coalesce
+
+from django.db.models import Count, Q, F, CharField, prefetch_related_objects
 
 from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote
@@ -114,19 +114,16 @@ def add_child_ids(response):
         family['individualGuids'] = individual_guids_by_family[family['familyGuid']]
 
 
-def families_discovery_tags(families, genome_version, project=None):
+def families_discovery_tags(families, project=None):
     families_by_guid = {f['familyGuid']: dict(discoveryGeneIds=[], **f) for f in families}
 
     family_filter = {'family__project': project} if project else {'family__guid__in': families_by_guid.keys()}
-    discovery_variants = SavedVariant.objects.filter(
+    family_discovery_genes = list(SavedVariant.objects.filter(
         varianttag__variant_tag_type__category='CMG Discovery Tags', **family_filter,
-    ).annotate(family_guid=F('family__guid'))
-
-    family_discovery_genes = list(discovery_variants.values_list(
-        'family_guid', Coalesce('main_transcript__geneId', 'gene_ids__0'),
-    ))
+    ).values_list('family__guid', 'main_transcript__geneId', 'gene_ids__0'))
     gene_ids = set()
-    for family_guid, gene_id in family_discovery_genes:
+    for family_guid, selected_gene_id, main_gene_id in family_discovery_genes:
+        gene_id = selected_gene_id or main_gene_id
         gene_ids.add(gene_id)
         families_by_guid[family_guid]['discoveryGeneIds'].append(gene_id)
 
