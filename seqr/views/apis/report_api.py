@@ -1041,9 +1041,11 @@ def _get_metadata_variant_json(*args):
 
 
 def _get_variant_json(saved_variants, fields, annotations, include_clinvar=False, **kwargs):
-    dataset_type_keys = saved_variants.exclude(dataset_type__startswith='SV').values(
+    dataset_type_keys = saved_variants.exclude(dataset_type__startswith='SV').filter(
+        key__isnull=False,
+    ).values(
         'dataset_type', genome_version=F('family__project__genome_version'),
-    ).annotate(keys=ArrayAgg('key', distinct=True))
+    ).annotate(keys=ArrayAgg('key', distinct=True, filter=Q(key__isnull=False)))
     clickhouse_metadata = {}
     for o in dataset_type_keys:
         clickhouse_metadata.update(_get_clickhouse_metadata(**o, include_clinvar=include_clinvar))
