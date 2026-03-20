@@ -346,11 +346,14 @@ def _get_parsed_saved_discovery_variants_by_family(
     gene_ids = set()
     variant_json_by_guid = _get_variant_json_by_guid(project_saved_variants, include_clinvar)
     for variant in project_saved_variants:
-        chrom, pos = get_chrom_pos(variant.xpos)
-
         variant_json = variant_json_by_guid[variant.guid]
+        chrom = variant_json['chrom']
+        pos = variant_json['pos']
         main_transcript = variant_json['main_transcript']
-        gene_ids.add(variant_json['gene_id'])
+        gene_id = main_transcript.get('geneId')
+        if not gene_id and len(variant_json['gene_ids'] or []) == 1:
+            gene_id = variant_json['gene_ids'][0]
+        gene_ids.add(gene_id)
         sv_type = variant_json.get('sv_type')
         variant_type = next(
             (variant_type for variant_type, has_type in VARIANT_TYPES if has_type(variant.ref, variant.alt)),
@@ -366,7 +369,7 @@ def _get_parsed_saved_discovery_variants_by_family(
             'chrom': 'MT' if chrom == 'M' else chrom,
             'pos': pos,
             'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.genome_version],
-            'gene_id': variant_json['gene_id'],
+            'gene_id': gene_id,
             'gene_ids': variant_json['gene_ids'],
             'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
             'phenotype_contribution': phenotype_contribution,
@@ -402,14 +405,16 @@ def _get_parsed_saved_discovery_variants_by_family(
     return saved_variants_by_family
 
 
+# TODO inline and just use values
 def _get_variant_json_by_guid(saved_variants, include_clinvar):
     variant_json_by_guid = {}
     variant_keys_by_search_type = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
     for v in saved_variants:
+        chrom, pos = get_chrom_pos(v.xpos)
         end_chrom, end = get_chrom_pos(v.xpos_end)
         variant_json_by_guid[v.guid] = {
-            'genotypes': v.genotypes, 'endChrom': end_chrom, 'end': end, 'gene_ids': v.gene_ids,
-            'main_transcript': v.main_transcript, 'gene_id': v.main_transcript.get('geneId') or (v.gene_ids or [None])[0],
+            'chrom': chrom, 'pos': pos, 'endChrom': end_chrom if end_chrom != chrom else None, 'end': end,
+            'genotypes': v.genotypes, 'gene_ids': v.gene_ids, 'main_transcript': v.main_transcript,
             'sv_type': v.sv_type, 'CAID': None,
         }
         if include_clinvar:

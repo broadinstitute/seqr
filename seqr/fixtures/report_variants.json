@@ -182,7 +182,7 @@
         "variant_id": "suffix_19107_DEL_013746",
         "key": 101,
         "dataset_type": "SV_WGS",
-        "sv_type": "SV",
+        "sv_type": "DEL",
         "genotypes": {
             "I000018_na21234": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
         },

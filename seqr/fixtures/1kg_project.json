@@ -2091,6 +2091,7 @@
             "I000017_na20889": {"sampleId": "NA20885", "ab": 0.0, "ad": "71,0", "gq": 99.0, "dp": "71", "pl": "0,213,1918", "numAlt": 1}
         },
         "gene_ids": ["ENSG00000240361", "ENSG00000135953"],
+        "main_transcript": {"aminoAcids": null, "biotype": "protein_coding", "canonical": 1, "codons": "Gtg/Atg", "consequenceTerms": ["intron_variant"], "geneId": "ENSG00000240361", "hgvsc": "ENST00000262738.3:c.3955G>A", "hgvsp": "ENST00000505820.2:c.1586-17C>G", "loftee": [null, []], "majorConsequence": "intron_variant", "transcriptId": "ENST00000505820", "transcriptRank": 0},
         "saved_variant_json": {},
         "family": 12
     }
