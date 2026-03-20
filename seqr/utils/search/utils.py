@@ -11,9 +11,10 @@ from seqr.models import Sample, Project, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE
+    SV_ANNOTATION_TYPES, X_LINKED_RECESSIVE, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
+from seqr.views.utils.permissions_utils import user_is_analyst
 
 logger = SeqrLogger(__name__)
 
@@ -21,6 +22,8 @@ logger = SeqrLogger(__name__)
 
 MAX_GENES_FOR_FILTER = 10000
 MIN_MULTI_FAMILY_SEQR_AC = 5000
+MAX_EXPORT_VARIANTS = 1000
+MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 
 
 def _get_search_genome_version(search_model):
@@ -92,7 +95,7 @@ def export_variants(search_model, user):
     return format_clickhouse_export_results(previous_search_results['all_results'], genome_version)
 
 
-def _get_previous_search_results(search_model, sort):
+def _get_previous_search_results(search_model, sort, user):
     previous_search_results = None
     if sort:
         cache_key = _get_search_cache_key(search_model, sort=sort)
@@ -102,7 +105,7 @@ def _get_previous_search_results(search_model, sort):
         previous_search_results = safe_redis_get_wildcard_json(wildcard_cache_key)
         if previous_search_results and sort:
             previous_search_results = get_clickhouse_cache_results(
-                previous_search_results['all_results'], sort, family_guid=search_model.families.first().guid,
+                previous_search_results['all_results'], sort, user, family_guid=search_model.families.first().guid,
             )
             cache_key = _get_search_cache_key(search_model, sort=sort)
             safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
@@ -110,7 +113,9 @@ def _get_previous_search_results(search_model, sort):
 
 
 def query_variants(search_model, sort, page, num_results, user):
-    previous_search_results, genome_version = _query_variants(search_model, user, sort=sort)
+    if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(user):
+        sort = PATHOGENICTY_HGMD_SORT_KEY
+    previous_search_results, genome_version = _query_variants(search_model, user, sort=sort or XPOS_SORT_KEY)
 
     all_results = previous_search_results.get('all_results') or []
     results_page = format_clickhouse_results(all_results[(page-1)*num_results:page*num_results], genome_version)
@@ -120,7 +125,7 @@ def query_variants(search_model, sort, page, num_results, user):
 
 def _query_variants(search_model, user, sort=None, **kwargs):
     genome_version = _get_search_genome_version(search_model)
-    previous_search_results = _get_previous_search_results(search_model, sort) or {}
+    previous_search_results = _get_previous_search_results(search_model, sort, user) or {}
     if previous_search_results:
         return previous_search_results, genome_version
 
