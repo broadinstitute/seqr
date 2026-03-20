@@ -424,6 +424,7 @@ def _get_variant_json_by_guid(saved_variants, include_clinvar):
     return variant_json_by_guid
 
 
+#  TODO only call when needed?
 def _set_clickhouse_snv_indel_json(variant_json_by_guid, genome_version, dataset_type, key_map, include_clinvar):
     qs = get_variant_details_queryset(genome_version, dataset_type, key_map.keys())
     fields = ['key']

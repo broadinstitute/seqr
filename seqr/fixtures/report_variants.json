@@ -14,6 +14,9 @@
         "variant_id": "19-1912634-C-T",
         "dataset_type": "SNV_INDEL",
         "gene_ids": ["ENSG00000240361"],
+        "genotypes": {
+            "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+        },
         "saved_variant_json": {
             "liftedOverGenomeVersion": "37",
             "pos": 1912634,
@@ -62,6 +65,9 @@
         "dataset_type": "SNV_INDEL",
         "gene_ids": ["ENSG00000135953"],
         "main_transcript": {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"},
+        "genotypes": {
+            "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+        },
         "saved_variant_json": {
             "liftedOverGenomeVersion": "37",
             "pos": 1912633,
@@ -113,6 +119,9 @@
         "dataset_type": "SNV_INDEL",
         "gene_ids": ["ENSG00000135953"],
         "main_transcript": {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361", "hgvsc": "c.586_587delinsTT", "hgvsp": "p.Ala196Leu"},
+        "genotypes": {
+            "I000004_hg00731": {"numAlt": 1}
+        },
         "saved_variant_json": {
             "pos": 1912632,
             "end": 1912632,
