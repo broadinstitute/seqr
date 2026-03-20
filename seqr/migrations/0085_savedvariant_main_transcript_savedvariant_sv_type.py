@@ -15,15 +15,27 @@ BATCH_SIZE = 10000
 def populate_saved_variant_fields(apps, schema_editor):
     SavedVariant = apps.get_model('seqr', 'SavedVariant')
     db_alias = schema_editor.connection.alias
+
     no_key_variants = SavedVariant.objects.using(db_alias).filter(key__isnull=True)
+    sv_variants = no_key_variants.filter(saved_variant_json__svType__isnull=False, ).exclude(
+        saved_variant_json__svType=models.Value('null'),
+    )
+    sv_variants.update(
+        sv_type=models.fields.json.KeyTextTransform('svType', 'saved_variant_json'),
+        dataset_type='SV',
+    )
+    # For SVs that have dropped out of the callset, set correct variant ID for reporting
+    sv_variants.filter(saved_variant_json__populations__isnull=False).update(
+        variant_id=models.functions.Concat(
+        'sv_type', models.Value(':chr'), models.fields.json.KeyTextTransform('chrom', 'saved_variant_json'),
+        models.Value(':'), 'saved_variant_json__pos', models.Value('-'), 'saved_variant_json__end',
+        output_field=models.CharField(),
+    ))
+
+    no_key_variants.filter(sv_type__isnull=True).update(dataset_type='SNV_INDEL')
     no_key_variants.filter(saved_variant_json__genotypes__isnull=False).update(
         genotypes=models.F('saved_variant_json__genotypes'),
     )
-    no_key_variants.filter(saved_variant_json__svType__isnull=False).exclude(saved_variant_json__svType='null').update(
-        sv_type=models.F('saved_variant_json__svType'), # TODO has extra strings
-        dataset_type='SV',
-    )
-    no_key_variants.filter(sv_type__isnull=True).update(dataset_type='SNV_INDEL')
 
     to_update = []
     transcript_variants = no_key_variants.filter(sv_type__isnull=True, saved_variant_json__transcripts__isnull=False).exclude(saved_variant_json__transcripts={})

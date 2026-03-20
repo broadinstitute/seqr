@@ -337,7 +337,6 @@ def _get_parsed_saved_discovery_variants_by_family(
         validated_name=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Validated Name')),
         sv_name=Case(When(sv_type__isnull=False, key__isnull=True, then=F('variant_id')), default=Value(None)),
     )
-    #  TODO migrate constructed sv_name to variant_id for dropped SVs, fix "null" sv_type but
 
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
