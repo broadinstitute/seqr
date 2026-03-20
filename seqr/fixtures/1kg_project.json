@@ -2108,7 +2108,7 @@
         "xpos_end": 1249045898,
         "ref": null,
         "alt": null,
-        "variant_id": "prefix_19107_DEL",
+        "variant_id": "DEL:chr1:249045487-249045898",
         "dataset_type": "SV",
         "gene_ids": ["ENSG00000135953", "ENSG00000223972", "ENSG00000240361"],
         "sv_type": "DEL",

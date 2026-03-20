@@ -116,8 +116,6 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'condition_id': 'OMIM:616126',
     'condition_inheritance': 'Autosomal recessive',
     'known_condition_name': 'Immunodeficiency 38',
-    'ClinGen_allele_ID-1': 'CA1501729',
-    'ClinGen_allele_ID-2': None,
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
@@ -180,7 +178,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'validated_name-1': None,
     'transcript-1': None,
     'analysis_groups': '',
-    'ClinGen_allele_ID-1': 'CA1501729',
     'alt-3': None,
     'chrom-3': '1',
     'gene_known_for_phenotype-3': 'Known',
@@ -205,7 +202,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'validated_name-3': None,
     'variant_inheritance-3': 'unknown',
     'transcript-3': None,
-    'ClinGen_allele_ID-3': None,
     'alt-2': 'C',
     'chrom-2': 'MT',
     'gene_known_for_phenotype-2': 'Candidate',
@@ -230,7 +226,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'validated_name-2': None,
     'variant_inheritance-2': 'unknown',
     'transcript-2': 'ENST00000361789.2',
-    'ClinGen_allele_ID-2': None,
 }
 
 AIRTABLE_SAMPLE_RECORDS = {

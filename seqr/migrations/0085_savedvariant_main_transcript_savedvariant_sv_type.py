@@ -19,8 +19,8 @@ def populate_saved_variant_fields(apps, schema_editor):
     no_key_variants.filter(saved_variant_json__genotypes__isnull=False).update(
         genotypes=models.F('saved_variant_json__genotypes'),
     )
-    no_key_variants.filter(saved_variant_json__svType__isnull=False).update(
-        sv_type=models.F('saved_variant_json__svType'),
+    no_key_variants.filter(saved_variant_json__svType__isnull=False).exclude(saved_variant_json__svType='null').update(
+        sv_type=models.F('saved_variant_json__svType'), # TODO has extra strings
         dataset_type='SV',
     )
     no_key_variants.filter(sv_type__isnull=True).update(dataset_type='SNV_INDEL')

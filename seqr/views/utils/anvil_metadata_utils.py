@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
 
-from django.db.models import F, Q, Value, CharField, Aggregate
+from django.db.models import F, Q, Value, Case, When, CharField, Aggregate
 from django.db.models.functions import Replace
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -333,60 +333,62 @@ def _get_parsed_saved_discovery_variants_by_family(
         notes=ArrayAgg('variantnote__note', distinct=True, filter=Q(variantnote__report=True)),
         partial_hpo_terms=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Partial Phenotype Contribution')),
         validated_name=ArrayAgg('variantfunctionaldata__metadata', distinct=True, filter=Q(variantfunctionaldata__functional_data_tag='Validated Name')),
+        sv_name=Case(When(sv_type__isnull=False, key__isnull=True, then=F('variant_id')), default=Value(None)),
     )
+    if include_variant_id:
+        annotations['variantId'] = F('variant_id')
 
     project_saved_variants = SavedVariant.objects.filter(
         varianttag__variant_tag_type__in=tag_types, family__id__in=families,
-    ).order_by('created_date').distinct().annotate(**annotations)
+    ).order_by('created_date').distinct().values(
+        'family_id', 'ref', 'alt', 'xpos', 'xpos_end', 'genotypes', 'gene_ids', 'main_transcript', 'sv_type',
+        **annotations,
+    )
 
-    variant_json_fields = ['genotypes']
-    if include_clinvar:
-        variant_json_fields.append('clinvar')
+    #  TODO migrate constructed sv_name to variant_id for dropped SVs, fix "null" sv_type but
+
     variants = []
     gene_ids = set()
-    variant_json_by_guid = _get_variant_json_by_guid(project_saved_variants, include_clinvar)
     for variant in project_saved_variants:
-        variant_json = variant_json_by_guid[variant.guid]
-        chrom = variant_json['chrom']
-        pos = variant_json['pos']
-        main_transcript = variant_json['main_transcript']
+        chrom, pos = get_chrom_pos(variant.pop('xpos'))
+        chrom_end = end = None
+        xpos_end = variant.pop('xpos_end')
+        sv_type = variant.get('sv_type')
+        if sv_type:
+            chrom_end, end = get_chrom_pos(xpos_end)
+
+        main_transcript = variant.pop('main_transcript')
         gene_id = main_transcript.get('geneId')
-        if not gene_id and len(variant_json['gene_ids'] or []) == 1:
-            gene_id = variant_json['gene_ids'][0]
+        if not gene_id and len(variant['gene_ids'] or []) == 1:
+            gene_id = variant['gene_ids'][0]
         gene_ids.add(gene_id)
-        sv_type = variant_json.get('sv_type')
         variant_type = next(
-            (variant_type for variant_type, has_type in VARIANT_TYPES if has_type(variant.ref, variant.alt)),
+            (variant_type for variant_type, has_type in VARIANT_TYPES if has_type(variant['ref'], variant['alt'])),
             'INDEL')
 
-        partial_hpo_terms = variant.partial_hpo_terms[0] if variant.partial_hpo_terms else ''
+        partial_hpo_terms = (variant.pop('partial_hpo_terms') or [''])[0]
         phenotype_contribution = 'Partial' if partial_hpo_terms else 'Full'
-        if partial_hpo_terms == 'Uncertain':
+        if partial_hpo_terms and partial_hpo_terms == 'Uncertain':
             phenotype_contribution = 'Uncertain'
             partial_hpo_terms = ''
 
         parsed_variant = {
             'chrom': 'MT' if chrom == 'M' else chrom,
             'pos': pos,
-            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.genome_version],
+            'variant_reference_assembly': GENOME_VERSION_LOOKUP[variant.pop('genome_version')],
             'gene_id': gene_id,
-            'gene_ids': variant_json['gene_ids'],
-            'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.tags else 'Candidate',
+            'gene_known_for_phenotype': 'Known' if 'Known gene for phenotype' in variant.pop('tags') else 'Candidate',
             'phenotype_contribution': phenotype_contribution,
             'partial_contribution_explained': partial_hpo_terms.replace(', ', '|'),
-            'notes': variant.notes,
-            'sv_type': sv_type,
-            'sv_name': (variant_json.get('svName') or f'{sv_type}:chr{chrom}:{pos}-{variant_json["end"]}') if sv_type else None,
+            **variant,
+            'sv_name': (variant['sv_name'] or f'{sv_type}:chr{chrom}:{pos}-{end}') if sv_type else None,
             'variant_type': variant_type,
-            'validated_name': variant.validated_name[0] if variant.validated_name else None,
+            'validated_name': variant['validated_name'][0] if variant['validated_name'] else None,
             **{k: _get_transcript_field(k, config, main_transcript) for k, config in TRANSCRIPT_FIELDS.items()},
-            **{k: variant_json.get(k) for k in variant_json_fields},
-            **{k: variant_json.get(field) if sv_type else None for k, field in [('chrom_end', 'endChrom'), ('pos_end', 'end')]},
-            'ClinGen_allele_ID': variant_json.get('CAID'),
-            **{k: getattr(variant, k) for k in ['family_id', 'ref', 'alt'] + (variant_attr_fields or [])},
+            'chrom_end': chrom_end if chrom_end and chrom_end != chrom else None,
+            'pos_end': end,
         }
-        if include_variant_id:
-            parsed_variant['variantId'] = variant.variant_id
+        # TODO post process func? variant attrs?
         if include_metadata:
             parsed_variant.update({
                 'seqr_chosen_consequence': main_transcript.get('majorConsequence'),
