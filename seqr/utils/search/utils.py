@@ -95,7 +95,7 @@ def export_variants(search_model, user):
     return format_clickhouse_export_results(previous_search_results['all_results'], genome_version)
 
 
-def _get_previous_search_results(search_model, sort, user):
+def _get_previous_search_results(search_model, sort):
     previous_search_results = None
     if sort:
         cache_key = _get_search_cache_key(search_model, sort=sort)
@@ -125,7 +125,7 @@ def query_variants(search_model, sort, page, num_results, user):
 
 def _query_variants(search_model, user, sort=None, **kwargs):
     genome_version = _get_search_genome_version(search_model)
-    previous_search_results = _get_previous_search_results(search_model, sort, user) or {}
+    previous_search_results = _get_previous_search_results(search_model, sort) or {}
     if previous_search_results:
         return previous_search_results, genome_version
 
