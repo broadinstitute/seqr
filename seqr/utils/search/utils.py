@@ -105,7 +105,7 @@ def _get_previous_search_results(search_model, sort, user):
         previous_search_results = safe_redis_get_wildcard_json(wildcard_cache_key)
         if previous_search_results and sort:
             previous_search_results = get_clickhouse_cache_results(
-                previous_search_results['all_results'], sort, user, family_guid=search_model.families.first().guid,
+                previous_search_results['all_results'], sort, family_guid=search_model.families.first().guid,
             )
             cache_key = _get_search_cache_key(search_model, sort=sort)
             safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
