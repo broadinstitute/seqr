@@ -34,7 +34,7 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, dataset_types, secondary_dataset_types, search, user, previous_search_results, genome_version, sort=None, **kwargs):
+def get_clickhouse_variants(families, dataset_types, secondary_dataset_types, search, user, genome_version, sort=None, **kwargs):
     inheritance_mode = search.get('inheritance_mode')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
@@ -100,10 +100,8 @@ def get_clickhouse_variants(families, dataset_types, secondary_dataset_types, se
             exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
         )
 
-    cache_results = get_clickhouse_cache_results(results, sort, family_guid)
-    previous_search_results.update(cache_results)
-
-    logger.info(f'Total results: {cache_results["total_results"]}', user)
+    logger.info(f'Total results: {len(results)}', user)
+    return get_sorted_search_results(results, sort, family_guid)
 
 def get_search_queryset(genome_version, dataset_type, sample_data, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
@@ -328,14 +326,13 @@ def _set_individual_guids(result, sample_map, encode_genotypes_json):
     result['genotypes'] = genotypes
 
 
-def get_clickhouse_cache_results(results, sort, family_guid):
+def get_sorted_search_results(results, sort, family_guid):
     sort_metadata = _get_sort_gene_metadata(sort, results, family_guid)
     sort_key = _get_sort_key(sort, sort_metadata)
     sorted_results = sorted([
         sorted(result, key=sort_key) if isinstance(result, list) else result for result in results
     ], key=sort_key)
-    total_results = len(sorted_results)
-    return {'all_results': sorted_results, 'total_results': total_results}
+    return sorted_results
 
 
 def format_clickhouse_export_results(results, genome_version):
