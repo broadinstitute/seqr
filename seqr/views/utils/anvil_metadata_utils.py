@@ -405,7 +405,6 @@ def _get_parsed_saved_discovery_variants_by_family(
     return saved_variants_by_family
 
 
-# TODO inline and just use values
 def _get_variant_json_by_guid(saved_variants, include_clinvar):
     variant_json_by_guid = {}
     variant_keys_by_search_type = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
