@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from django.db.models import F, Q, Value, CharField, Aggregate
-from django.db.models.functions import Coalesce, Replace
+from django.db.models.functions import Replace
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 import requests
@@ -409,7 +409,7 @@ def _get_variant_json_by_guid(saved_variants, include_clinvar):
         end_chrom, end = get_chrom_pos(v.xpos_end)
         variant_json_by_guid[v.guid] = {
             'genotypes': v.genotypes, 'endChrom': end_chrom, 'end': end, 'gene_ids': v.gene_ids,
-            'main_transcript': v.main_transcript, 'gene_id': Coalesce('main_transcript__geneId', 'gene_ids__0'),
+            'main_transcript': v.main_transcript, 'gene_id': v.main_transcript.get('geneId') or (v.gene_ids or [None])[0],
             'sv_type': v.sv_type, 'CAID': None,
         }
         if include_clinvar:
