@@ -27,6 +27,7 @@ class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
                 sv.saved_variant_json['populations']['seqr'] = {'af': 0.019480518996715546, 'ac': 3, 'an': 154}
             sv.save()
         SavedVariant.objects.update(key=None)
+        SavedVariant.objects.filter(guid='SV0000007_prefix_19107_DEL_r00').update(variant_id='prefix_19107_DEL')
 
     @mock.patch('clickhouse_search.management.commands.set_saved_variant_key.BATCH_SIZE', 2)
     @mock.patch('seqr.utils.file_utils.subprocess.Popen')
