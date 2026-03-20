@@ -22,6 +22,10 @@ from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, CHROMOSOME_CHOICES
 
 
+class InvalidDatasetTypeException(Exception):
+    pass
+
+
 class SearchQuerySet(QuerySet):
 
     @property
@@ -149,7 +153,7 @@ class SearchQuerySet(QuerySet):
                 in_silico_q |= missing_q
             results = results.filter(in_silico_q)
         elif has_required_filter:
-            results = results.none()
+            raise InvalidDatasetTypeException
 
         return results
 
@@ -425,7 +429,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
         if not (filter_qs or transcript_filters):
             if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
                 #  Annotation filters restrict search to other dataset types
-                results = results.none()
+                raise InvalidDatasetTypeException
             return results
 
         filter_q = filter_qs[0] if filter_qs else None
