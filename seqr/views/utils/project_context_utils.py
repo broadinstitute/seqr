@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from django.db.models import Count, Q, F, CharField, prefetch_related_objects
+from django.db.models import Count, Q, F, prefetch_related_objects
 
 from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
     VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote

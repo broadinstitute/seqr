@@ -1221,7 +1221,6 @@ class IndividualAPITest(object):
         ).order_by('family_id', 'variant_id').distinct().values(
             'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json', 'key', 'dataset_type', 'genotypes', 'gene_ids', 'main_transcript',
         )
-        self.maxDiff = None
         self.assertEqual(len(saved_variants), 4)
         self.assertDictEqual(saved_variants[0], {
             'guid': 'SV0000006_1248367227_r0003_tes',
@@ -1233,7 +1232,12 @@ class IndividualAPITest(object):
             'dataset_type': 'SNV_INDEL',
             'genotypes': mock.ANY,
             'gene_ids': ['ENSG00000240361', 'ENSG00000135953'],
-            'main_transcript': {},
+            'main_transcript': {
+                'aminoAcids': None, 'biotype': 'protein_coding', 'canonical': 1, 'codons': 'Gtg/Atg',
+                'consequenceTerms': ['intron_variant'], 'geneId': 'ENSG00000240361', 'hgvsc': 'ENST00000262738.3:c.3955G>A',
+                'hgvsp': 'ENST00000505820.2:c.1586-17C>G', 'loftee': [None, []], 'majorConsequence': 'intron_variant',
+                'transcriptId': 'ENST00000505820', 'transcriptRank': 0,
+            },
         })
         self.assertEqual(len(saved_variants[0]['genotypes']), 2)
         self.assertDictEqual(saved_variants[1], {
