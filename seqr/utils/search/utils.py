@@ -96,7 +96,7 @@ def _get_previous_search_results(search_model, sort):
     previous_search_results = None
     if sort:
         cache_key = _get_search_cache_key(search_model, sort=sort)
-        previous_search_results = safe_redis_get_json(cache_key) or {}
+        previous_search_results = safe_redis_get_json(cache_key) or []
     if not previous_search_results:
         wildcard_cache_key = _get_search_cache_key(search_model, sort='*')
         previous_search_results = safe_redis_get_wildcard_json(wildcard_cache_key)

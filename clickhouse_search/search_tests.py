@@ -846,6 +846,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
+    @mock.patch('seqr.utils.search.utils.MAX_EXPORT_VARIANTS', 2)
     @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
@@ -863,11 +864,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'Invalid variants: chr2-A-C', locus={'rawVariantItems': 'chr2-A-C'},
         )
 
-        self.set_cache(f'search_results__VRS{search_hash:07d}__xpos', {'total_results': 20000})
+        self.set_cache(f'search_results__VRS{search_hash:07d}__xpos', [VARIANT1, VARIANT2, VARIANT3, VARIANT4])
         export_url = reverse(export_variants_handler, args=[search_hash])
         response = self.client.get(export_url)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': 'Unable to export more than 1000 variants (20000 requested)'})
+        self.assertDictEqual(response.json(), {'error': 'Unable to export more than 2 variants (4 requested)'})
 
         self._assert_expected_search_error('Invalid variants: rs9876', locus={'rawVariantItems': 'rs9876'})
 
