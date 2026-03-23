@@ -37,23 +37,29 @@ SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 def get_clickhouse_variants(families, search, user, previous_search_results, genome_version, sort=None, **kwargs):
     inheritance_mode = search.get('inheritance_mode')
+    inheritance_filter = search.get('inheritance_filter')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
-    sample_data_by_dataset_type = _get_sample_data(
-        families,
-        skip_multi_project_individual_guid=True,
-        annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
-        inheritance_mode=inheritance_mode,
-        inheritance_filter=search.get('inheritance_filter'),
-        allow_no_samples=bool(search.get('no_access_project_genome_version')),
-    )
+    sample_data_by_dataset_type = {}
     results = []
     exclude_keys = search.pop('exclude_keys', None) or {}
     exclude_key_pairs = search.pop('exclude_key_pairs', None) or {}
     searched_dataset_types = set()
     skipped_dataset_types = []
-    for dataset_type, sample_data in sample_data_by_dataset_type.items():
+    for dataset_type in ENTRY_CLASS_MAP[genome_version].keys():
+        sample_data = _get_sample_data(
+            families,
+            dataset_type,
+            skip_multi_project_individual_guid=True,
+            annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
+            inheritance_mode=inheritance_mode,
+            inheritance_filter=inheritance_filter,
+            allow_no_samples=bool(search.get('no_access_project_genome_version')),
+        )
+        if not sample_data:
+            continue
+        sample_data_by_dataset_type[dataset_type] = sample_data
         logger.info(f'Loading {dataset_type} data for {sample_data["num_families"]} families', user)
 
         dataset_results = []
@@ -99,6 +105,11 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
         results += _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, **search)
 
     if not searched_dataset_types:
+        if not sample_data_by_dataset_type:
+            raise InvalidSearchException(
+                'Invalid custom inheritance' if (inheritance_filter or {}).get('genotype') else
+                'Inheritance based search is disabled in families with no data loaded for affected individuals'
+            )
         # TODO do not report the ones that are skipped report the ones with no sample data
         raise InvalidSearchException(f'Unable to search against dataset type "{skipped_dataset_types[0]}"')
 
@@ -446,14 +457,18 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
      and transcript.get('spliceregion', {}).get('extended_intronic_splice_region_variant') == minimal_transcript.get('extendedIntronicSpliceRegionVariant'))
 
 
-def _get_valid_samples(families, allow_no_samples):
+def _get_valid_samples(families, dataset_type, sample_type, allow_no_samples):
     samples = Sample.objects.filter(individual__family__in=families, is_active=True)
     if not samples.exists():
         if allow_no_samples:
             return None
         raise InvalidSearchException(f'No search data found for families {", ".join([f.family_id for f in families])}')
 
-    mismatch_affected_samples = samples.values('sample_id', 'dataset_type').annotate(
+    samples = samples.filter(dataset_type=dataset_type)
+    if sample_type:
+        samples = samples.filter(sample_type=sample_type)
+
+    mismatch_affected_samples = samples.values('sample_id').annotate(
         projects=ArrayAgg('individual__family__project__name', distinct=True),
         affected=ArrayAgg('individual__affected', distinct=True),
     ).filter(affected__len__gt=1)
@@ -466,7 +481,7 @@ def _get_valid_samples(families, allow_no_samples):
     return samples
 
 
-def _get_grouped_samples(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males):
+def _get_sample_metadata(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males):
     skip_individual_guid = (
         skip_multi_project_individual_guid and samples.values('individual__family__project_id').distinct().count() > 1
     )
@@ -491,89 +506,83 @@ def _get_grouped_samples(samples, skip_multi_project_individual_guid, affected_f
             family_guid=F('individual__family__guid'), individual_guid=F('individual__guid'),
         ))
 
-    sample_data = samples.values('dataset_type', 'sample_type').annotate(**annotations)
-    if affected_family_only:
-        sample_data = sample_data.filter(family_guids__len__gt=0)
-    return sample_data
+    return samples.aggregate(**annotations)
 
 
-def _get_sample_data(families, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None):
-    samples = _get_valid_samples(families, allow_no_samples)
+def _is_valid_sample_data(sample_data, affected_family_only, inheritance_mode, individual_affected_status, genotype_filter):
+    if affected_family_only and not sample_data['family_guids']:
+        return False
+    if genotype_filter and all(s['individual_guid'] not in genotype_filter for s in sample_data.get('samples', [])):
+        return False
+    if inheritance_mode and individual_affected_status and all((individual_affected_status.get(s['individual_guid']) or s['affected']) != AFFECTED for s in sample_data.get('samples', [])):
+        return False
+    return True
+
+
+def _get_sample_data(families, dataset_type, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None):
+    sample_type = None
+    if dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS):
+        dataset_type, sample_type = dataset_type.split('_')
+    samples = _get_valid_samples(families, dataset_type, sample_type, allow_no_samples)
     if not samples:
         return {}
 
     individual_affected_status = (inheritance_filter or {}).get('affected')
-    genotype_filter = (inheritance_filter or {}).get('genotype')
     affected_family_only = inheritance_mode and not individual_affected_status
-    sample_data = _get_grouped_samples(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males)
+    sample_data = _get_sample_metadata(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males)
 
-    samples_by_dataset_type = {}
-    for data in sample_data:
-        dataset_type = data.pop('dataset_type')
-        sample_type = data.pop('sample_type')
-        if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
-            dataset_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+    if not _is_valid_sample_data(
+        sample_data, affected_family_only, inheritance_mode, individual_affected_status, (inheritance_filter or {}).get('genotype'),
+    ):
+        return {}
 
-        if genotype_filter and all(s['individual_guid'] not in genotype_filter for s in data.get('samples', [])):
-            continue
-        if inheritance_mode and individual_affected_status and all(
-            (individual_affected_status.get(s['individual_guid']) or s['affected']) != AFFECTED for s in data.get('samples', [])
-        ):
-            continue
-
-        family_guids = set(data.pop('family_guids'))
-        if dataset_type in samples_by_dataset_type:
-            other_type_data = samples_by_dataset_type[dataset_type]
-            other_sample_type, other_type_family_guids = next(iter(other_type_data['sample_type_families'].items()))
-            sample_type_families = {
-                other_sample_type: other_type_family_guids - family_guids,
-                sample_type: family_guids - other_type_family_guids,
-                'multi': family_guids.intersection(other_type_family_guids),
-            }
-            if sample_type_families['multi']:
-                data['family_missing_type_samples'] = defaultdict(lambda: defaultdict(list))
-                individual_samples = {s['individual_guid']: s for s in data.get('samples', [])}
-                other_type_individual_samples = {s['individual_guid']: s for s in other_type_data.get('samples', [])}
-                for individual_guid in set(individual_samples.keys()) - set(other_type_individual_samples.keys()):
-                    sample = individual_samples[individual_guid]
-                    data['family_missing_type_samples'][sample['family_guid']][other_sample_type].append(sample['sample_id'])
-                for individual_guid in set(other_type_individual_samples.keys()) -  set(individual_samples.keys()):
-                    sample = other_type_individual_samples[individual_guid]
-                    data['family_missing_type_samples'][sample['family_guid']][sample_type].append(sample['sample_id'])
-            data['sample_type_families'] = {k: v for k, v in sample_type_families.items() if v}
-            for key in ['project_guids', 'samples']:
-                if key in data:
-                    data[key] += other_type_data[key]
+    family_guids = set(sample_data.pop('family_guids'))
+    sample_data['num_families'] = len(family_guids)
+    if sample_type:
+        sample_data['sample_type_families'] = {sample_type: family_guids}
+    else:
+        if sample_data.get('samples'):
+            sample_data['sample_type_families'] = defaultdict(set)
+            for sample in sample_data['samples']:
+                sample_data['sample_type_families'][sample['sample_type']].add(sample['family_guid'])
         else:
-            data['sample_type_families'] = {sample_type: family_guids}
+            sample_data['sample_type_families'] = samples.filter(
+                individual__family__guid__in=family_guids,
+            ).values('sample_type').annotate(family_guids=ArrayAgg('individual__family__guid', distinct=True))
+        if len(sample_data['sample_type_families']) == 2:
+            st_families_1, st_families_2 = sample_data['sample_type_families'].values()
+            multi_families = set(st_families_1).intersection(st_families_2)
+            if multi_families:
+                sample_data['sample_type_families'] = {
+                    sample_type: set(families) - multi_families
+                    for sample_type, families in sample_data['sample_type_families'].items()
+                    if set(families) - multi_families
+                }
+                sample_data['sample_type_families']['multi'] = multi_families
+                _add_missing_multi_type_samples(samples, sample_data)
 
-        samples_by_dataset_type[dataset_type] = {
-            **data,
-            'num_families': len(set().union(*data['sample_type_families'].values())),
-        }
-
-    if not samples_by_dataset_type:
-        raise InvalidSearchException(
-            'Invalid custom inheritance' if genotype_filter else
-            'Inheritance based search is disabled in families with no data loaded for affected individuals'
-        )
-    _add_missing_multi_type_samples(samples, samples_by_dataset_type)
-
-    return samples_by_dataset_type
+    return sample_data
 
 
-def _add_missing_multi_type_samples(samples, samples_by_dataset_type):
-    for dataset_type, data in samples_by_dataset_type.items():
-        if data['sample_type_families'].get('multi') and 'samples' not in data:
-            individual_samples = samples.filter(
-                dataset_type=dataset_type, individual__family__guid__in=data['sample_type_families']['multi'],
-            ).values('individual_id', family_guid=F('individual__family__guid')).annotate(
-                samples=ArrayAgg(JSONObject(sample_id='sample_id', sample_type='sample_type'))
-            ).filter(samples__len=1)
-            for agg in individual_samples:
-                sample = agg['samples'][0]
-                missing_type = Sample.SAMPLE_TYPE_WES if sample['sample_type'] == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
-                data['family_missing_type_samples'][agg['family_guid']][missing_type].append(sample['sample_id'])
+def _add_missing_multi_type_samples(samples, data):
+    data['family_missing_type_samples'] = defaultdict(lambda: defaultdict(list))
+    if 'samples'  in data:
+        individual_sample_types = defaultdict(list)
+        for s in data['samples']:
+            individual_sample_types[s['individual_guid']].append(s)
+        individual_samples = [
+            {'samples': samples, 'family_guid': samples[0]['family_guid']}
+            for samples in individual_sample_types.values() if len(samples) == 1
+        ]
+    else:
+        individual_samples = samples.filter(individual__family__guid__in=data['sample_type_families']['multi'],
+        ).values('individual_id', family_guid=F('individual__family__guid')).annotate(
+            samples=ArrayAgg(JSONObject(sample_id='sample_id', sample_type='sample_type'))
+        ).filter(samples__len=1)
+    for agg in individual_samples:
+        sample = agg['samples'][0]
+        missing_type = Sample.SAMPLE_TYPE_WES if sample['sample_type'] == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
+        data['family_missing_type_samples'][agg['family_guid']][missing_type].append(sample['sample_id'])
 
 
 def _no_affected_male_families(sample_data, user):
@@ -836,6 +845,7 @@ def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_o
 
 def get_clickhouse_variant_by_id(variant_id, parsed_variant_id, family, dataset_type):
     genome_version = family.project.genome_version
+    # TODO
     sample_data_by_type = _get_sample_data([family], [dataset_type])
     for data_type, sample_data in sample_data_by_type.items():
         variant = _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, sample_data)
@@ -845,6 +855,7 @@ def get_clickhouse_variant_by_id(variant_id, parsed_variant_id, family, dataset_
 
 
 def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys):
+    # TODO
     sample_data = _get_sample_data(Family.objects.filter(guid__in=family_guids), None)[dataset_type]
     entries = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter(
         project_guid=project_guid, family_guid__in=family_guids, key__in=keys,
