@@ -47,7 +47,16 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
     exclude_key_pairs = search.pop('exclude_key_pairs', None) or {}
     searched_dataset_types = set()
     skipped_dataset_types = []
-    for dataset_type in ENTRY_CLASS_MAP[genome_version].keys():
+    for dataset_type, entry_cls in ENTRY_CLASS_MAP[genome_version].items():
+        try:
+            entry_qs = entry_cls.objects.filter_locus(**search)
+            variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
+            variants_qs = variants_cls.objects
+            parsed_filters = variants_qs.get_parsed_annotations_filters(**search)
+        except InvalidDatasetTypeException:
+            skipped_dataset_types.append(dataset_type)
+            continue
+
         sample_data = _get_sample_data(
             families,
             dataset_type,
@@ -64,11 +73,9 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
 
         dataset_results = []
         if inheritance_mode != COMPOUND_HET:
-            try:
-                dataset_results += _get_search_results(genome_version, dataset_type, sample_data, exclude_keys=exclude_keys.get(dataset_type), **search)
-            except InvalidDatasetTypeException:
-                skipped_dataset_types.append(dataset_type)
-                continue
+            dataset_results += _get_search_results(
+                entry_qs, variants_qs, sample_data, exclude_keys=exclude_keys.get(dataset_type), **search, **parsed_filters,
+            )
 
         run_x_linked_male_search = has_x_linked and not (inheritance_mode == X_LINKED_RECESSIVE and sample_data.get('samples'))
         if run_x_linked_male_search:
@@ -80,24 +87,33 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
                 x_linked_search = {**search, 'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED}
                 logger.info(f'Loading {dataset_type} X-linked male data for {x_linked_sample_data["num_families"]} families', user)
                 dataset_results += _get_search_results(
-                    genome_version, dataset_type, x_linked_sample_data, exclude_keys=exclude_keys.get(dataset_type),
-                    **x_linked_search,
+                    entry_qs, variants_qs, x_linked_sample_data, exclude_keys=exclude_keys.get(dataset_type),
+                    **x_linked_search, **parsed_filters,
                 )
 
         if has_comp_het:
             comp_het_sample_data = sample_data
             if has_x_chrom_comp_het and 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 comp_het_sample_data = _no_affected_male_families(sample_data, user)
-            try:
-                result_q = get_data_type_comp_het_results_queryset(genome_version, dataset_type, comp_het_sample_data, exclude_key_pairs=exclude_key_pairs.get(dataset_type), **search)
+
+            result_q = _get_data_type_comp_het_results_queryset(
+                entry_qs, variants_qs, comp_het_sample_data, exclude_key_pairs=exclude_key_pairs.get(dataset_type),
+                **search, **parsed_filters,
+            )
+            if result_q is not None:
                 dataset_results += _evaluate_results(result_q, is_comp_het=True)
-            except InvalidDatasetTypeException:
-                continue
 
         if 'samples' not in sample_data:
             add_individual_guids(dataset_results)
         results += dataset_results
         searched_dataset_types.add(dataset_type)
+
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and search.get('no_access_project_genome_version'):
+            logger.info('Looking up variants in projects with no user access', user)
+            results += _get_search_results(
+                entry_qs, variants_qs, **search, **parsed_filters, sample_data=None, skip_entry_fields=True,
+                exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
+            )
 
     if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
         dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
@@ -113,13 +129,6 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
         # TODO do not report the ones that are skipped report the ones with no sample data
         raise InvalidSearchException(f'Unable to search against dataset type "{skipped_dataset_types[0]}"')
 
-    if search.get('no_access_project_genome_version'):
-        logger.info('Looking up variants in projects with no user access', user)
-        results += _get_search_results(
-        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **search, sample_data=None, skip_entry_fields=True,
-            exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
-        )
-
     cache_results = get_clickhouse_cache_results(results, sort, families)
     previous_search_results.update(cache_results)
 
@@ -127,14 +136,16 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
 
 
 def get_search_queryset(genome_version, dataset_type, sample_data, **search_kwargs):
+    # TODO share with _get_search_results
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
     entries = entry_cls.objects.filter_locus(**search_kwargs).search(sample_data, **search_kwargs)
     return variants_cls.objects.subquery_join(entries).search(**search_kwargs, **variants_cls.objects.get_parsed_annotations_filters(**search_kwargs))
 
 
-def _get_search_results(*args, skip_entry_fields=False, **search_kwargs):
-    results = get_search_queryset(*args, skip_entry_fields=skip_entry_fields, **search_kwargs)
+def _get_search_results(entry_qs, variants_qs, sample_data, skip_entry_fields=False, **search_kwargs):
+    entries = entry_qs.search(sample_data, skip_entry_fields=skip_entry_fields, **search_kwargs)
+    results = variants_qs.subquery_join(entries).search(skip_entry_fields=skip_entry_fields, **search_kwargs)
     return _evaluate_results(results.result_values(skip_entry_fields=skip_entry_fields))
 
 
@@ -153,6 +164,16 @@ def _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset
 
     snv_indel_sample_data = sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]
     snv_indel_families = set().union(*snv_indel_sample_data['sample_type_families'].values())
+
+    try:
+        snv_indel_entry_qs = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS].objects.filter_locus(**search_kwargs)
+        snv_indel_variants_qs = VARIANTS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS].objects
+        snv_indel_parsed_filters = snv_indel_variants_qs.get_parsed_annotations_filters(annotations=annotations, **search_kwargs)
+        sv_variants_cls = VARIANTS_CLASS_MAP[genome_version][f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}']
+        sv_parsed_filters = sv_variants_cls.objects.get_parsed_annotations_filters(annotations=annotations, **search_kwargs)
+    except InvalidDatasetTypeException:
+        return []
+
 
     results = []
     skipped_dataset_types = []
@@ -184,15 +205,23 @@ def _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset
             'samples': [s for s in sv_sample_data['samples'] if s['family_guid'] in families] if 'samples' in sv_sample_data else None,
         }
 
-        try:
-            result_q = get_multi_data_type_comp_het_results_queryset(
-                genome_version, sv_dataset_type, sv_sample_data, type_snv_indel_sample_data, num_families=len(families),
-                exclude_key_pairs=exclude_key_pairs.get(f'{Sample.DATASET_TYPE_VARIANT_CALLS},{sv_dataset_type}'),
-                annotations=annotations, **search_kwargs,
-            )
-            dataset_results = _evaluate_results(result_q, is_comp_het=True)
-        except InvalidDatasetTypeException:
-            skipped_dataset_types.append(sv_dataset_type)
+        entries = snv_indel_entry_qs.search(
+            type_snv_indel_sample_data, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True,
+            annotate_hom_alts=True, **search_kwargs,
+        )
+        snv_indel_q = snv_indel_variants_qs.subquery_join(entries).search(**search_kwargs, **snv_indel_parsed_filters)
+
+        sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.filter_locus(**search_kwargs).search(
+            sv_sample_data, **search_kwargs, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
+        )
+        sv_variants_cls = VARIANTS_CLASS_MAP[genome_version][sv_dataset_type]
+        sv_q = sv_variants_cls.objects.subquery_join(sv_entries).search(**search_kwargs, **sv_parsed_filters)
+
+        result_q = _get_comp_het_results_queryset(
+            snv_indel_variants_qs, snv_indel_q, sv_q, len(families),
+            exclude_key_pairs=exclude_key_pairs.get(f'{Sample.DATASET_TYPE_VARIANT_CALLS},{sv_dataset_type}'),
+        )
+        dataset_results = _evaluate_results(result_q, is_comp_het=True)
 
         if not sv_sample_data['samples']:
             add_individual_guids(dataset_results)
@@ -207,6 +236,7 @@ def _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset
     return results
 
 
+# TODO shared helper
 def get_multi_data_type_comp_het_results_queryset(genome_version, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families, exclude_key_pairs=None, **kwargs):
     entries = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS].filter_locus(**kwargs).objects.search(
         snv_indel_sample_data, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True,
@@ -221,9 +251,10 @@ def get_multi_data_type_comp_het_results_queryset(genome_version, sv_dataset_typ
     sv_variants_cls = VARIANTS_CLASS_MAP[genome_version][sv_dataset_type]
     sv_q = sv_variants_cls.objects.subquery_join(sv_entries).search(**kwargs, **variants_cls.objects.get_parsed_annotations_filters(**kwargs))
 
-    return _get_comp_het_results_queryset(variants_cls, snv_indel_q, sv_q, num_families, exclude_key_pairs)
+    return _get_comp_het_results_queryset(variants_cls.objects, snv_indel_q, sv_q, num_families, exclude_key_pairs)
 
 
+# TODO shared helper
 def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample_data, annotations=None, annotations_secondary=None, pathogenicity=None, inheritance_mode=None, exclude_key_pairs=None, split_pathogenicity_annotations=False, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
@@ -246,11 +277,32 @@ def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample
         **variants_cls.objects.get_parsed_annotations_filters(secondary_kwargs), **secondary_kwargs, **search_kwargs,
     )
 
-    return _get_comp_het_results_queryset(variants_cls, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
+    return _get_comp_het_results_queryset(variants_cls.objects, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
 
 
-def _get_comp_het_results_queryset(variants_cls, primary_q, secondary_q, num_families, exclude_key_pairs):
-    results = variants_cls.objects.search_compound_hets(primary_q, secondary_q)
+def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, annotations_secondary=None, exclude_key_pairs=None, **search_kwargs):
+    parsed_secondary_filters = {}
+    if annotations_secondary:
+        try:
+            secondary_search = {**search_kwargs, 'annotations': annotations_secondary}
+            parsed_secondary_filters = variants_qs.get_parsed_annotations_filters(**secondary_search)
+        except InvalidDatasetTypeException:
+            return None
+
+    entries = entry_qs.search(
+        sample_data, **search_kwargs, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
+    )
+
+    primary_q = variants_qs.subquery_join(entries).search(**search_kwargs)
+    secondary_kwargs = {**search_kwargs, **parsed_secondary_filters}
+    secondary_q = variants_qs.subquery_join(entries).search(**secondary_kwargs)
+
+    return _get_comp_het_results_queryset(variants_qs, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
+
+
+
+def _get_comp_het_results_queryset(variants_qs, primary_q, secondary_q, num_families, exclude_key_pairs):
+    results = variants_qs.search_compound_hets(primary_q, secondary_q)
 
     if results.has_annotation('primary_carriers') and results.has_annotation('secondary_carriers'):
         results = results.annotate(
