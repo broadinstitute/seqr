@@ -18,7 +18,7 @@ from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvG
 from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Family, Individual
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+from clickhouse_search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE, AFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
