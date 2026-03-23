@@ -65,7 +65,6 @@ NEW_SV_FIELD = 'new_structural_variants'
 SV_CONSEQUENCES_FIELD = 'structural_consequence'
 SV_TYPE_FILTER_FIELD = 'structural'
 SV_ANNOTATION_TYPES = {SV_CONSEQUENCES_FIELD, SV_TYPE_FILTER_FIELD, NEW_SV_FIELD}
-ALL_DATA_TYPES = 'ALL'
 
 CLINVAR_KEY = 'clinvar'
 CLINVAR_PATH_FILTER = 'pathogenic'

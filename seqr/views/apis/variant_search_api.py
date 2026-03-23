@@ -14,7 +14,7 @@ import re
 
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
-from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
+from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
     variant_lookup, parse_variant_id, export_variants
 from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.search.utils import InvalidSearchException
@@ -368,7 +368,7 @@ def search_context_handler(request):
         **FAMILY_ADDITIONAL_VALUES,
     )}
 
-    family_sample_types = get_search_samples(projects).values('individual__family__guid').annotate(
+    family_sample_types = Sample.objects.filter(individual__family__project__in=projects, is_active=True).values('individual__family__guid').annotate(
         samples=ArrayAgg(JSONObject(sampleType='sample_type', datasetType='dataset_type', isActive=Value(True)), distinct=True))
     project_dataset_types = defaultdict(set)
     for agg in family_sample_types:
