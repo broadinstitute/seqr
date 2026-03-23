@@ -245,9 +245,8 @@ def _search_new_saved_variants(family_variant_ids, *args, **kwargs):
     }
 
     genome_version = next(family['project__genome_version'] for family in families_by_id.values())
-    samples = Sample.objects.filter(is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
     search_variants_by_id = {
-        v['variantId']: v for v in _get_clickhouse_variants(samples, families_by_id, family_variant_ids, genome_version)
+        v['variantId']: v for v in _get_clickhouse_variants(families_by_id, family_variant_ids, genome_version)
     }
 
     new_variants = {}
@@ -270,7 +269,7 @@ def _search_new_saved_variants(family_variant_ids, *args, **kwargs):
     return new_variants
 
 
-def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, dict], family_variant_ids: set[tuple[int, str]], genome_version: str) -> list[dict]:
+def _get_clickhouse_variants(families_by_id: dict[int, dict], family_variant_ids: set[tuple[int, str]], genome_version: str) -> list[dict]:
     variants_by_key = get_saved_variant_annotations(family_variant_ids, genome_version=genome_version, group_by_field='key')
     families_by_project = defaultdict(list)
     for family in families_by_id.values():
@@ -278,7 +277,7 @@ def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, 
     for project_guid, family_guids in families_by_project.items():
         genotype_keys = get_clickhouse_genotypes(
             project_guid, family_guids, genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variants_by_key.keys(),
-            samples, additional_fields=['xpos']
+            additional_fields=['xpos']
         )
         for key, entry_data in genotype_keys.items():
             variants_by_key[key]['xpos'] = entry_data['xpos']
