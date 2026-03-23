@@ -153,8 +153,7 @@ class SearchQuerySet(QuerySet):
                 in_silico_q |= missing_q
             results = results.filter(in_silico_q)
         elif has_required_filter:
-            # TODO
-            raise InvalidDatasetTypeException
+            results = results.none()
 
         return results
 
@@ -419,38 +418,30 @@ class BaseVariantsQuerySet(SearchQuerySet):
     def _filter_frequency(self, results, **kwargs):
         return results
 
-    def _filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
+    def _filter_annotations(self, results, annotations_filter_q=None, transcript_filters=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
         if exclude_locations and genes:
             intervals = self._format_gene_intervals(genes)
             genes = None
+
         results = self._filter_locations(results, genes, intervals, exclude_locations=exclude_locations, **kwargs)
 
-        filter_qs, transcript_filters = self._parse_annotation_filters(annotations or {}, pathogenicity) if (annotations or pathogenicity) else ([], [])
-
-        if not (filter_qs or transcript_filters):
-            if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
-                #  Annotation filters restrict search to other dataset types
-                # TODO
-                raise InvalidDatasetTypeException
+        if not (annotations_filter_q or transcript_filters):
             return results
 
-        filter_q = filter_qs[0] if filter_qs else None
-        for q in filter_qs[1:]:
-            filter_q |= q
-        if filter_q:
-            results = results.annotate(passes_annotation=filter_q)
-            filter_q = Q(passes_annotation=True)
+        if annotations_filter_q:
+            results = results.annotate(passes_annotation=annotations_filter_q)
+            annotations_filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
             consequence_field = self.GENE_CONSEQUENCE_FIELD if genes else self.TRANSCRIPT_FIELD
             results = self._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
             transcript_q = Q(filtered_transcript_consequences__not_empty=True)
-            if filter_q:
-                filter_q |= transcript_q
+            if annotations_filter_q:
+                annotations_filter_q |= transcript_q
             else:
-                filter_q = transcript_q
+                annotations_filter_q = transcript_q
 
-        return results.filter(filter_q)
+        return results.filter(annotations_filter_q)
 
     def _annotate_filtered_transcripts(self, results, consequence_field, transcript_filters, **kwargs):
         return results.annotate(**{
@@ -477,6 +468,20 @@ class BaseVariantsQuerySet(SearchQuerySet):
             start = max(start - offset_pos, MIN_POS)
             end = min(end + offset_pos, MAX_POS)
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
+
+    def get_parsed_annotations_filters(self, annotations=None, pathogenicity=None, **kwargs):
+        filter_qs, transcript_filters = self._parse_annotation_filters(annotations or {}, pathogenicity or {})
+
+        if not (filter_qs or transcript_filters):
+            if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
+                #  Annotation filters restrict search to other dataset types
+                raise InvalidDatasetTypeException
+
+        filter_q = filter_qs[0] if filter_qs else None
+        for q in filter_qs[1:]:
+            filter_q |= q
+
+        return {'annotations_filter_q': filter_q, 'transcript_filters': transcript_filters}
 
     def _parse_annotation_filters(self, annotations, pathogenicity):
         raise NotImplementedError
@@ -648,11 +653,7 @@ class VariantsQuerySet(BaseVariantsQuerySet):
                     filter_qs.append(Q(mitomapPathogenic=value))
             elif field == SPLICE_AI_FIELD:
                 if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS:
-                    pred_index = next (
-                        i for i, (pred_field, _) in enumerate(self.query.annotations['preds'].output_field.base_fields)
-                        if pred_field == SPLICE_AI_FIELD
-                    )
-                    filter_qs.append(Q(**{f'preds__{pred_index}__gte': float(value)}))
+                    filter_qs.append(Q(preds__0__gte=float(value)))
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
 

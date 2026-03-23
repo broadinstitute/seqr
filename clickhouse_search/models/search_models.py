@@ -300,11 +300,11 @@ class BaseEntriesSnvIndel(BaseEntries):
         ('dp', models.UInt16Field(null=True, blank=True)),
     ]
     PREDICTIONS = {
-        'dbnsfp': {},
-        'eigen': {},
         'splice_ai': {
             'consequence_id': ('splice_ai_consequence', models.Enum8Field(choices=[(csq, csq_id) for csq_id, csq in BaseSpliceAi.CONSEQUENCE_CHOICES])),
         },
+        'dbnsfp': {},
+        'eigen': {},
     }
     RANGE_PREDICTIONS = {}
     POPULATIONS = ['gnomad_exomes', 'gnomad_genomes', 'topmed']
