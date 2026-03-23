@@ -5,7 +5,6 @@ from collections import defaultdict
 
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.file_utils import file_iter, does_file_exist, list_files
-from seqr.utils.search.constants import VCF_FILE_EXTENSIONS
 from seqr.models import Sample
 
 BLOCK_SIZE = 65536
@@ -30,6 +29,8 @@ DATA_TYPE_FILE_EXTS = {
 }
 
 REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
+
+VCF_FILE_EXTENSIONS = ('.vcf', '.vcf.gz', '.vcf.bgz')
 
 
 def _validate_vcf_header(header):

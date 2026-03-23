@@ -1,10 +1,6 @@
 from seqr.models import Individual
 
-VCF_FILE_EXTENSIONS = ('.vcf', '.vcf.gz', '.vcf.bgz')
-
 MAX_VARIANTS = 10000
-MAX_EXPORT_VARIANTS = 1000
-MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 
 XPOS_SORT_KEY = 'xpos'
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
