@@ -14,9 +14,8 @@ import re
 
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
-from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, get_search_samples, \
+from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
     variant_lookup, parse_variant_id, export_variants
-from seqr.utils.search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
@@ -27,7 +26,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches, add_individual_hpo_details, FAMILY_ADDITIONAL_VALUES
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    user_is_analyst, login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
+    login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variants_response
 from seqr.views.utils.vlm_utils import vlm_lookup
@@ -52,9 +51,6 @@ def query_variants_handler(request, search_hash):
     """
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
-    sort = request.GET.get('sort') or XPOS_SORT_KEY
-    if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(request.user):
-        sort = PATHOGENICTY_HGMD_SORT_KEY
 
     search_context = json.loads(request.body or '{}')
     try:
@@ -64,7 +60,7 @@ def query_variants_handler(request, search_hash):
 
     _check_results_permission(results_model, request.user)
 
-    variants, total_results = query_variants(results_model, sort=sort, page=page, num_results=per_page, user=request.user)
+    variants, total_results = query_variants(results_model, sort=request.GET.get('sort'), page=page, num_results=per_page, user=request.user)
 
     response = _process_variants(variants or [], results_model.families.all(), request,
                                  genome_version=results_model.variant_search.search.get('no_access_project_genome_version'))
@@ -368,7 +364,7 @@ def search_context_handler(request):
         **FAMILY_ADDITIONAL_VALUES,
     )}
 
-    family_sample_types = get_search_samples(projects).values('individual__family__guid').annotate(
+    family_sample_types = Sample.objects.filter(individual__family__project__in=projects, is_active=True).values('individual__family__guid').annotate(
         samples=ArrayAgg(JSONObject(sampleType='sample_type', datasetType='dataset_type', isActive=Value(True)), distinct=True))
     project_dataset_types = defaultdict(set)
     for agg in family_sample_types:

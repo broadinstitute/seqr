@@ -14,7 +14,6 @@ from seqr.models import Project, Family, Individual, Sample, SavedVariant, Varia
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.utils import get_search_samples
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
@@ -286,7 +285,7 @@ def _get_all_project_individual_samples(projects):
 
 
 def _get_sorted_search_samples(projects):
-    return get_search_samples(projects, active_only=False).order_by('-loaded_date')
+    return Sample.objects.filter(individual__family__project__in=projects).order_by('-loaded_date')
 
 
 HET = 'Heterozygous'

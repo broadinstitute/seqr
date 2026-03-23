@@ -402,7 +402,6 @@ class Command(BaseCommand):
             variants = []
             genotypes_by_key = get_clickhouse_genotypes(
                 project.guid, [family_guid], project.genome_version, dataset_type, variant_models_by_key.keys(),
-                samples=Sample.objects.filter(is_active=True),
             )
             for key, genotypes in genotypes_by_key.items():
                 variant = variant_models_by_key[key]

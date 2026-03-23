@@ -275,10 +275,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1,
-                         GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            gene_counts={**variant_gene_counts, **MITO_GENE_COUNTS, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
-            project_families=[*SINGLE_FAMILY_PROJECT_FAMILIES, *SV_PROJECT_FAMILIES],
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT1,
+                         GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            gene_counts={**variant_gene_counts, **MITO_GENE_COUNTS, **GCNV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
+            project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
         self._set_grch37_search()
@@ -374,27 +374,28 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self.login_manager()
+        locus = {'rawItems': 'chr1:1-100000000, chr13:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, chr21:1-100000000, M:1-100000000'}
         project_families += SV_PROJECT_FAMILIES
         results = [
             VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, SV_VARIANT3, GCNV_VARIANT1,
             GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,
         ]
         self._assert_expected_search(
-            results, request_body=request_body, project_families=project_families, additional_response=additional_response,
+            results, request_body=request_body, project_families=project_families, additional_response=additional_response, locus=locus,
         )
 
         request_body['unsolvedFamiliesOnly'] = True
         project_families[0]['familyGuids'].remove('F000007_7')
         project_families[0]['familyGuids'].remove('F000010_10')
         self._assert_expected_search(
-            results, request_body=request_body, project_families=project_families, additional_response=additional_response,
+            results, request_body=request_body, project_families=project_families, additional_response=additional_response, locus=locus,
         )
 
         request_body['trioFamiliesOnly'] = True
         self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3,
              GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            request_body=request_body, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
+            request_body=request_body, project_families=SINGLE_FAMILY_PROJECT_FAMILIES, locus=locus,
         )
 
     def test_both_sample_types_search(self):
@@ -897,9 +898,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search_error('Annotations must be specified to search for compound heterozygous variants', inheritance_mode='recessive')
 
+        annotations = {'frameshift': ['frameshift_variant']}
         self._assert_expected_search_error(
             'Location must be specified to search for compound heterozygous variants across many families',
-            annotations={'frameshift': ['frameshift_variant']}, inheritance_mode='recessive',
+            annotations=annotations, inheritance_mode='recessive',
         )
 
         self._assert_expected_search_error(
@@ -912,6 +914,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search_error(
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
             inheritance_mode='recessive', project_families=[{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000005_5']}],
+            annotations=annotations,
         )
 
         no_sv_project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000003_3']}]
@@ -928,6 +931,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search_error(
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
             inheritance_mode='recessive', inheritance_filter={'affected': {'I000007_na20870': 'N'}}, project_families=no_sv_project_families,
+            annotations=annotations,
         )
 
         self._assert_expected_search_error('Inheritance must be specified if custom affected status is set', inheritance_filter={'affected': {'I000007_na20870': 'N'}})
