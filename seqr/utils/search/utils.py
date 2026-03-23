@@ -10,10 +10,11 @@ from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, Project, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
-from seqr.utils.search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    MAX_NO_LOCATION_COMP_HET_FAMILIES, SV_ANNOTATION_TYPES, MAX_EXPORT_VARIANTS, X_LINKED_RECESSIVE
+from clickhouse_search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
+    SV_ANNOTATION_TYPES, X_LINKED_RECESSIVE, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
+from seqr.views.utils.permissions_utils import user_is_analyst
 
 logger = SeqrLogger(__name__)
 
@@ -21,6 +22,8 @@ logger = SeqrLogger(__name__)
 
 MAX_GENES_FOR_FILTER = 10000
 MIN_MULTI_FAMILY_SEQR_AC = 5000
+MAX_EXPORT_VARIANTS = 1000
+MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 
 
 def _get_search_genome_version(search_model):
@@ -110,7 +113,9 @@ def _get_previous_search_results(search_model, sort):
 
 
 def query_variants(search_model, sort, page, num_results, user):
-    all_results, genome_version = _query_variants(search_model, user, sort=sort)
+    if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(user):
+        sort = PATHOGENICTY_HGMD_SORT_KEY
+    all_results, genome_version = _query_variants(search_model, user, sort=sort or XPOS_SORT_KEY)
 
     results_page = format_clickhouse_results(all_results[(page-1)*num_results:page*num_results], genome_version)
 
