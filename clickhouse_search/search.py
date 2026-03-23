@@ -47,7 +47,6 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
         inheritance_mode=inheritance_mode,
         inheritance_filter=search.get('inheritance_filter'),
         allow_no_samples=bool(search.get('no_access_project_genome_version')),
-        exclude_svs=search.get('exclude_svs'),
     )
     results = []
     exclude_keys = search.pop('exclude_keys', None) or {}
@@ -447,10 +446,8 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
      and transcript.get('spliceregion', {}).get('extended_intronic_splice_region_variant') == minimal_transcript.get('extendedIntronicSpliceRegionVariant'))
 
 
-def _get_valid_samples(families, allow_no_samples, exclude_svs):
+def _get_valid_samples(families, allow_no_samples):
     samples = Sample.objects.filter(individual__family__in=families, is_active=True)
-    if exclude_svs:
-        samples = samples.exclude(dataset_type=Sample.DATASET_TYPE_SV_CALLS)
     if not samples.exists():
         if allow_no_samples:
             return None
@@ -500,8 +497,8 @@ def _get_grouped_samples(samples, skip_multi_project_individual_guid, affected_f
     return sample_data
 
 
-def _get_sample_data(families, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, exclude_svs=False, inheritance_mode=None, inheritance_filter=None):
-    samples = _get_valid_samples(families, allow_no_samples, exclude_svs)
+def _get_sample_data(families, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None):
+    samples = _get_valid_samples(families, allow_no_samples)
     if not samples:
         return {}
 
