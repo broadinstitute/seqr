@@ -153,6 +153,7 @@ class SearchQuerySet(QuerySet):
                 in_silico_q |= missing_q
             results = results.filter(in_silico_q)
         elif has_required_filter:
+            # TODO
             raise InvalidDatasetTypeException
 
         return results
@@ -429,6 +430,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
         if not (filter_qs or transcript_filters):
             if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
                 #  Annotation filters restrict search to other dataset types
+                # TODO
                 raise InvalidDatasetTypeException
             return results
 
@@ -1024,7 +1026,7 @@ class BaseEntriesManager(SearchQuerySet):
         return cls._clinvar_filter_q(pathogenicity, allowed_filters=CLINVAR_PATH_SIGNIFICANCES)
 
     def search(self, sample_data, exclude_keys=None, **kwargs):
-        entries = self.filter_locus(**kwargs)
+        entries = self
 
         if exclude_keys:
             entries = entries.exclude(key__in=exclude_keys)
@@ -1079,11 +1081,6 @@ class BaseEntriesManager(SearchQuerySet):
            entries, multi_sample_type_families = self._filter_project_families(entries, sample_data)
        elif exclude_projects:
            entries = entries.exclude(project_guid__in=exclude_projects)
-
-       if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}:
-           if self.filtered_chrom and self.filtered_chrom != 'X':
-               raise InvalidDatasetTypeException
-           entries = entries.filter(self._interval_query('X', start=MIN_POS, end=MAX_POS))
 
        inheritance_q = None
        quality_q = None
@@ -1430,11 +1427,16 @@ class BaseEntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, **kwargs):
+    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, inheritance_mode=None, **kwargs):
         entries = self
 
         if variant_ids:
             entries = entries.filter_variant_ids(variant_ids)
+
+        if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}:
+            if self.filtered_chrom and self.filtered_chrom != 'X':
+                raise InvalidDatasetTypeException
+            entries = entries.filter(self._interval_query('X', start=MIN_POS, end=MAX_POS))
 
         if not (genes or intervals):
             return entries

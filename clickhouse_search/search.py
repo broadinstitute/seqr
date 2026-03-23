@@ -129,7 +129,7 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
 def get_search_queryset(genome_version, dataset_type, sample_data, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
-    entries = entry_cls.objects.search(sample_data, **search_kwargs)
+    entries = entry_cls.objects.filter_locus(**search_kwargs).search(sample_data, **search_kwargs)
     return variants_cls.objects.subquery_join(entries).search(**search_kwargs)
 
 
@@ -208,14 +208,14 @@ def _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset
 
 
 def get_multi_data_type_comp_het_results_queryset(genome_version, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families, exclude_key_pairs=None, **kwargs):
-    entries = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS].objects.search(
+    entries = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS].filter_locus(**kwargs).objects.search(
         snv_indel_sample_data, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True,
         annotate_hom_alts=True, **kwargs,
     )
     variants_cls = VARIANTS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
     snv_indel_q = variants_cls.objects.subquery_join(entries).search(**kwargs)
 
-    sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search(
+    sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.filter_locus(**kwargs).search(
         sv_sample_data, **kwargs, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
     )
     sv_variants_cls = VARIANTS_CLASS_MAP[genome_version][sv_dataset_type]
@@ -227,7 +227,7 @@ def get_multi_data_type_comp_het_results_queryset(genome_version, sv_dataset_typ
 def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample_data, annotations=None, annotations_secondary=None, pathogenicity=None, inheritance_mode=None, exclude_key_pairs=None, split_pathogenicity_annotations=False, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
-    entries = entry_cls.objects.search(
+    entries = entry_cls.objects.filter_locus(**search_kwargs).search(
         sample_data, **search_kwargs, inheritance_mode=COMPOUND_HET, pathogenicity=pathogenicity, annotations=annotations, annotate_carriers=True,
     )
 
