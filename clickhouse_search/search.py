@@ -35,19 +35,19 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, dataset_types, search, user, previous_search_results, genome_version, sort=None, **kwargs):
+def get_clickhouse_variants(families, search, user, previous_search_results, genome_version, sort=None, **kwargs):
     inheritance_mode = search.get('inheritance_mode')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
     sample_data_by_dataset_type = _get_sample_data(
         families,
-        dataset_types,
         skip_multi_project_individual_guid=True,
         annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
         inheritance_mode=inheritance_mode,
         inheritance_filter=search.get('inheritance_filter'),
         allow_no_samples=bool(search.get('no_access_project_genome_version')),
+        exclude_svs=search.get('exclude_svs'),
     )
     results = []
     exclude_keys = search.pop('exclude_keys', None) or {}
@@ -447,20 +447,14 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
      and transcript.get('spliceregion', {}).get('extended_intronic_splice_region_variant') == minimal_transcript.get('extendedIntronicSpliceRegionVariant'))
 
 
-def _get_valid_samples(families, dataset_types, allow_no_samples):
+def _get_valid_samples(families, allow_no_samples, exclude_svs):
     samples = Sample.objects.filter(individual__family__in=families, is_active=True)
+    if exclude_svs:
+        samples = samples.exclude(dataset_type=Sample.DATASET_TYPE_SV_CALLS)
     if not samples.exists():
         if allow_no_samples:
             return None
         raise InvalidSearchException(f'No search data found for families {", ".join([f.family_id for f in families])}')
-
-    if dataset_types:
-        samples = samples.filter(dataset_type__in=dataset_types)
-        if not samples.exists():
-            if allow_no_samples:
-                return None
-            # TODO remove
-            raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')
 
     mismatch_affected_samples = samples.values('sample_id', 'dataset_type').annotate(
         projects=ArrayAgg('individual__family__project__name', distinct=True),
@@ -506,8 +500,8 @@ def _get_grouped_samples(samples, skip_multi_project_individual_guid, affected_f
     return sample_data
 
 
-def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None):
-    samples = _get_valid_samples(families, dataset_types, allow_no_samples)
+def _get_sample_data(families, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, exclude_svs=False, inheritance_mode=None, inheritance_filter=None):
+    samples = _get_valid_samples(families, allow_no_samples, exclude_svs)
     if not samples:
         return {}
 

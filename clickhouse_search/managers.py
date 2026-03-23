@@ -1012,6 +1012,10 @@ class BaseEntriesManager(SearchQuerySet):
         return self.annotations_model.ANNOTATION_CONSTANTS['genomeVersion']
 
     @property
+    def filtered_chrom(self):
+        return self.annotations_model.ANNOTATION_CONSTANTS.get('chrom')
+
+    @property
     def callset_filter_field(self):
         return 'callset'
 
@@ -1077,6 +1081,8 @@ class BaseEntriesManager(SearchQuerySet):
            entries = entries.exclude(project_guid__in=exclude_projects)
 
        if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}:
+           if self.filtered_chrom and self.filtered_chrom != 'X':
+               raise InvalidDatasetTypeException
            entries = entries.filter(self._interval_query('X', start=MIN_POS, end=MAX_POS))
 
        inheritance_q = None
@@ -1442,6 +1448,10 @@ class BaseEntriesManager(SearchQuerySet):
                 locus_q = Q(geneId_ids__bitmap_has_any=[gene['id'] for gene in genes.values()])
 
         if intervals:
+            if self.filtered_chrom:
+                intervals = [interval for interval in intervals if interval['chrom'] == self.filtered_chrom]
+                if not intervals and not exclude_locations:
+                    raise InvalidDatasetTypeException
             interval_q = self._interval_query(**intervals[0])
             for interval in intervals[1:]:
                 interval_q |= self._interval_query(**interval)
@@ -1456,7 +1466,7 @@ class BaseEntriesManager(SearchQuerySet):
         return filter_func(locus_q)
 
     def _can_filter_gene_interval(self, genes):
-        return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS
+        return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS or self.filtered_chrom
 
     def search_padded_interval(self, chrom, pos, padding):
         interval_q = self._interval_query(chrom, start=max(pos - padding, MIN_POS), end=min(pos + padding, MAX_POS))

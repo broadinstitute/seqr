@@ -129,10 +129,9 @@ def _query_variants(search_model, user, sort=None, **kwargs):
     _validate_sort(sort, families)
 
     parsed_search = _parse_search(search, genome_version, user)
-    dataset_types = _search_dataset_type(parsed_search, genome_version)
     _validate_search(parsed_search, families)
 
-    get_clickhouse_variants(families, dataset_types, parsed_search, user, previous_search_results, genome_version, sort=sort, **kwargs)
+    get_clickhouse_variants(families, parsed_search, user, previous_search_results, genome_version, sort=sort, **kwargs)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
@@ -264,46 +263,12 @@ def _validate_sort(sort, families):
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
 
 
-def _search_dataset_type(search, genome_version):
-    parsed_variant_ids = search.get('parsed_variant_ids')
-    if parsed_variant_ids:
-        dataset_types = _chromosome_filter_dataset_types([vid[0] for vid in parsed_variant_ids])
-    else:
-        chroms = [gene[f'chromGrch{genome_version}'] for gene in (search.get('genes') or {}).values()] + [
-            interval['chrom'] for interval in (search.get('intervals') or [])
-        ] if not search.get('exclude_locations') else None
-        dataset_types = _chromosome_filter_dataset_types(chroms) if chroms else None
-        if search.pop('exclude_svs', False):
-            dataset_types = [
-                dt for dt in dataset_types or [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS]
-                if dt != Sample.DATASET_TYPE_SV_CALLS
-            ]
-
-    if search.get('inheritance_mode') == X_LINKED_RECESSIVE:
-        if not dataset_types:
-            dataset_types = [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_SV_CALLS]
-        elif Sample.DATASET_TYPE_MITO_CALLS in dataset_types:
-            dataset_types.remove(Sample.DATASET_TYPE_MITO_CALLS)
-
-    return dataset_types
-
-
 def _variant_id_dataset_type(parsed_variant_id):
     if not parsed_variant_id:
         return Sample.DATASET_TYPE_SV_CALLS
     if parsed_variant_id[0].replace('chr', '').startswith('M'):
         return Sample.DATASET_TYPE_MITO_CALLS
     return Sample.DATASET_TYPE_VARIANT_CALLS
-
-
-def _chromosome_filter_dataset_types(chroms):
-    has_mito = [chrom for chrom in chroms if chrom.replace('chr', '').startswith('M')]
-    if len(has_mito) == len(chroms):
-        return [Sample.DATASET_TYPE_MITO_CALLS]
-    dataset_types = [Sample.DATASET_TYPE_VARIANT_CALLS]
-    if has_mito:
-        dataset_types.append(Sample.DATASET_TYPE_MITO_CALLS)
-    return dataset_types
 
 
 def _parse_inheritance(search):
