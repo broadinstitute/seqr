@@ -1450,11 +1450,15 @@ class BaseEntriesManager(SearchQuerySet):
             if require_gene_filter or (not should_filter_interval):
                 locus_q = Q(geneId_ids__bitmap_has_any=[gene['id'] for gene in genes.values()])
 
-        if intervals:
-            if self.filtered_chrom:
-                intervals = [interval for interval in intervals if interval['chrom'] == self.filtered_chrom]
-                if not intervals and not exclude_locations:
+        if intervals and self.filtered_chrom:
+            intervals = [interval for interval in intervals if interval['chrom'] == self.filtered_chrom]
+            if not intervals:
+                if not exclude_locations:
                     raise InvalidDatasetTypeException
+                if not locus_q:
+                    return entries
+
+        if intervals:
             interval_q = self._interval_query(**intervals[0])
             for interval in intervals[1:]:
                 interval_q |= self._interval_query(**interval)
