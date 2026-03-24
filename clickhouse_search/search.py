@@ -770,13 +770,9 @@ def _get_sort_key(sort, gene_metadata):
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
 
-def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, affected_only=False, hom_only=False):
-    entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
+def _clickhouse_variant_lookup(entries, genome_version, data_type, affected_only=False, hom_only=False):
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
-    entries = entry_cls.objects.filter_locus(
-        variant_ids=[variant_id], parsed_variant_ids=[parsed_variant_id] if parsed_variant_id else [],
-    )
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
     entries = entries.result_values()
     results = variants_cls.objects.subquery_join(entries)
@@ -795,25 +791,43 @@ def _filter_lookup_entries(entries, affected_only, hom_only):
         entries = entries.filter(calls__array_exists={'gt': (2,)})
     return entries
 
-def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type, sample_type, genome_version, affected_only, hom_only):
-    is_sv = dataset_type == Sample.DATASET_TYPE_SV_CALLS
-    data_type = f'{dataset_type}_{sample_type}' if is_sv else dataset_type
+def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, sample_type, genome_version, affected_only, hom_only):
+    data_type = entry_qs = None
+    for dataset_type, entry_cls in sorted(ENTRY_CLASS_MAP[genome_version].items()):
+        try:
+            entry_qs = entry_cls.objects.filter_locus(
+                variant_ids=[variant_id], parsed_variant_ids=[parsed_variant_id] if parsed_variant_id else [],
+            )
+        except InvalidDatasetTypeException:
+            continue
+        if dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS):
+            if not sample_type:
+                raise InvalidSearchException('Sample type must be specified to look up a structural variant')
+            elif not dataset_type.endswith(sample_type):
+                continue
+        data_type = dataset_type
+        break
+    if data_type is None:
+        raise InvalidSearchException(f'Invalid genome build for dataset type')
+
     logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
 
     variant = _clickhouse_variant_lookup(
-        variant_id, parsed_variant_id, genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
+        entry_qs, genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
     )
     if variant:
         _add_liftover_genotypes(variant, data_type, parsed_variant_id, affected_only, hom_only)
     else:
         lifted_genome_version = next(gv for gv in ENTRY_CLASS_MAP.keys() if gv != genome_version)
-        if ENTRY_CLASS_MAP[lifted_genome_version].get(data_type):
+        lifted_entry_cls = ENTRY_CLASS_MAP[lifted_genome_version].get(data_type)
+        if lifted_entry_cls:
             from seqr.utils.search.utils import run_liftover
             liftover_results = run_liftover(lifted_genome_version, parsed_variant_id[0], parsed_variant_id[1])
             if liftover_results:
                 lifted_id = (liftover_results[0], liftover_results[1], *parsed_variant_id[2:])
+                entry_qs = lifted_entry_cls.objects.filter_locus(parsed_variant_ids=[lifted_id])
                 variant = _clickhouse_variant_lookup(
-                    None, lifted_id, lifted_genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
+                    entry_qs, lifted_genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
                 )
 
     if not variant:
@@ -821,7 +835,7 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type,
 
     variants = [variant]
 
-    if is_sv and variant['svType'] in {'DEL', 'DUP'}:
+    if variant.get('svType') in {'DEL', 'DUP'}:
         other_sample_type, other_entry_class = next(
             (dt, cls) for dt, cls in ENTRY_CLASS_MAP[genome_version].items()
             if dt != data_type and dt.startswith(Sample.DATASET_TYPE_SV_CALLS)

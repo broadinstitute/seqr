@@ -1642,6 +1642,8 @@ class EntriesManager(BaseEntriesManager):
             # improve performance by using the xpos projection
             intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
             variant_ids = ['-'.join([str(o) for o in variant_id]) for variant_id in parsed_variant_ids]
+        elif variant_ids:
+            raise InvalidDatasetTypeException
 
         entries = super().filter_locus(*args, intervals=intervals, genes=genes, variant_ids=variant_ids, **kwargs)
 

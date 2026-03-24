@@ -67,21 +67,10 @@ def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_
         return variants
 
     parsed_variant_id = parse_variant_id(variant_id)
-    # TODO move into lookup
-    dataset_type = _variant_id_dataset_type(parsed_variant_id)
-    _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version)
-
-    variants = clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type, sample_type, genome_version, affected_only, hom_only)
+    variants = clickhouse_variant_lookup(user, variant_id, parsed_variant_id, sample_type, genome_version, affected_only, hom_only)
 
     safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
     return variants
-
-
-def _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version):
-    if genome_version == GENOME_VERSION_GRCh37 and dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS:
-        raise InvalidSearchException(f'{dataset_type} variants are not available for GRCh37')
-    if dataset_type == Sample.DATASET_TYPE_SV_CALLS and not sample_type:
-        raise InvalidSearchException('Sample type must be specified to look up a structural variant')
 
 
 def _get_search_cache_key(search_model, sort=None):
@@ -265,14 +254,6 @@ def _parse_valid_variant_id(variant_id):
 def _validate_sort(sort, families):
     if sort == PRIORITIZED_GENE_SORT and len(families) != 1:
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
-
-
-def _variant_id_dataset_type(parsed_variant_id):
-    if not parsed_variant_id:
-        return Sample.DATASET_TYPE_SV_CALLS
-    if parsed_variant_id[0].replace('chr', '').startswith('M'):
-        return Sample.DATASET_TYPE_MITO_CALLS
-    return Sample.DATASET_TYPE_VARIANT_CALLS
 
 
 def _parse_inheritance(search):
