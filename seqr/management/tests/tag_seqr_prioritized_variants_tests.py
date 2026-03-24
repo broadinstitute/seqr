@@ -38,17 +38,18 @@ SV_MATCHES = {
     'SV - Compound Heterozygous': (1, None),
     'SV - De Novo/ Dominant': (0, None),
     'SV - Recessive': (1, None),
-    'SV - X-Linked Recessive': (0, None),
+    'SV - X-Linked Recessive': (0, 0),
 }
 MITO_MATCHES = {
     'Mitochondrial - Pathogenic': (1, None),
     'Mitochondrial - De Novo/ Dominant': (1, None),
 }
+# TODO counts 0/1/0/1
 MULTI_TYPE_MATCHES = {
-    'Compound Heterozygous - One SV': (0, None),
-    'Compound Heterozygous - Clinvar Pathogenic/ SV': (1, None),
-    'Compound Heterozygous - High Splice AI/ SV': (0, None),
-    'Compound Heterozygous - One SV - Confirmed': (1, None),
+    'Compound Heterozygous - One SV': (1, None),
+    'Compound Heterozygous - Clinvar Pathogenic/ SV': (2, None),
+    'Compound Heterozygous - High Splice AI/ SV': (1, None),
+    'Compound Heterozygous - One SV - Confirmed': (2, None),
 }
 
 class CheckNewSamplesTest(ClickhouseSearchTestCase):
@@ -147,6 +148,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             'MITO', 1, MITO_MATCHES, **creation_stats.get('MITO', {}),
         ) + self._dataset_type_logs(
             'multi data type', 1, MULTI_TYPE_MATCHES, **creation_stats.get('MULTI', {}),
+            search_dataset_types=['SNV_INDEL', 'SV_WES', 'SNV_INDEL/SV_WES'],
         ) + [
             (f'Tagged {num_new} new and 0 previously tagged variants in 1 families, found {num_unchanged} unchanged tags:', None)
         ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in  SNV_INDEL_MATCHES.items()] + [
@@ -155,8 +157,8 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             (f'  {criteria}: {count} variants', None) for criteria, (count, _) in MULTI_TYPE_MATCHES.items()
         ])
 
-    @staticmethod
-    def _dataset_type_logs(dataset_type, num_families, matches, num_variants=0, tag_id_range=None):
+    @classmethod
+    def _dataset_type_logs(cls, dataset_type, num_families, matches, num_variants=0, tag_id_range=None, search_dataset_types=None):
         create_variants_logs = [
             (f'create {num_variants} SavedVariants', {
                 'dbUpdate': {'dbEntity': 'SavedVariant', 'entityIds': mock.ANY, 'updateType': 'bulk_create'},
@@ -164,14 +166,22 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         ] if num_variants > 0 else []
         return  [
             (f'Searching for prioritized {dataset_type} variants in {num_families} families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
-        ] + [
-            (log, None) for logs in [[f'Searching for criteria: {criteria}'] + ([
-                f'Loading {dataset_type} data for {num_criteria_families or num_families} families',
-                f'Total results: {count}',
-            ] if num_criteria_families != 0 else []) for criteria, (count, num_criteria_families) in matches.items()] for log in logs
-        ] + create_variants_logs + [
+        ] + [(log, None) for logs in [
+            cls._criteria_search_logs(search_dataset_types or [dataset_type], criteria, count, num_criteria_families, num_families)
+            for criteria, (count, num_criteria_families) in matches.items()
+        ] for log in logs] + create_variants_logs + [
             (f'create VariantTag VT{db_id}_seqr_prioritized', {'dbUpdate': {
                 'dbEntity': 'VariantTag', 'entityId': f'VT{db_id}_seqr_prioritized', 'updateFields': ['metadata', 'variant_tag_type'], 'updateType': 'create',
             }}) for db_id in range(*(tag_id_range or [0]))
         ]
+
+    @staticmethod
+    def _criteria_search_logs(search_dataset_types, criteria, count, num_criteria_families, num_families):
+        logs = [f'Searching for criteria: {criteria}']
+        if num_criteria_families == 0:
+            return logs
+        return logs + [log for logs in [
+            [f'Loading {dataset_type} data for {num_criteria_families or num_families} families',
+        ] + ([f'Total results: {count}'] if i == len(search_dataset_types) - 1 else [])
+        for i, dataset_type in enumerate(search_dataset_types)] for log in logs]
 

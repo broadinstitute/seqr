@@ -547,7 +547,6 @@ class Command(BaseCommand):
             ) if sample_data['num_families'] else 0
             search_counts[search_name] = num_results
 
-        import pdb; pdb.set_trace()
         cls._bulk_tag_variants(family_variant_data, updates, dataset_type)
 
     @classmethod
@@ -597,6 +596,7 @@ class Command(BaseCommand):
         family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
         logger.info(f'Searching for prioritized multi data type variants in {len(families)} families in project {project.name}')
         for search_name, config_search in MULTI_DATA_TYPE_SEARCHES.items():
+            logger.info(f'Searching for criteria: {search_name}')
             sv_sample_data = cls._get_valid_family_sample_data(
                 project, sample_type, sv_samples_by_family, config_search.get('family_filter'),
             )
@@ -610,7 +610,6 @@ class Command(BaseCommand):
                 sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map,
                 inheritance_mode=COMPOUND_HET, **config_search, **ALL_SEARCHES_CRITERIA,
             )
-            logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
 
         cls._bulk_tag_variants(family_variant_data, updates)
