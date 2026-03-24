@@ -38,6 +38,8 @@ SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 def get_clickhouse_variants(families, search, user, previous_search_results, genome_version, sort=None, **kwargs):
     inheritance_mode = search.get('inheritance_mode')
     inheritance_filter = search.get('inheritance_filter')
+    genotype_filter = (inheritance_filter or {}).get('genotype')
+    individual_affected_status = (inheritance_filter or {}).get('affected')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
@@ -46,7 +48,7 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
     exclude_keys = search.pop('exclude_keys', None) or {}
     exclude_key_pairs = search.pop('exclude_key_pairs', None) or {}
     searched_dataset_types = set()
-    skipped_dataset_types = []
+    sample_data_errors = set()
     for dataset_type, entry_cls in ENTRY_CLASS_MAP[genome_version].items():
         try:
             entry_qs = entry_cls.objects.filter_locus(**search)
@@ -54,7 +56,6 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
             variants_qs = variants_cls.objects
             parsed_filters = variants_qs.get_parsed_annotations_filters(**search)
         except InvalidDatasetTypeException:
-            skipped_dataset_types.append(dataset_type)
             continue
 
         sample_data = _get_sample_data(
@@ -78,6 +79,15 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
 
         if not sample_data:
             continue
+        if inheritance_mode and (not sample_data['num_families'] or (individual_affected_status and all(
+            (individual_affected_status.get(s['individual_guid']) or s['affected']) != AFFECTED for s in sample_data.get('samples', [])
+        ))):
+            sample_data_errors.add('Inheritance based search is disabled in families with no data loaded for affected individuals')
+            continue
+        if genotype_filter and all(s['individual_guid'] not in genotype_filter for s in sample_data.get('samples', [])):
+            sample_data_errors.add('Invalid custom inheritance')
+            continue
+
         logger.info(f'Loading {dataset_type} data for {sample_data["num_families"]} families', user)
 
         dataset_results = []
@@ -125,13 +135,12 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
         results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, **search)
 
     if not searched_dataset_types:
-        if not sample_data_by_dataset_type:
-            raise InvalidSearchException(
-                'Invalid custom inheritance' if (inheritance_filter or {}).get('genotype') else
-                'Inheritance based search is disabled in families with no data loaded for affected individuals'
-            )
-        # TODO do not report the ones that are skipped report the ones with no sample data
-        raise InvalidSearchException(f'Unable to search against dataset type "{skipped_dataset_types[0]}"')
+        if sample_data_errors:
+            raise InvalidSearchException(next(iter(sample_data_errors)))
+        no_data_type = next(data_type for data_type, data in sample_data_by_dataset_type.items() if not data)
+        if no_data_type.startswith(Sample.DATASET_TYPE_SV_CALLS):
+            no_data_type = Sample.DATASET_TYPE_SV_CALLS
+        raise InvalidSearchException(f'Unable to search against dataset type "{no_data_type}"')
 
     cache_results = get_clickhouse_cache_results(results, sort, families)
     previous_search_results.update(cache_results)
@@ -184,12 +193,11 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
             inheritance_filter=search_kwargs.get('inheritance_filter'),
         )
     snv_indel_sample_data = sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]
-    if not snv_indel_sample_data:
+    if not (snv_indel_sample_data or {}).get('num_families'):
         return []
     snv_indel_families = set().union(*snv_indel_sample_data['sample_type_families'].values())
 
     results = []
-    skipped_dataset_types = []
     for sample_type in [Sample.SAMPLE_TYPE_WES, Sample.SAMPLE_TYPE_WGS]:
         sv_dataset_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
         if sv_dataset_type not in sample_data_by_dataset_type:
@@ -251,7 +259,7 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
 
     if not searched_dataset_types:
         raise InvalidSearchException(
-            f'Unable to search for comp-het pairs with dataset type "{skipped_dataset_types[0]}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
+            'Unable to search for comp-het pairs with dataset type "SV". This may be because inheritance based search is disabled in families with no loaded affected individuals'
         )
 
     return results
@@ -583,16 +591,6 @@ def _get_sample_metadata(samples, skip_multi_project_individual_guid, affected_f
     return samples.aggregate(**annotations)
 
 
-def _is_valid_sample_data(sample_data, affected_family_only, inheritance_mode, individual_affected_status, genotype_filter):
-    if affected_family_only and not sample_data['family_guids']:
-        return False
-    if genotype_filter and all(s['individual_guid'] not in genotype_filter for s in sample_data.get('samples', [])):
-        return False
-    if inheritance_mode and individual_affected_status and all((individual_affected_status.get(s['individual_guid']) or s['affected']) != AFFECTED for s in sample_data.get('samples', [])):
-        return False
-    return True
-
-
 def _get_sample_data(families, dataset_type, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None):
     sample_type = None
     if dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS):
@@ -604,11 +602,6 @@ def _get_sample_data(families, dataset_type, skip_multi_project_individual_guid=
     individual_affected_status = (inheritance_filter or {}).get('affected')
     affected_family_only = inheritance_mode and not individual_affected_status
     sample_data = _get_sample_metadata(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males)
-
-    if not _is_valid_sample_data(
-        sample_data, affected_family_only, inheritance_mode, individual_affected_status, (inheritance_filter or {}).get('genotype'),
-    ):
-        return {}
 
     family_guids = set(sample_data.pop('family_guids'))
     sample_data['num_families'] = len(family_guids)
