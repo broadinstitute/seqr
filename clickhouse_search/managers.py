@@ -829,7 +829,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
                 if sv_type.startswith(self.model.SV_TYPE_FILTER_PREFIX)
             ]))
 
-        if not filter_qs and (pathogenicity or any(key for key in annotations.keys() if key != NEW_SV_FIELD)):
+        if not (filter_qs or transcript_filters) and (pathogenicity or any(key for key in annotations.keys() if key != NEW_SV_FIELD)):
             #  Annotation filters restrict search to other dataset types
             raise InvalidDatasetTypeException
 
