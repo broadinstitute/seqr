@@ -50,7 +50,7 @@ def get_single_variant(family, variant_id, user):
     parsed_variant_ids = [parsed_variant_id] if parsed_variant_id else None
     search = {'parsed_variant_ids': parsed_variant_ids, 'variant_ids': [variant_id]}
     genome_version = family.project.genome_version
-    variants = get_clickhouse_variants([family], [dataset_type], None, search, user, genome_version)
+    variants = get_clickhouse_variants([family], [dataset_type], search, user, genome_version)
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return format_clickhouse_results(variants, genome_version)[0]
@@ -123,7 +123,7 @@ def query_variants(search_model, sort, page, num_results, user):
     return results_page, len(all_results)
 
 
-def _query_variants(search_model, user, sort=None, **kwargs):
+def _query_variants(search_model, user, sort=None):
     genome_version = _get_search_genome_version(search_model)
     previous_search_results = _get_previous_search_results(search_model, sort) or {}
     if previous_search_results:
@@ -137,7 +137,7 @@ def _query_variants(search_model, user, sort=None, **kwargs):
     dataset_types, secondary_dataset_types = _search_dataset_type(parsed_search, genome_version)
     _validate_search(parsed_search, families)
 
-    results = get_clickhouse_variants(families, dataset_types, secondary_dataset_types, parsed_search, user, genome_version, sort=sort, **kwargs)
+    results = get_clickhouse_variants(families, dataset_types, parsed_search, user, genome_version, sort=sort, secondary_dataset_types=secondary_dataset_types)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, results, expire=timedelta(weeks=2))

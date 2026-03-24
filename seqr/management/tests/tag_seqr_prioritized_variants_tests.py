@@ -165,7 +165,11 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         return  [
             (f'Searching for prioritized {dataset_type} variants in {num_families} families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
         ] + [
-            (f'Found {count} variants for criteria: {criteria}', None) for criteria, count in matches.items()
+            (log, None) for logs in [[
+                f'Loading SNV_INDEL data for {num_families} families',
+                f'Total results: {count}',
+                f'Found {count} variants for criteria: {criteria}',
+            ] for criteria, count in matches.items()] for log in logs
         ] + create_variants_logs + [
             (f'create VariantTag VT{db_id}_seqr_prioritized', {'dbUpdate': {
                 'dbEntity': 'VariantTag', 'entityId': f'VT{db_id}_seqr_prioritized', 'updateFields': ['metadata', 'variant_tag_type'], 'updateType': 'create',
