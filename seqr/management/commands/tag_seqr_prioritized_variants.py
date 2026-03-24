@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.search import get_clickhouse_variants
+from clickhouse_search.search import get_clickhouse_variants, ENTRY_CLASS_MAP
 from panelapp.models import PaLocusListGene
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, Sample, LocusList
@@ -191,8 +191,8 @@ SEARCHES = {
         },
         'Clinvar Pathogenic - Compound Heterozygous': {
             'inheritance_mode': COMPOUND_HET,
-            'split_pathogenicity_annotations': True,
-            'annotations': HIGH_MODERATE_ANNOTATIONS,
+            'annotations': {},
+            'annotations_secondary': HIGH_MODERATE_ANNOTATIONS,
             **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Both Pathogenic - Compound Heterozygous': {
@@ -236,8 +236,8 @@ SEARCHES = {
         },
         'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': {
             'inheritance_mode': COMPOUND_HET,
-            'split_pathogenicity_annotations': True,
-            'annotations': {
+            'annotations': {},
+            'annotations_secondary': {
                 'splice_ai': 0.5,
             },
             **CLINVAR_RECESSIVE_SEARCH,
@@ -614,8 +614,10 @@ class Command(BaseCommand):
     @staticmethod
     def _execute_search(sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map, **kwargs):
         results = get_clickhouse_variants(
-            families=None, dataset_types=None, search=kwargs, user=None, genome_version=GENOME_VERSION_GRCh38,
-            sample_data_by_dataset_type=sample_data_by_dataset_type, encode_genotypes_json=True
+            families=None, search=kwargs, user=None, genome_version=GENOME_VERSION_GRCh38,
+            encode_genotypes_json=True, sample_data_by_dataset_type={
+                **{dt: None for dt in ENTRY_CLASS_MAP[GENOME_VERSION_GRCh38]}, **sample_data_by_dataset_type,
+            },
         )
         for result in results:
             if isinstance(result, list):

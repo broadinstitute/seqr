@@ -67,6 +67,7 @@ def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_
         return variants
 
     parsed_variant_id = parse_variant_id(variant_id)
+    # TODO move into lookup
     dataset_type = _variant_id_dataset_type(parsed_variant_id)
     _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version)
 

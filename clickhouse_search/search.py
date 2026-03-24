@@ -58,15 +58,18 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
         except InvalidDatasetTypeException:
             continue
 
-        sample_data = _get_sample_data(
-            families,
-            dataset_type,
-            annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
-            inheritance_mode=inheritance_mode,
-            inheritance_filter=inheritance_filter,
-            allow_no_samples=bool(search.get('no_access_project_genome_version')),
-        )
-        sample_data_by_dataset_type[dataset_type] = sample_data
+        if dataset_type in sample_data_by_dataset_type:
+            sample_data = sample_data_by_dataset_type[dataset_type]
+        else:
+            sample_data = _get_sample_data(
+                families,
+                dataset_type,
+                annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
+                inheritance_mode=inheritance_mode,
+                inheritance_filter=inheritance_filter,
+                allow_no_samples=bool(search.get('no_access_project_genome_version')),
+            )
+            sample_data_by_dataset_type[dataset_type] = sample_data
 
         if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and search.get('no_access_project_genome_version'):
             logger.info('Looking up variants in projects with no user access', user)
@@ -252,32 +255,7 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
     return results
 
 
-def _get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample_data, annotations=None, annotations_secondary=None, pathogenicity=None, inheritance_mode=None, exclude_key_pairs=None, split_pathogenicity_annotations=False, **search_kwargs):
-    entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
-    variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
-    entries = entry_cls.objects.filter_locus(**search_kwargs).search(
-        sample_data, **search_kwargs, inheritance_mode=COMPOUND_HET, pathogenicity=pathogenicity, annotations=annotations, annotate_carriers=True,
-    )
-
-    if split_pathogenicity_annotations:
-        pathogenicity_secondary = pathogenicity
-        pathogenicity = None
-    else:
-        annotations_secondary = annotations_secondary or annotations
-        pathogenicity_secondary = pathogenicity
-    primary_kwargs = {'annotations': annotations, 'pathogenicity': pathogenicity}
-    primary_q = variants_cls.objects.subquery_join(entries).search(
-        **variants_cls.objects.get_parsed_annotations_filters(**primary_kwargs), **primary_kwargs, **search_kwargs,
-    )
-    secondary_kwargs = {'annotations': annotations_secondary, 'pathogenicity': pathogenicity_secondary}
-    secondary_q = variants_cls.objects.subquery_join(entries).search(
-        **variants_cls.objects.get_parsed_annotations_filters(secondary_kwargs), **secondary_kwargs, **search_kwargs,
-    )
-
-    return _get_comp_het_results_queryset(variants_cls.objects, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
-
-
-def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, annotations_secondary=None, exclude_key_pairs=None, inheritance_mode=None, **search_kwargs):
+def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, annotations_secondary=None, inheritance_mode=None, exclude_key_pairs=None, **search_kwargs):
     parsed_secondary_filters = {}
     if annotations_secondary:
         try:
