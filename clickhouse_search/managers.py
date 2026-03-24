@@ -668,7 +668,7 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         if allowed_consequences:
             transcript_filters += self._allowed_consequences_filters(allowed_consequences)
 
-        if annotations and not (filter_qs or transcript_filters):
+        if (annotations or pathogenicity) and not (filter_qs or transcript_filters):
             raise InvalidDatasetTypeException
 
         return filter_qs, transcript_filters
