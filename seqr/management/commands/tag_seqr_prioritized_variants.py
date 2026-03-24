@@ -418,25 +418,24 @@ SEARCHES = {
 
 MULTI_DATA_TYPE_SEARCHES = {
     'Compound Heterozygous - One SV': {
-        'annotations': {
-            **SV_ANNOTATIONS,
-            **HIGH_ANNOTATIONS,
-        },
+        'annotations': HIGH_ANNOTATIONS,
+        'annotations_secondary': SV_ANNOTATIONS,
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
         'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
     'Compound Heterozygous - Clinvar Pathogenic/ SV': {
-        'annotations': SV_ANNOTATIONS,
+        'annotations': {},
+        'annotations_secondary': SV_ANNOTATIONS,
         'pathogenicity': CLINVAR_FILTER,
         'freqs': FREQ_FILTER,
         'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
     'Compound Heterozygous - High Splice AI/ SV': {
         'annotations': {
-            **SV_ANNOTATIONS,
             'splice_ai': 0.8,
         },
+        'annotations_secondary': SV_ANNOTATIONS,
         'freqs': FREQ_FILTER,
         'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
@@ -444,10 +443,8 @@ MULTI_DATA_TYPE_SEARCHES = {
         'family_filter': {
             CONFIRMED_FAMILY_FILTER: True,
         },
-        'annotations': {
-            **SV_ANNOTATIONS,
-            **MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT,
-        },
+        'annotations': MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT,
+        'annotations_secondary': SV_ANNOTATIONS,
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
         'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
@@ -541,7 +538,6 @@ class Command(BaseCommand):
             sample_data = cls._get_valid_family_sample_data(
                 project, sample_type, samples_by_family, config_search.get('family_filter'),
             )
-            import pdb; pdb.set_trace()
             num_results = cls._execute_search(
                 {dataset_type: sample_data}, search_name, family_variant_data, family_guid_map,
                 exclude_locations=exclude_locations, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
@@ -609,7 +605,7 @@ class Command(BaseCommand):
             }
             num_results = cls._execute_search(
                 sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map,
-                inheritance_mode=COMPOUND_HET, **config_search, **ALL_SEARCHES_CRITERIA,
+                inheritance_mode=COMPOUND_HET, **config_search, **ALL_SEARCHES_CRITERIA, genes=genes,
             )
             search_counts[search_name] = num_results
 

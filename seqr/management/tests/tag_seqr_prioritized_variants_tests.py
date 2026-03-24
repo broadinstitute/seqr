@@ -44,12 +44,11 @@ MITO_MATCHES = {
     'Mitochondrial - Pathogenic': (1, None),
     'Mitochondrial - De Novo/ Dominant': (1, None),
 }
-# TODO counts 0/1/0/1
 MULTI_TYPE_MATCHES = {
-    'Compound Heterozygous - One SV': (1, None),
-    'Compound Heterozygous - Clinvar Pathogenic/ SV': (2, None),
-    'Compound Heterozygous - High Splice AI/ SV': (1, None),
-    'Compound Heterozygous - One SV - Confirmed': (2, None),
+    'Compound Heterozygous - One SV': (0, None),
+    'Compound Heterozygous - Clinvar Pathogenic/ SV': (1, None),
+    'Compound Heterozygous - High Splice AI/ SV': (0, None),
+    'Compound Heterozygous - One SV - Confirmed': (1, None),
 }
 
 class CheckNewSamplesTest(ClickhouseSearchTestCase):
