@@ -121,7 +121,7 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
         results += dataset_results
         searched_dataset_types.add(dataset_type)
 
-    if has_comp_het:
+    if has_comp_het and any(dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in VARIANTS_CLASS_MAP[genome_version]):
         results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, **search)
 
     if not searched_dataset_types:

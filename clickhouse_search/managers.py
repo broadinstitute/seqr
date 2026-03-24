@@ -470,13 +470,9 @@ class BaseVariantsQuerySet(SearchQuerySet):
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
 
     def get_parsed_annotations_filters(self, annotations=None, pathogenicity=None, **kwargs):
-        filter_qs, transcript_filters = self._parse_annotation_filters(annotations or {}, pathogenicity or {})
-
-        if not (filter_qs or transcript_filters):
-            if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
-                #  Annotation filters restrict search to other dataset types
-                raise InvalidDatasetTypeException
-
+        annotations = {k: v for k, v in (annotations or {}).items() if v}
+        pathogenicity = {k: v for k, v in (pathogenicity or {}).items() if v}
+        filter_qs, transcript_filters = self._parse_annotation_filters(annotations, pathogenicity)
         filter_q = filter_qs[0] if filter_qs else None
         for q in filter_qs[1:]:
             filter_q |= q
@@ -672,6 +668,9 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         if allowed_consequences:
             transcript_filters += self._allowed_consequences_filters(allowed_consequences)
 
+        if annotations and not (filter_qs or transcript_filters):
+            raise InvalidDatasetTypeException
+
         return filter_qs, transcript_filters
 
     def _allowed_consequences_filters(self, allowed_consequences):
@@ -829,6 +828,10 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
                 sv_type.replace(self.model.SV_TYPE_FILTER_PREFIX, '') for sv_type in annotations[SV_TYPE_FILTER_FIELD]
                 if sv_type.startswith(self.model.SV_TYPE_FILTER_PREFIX)
             ]))
+
+        if not filter_qs and (pathogenicity or any(key for key in annotations.keys() if key != NEW_SV_FIELD)):
+            #  Annotation filters restrict search to other dataset types
+            raise InvalidDatasetTypeException
 
         return filter_qs, transcript_filters
 
