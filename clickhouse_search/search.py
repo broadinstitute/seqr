@@ -66,9 +66,9 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
             inheritance_filter=inheritance_filter,
             allow_no_samples=bool(search.get('no_access_project_genome_version')),
         )
+        sample_data_by_dataset_type[dataset_type] = sample_data
         if not sample_data:
             continue
-        sample_data_by_dataset_type[dataset_type] = sample_data
         logger.info(f'Loading {dataset_type} data for {sample_data["num_families"]} families', user)
 
         dataset_results = []
@@ -119,10 +119,8 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
                 exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
             )
 
-    if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
-        dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
-    ):
-        results += _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, **search)
+    if has_comp_het:
+        results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, **search)
 
     if not searched_dataset_types:
         if not sample_data_by_dataset_type:
@@ -159,15 +157,12 @@ def _evaluate_results(result_q, is_comp_het=False):
         raise InvalidSearchException('This search returned too many results')
     return results
 
-def _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
+def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
     if annotations_secondary:
         annotations = {
             **annotations,
             **{k: v + annotations[k] if k in annotations else v for k, v in annotations_secondary.items()},
         }
-
-    snv_indel_sample_data = sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]
-    snv_indel_families = set().union(*snv_indel_sample_data['sample_type_families'].values())
 
     try:
         snv_indel_entry_qs = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS].objects.filter_locus(**search_kwargs)
@@ -178,12 +173,32 @@ def _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset
     except InvalidDatasetTypeException:
         return []
 
+    if Sample.DATASET_TYPE_VARIANT_CALLS not in sample_data_by_dataset_type:
+        sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] = _get_sample_data(
+            all_families,
+            Sample.DATASET_TYPE_VARIANT_CALLS,
+            skip_multi_project_individual_guid=True,
+            inheritance_mode=COMPOUND_HET,
+            inheritance_filter=search_kwargs.get('inheritance_filter'),
+        )
+    snv_indel_sample_data = sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS]
+    if not snv_indel_sample_data:
+        return []
+    snv_indel_families = set().union(*snv_indel_sample_data['sample_type_families'].values())
 
     results = []
     skipped_dataset_types = []
     for sample_type in [Sample.SAMPLE_TYPE_WES, Sample.SAMPLE_TYPE_WGS]:
         sv_dataset_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
-        sv_sample_data = sample_data_by_dataset_type.get(sv_dataset_type, {})
+        if sv_dataset_type not in sample_data_by_dataset_type:
+            sample_data_by_dataset_type[sv_dataset_type] = _get_sample_data(
+                all_families,
+                sv_dataset_type,
+                skip_multi_project_individual_guid=True,
+                inheritance_mode=COMPOUND_HET,
+                inheritance_filter=search_kwargs.get('inheritance_filter'),
+            )
+        sv_sample_data = sample_data_by_dataset_type[sv_dataset_type] or {}
         sv_families = set(sv_sample_data.get('sample_type_families', {}).get(sample_type, []))
         families = snv_indel_families.intersection(sv_families)
         if not families:
@@ -191,7 +206,7 @@ def _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset
         logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS}/{sv_dataset_type} data for {len(families)} families', user)
 
         snv_indel_sample_type_families = {
-            sample_type: familes.intersection(sv_families)
+            sample_type: set(familes).intersection(sv_families)
             for sample_type, familes in snv_indel_sample_data['sample_type_families'].items()
         }
         snv_indel_sample_type_families = {k: v for k, v in snv_indel_sample_type_families.items() if v}
