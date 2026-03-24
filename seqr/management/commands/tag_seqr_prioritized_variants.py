@@ -547,6 +547,7 @@ class Command(BaseCommand):
             ) if sample_data['num_families'] else 0
             search_counts[search_name] = num_results
 
+        import pdb; pdb.set_trace()
         cls._bulk_tag_variants(family_variant_data, updates, dataset_type)
 
     @classmethod
