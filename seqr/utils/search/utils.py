@@ -122,7 +122,7 @@ def query_variants(search_model, sort, page, num_results, user):
     return results_page, len(all_results)
 
 
-def _query_variants(search_model, user, sort=None, **kwargs):
+def _query_variants(search_model, user, sort=None):
     genome_version = _get_search_genome_version(search_model)
     previous_search_results = _get_previous_search_results(search_model, sort) or {}
     if previous_search_results:
@@ -135,7 +135,7 @@ def _query_variants(search_model, user, sort=None, **kwargs):
     parsed_search = _parse_search(search, genome_version, user)
     _validate_search(parsed_search, families)
 
-    results = get_clickhouse_variants(families, parsed_search, user, genome_version, sort=sort, **kwargs)
+    results = get_clickhouse_variants(families, parsed_search, user, genome_version, sort=sort)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, results, expire=timedelta(weeks=2))

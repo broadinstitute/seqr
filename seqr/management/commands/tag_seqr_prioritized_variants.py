@@ -5,8 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from django.db.models.functions import JSONObject
 
-from clickhouse_search.search import get_search_queryset, add_individual_guids, \
-    get_data_type_comp_het_results_queryset, get_multi_data_type_comp_het_results_queryset
+from clickhouse_search.search import get_clickhouse_variants
 from panelapp.models import PaLocusListGene
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, Sample, LocusList
@@ -419,25 +418,24 @@ SEARCHES = {
 
 MULTI_DATA_TYPE_SEARCHES = {
     'Compound Heterozygous - One SV': {
-        'annotations': {
-            **SV_ANNOTATIONS,
-            **HIGH_ANNOTATIONS,
-        },
+        'annotations': HIGH_ANNOTATIONS,
+        'annotations_secondary': SV_ANNOTATIONS,
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
         'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
     'Compound Heterozygous - Clinvar Pathogenic/ SV': {
-        'annotations': SV_ANNOTATIONS,
+        'annotations': {},
+        'annotations_secondary': SV_ANNOTATIONS,
         'pathogenicity': CLINVAR_FILTER,
         'freqs': FREQ_FILTER,
         'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
     'Compound Heterozygous - High Splice AI/ SV': {
         'annotations': {
-            **SV_ANNOTATIONS,
             'splice_ai': 0.8,
         },
+        'annotations_secondary': SV_ANNOTATIONS,
         'freqs': FREQ_FILTER,
         'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
     },
@@ -445,10 +443,8 @@ MULTI_DATA_TYPE_SEARCHES = {
         'family_filter': {
             CONFIRMED_FAMILY_FILTER: True,
         },
-        'annotations': {
-            **SV_ANNOTATIONS,
-            **MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT,
-        },
+        'annotations': MODERATE_ANNOTATIONS_TRANSCRIPT_EXON_VARIANT,
+        'annotations_secondary': SV_ANNOTATIONS,
         'in_silico': IN_SILICO_FILTER,
         'freqs': FREQ_FILTER,
         'qualityFilter': PERMISSIVE_PASS_QUALITY_FILTER,
@@ -536,17 +532,16 @@ class Command(BaseCommand):
         family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
         logger.info(f'Searching for prioritized {dataset_type} variants in {len(samples_by_family)} families in project {project.name}')
         for search_name, config_search in searches.items():
+            logger.info(f'Searching for criteria: {search_name}')
             exclude_locations = not config_search.get('gene_list_moi')
             search_genes = exclude_genes if exclude_locations else gene_by_moi[config_search['gene_list_moi']]
             sample_data = cls._get_valid_family_sample_data(
                 project, sample_type, samples_by_family, config_search.get('family_filter'),
             )
-            run_search_func = cls._run_comp_het_search if config_search['inheritance_mode'] == COMPOUND_HET else cls._run_search
-            num_results = run_search_func(
-                search_name, family_variant_data, family_guid_map, dataset_type, sample_data,
+            num_results = cls._execute_search(
+                {dataset_type: sample_data}, search_name, family_variant_data, family_guid_map,
                 exclude_locations=exclude_locations, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
-            )
-            logger.info(f'Found {num_results} variants for criteria: {search_name}')
+            ) if sample_data['num_families'] else 0
             search_counts[search_name] = num_results
 
         cls._bulk_tag_variants(family_variant_data, updates, dataset_type)
@@ -562,7 +557,7 @@ class Command(BaseCommand):
             'project_guids': [project.guid],
             'num_families': len(samples_by_family),
             'num_unaffected': sum(len(s['unaffected_guids']) for s in samples_by_family.values()),
-            'sample_type_families': {sample_type: samples_by_family.keys()},
+            'sample_type_families': {sample_type: set(samples_by_family.keys())},
         }
 
     @staticmethod
@@ -584,38 +579,6 @@ class Command(BaseCommand):
         return wrapped
 
     @classmethod
-    def _run_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, **kwargs):
-        results_qs = get_search_queryset(GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs)
-
-        variant_fields = []
-        variant_values = {}
-        if getattr(results_qs.model, 'GENOTYPE_OVERRIDE_FIELDS', None):
-            genotype_overrides_expressions = results_qs.conditional_selects(results_qs)
-            variant_values.update({k: genotype_overrides_expressions[k] for k in ['familyGenotypes']})
-        else:
-            variant_fields += ['familyGenotypes']
-
-        results = results_qs.values(*variant_fields, 'key', 'familyGuids', **variant_values)
-        add_individual_guids(results, encode_genotypes_json=True)
-
-        for variant in results:
-            for family_guid in variant.pop('familyGuids'):
-                variant_data = family_variant_data[(family_guid_map[family_guid], variant['key'])]
-                variant_data.update(variant)
-                variant_data['matched_searches'].add(search_name)
-
-        return len(results)
-
-    @classmethod
-    def _run_comp_het_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, **kwargs):
-        queryset = get_data_type_comp_het_results_queryset(
-            GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs,
-        )
-        return cls._execute_comp_het_search(
-            queryset, search_name, family_variant_data, family_guid_map,
-        )
-
-    @classmethod
     def _run_multi_data_type_comp_het_search(cls, updates, search_counts, samples_by_dataset_type, family_guid_map, project, genes):
         sv_dataset_type = next(dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV'))
         sample_type = sv_dataset_type.split('_')[-1]
@@ -630,33 +593,43 @@ class Command(BaseCommand):
         family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
         logger.info(f'Searching for prioritized multi data type variants in {len(families)} families in project {project.name}')
         for search_name, config_search in MULTI_DATA_TYPE_SEARCHES.items():
+            logger.info(f'Searching for criteria: {search_name}')
             sv_sample_data = cls._get_valid_family_sample_data(
                 project, sample_type, sv_samples_by_family, config_search.get('family_filter'),
             )
             snv_indel_sample_data = cls._get_valid_family_sample_data(
                 project, sample_type, snv_indel_samples_by_family, config_search.get('family_filter'),
             )
-            queryset = get_multi_data_type_comp_het_results_queryset(
-                GENOME_VERSION_GRCh38, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families=len(families),
-                genes=genes, **config_search, **ALL_SEARCHES_CRITERIA,
+            sample_data_by_dataset_type = {
+                Sample.DATASET_TYPE_VARIANT_CALLS: snv_indel_sample_data, sv_dataset_type: sv_sample_data,
+            }
+            num_results = cls._execute_search(
+                sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map,
+                inheritance_mode=COMPOUND_HET, **config_search, **ALL_SEARCHES_CRITERIA, genes=genes,
             )
-            num_results = cls._execute_comp_het_search(queryset, search_name, family_variant_data, family_guid_map)
-            logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
 
         cls._bulk_tag_variants(family_variant_data, updates)
 
-    @classmethod
-    def _execute_comp_het_search(cls, queryset, search_name, family_variant_data, family_guid_map):
-        results = [list(v[1:]) for v in queryset]
-        add_individual_guids(results, encode_genotypes_json=True)
-        for pair in results:
-            for family_guid in pair[0]['familyGuids']:
-                for variant, support_id in [(pair[0], pair[1]['key']), (pair[1], pair[0]['key'])]:
-                    variant_data = family_variant_data[(family_guid_map[family_guid], variant['key'])]
-                    variant_data.update(variant)
-                    variant_data['support_vars'].add(support_id)
-                    variant_data['matched_comp_het_searches'].add(search_name)
+    @staticmethod
+    def _execute_search(sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map, **kwargs):
+        results = get_clickhouse_variants(
+            families=None, dataset_types=None, search=kwargs, user=None, genome_version=GENOME_VERSION_GRCh38,
+            sample_data_by_dataset_type=sample_data_by_dataset_type, encode_genotypes_json=True
+        )
+        for result in results:
+            if isinstance(result, list):
+                for family_guid in result[0]['familyGuids']:
+                    for variant, support_id in [(result[0], result[1]['key']), (result[1], result[0]['key'])]:
+                        variant_data = family_variant_data[(family_guid_map[family_guid], variant['key'])]
+                        variant_data.update(variant)
+                        variant_data['support_vars'].add(support_id)
+                        variant_data['matched_comp_het_searches'].add(search_name)
+            else:
+                for family_guid in result.pop('familyGuids'):
+                    variant_data = family_variant_data[(family_guid_map[family_guid], result['key'])]
+                    variant_data.update(result)
+                    variant_data['matched_searches'].add(search_name)
 
         return len(results)
 
