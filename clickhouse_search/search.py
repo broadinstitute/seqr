@@ -600,9 +600,11 @@ def _get_sample_data(families, dataset_type, skip_multi_project_individual_guid=
             for sample in sample_data['samples']:
                 sample_data['sample_type_families'][sample['sample_type']].add(sample['family_guid'])
         else:
-            sample_data['sample_type_families'] = samples.filter(
-                individual__family__guid__in=family_guids,
-            ).values('sample_type').annotate(family_guids=ArrayAgg('individual__family__guid', distinct=True))
+            sample_data['sample_type_families'] = dict(
+                samples.filter(individual__family__guid__in=family_guids).values('sample_type').values_list(
+                    'sample_type', ArrayAgg('individual__family__guid', distinct=True),
+                )
+            )
         if len(sample_data['sample_type_families']) == 2:
             st_families_1, st_families_2 = sample_data['sample_type_families'].values()
             multi_families = set(st_families_1).intersection(st_families_2)
