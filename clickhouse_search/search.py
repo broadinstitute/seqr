@@ -67,6 +67,15 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
             allow_no_samples=bool(search.get('no_access_project_genome_version')),
         )
         sample_data_by_dataset_type[dataset_type] = sample_data
+
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and search.get('no_access_project_genome_version'):
+            logger.info('Looking up variants in projects with no user access', user)
+            results += _get_search_results(
+                entry_qs, variants_qs, **search, **parsed_filters, sample_data=None, skip_entry_fields=True,
+                exclude_projects=sample_data_by_dataset_type[dataset_type].get('project_guids'),
+            )
+            searched_dataset_types.add(dataset_type)
+
         if not sample_data:
             continue
         logger.info(f'Loading {dataset_type} data for {sample_data["num_families"]} families', user)
@@ -111,13 +120,6 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
             add_individual_guids(dataset_results)
         results += dataset_results
         searched_dataset_types.add(dataset_type)
-
-        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and search.get('no_access_project_genome_version'):
-            logger.info('Looking up variants in projects with no user access', user)
-            results += _get_search_results(
-                entry_qs, variants_qs, **search, **parsed_filters, sample_data=None, skip_entry_fields=True,
-                exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
-            )
 
     if has_comp_het:
         results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, **search)
