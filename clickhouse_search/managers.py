@@ -1713,8 +1713,8 @@ class SvEntriesManager(BaseEntriesManager):
 
         return entries
 
-    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, exclude_svs=False, **kwargs):
-        if exclude_svs:
+    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, exclude_svs=False, parsed_variant_ids=None, **kwargs):
+        if exclude_svs or parsed_variant_ids:
             raise InvalidDatasetTypeException
         # SV interval filtering occurs after joining on annotations to correctly incorporate end position
         can_filter_gene_interval = self._can_filter_gene_interval(genes)
