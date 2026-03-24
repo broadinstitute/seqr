@@ -61,7 +61,6 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, *
         sample_data = _get_sample_data(
             families,
             dataset_type,
-            skip_multi_project_individual_guid=True,  # TODO unused?
             annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
             inheritance_mode=inheritance_mode,
             inheritance_filter=inheritance_filter,
@@ -186,7 +185,6 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
         sample_data_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] = _get_sample_data(
             all_families,
             Sample.DATASET_TYPE_VARIANT_CALLS,
-            skip_multi_project_individual_guid=True,
             inheritance_mode=COMPOUND_HET,
             inheritance_filter=search_kwargs.get('inheritance_filter'),
         )
@@ -202,7 +200,6 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
             sample_data_by_dataset_type[sv_dataset_type] = _get_sample_data(
                 all_families,
                 sv_dataset_type,
-                skip_multi_project_individual_guid=True,
                 inheritance_mode=COMPOUND_HET,
                 inheritance_filter=search_kwargs.get('inheritance_filter'),
             )
@@ -559,10 +556,8 @@ def _get_valid_samples(families, dataset_type, sample_type, allow_no_samples):
     return samples
 
 
-def _get_sample_metadata(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males):
-    skip_individual_guid = (
-        skip_multi_project_individual_guid and samples.values('individual__family__project_id').distinct().count() > 1
-    )
+def _get_sample_metadata(samples, affected_family_only, annotate_affected_males):
+    skip_individual_guid = samples.values('individual__family__project_id').distinct().count() > 1
     family_array_kwargs = {'distinct': True}
     if affected_family_only:
         family_array_kwargs['filter'] = Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED)
@@ -587,7 +582,7 @@ def _get_sample_metadata(samples, skip_multi_project_individual_guid, affected_f
     return samples.aggregate(**annotations)
 
 
-def _get_sample_data(families, dataset_type, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None):
+def _get_sample_data(families, dataset_type, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None):
     sample_type = None
     if dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS):
         dataset_type, sample_type = dataset_type.split('_')
@@ -597,7 +592,7 @@ def _get_sample_data(families, dataset_type, skip_multi_project_individual_guid=
 
     individual_affected_status = (inheritance_filter or {}).get('affected')
     affected_family_only = inheritance_mode and not individual_affected_status
-    sample_data = _get_sample_metadata(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males)
+    sample_data = _get_sample_metadata(samples, affected_family_only, annotate_affected_males)
 
     family_guids = set(sample_data.pop('family_guids'))
     sample_data['num_families'] = len(family_guids)
@@ -824,7 +819,7 @@ def _get_sort_key(sort, gene_metadata):
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
 
-def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, sample_data=None, affected_only=False, hom_only=False):
+def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, affected_only=False, hom_only=False):
     entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
@@ -832,7 +827,7 @@ def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, da
         variant_ids=[variant_id], parsed_variant_ids=[parsed_variant_id] if parsed_variant_id else [],
     )
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
-    entries = entries.result_values(sample_data)  # TODO clean up
+    entries = entries.result_values()
     results = variants_cls.objects.subquery_join(entries)
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
