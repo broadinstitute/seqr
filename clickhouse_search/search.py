@@ -752,7 +752,7 @@ def _get_sort_key(sort, gene_metadata):
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
 
-def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, sample_data=None, affected_only=False, hom_only=False):
+def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, affected_only=False, hom_only=False):
     entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
@@ -760,7 +760,7 @@ def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, da
         variant_ids=[variant_id], parsed_variant_ids=[parsed_variant_id] if parsed_variant_id else [],
     )
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
-    entries = entries.result_values(sample_data)
+    entries = entries.result_values()
     results = variants_cls.objects.subquery_join(entries)
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
@@ -834,16 +834,6 @@ def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_o
     if lifted_entry_data:
         variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
-
-
-def get_clickhouse_variant_by_id(variant_id, parsed_variant_id, family, dataset_type):
-    genome_version = family.project.genome_version
-    sample_data_by_type = _get_sample_data([family], [dataset_type])
-    for data_type, sample_data in sample_data_by_type.items():
-        variant = _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, sample_data)
-        if variant:
-            return variant
-    return None
 
 
 def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys):
