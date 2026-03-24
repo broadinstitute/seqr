@@ -808,7 +808,7 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, sample_type, 
         data_type = dataset_type
         break
     if data_type is None:
-        raise InvalidSearchException(f'Invalid genome build for dataset type')
+        raise InvalidSearchException('Invalid genome build for dataset type')
 
     logger.info(f'Looking up variant {variant_id} with data type {data_type}', user)
 
