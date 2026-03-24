@@ -83,11 +83,15 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
                 s['family_guid'] for s in sample_data['samples'] if s['affected'] == AFFECTED and s['sex'] in MALE_SEXES
             } if 'samples' in sample_data else sample_data['affected_male_family_guids']
             if affected_male_family_guids:
+                try:
+                    x_linked_entry_qs = entry_qs.filter_locus(inheritance_mode=X_LINKED_RECESSIVE_MALE_AFFECTED)
+                except InvalidDatasetTypeException:
+                    continue
                 x_linked_sample_data = _affected_male_families(sample_data, affected_male_family_guids)
                 x_linked_search = {**search, 'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED}
                 logger.info(f'Loading {dataset_type} X-linked male data for {x_linked_sample_data["num_families"]} families', user)
                 dataset_results += _get_search_results(
-                    entry_qs, variants_qs, x_linked_sample_data, exclude_keys=exclude_keys.get(dataset_type),
+                    x_linked_entry_qs, variants_qs, x_linked_sample_data, exclude_keys=exclude_keys.get(dataset_type),
                     **x_linked_search, **parsed_filters,
                 )
 
@@ -280,12 +284,11 @@ def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample
     return _get_comp_het_results_queryset(variants_cls.objects, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
 
 
-def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, annotations_secondary=None, exclude_key_pairs=None, **search_kwargs):
+def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, annotations_secondary=None, exclude_key_pairs=None, inheritance_mode=None, **search_kwargs):
     parsed_secondary_filters = {}
     if annotations_secondary:
         try:
-            secondary_search = {**search_kwargs, 'annotations': annotations_secondary}
-            parsed_secondary_filters = variants_qs.get_parsed_annotations_filters(**secondary_search)
+            parsed_secondary_filters = variants_qs.get_parsed_annotations_filters(annotations=annotations_secondary)
         except InvalidDatasetTypeException:
             return None
 
