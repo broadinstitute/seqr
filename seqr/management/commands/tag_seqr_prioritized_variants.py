@@ -535,6 +535,7 @@ class Command(BaseCommand):
         family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
         logger.info(f'Searching for prioritized {dataset_type} variants in {len(samples_by_family)} families in project {project.name}')
         for search_name, config_search in searches.items():
+            logger.info(f'Searching for criteria: {search_name}')
             exclude_locations = not config_search.get('gene_list_moi')
             search_genes = exclude_genes if exclude_locations else gene_by_moi[config_search['gene_list_moi']]
             sample_data = cls._get_valid_family_sample_data(
@@ -544,7 +545,6 @@ class Command(BaseCommand):
                 {dataset_type: sample_data}, search_name, family_variant_data, family_guid_map,
                 exclude_locations=exclude_locations, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
             ) if sample_data['num_families'] else 0
-            logger.info(f'Found {num_results} variants for criteria: {search_name}')
             search_counts[search_name] = num_results
 
         cls._bulk_tag_variants(family_variant_data, updates, dataset_type)
