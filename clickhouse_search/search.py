@@ -35,7 +35,7 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, search, user, previous_search_results, genome_version, sort=None, **kwargs):
+def get_clickhouse_variants(families, search, user, genome_version, sort=None, **kwargs):
     inheritance_mode = search.get('inheritance_mode')
     inheritance_filter = search.get('inheritance_filter')
     genotype_filter = (inheritance_filter or {}).get('genotype')
@@ -61,7 +61,7 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
         sample_data = _get_sample_data(
             families,
             dataset_type,
-            skip_multi_project_individual_guid=True,
+            skip_multi_project_individual_guid=True,  # TODO unused?
             annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
             inheritance_mode=inheritance_mode,
             inheritance_filter=inheritance_filter,
@@ -142,10 +142,8 @@ def get_clickhouse_variants(families, search, user, previous_search_results, gen
             no_data_type = Sample.DATASET_TYPE_SV_CALLS
         raise InvalidSearchException(f'Unable to search against dataset type "{no_data_type}"')
 
-    cache_results = get_clickhouse_cache_results(results, sort, families)
-    previous_search_results.update(cache_results)
-
-    logger.info(f'Total results: {cache_results["total_results"]}', user)
+    logger.info(f'Total results: {len(results)}', user)
+    return get_sorted_search_results(results, sort, families)
 
 
 def get_search_queryset(genome_version, dataset_type, sample_data, **search_kwargs):
@@ -328,7 +326,6 @@ def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data,
     return _get_comp_het_results_queryset(variants_qs, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
 
 
-
 def _get_comp_het_results_queryset(variants_qs, primary_q, secondary_q, num_families, exclude_key_pairs):
     results = variants_qs.search_compound_hets(primary_q, secondary_q)
 
@@ -442,14 +439,13 @@ def _set_individual_guids(result, sample_map, encode_genotypes_json):
     result['genotypes'] = genotypes
 
 
-def get_clickhouse_cache_results(results, sort, families):
+def get_sorted_search_results(results, sort, families):
     sort_metadata = _get_sort_gene_metadata(sort, results, families)
     sort_key = _get_sort_key(sort, sort_metadata)
     sorted_results = sorted([
         sorted(result, key=sort_key) if isinstance(result, list) else result for result in results
     ], key=sort_key)
-    total_results = len(sorted_results)
-    return {'all_results': sorted_results, 'total_results': total_results}
+    return sorted_results
 
 
 def format_clickhouse_export_results(results, genome_version):

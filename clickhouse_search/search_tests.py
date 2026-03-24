@@ -223,11 +223,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         return search_hash
 
     def _format_cached_variants(self, variants, cached_variant_fields=None):
-        cached_variants = [
+        return [
             self._get_cached_variant(variant, (cached_variant_fields[i] if cached_variant_fields else None))
             for i, variant in enumerate(variants)
         ]
-        return {'all_results': cached_variants, 'total_results': len(variants)}
 
     @classmethod
     def _get_cached_variant(cls, variant, cached_variant_fields):
@@ -661,9 +660,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.mock_results_guid.return_value = 'VRS00079516'
         vsr = VariantSearchResults.objects.create(variant_search_id=79516, search_hash='abc1234')
         cache_key = f'search_results__{vsr.guid}__gnomad'
-        self.set_cache(cache_key, {'all_results': [
+        self.set_cache(cache_key, [
             VARIANT1, VARIANT2, [VARIANT3, VARIANT2], [GCNV_VARIANT4, GCNV_VARIANT3],
-        ]})
+        ])
 
         request_body = {'projectFamilies': DEFAULT_PROJECT_FAMILIES, 'previousSearchHash': 'abc1234'}
         exclude = {'previousSearch': True}
@@ -678,9 +677,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], check_login=self.check_collaborator_login,
         )
 
-        self.set_cache(cache_key, {'all_results': [
+        self.set_cache(cache_key, [
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3,
-        ]})
+        ])
         self._assert_expected_search(
             [VARIANT2, [GCNV_VARIANT3, GCNV_VARIANT4]], exclude=exclude, **COMP_HET_ALL_PASS_FILTERS,
             request_body=request_body, response_search=response_search, inheritance_mode='recessive', cached_variant_fields=[
@@ -847,6 +846,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
+    @mock.patch('seqr.utils.search.utils.MAX_EXPORT_VARIANTS', 2)
     @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
@@ -864,11 +864,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'Invalid variants: chr2-A-C', locus={'rawVariantItems': 'chr2-A-C'},
         )
 
-        self.set_cache(f'search_results__VRS{search_hash:07d}__xpos', {'total_results': 20000})
+        self.set_cache(f'search_results__VRS{search_hash:07d}__xpos', [VARIANT1, VARIANT2, VARIANT3, VARIANT4])
         export_url = reverse(export_variants_handler, args=[search_hash])
         response = self.client.get(export_url)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': 'Unable to export more than 1000 variants (20000 requested)'})
+        self.assertDictEqual(response.json(), {'error': 'Unable to export more than 2 variants (4 requested)'})
 
         self._assert_expected_search_error('Invalid variants: rs9876', locus={'rawVariantItems': 'rs9876'})
 
@@ -2354,9 +2354,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         })
 
         # Test cross-project discovery for analyst users
-        self.set_cache('search_results__VRS0009876__xpos',{'total_results': 1, 'all_results': [{
+        self.set_cache('search_results__VRS0009876__xpos',[{
             'key': 100, 'familyGuids': ['F000002_2'], 'xpos': 1248367227, 'genomeVersion': '38', 'sortedTranscriptConsequences': [],
-        }]})
+        }])
         response, _, _ = self._execute_search(search_hash=9876)
         self.assertEqual(response.status_code, 200)
         variants = response.json()['searchedVariants']
