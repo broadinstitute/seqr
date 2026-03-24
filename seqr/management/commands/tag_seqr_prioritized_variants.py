@@ -541,6 +541,7 @@ class Command(BaseCommand):
             sample_data = cls._get_valid_family_sample_data(
                 project, sample_type, samples_by_family, config_search.get('family_filter'),
             )
+            import pdb; pdb.set_trace()
             num_results = cls._execute_search(
                 {dataset_type: sample_data}, search_name, family_variant_data, family_guid_map,
                 exclude_locations=exclude_locations, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
@@ -560,7 +561,7 @@ class Command(BaseCommand):
             'project_guids': [project.guid],
             'num_families': len(samples_by_family),
             'num_unaffected': sum(len(s['unaffected_guids']) for s in samples_by_family.values()),
-            'sample_type_families': {sample_type: samples_by_family.keys()},
+            'sample_type_families': {sample_type: set(samples_by_family.keys())},
         }
 
     @staticmethod
