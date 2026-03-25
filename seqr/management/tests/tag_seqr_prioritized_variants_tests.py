@@ -10,45 +10,45 @@ from seqr.models import SavedVariant, VariantTag
 PROJECT_GUID = 'R0001_1kg'
 
 SNV_INDEL_MATCHES = {
-    'Clinvar Pathogenic': 0,
-    'Clinvar Pathogenic - Compound Heterozygous': 0,
-    'Clinvar Both Pathogenic - Compound Heterozygous': 0,
-    'Clinvar Pathogenic - Recessive': 1,
-    'Clinvar Pathogenic - X-Linked Recessive': 0,
-    'Compound Heterozygous': 1,
-    'Compound Heterozygous - Confirmed': 0,
-    'Compound Heterozygous - Both High Splice AI': 0,
-    'Compound Heterozygous - Both High Splice AI - Confirmed': 0,
-    'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': 0,
-    'Compound Heterozygous - High Splice AI': 0,
-    'Compound Heterozygous - High Splice AI - Confirmed': 0,
-    'De Novo/ Dominant - Confirmed': 0,
-    'De Novo/ Dominant - Non-coding Transcript Exon Variant': 0,
-    'De Novo/ Dominant': 0,
-    'High Splice AI - De Novo/ Dominant': 0,
-    'High Splice AI - De Novo/ Dominant Confirmed': 0,
-    'High Splice AI - Recessive': 0,
-    'High Splice AI - Recessive Confirmed': 0,
-    'High Splice AI - X-Linked Recessive': 0,
-    'High Splice AI - X-Linked Recessive Confirmed': 0,
-    'Recessive': 1,
-    'X-Linked Recessive': 0,
+    'Clinvar Pathogenic': (0, None),
+    'Clinvar Pathogenic - Compound Heterozygous': (0, None),
+    'Clinvar Both Pathogenic - Compound Heterozygous': (0, None),
+    'Clinvar Pathogenic - Recessive': (1, None),
+    'Clinvar Pathogenic - X-Linked Recessive': (0, 2),
+    'Compound Heterozygous': (1, None),
+    'Compound Heterozygous - Confirmed': (0, 1),
+    'Compound Heterozygous - Both High Splice AI': (0, 1),
+    'Compound Heterozygous - Both High Splice AI - Confirmed': (0, 1),
+    'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': (0, None),
+    'Compound Heterozygous - High Splice AI': (0, 1),
+    'Compound Heterozygous - High Splice AI - Confirmed': (0, 1),
+    'De Novo/ Dominant - Confirmed': (0, 1),
+    'De Novo/ Dominant - Non-coding Transcript Exon Variant': (0, 1),
+    'De Novo/ Dominant': (0, None),
+    'High Splice AI - De Novo/ Dominant': (0, 1),
+    'High Splice AI - De Novo/ Dominant Confirmed': (0, 1),
+    'High Splice AI - Recessive': (0, 1),
+    'High Splice AI - Recessive Confirmed': (0, 1),
+    'High Splice AI - X-Linked Recessive': (0, 1),
+    'High Splice AI - X-Linked Recessive Confirmed': (0, 0),
+    'Recessive': (1, None),
+    'X-Linked Recessive': (0, 2),
 }
 SV_MATCHES = {
-    'SV - Compound Heterozygous': 1,
-    'SV - De Novo/ Dominant': 0,
-    'SV - Recessive': 1,
-    'SV - X-Linked Recessive': 0,
+    'SV - Compound Heterozygous': (1, None),
+    'SV - De Novo/ Dominant': (0, None),
+    'SV - Recessive': (1, None),
+    'SV - X-Linked Recessive': (0, 0),
 }
 MITO_MATCHES = {
-    'Mitochondrial - Pathogenic': 1,
-    'Mitochondrial - De Novo/ Dominant': 1,
+    'Mitochondrial - Pathogenic': (1, None),
+    'Mitochondrial - De Novo/ Dominant': (1, None),
 }
 MULTI_TYPE_MATCHES = {
-    'Compound Heterozygous - One SV': 0,
-    'Compound Heterozygous - Clinvar Pathogenic/ SV': 1,
-    'Compound Heterozygous - High Splice AI/ SV': 0,
-    'Compound Heterozygous - One SV - Confirmed': 1,
+    'Compound Heterozygous - One SV': (0, None),
+    'Compound Heterozygous - Clinvar Pathogenic/ SV': (1, None),
+    'Compound Heterozygous - High Splice AI/ SV': (0, None),
+    'Compound Heterozygous - One SV - Confirmed': (1, None),
 }
 
 class CheckNewSamplesTest(ClickhouseSearchTestCase):
@@ -151,16 +151,17 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             'MITO', 1, MITO_MATCHES, **creation_stats.get('MITO', {}),
         ) + self._dataset_type_logs(
             'multi data type', 1, MULTI_TYPE_MATCHES, **creation_stats.get('MULTI', {}),
+            search_dataset_types=['SNV_INDEL', 'SV_WES', 'SNV_INDEL/SV_WES'],
         ) + [
             (f'Tagged {num_new} new and 0 previously tagged variants in 1 families, found {num_unchanged} unchanged tags:', None)
-        ] + [(f'  {criteria}: {count} variants', None) for criteria, count in  SNV_INDEL_MATCHES.items()] + [
-            (f'  {criteria}: {count} variants', None) for criteria, count in  SV_MATCHES.items()
-        ] + [(f'  {criteria}: {count} variants', None) for criteria, count in MITO_MATCHES.items()] + [
-            (f'  {criteria}: {count} variants', None) for criteria, count in MULTI_TYPE_MATCHES.items()
+        ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in  SNV_INDEL_MATCHES.items()] + [
+            (f'  {criteria}: {count} variants', None) for criteria, (count, _) in  SV_MATCHES.items()
+        ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in MITO_MATCHES.items()] + [
+            (f'  {criteria}: {count} variants', None) for criteria, (count, _) in MULTI_TYPE_MATCHES.items()
         ])
 
-    @staticmethod
-    def _dataset_type_logs(dataset_type, num_families, matches, num_variants=0, tag_id_range=None):
+    @classmethod
+    def _dataset_type_logs(cls, dataset_type, num_families, matches, num_variants=0, tag_id_range=None, search_dataset_types=None):
         create_variants_logs = [
             (f'create {num_variants} SavedVariants', {
                 'dbUpdate': {'dbEntity': 'SavedVariant', 'entityIds': mock.ANY, 'updateType': 'bulk_create'},
@@ -168,11 +169,22 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         ] if num_variants > 0 else []
         return  [
             (f'Searching for prioritized {dataset_type} variants in {num_families} families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
-        ] + [
-            (f'Found {count} variants for criteria: {criteria}', None) for criteria, count in matches.items()
-        ] + create_variants_logs + [
+        ] + [(log, None) for logs in [
+            cls._criteria_search_logs(search_dataset_types or [dataset_type], criteria, count, num_criteria_families, num_families)
+            for criteria, (count, num_criteria_families) in matches.items()
+        ] for log in logs] + create_variants_logs + [
             (f'create VariantTag VT{db_id}_seqr_prioritized', {'dbUpdate': {
                 'dbEntity': 'VariantTag', 'entityId': f'VT{db_id}_seqr_prioritized', 'updateFields': ['metadata', 'variant_tag_type'], 'updateType': 'create',
             }}) for db_id in range(*(tag_id_range or [0]))
         ]
+
+    @staticmethod
+    def _criteria_search_logs(search_dataset_types, criteria, count, num_criteria_families, num_families):
+        logs = [f'Searching for criteria: {criteria}']
+        if num_criteria_families == 0:
+            return logs
+        return logs + [log for logs in [
+            [f'Loading {dataset_type} data for {num_criteria_families or num_families} families',
+        ] + ([f'Total results: {count}'] if i == len(search_dataset_types) - 1 else [])
+        for i, dataset_type in enumerate(search_dataset_types)] for log in logs]
 
