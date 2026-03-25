@@ -14,7 +14,7 @@ from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.gene_utils import get_genes
 from clickhouse_search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO, COMPOUND_HET
 from seqr.views.utils.orm_to_json_utils import SEQR_TAG_TYPE
-from seqr.views.utils.variant_utils import bulk_create_tagged_variants
+from seqr.views.utils.variant_utils import bulk_create_tagged_variants, get_saved_variant_annotations
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 import logging
@@ -583,6 +583,20 @@ class Command(BaseCommand):
             return {name: today for name in v[metadata_key]} if v[metadata_key] else None
         return wrapped
 
+    @staticmethod
+    def _parse_new_saved_variants(dataset_type):
+        def wrapped(new_variant_keys, family_variant_data):
+            new_variant_data = {k: v for k, v in family_variant_data.items() if k in new_variant_keys}
+            variants_by_id = get_saved_variant_annotations(
+                {k for k, v in new_variant_data.items() if not (v.get('key') and v.get('variantId'))},
+                dataset_type=dataset_type, genome_version=GENOME_VERSION_GRCh38, primary_id_field='key',
+            )
+            return {
+                k: {**v, 'dataset_type': dataset_type, **(variants_by_id.get(k[1], {}))}
+                for k, v in family_variant_data.items() if k in new_variant_keys
+            }
+        return wrapped
+
     @classmethod
     def _run_search(cls, search_name, family_variant_data, family_guid_map, dataset_type, sample_data, **kwargs):
         results_qs = get_search_queryset(GENOME_VERSION_GRCh38, dataset_type, sample_data, **kwargs)
@@ -595,7 +609,7 @@ class Command(BaseCommand):
         else:
             variant_fields += ['familyGenotypes']
 
-        results = results_qs.values(*variant_fields, 'key', 'familyGuids', **variant_values)
+        results = results_qs.values(*variant_fields, 'key', 'familyGuids', 'xpos', **variant_values)
         add_individual_guids(results, encode_genotypes_json=True)
 
         for variant in results:
@@ -666,7 +680,7 @@ class Command(BaseCommand):
         new_tag_keys, update_tag_keys, skipped_tag_keys = bulk_create_tagged_variants(
             family_variant_data, tag_name=SEQR_TAG_TYPE, get_metadata=cls._get_metadata(today, 'matched_searches'),
             get_comp_het_metadata=cls._get_metadata(today, 'matched_comp_het_searches'), user=None,
-            remove_missing_metadata=False, primary_id_field='key', dataset_type=dataset_type, genome_version=GENOME_VERSION_GRCh38,
+            remove_missing_metadata=False, primary_id_field='key', parse_new_saved_variants=cls._parse_new_saved_variants(dataset_type),
         )
         updates['new_tag_keys'].update(new_tag_keys)
         updates['update_tag_keys'].update(update_tag_keys - updates['new_tag_keys'])

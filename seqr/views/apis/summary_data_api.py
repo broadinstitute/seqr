@@ -6,11 +6,12 @@ from django.db.models import CharField, F, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 
+from clickhouse_search.search import get_clickhouse_genotypes
 from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissions, parse_mme_features, \
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Project, Family, Individual, VariantTagType, SavedVariant, FamilyAnalysedBy
+from seqr.models import Project, Family, Individual, Sample, VariantTagType, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.communication_utils import safe_post_to_slack
@@ -24,7 +25,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissio
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
     login_and_policies_required, get_project_and_check_permissions, get_internal_projects
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
-from seqr.views.utils.variant_utils import get_variants_response, bulk_create_tagged_variants, DISCOVERY_CATEGORY
+from seqr.views.utils.variant_utils import get_variants_response, bulk_create_tagged_variants, get_saved_variant_annotations, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
 
 logger = SeqrLogger(__name__)
@@ -214,8 +215,8 @@ def _load_aip_data(data: dict, user: User):
 
     today = datetime.now().strftime('%Y-%m-%d')
     new_keys, update_keys, skipped_keys = bulk_create_tagged_variants(
-        family_variant_data, tag_name=AIP_TAG_TYPE, user=user, load_new_variant_data=True,
-        get_metadata=lambda pred:  {category: {'name': category_map[category], 'date': today} for category in pred['categories']},
+        family_variant_data, tag_name=AIP_TAG_TYPE, user=user, parse_new_saved_variants=_search_new_saved_variants,
+        get_metadata=lambda pred: {category: {'name': category_map[category], 'date': today} for category in pred['categories']},
     )
 
     summary_message = f'Loaded {len(new_keys)} new and {len(update_keys)} updated AIP tags for {len(family_id_map)} families'
@@ -229,6 +230,64 @@ def _load_aip_data(data: dict, user: User):
     return create_json_response({
         'info': [summary_message],
     })
+
+
+def _search_new_saved_variants(family_variant_ids, *args, **kwargs):
+    family_ids = set()
+    variant_families = defaultdict(list)
+    for family_id, variant_id in family_variant_ids:
+        family_ids.add(family_id)
+        variant_families[variant_id].append(family_id)
+    families_by_id = {
+        f['id']: f for f in Family.objects.filter(id__in=family_ids).values(
+            'id', 'guid', 'family_id', 'project__guid', 'project__genome_version',
+        )
+    }
+
+    genome_version = next(family['project__genome_version'] for family in families_by_id.values())
+    search_variants_by_id = {
+        v['variantId']: v for v in _get_clickhouse_variants(families_by_id, family_variant_ids, genome_version)
+    }
+
+    new_variants = {}
+    missing = defaultdict(list)
+    for variant_id, family_ids in variant_families.items():
+        variant = search_variants_by_id.get(variant_id) or {'familyGuids': []}
+        for family_id in family_ids:
+            family = families_by_id[family_id]
+            if family['guid'] in variant['familyGuids']:
+                new_variants[(family_id, variant_id)] = variant
+            else:
+                missing[family['family_id']].append(variant_id)
+
+    if missing:
+        missing_summary = [f'{family} ({", ".join(sorted(variant_ids))})' for family, variant_ids in missing.items()]
+        raise ErrorsWarningsException([
+            f"Unable to find the following family's variants in the search backend: {', '.join(missing_summary)}",
+        ])
+
+    return new_variants
+
+
+def _get_clickhouse_variants(families_by_id: dict[int, dict], family_variant_ids: set[tuple[int, str]], genome_version: str) -> list[dict]:
+    variants_by_key = get_saved_variant_annotations(family_variant_ids, genome_version=genome_version, group_by_field='key')
+    families_by_project = defaultdict(list)
+    for family in families_by_id.values():
+        families_by_project[family['project__guid']].append(family['guid'])
+    for project_guid, family_guids in families_by_project.items():
+        genotype_keys = get_clickhouse_genotypes(
+            project_guid, family_guids, genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variants_by_key.keys(),
+            additional_fields=['xpos']
+        )
+        for key, entry_data in genotype_keys.items():
+            variants_by_key[key]['xpos'] = entry_data['xpos']
+            variants_by_key[key]['genotypes'] = {**entry_data['genotypes'], **variants_by_key[key].get('genotypes', {})}
+            variants_by_key[key]['familyGuids'] = sorted([
+                *{g['familyGuid'] for g in entry_data['genotypes'].values()},
+                *(variants_by_key[key].get('familyGuids', [])),
+            ])
+
+    return list(variants_by_key.values())
 
 
 ALL_PROJECTS = 'all'
