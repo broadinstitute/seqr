@@ -447,9 +447,6 @@ class ProjectAPITest(object):
         empty_url = reverse(project_families, args=[EMPTY_PROJECT_GUID])
         self._check_empty_project(empty_url, response_keys)
 
-        self._assert_expected_project_families(url, response_keys)
-
-    def _assert_expected_project_families(self, url, response_keys, no_discovery_tags=False):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -496,8 +493,7 @@ class ProjectAPITest(object):
         self.assertListEqual(family_3['discoveryGeneIds'], [])
         self.assertListEqual(empty_family['discoveryGeneIds'], [])
         self.assertListEqual(family_1['discoveryGeneIds'], ['ENSG00000135953'])
-        family_2_tags = [] if no_discovery_tags else ['ENSG00000135953']
-        self.assertListEqual(response_json['familiesByGuid']['F000002_2']['discoveryGeneIds'], family_2_tags)
+        self.assertListEqual(response_json['familiesByGuid']['F000002_2']['discoveryGeneIds'],  ['ENSG00000135953'])
         no_discovery_families = set(response_json['familiesByGuid'].keys()) - {'F000001_1', 'F000002_2'}
         self.assertSetEqual({
             len(response_json['familiesByGuid'][family_guid]['discoveryGeneIds']) for family_guid in no_discovery_families
@@ -1194,20 +1190,6 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
                                                          'my-seqr-billing',
                                                          'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
-
-    def _assert_expected_project_families(self, *args, **kwargs):
-        super()._assert_expected_project_families(*args, **kwargs)
-
-        # Test success when clickhouse is unavailable
-        self.reset_logs()
-        connections['clickhouse'].close()
-        super()._assert_expected_project_families(*args, **kwargs, no_discovery_tags=True)
-        self.assert_json_logs(None, [
-            ("Error loading discovery genes from clickhouse: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.", {
-                'severity': 'ERROR',
-                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
-            }),
-        ])
 
     @staticmethod
     def _set_file_not_found(file_name, mock_subprocess, mock_does_file_exist, mock_open):

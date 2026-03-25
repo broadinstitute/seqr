@@ -12,7 +12,11 @@
         "ref": "C",
         "alt": "T",
         "variant_id": "19-1912634-C-T",
+        "dataset_type": "SNV_INDEL",
         "gene_ids": ["ENSG00000240361"],
+        "genotypes": {
+            "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+        },
         "saved_variant_json": {
             "liftedOverGenomeVersion": "37",
             "pos": 1912634,
@@ -58,7 +62,12 @@
         "ref": "G",
         "alt": "T",
         "variant_id": "19-1912633-G-T",
+        "dataset_type": "SNV_INDEL",
         "gene_ids": ["ENSG00000135953"],
+        "main_transcript": {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"},
+        "genotypes": {
+            "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
+        },
         "saved_variant_json": {
             "liftedOverGenomeVersion": "37",
             "pos": 1912633,
@@ -107,7 +116,12 @@
         "ref": "G",
         "alt": "C",
         "variant_id": "19-1912632-G-C",
+        "dataset_type": "SNV_INDEL",
         "gene_ids": ["ENSG00000135953"],
+        "main_transcript": {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361", "hgvsc": "c.586_587delinsTT", "hgvsp": "p.Ala196Leu"},
+        "genotypes": {
+            "I000004_hg00731": {"numAlt": 1}
+        },
         "saved_variant_json": {
             "pos": 1912632,
             "end": 1912632,
@@ -135,7 +149,7 @@
     "pk": 12,
     "fields": {
         "guid": "SV0000009_25000014783_r0004_no",
-        "created_date": "2018-05-15T14:51:56.943Z",
+        "created_date": "2018-05-16T14:51:56.943Z",
         "created_by": null,
         "last_modified_date": "2018-05-31T16:36:02.805Z",
         "xpos": 25000014783,
@@ -149,6 +163,7 @@
             "I000018_na21234": {"sampleId": "NA20885", "numAlt": 2, "dp": 3943, "hl": 1.0, "mitoCn": 214, "contamination": 0.0, "filters": ["artifact_prone_site"]}
         },
         "gene_ids": ["ENSG00000198727"],
+        "main_transcript": {"aminoAcids": "L", "biotype": "protein_coding", "canonical": 1, "codons": "Tta/Cta", "consequenceTerms": ["synonymous_variant"], "geneId": "ENSG00000198727", "hgvsc": "ENST00000361789.2:c.37T>C", "hgvsp": "ENSP00000354554.2:p.Leu13=", "loftee": [null, []], "majorConsequence": "synonymous_variant", "transcriptId": "ENST00000361789", "transcriptRank": 0},
         "saved_variant_json": {},
         "family": 14
     }
@@ -167,6 +182,7 @@
         "variant_id": "suffix_19107_DEL_013746",
         "key": 101,
         "dataset_type": "SV_WGS",
+        "sv_type": "DEL",
         "genotypes": {
             "I000018_na21234": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
         },

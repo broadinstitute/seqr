@@ -2,7 +2,7 @@ from collections import defaultdict, abc
 from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Q, Count
+from django.db.models import F, Q, Count, Value
 import json
 import logging
 import redis
@@ -34,27 +34,37 @@ def parse_saved_variant_json(variant_json, family_id):
     xpos = variant_json['xpos']
     ref = variant_json.get('ref')
     var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
-    gene_ids = sorted(
-        variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json)
-    ) if 'transcripts' in variant_json else variant_json['gene_ids']
+    if 'transcripts' in variant_json:
+        main_transcript_id = variant_json.get('mainTranscriptId')
+        gene_ids = sorted(
+            variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json, main_transcript_id)
+        )
+        main_gene_transcripts = variant_json['transcripts'][gene_ids[0]] if gene_ids else []
+        main_transcript = next(
+            t for t in main_gene_transcripts if t.get('transcriptId') == main_transcript_id
+        ) if main_transcript_id else {}
+    else:
+        gene_ids = variant_json['gene_ids']
+        main_transcript = variant_json['main_transcript']
     return {
         'key': variant_json['key'],
         'xpos': xpos,
         'xpos_end': xpos + var_length,
         'ref': ref,
         'alt': variant_json.get('alt'),
+        'sv_type': variant_json.get('svType'),
         'family_id': family_id,
         'variant_id': variant_json['variantId'],
         'genotypes': variant_json.get('genotypes', {}),
         'dataset_type': variant_json.get('dataset_type') or variant_dataset_type(variant_json),
         'gene_ids': gene_ids,
+        'main_transcript': main_transcript,
         'saved_variant_json': variant_json.get('saved_variant_json', {}),
     }
 
 
-def _transcript_sort(gene_id, saved_variant_json):
+def _transcript_sort(gene_id, saved_variant_json, main_transcript_id):
     gene_transcripts = saved_variant_json['transcripts'][gene_id]
-    main_transcript_id = saved_variant_json.get('mainTranscriptId')
     is_main_gene = bool(main_transcript_id) and any(t.get('transcriptId') == main_transcript_id for t in gene_transcripts)
     return (not is_main_gene, min(t.get('transcriptRank', 100) for t in gene_transcripts) if gene_transcripts else 100)
 
@@ -169,7 +179,7 @@ def get_saved_variant_annotations(variant_keys: abc.Iterable[tuple[int, str]], g
         variant_ids = None
     qs = get_variants_queryset(
         genome_version, dataset_type, keys=keys, variant_ids=variant_ids,
-    )
+    ).join_variant_id()
     key_field = 'variantId' if primary_id_field == 'variant_id' else primary_id_field
     variant_fields = ['key']
     variant_values = {
@@ -180,10 +190,18 @@ def get_saved_variant_annotations(variant_keys: abc.Iterable[tuple[int, str]], g
         ),
     }
     if dataset_type.startswith('SV'):
-        variant_fields += ['chrom', 'pos', 'end']
+        variant_fields += ['chrom', 'pos', 'end', 'sv_type']
+        variant_values.update({
+            'svType': F('sv_type'),
+            'main_transcript': Value(None, output_field=StringField()),
+        })
     else:
         variant_values.update(qs.split_variant_id_annotations())
-    return {v[group_by_field or key_field]: v for v in qs.join_variant_id().values(*variant_fields, **variant_values)}
+        if qs.variant_detail_field:
+            variant_values['main_transcript'] = F(f'{qs.variant_detail_field}__transcripts__0')
+        else:
+            variant_values['main_transcript'] = F('sorted_transcript_consequences__0')
+    return {v[group_by_field or key_field]: v for v in qs.values(*variant_fields, **variant_values)}
 
 
 def reset_cached_search_results(project, reset_index_metadata=False):

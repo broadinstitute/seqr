@@ -395,10 +395,7 @@ class Command(BaseCommand):
         for family_guid in family_guids:
             variant_models_by_key = {
                 v.key: v for v in
-                SavedVariant.objects.filter(dataset_type=dataset_type, family__guid=family_guid).filter(
-                    Q(saved_variant_json__genomeVersion__isnull=True) |
-                    Q(saved_variant_json__genomeVersion=project.genome_version.replace('GRCh', ''))
-                )
+                SavedVariant.objects.filter(dataset_type=dataset_type, family__guid=family_guid, key__isnull=False)
             }
             if not variant_models_by_key:
                 continue

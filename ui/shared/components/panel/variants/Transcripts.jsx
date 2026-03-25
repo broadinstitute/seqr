@@ -143,7 +143,7 @@ const transcriptIdDetails = (transcript, variant, { transcriptsById, project, up
             transcript.transcriptId === variant.selectedMainTranscriptId ?
               <Label content="User Chosen Transcript" color="purple" size="small" /> : (
                 <DispatchRequestButton
-                  onSubmit={updateMainTranscript(transcript.transcriptId)}
+                  onSubmit={updateMainTranscript(transcript)}
                   confirmDialog="Are you sure want to update the main transcript for this variant?"
                 >
                   <Label as="a" content="Use as Main Transcript" color="violet" basic size="small" />
@@ -223,8 +223,8 @@ const mapStateToProps = (state, ownProps) => ({
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  updateMainTranscript: transcriptId => () => (
-    dispatch(updateVariantMainTranscript(ownProps.variant.variantGuid, transcriptId))
+  updateMainTranscript: transcript => () => (
+    dispatch(updateVariantMainTranscript(ownProps.variant.variantGuid, transcript))
   ),
 })
 
