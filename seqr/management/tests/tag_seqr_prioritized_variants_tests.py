@@ -72,24 +72,28 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         })
 
         new_saved_variants = SavedVariant.objects.filter(key__in=[2, 3, 4, 18, 19]).order_by('key').values(
-            'key', 'variant_id', 'family_id', 'dataset_type', 'xpos', 'xpos_end', 'ref', 'alt', 'gene_ids', 'genotypes', 'saved_variant_json',
+            'key', 'variant_id', 'family_id', 'dataset_type', 'xpos', 'xpos_end', 'ref', 'alt', 'gene_ids', 'genotypes', 'saved_variant_json', 'main_transcript', 'sv_type',
         )
+        self.maxDiff = None
         self.assertListEqual(list(new_saved_variants),  [{
             'key': 2, 'variant_id': '1-38724419-T-G', 'family_id': 2, 'dataset_type': 'SNV_INDEL', 'xpos': 1038724419,
             'xpos_end': 1038724419, 'ref': 'T', 'alt': 'G', 'gene_ids': ['ENSG00000177000', 'ENSG00000277258'],
-            'genotypes': VARIANT2['genotypes'], 'saved_variant_json': {},
+            'genotypes': VARIANT2['genotypes'], 'saved_variant_json': {}, 'sv_type': None,
+            'main_transcript': VARIANT2['transcripts']['ENSG00000177000'][0],
         }, {'key': 3, 'variant_id': '1-91502721-G-A', 'family_id': 2, 'dataset_type': 'SNV_INDEL', 'xpos': 1091502721,
             'xpos_end': 1091502721, 'ref': 'G', 'alt': 'A', 'gene_ids': ['ENSG00000097046', 'ENSG00000177000'],
-            'genotypes': VARIANT3['genotypes'], 'saved_variant_json': {},
-        }, {'key': 4, 'variant_id': '1-91511686-T-G', 'family_id': 2, 'dataset_type': 'SNV_INDEL', 'xpos': 1091511686,
+            'genotypes': VARIANT3['genotypes'], 'saved_variant_json': {}, 'sv_type': None,
+            'main_transcript': VARIANT3['transcripts']['ENSG00000097046'][0],
+            }, {'key': 4, 'variant_id': '1-91511686-T-G', 'family_id': 2, 'dataset_type': 'SNV_INDEL', 'xpos': 1091511686,
             'xpos_end': 1091511686, 'ref': 'T', 'alt': 'G', 'gene_ids': ['ENSG00000097046'],
-            'genotypes': VARIANT4['genotypes'], 'saved_variant_json': {},
+            'genotypes': VARIANT4['genotypes'], 'saved_variant_json': {}, 'sv_type': None,
+            'main_transcript': VARIANT4['transcripts']['ENSG00000097046'][0],
         }, {'key': 18, 'variant_id': 'suffix_140593_DUP', 'family_id': 2, 'dataset_type': 'SV_WES', 'xpos': 17038717327,
             'xpos_end': 17038719636, 'ref': None, 'alt': None, 'gene_ids': ['ENSG00000275023'],
-            'genotypes': GCNV_VARIANT3['genotypes'], 'saved_variant_json': {},
+            'genotypes': GCNV_VARIANT3['genotypes'], 'saved_variant_json': {}, 'main_transcript': {}, 'sv_type': 'DUP',
         }, {'key': 19, 'variant_id': 'suffix_140608_DUP', 'family_id': 2, 'dataset_type': 'SV_WES', 'xpos': 17038721781,
             'xpos_end': 17038735703, 'ref': None, 'alt': None, 'gene_ids': ['ENSG00000275023', 'ENSG00000277258', 'ENSG00000277972'],
-            'genotypes': GCNV_VARIANT4['genotypes'], 'saved_variant_json': {},
+            'genotypes': GCNV_VARIANT4['genotypes'], 'saved_variant_json': {}, 'main_transcript': {}, 'sv_type': 'DEL',
         }])
 
         expected_tags = {

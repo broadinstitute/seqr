@@ -1321,7 +1321,7 @@ class ReportAPITest(AirtableTest):
             **BASE_VARIANT_METADATA_ROW,
             'alt': 'G',
             'chrom': '21',
-            'clinvar': {'alleleId': None, 'clinicalSignificance': '', 'goldStars': None, 'variationId': None},
+            'clinvar': None,
             'condition_id': 'OMIM:615120',
             'condition_inheritance': 'Autosomal recessive|X-linked',
             'displayName': '1',
