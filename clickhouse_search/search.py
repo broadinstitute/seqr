@@ -120,7 +120,6 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
             comp_het_sample_data = sample_data
             if has_x_chrom_comp_het and 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 comp_het_sample_data = _no_affected_male_families(sample_data, user)
-
             result_q = _get_data_type_comp_het_results_queryset(
                 entry_qs, variants_qs, comp_het_sample_data, exclude_key_pairs=exclude_key_pairs.get(dataset_type),
                 **search, **parsed_filters,
