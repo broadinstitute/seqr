@@ -1,11 +1,9 @@
 from collections import defaultdict
-from django.db.models import Count, Q, F, prefetch_related_objects
-from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models.functions import JSONObject
 
-from clickhouse_search.search import get_variant_main_transcripts_by_key
+from django.db.models import Count, Q, F, prefetch_related_objects
+
 from seqr.models import Individual, IgvSample, AnalysisGroup, DynamicAnalysisGroup, LocusList, VariantTagType,\
-    VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote, Sample
+    VariantFunctionalData, FamilyNote, SavedVariant, VariantTag, VariantNote
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json_for_individuals, get_json_for_queryset, \
@@ -116,28 +114,16 @@ def add_child_ids(response):
         family['individualGuids'] = individual_guids_by_family[family['familyGuid']]
 
 
-def families_discovery_tags(families, genome_version, project=None):
+def families_discovery_tags(families, project=None):
     families_by_guid = {f['familyGuid']: dict(discoveryGeneIds=[], **f) for f in families}
 
     family_filter = {'family__project': project} if project else {'family__guid__in': families_by_guid.keys()}
-    discovery_variants = SavedVariant.objects.filter(
+    family_discovery_genes = list(SavedVariant.objects.filter(
         varianttag__variant_tag_type__category='CMG Discovery Tags', **family_filter,
-    ).annotate(family_guid=F('family__guid'))
-
-    family_discovery_genes = list(discovery_variants.filter(
-        Q(gene_ids__len=1) | (Q(selected_main_transcript_id__isnull=True) & ~Q(dataset_type__startswith='SV'))
-    ).values_list('family_guid', F('gene_ids__0')))
-    try:
-         _get_clickhouse_selected_transcript_gene_id(
-            family_discovery_genes,
-            discovery_variants.filter(selected_main_transcript_id__isnull=False, gene_ids__len__gt=1),
-            genome_version,
-        )
-    except Exception as e:
-        logger.error(f'Error loading discovery genes from clickhouse: {e}', None)
-
+    ).values_list('family__guid', 'main_transcript__geneId', 'gene_ids__0'))
     gene_ids = set()
-    for family_guid, gene_id in family_discovery_genes:
+    for family_guid, selected_gene_id, main_gene_id in family_discovery_genes:
+        gene_id = selected_gene_id or main_gene_id
         gene_ids.add(gene_id)
         families_by_guid[family_guid]['discoveryGeneIds'].append(gene_id)
 
@@ -145,22 +131,6 @@ def families_discovery_tags(families, genome_version, project=None):
         'familiesByGuid': families_by_guid,
         'genesById': get_genes(gene_ids),
     }
-
-
-def _get_clickhouse_selected_transcript_gene_id(family_discovery_genes, discovery_variants, genome_version):
-    tags_by_dataset_type = discovery_variants.values('dataset_type').annotate(
-        keys=ArrayAgg('key', distinct=True),
-        variants=ArrayAgg(JSONObject(key='key', family_guid='family_guid', selected_main_transcript_id='selected_main_transcript_id')),
-    )
-
-    for dataset_type, keys, variants in tags_by_dataset_type.values_list('dataset_type', 'keys', 'variants'):
-        selected_transcripts_by_key = defaultdict(list)
-        for v in variants:
-            selected_transcripts_by_key[v['key']].append(v['selected_main_transcript_id'])
-        transcripts_by_key = get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_transcripts_by_key)
-        for v in variants:
-            gene_id = transcripts_by_key[v['key']]['main_transcripts'][v['selected_main_transcript_id']].get('geneId')
-            family_discovery_genes.append((v['family_guid'], gene_id))
 
 
 MME_TAG_NAME = 'MME Submission'

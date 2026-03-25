@@ -7,6 +7,7 @@ import json
 import re
 import requests
 
+from clickhouse_search.search import get_variant_details_queryset
 from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -410,6 +411,7 @@ def gregor_export(request):
         airtable_fields=[[PARTICIPANT_ID_FIELD, 'Recontactable'], [SMID_FIELD]],
         include_mondo=True,
         proband_only_variants=True,
+        get_variant_json=_get_variant_json,
     )
 
     airtable_metadata_by_participant = _get_gregor_airtable_data(participant_rows, request.user, smids_by_airtable_record_id)
@@ -1018,14 +1020,51 @@ def variant_metadata(request, project_guid):
         individual_samples={i: None for i in individuals},
         individual_data_types={i.individual_id: i.data_types for i in individuals},
         add_row=_add_row,
-        include_clinvar=True,
-        include_variant_id=True,
-        variant_attr_fields=['tags'],
         mme_value=ArrayAgg('matchmakersubmissiongenes__saved_variant__variant_id'),
         include_family_name_display=True,
         include_mondo=True,
         omit_airtable=True,
         proband_only_variants=True,
+        get_variant_json=_get_metadata_variant_json,
     )
 
     return create_json_response({'rows': variant_rows})
+
+
+def _get_metadata_variant_json(*args):
+    return _get_variant_json(
+        *args,
+        include_clinvar=True,
+        variantId=F('variant_id'),
+        tags=ArrayAgg('varianttag__variant_tag_type__name', distinct=True),
+    )
+
+
+def _get_variant_json(saved_variants, fields, annotations, include_clinvar=False, **kwargs):
+    dataset_type_keys = saved_variants.exclude(dataset_type__startswith='SV').filter(
+        key__isnull=False,
+    ).values(
+        'dataset_type', genome_version=F('family__project__genome_version'),
+    ).annotate(keys=ArrayAgg('key', distinct=True, filter=Q(key__isnull=False)))
+    clickhouse_metadata = {}
+    for o in dataset_type_keys:
+        clickhouse_metadata.update(_get_clickhouse_metadata(**o, include_clinvar=include_clinvar))
+
+    variants = saved_variants.values('dataset_type', 'key', *fields, **annotations, **kwargs)
+    for variant in variants:
+        metadata = clickhouse_metadata.get((variant.pop('dataset_type'), variant['genome_version'], variant.pop('key')), {})
+        variant['ClinGen_allele_ID'] = metadata.get('caid')
+        if include_clinvar:
+            variant['clinvar'] = metadata.get('clinvar')
+
+    return variants
+
+def _get_clickhouse_metadata(dataset_type, genome_version, keys, include_clinvar):
+    qs = get_variant_details_queryset(genome_version, dataset_type,keys)
+    fields = ['key']
+    if include_clinvar:
+        fields.append('clinvar')
+        qs = qs.join_clinvar()
+    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        fields.append('caid')
+    return {(dataset_type, genome_version, v.pop('key')): v for v in qs.values(*fields)}

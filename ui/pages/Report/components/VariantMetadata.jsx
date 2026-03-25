@@ -10,7 +10,7 @@ const VIEW_ALL_PAGES = [
 
 const COLUMNS = [
   { name: 'participant_id' },
-  ...VARIANT_METADATA_COLUMNS.slice(0, -1),
+  ...VARIANT_METADATA_COLUMNS,
   { name: 'variant_type' },
   { name: 'allele_balance_or_heteroplasmy_percentage' },
   { name: 'Clinvar allele ID', format: ({ clinvar }) => clinvar?.alleleId },
@@ -22,7 +22,7 @@ const COLUMNS = [
   { name: 'additional_family_members_with_variant' },
   { name: 'method_of_discovery' },
   { name: 'Submitted to MME', format: ({ MME }) => (MME ? 'Yes' : 'No') },
-  ...VARIANT_METADATA_COLUMNS.slice(-1),
+  { name: 'ClinGen_allele_ID' },
   { name: 'tags', format: ({ tags }) => (tags || []).join('; ') },
 ]
 

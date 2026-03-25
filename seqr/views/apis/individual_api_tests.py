@@ -1219,9 +1219,7 @@ class IndividualAPITest(object):
         saved_variants = SavedVariant.objects.filter(
             varianttag__variant_tag_type__name='GREGoR Finding'
         ).order_by('family_id', 'variant_id').distinct().values(
-            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json__genomeVersion',
-            'saved_variant_json__transcripts', 'saved_variant_json__genotypes', 'saved_variant_json__mainTranscriptId',
-            'saved_variant_json__hgvsc', 'key', 'dataset_type', 'genotypes', 'gene_ids',
+            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json', 'key', 'dataset_type', 'genotypes', 'gene_ids', 'main_transcript',
         )
         self.assertEqual(len(saved_variants), 4)
         self.assertDictEqual(saved_variants[0], {
@@ -1229,15 +1227,17 @@ class IndividualAPITest(object):
             'variant_id': '1-248367227-TC-T',
             'xpos': 1248367227,
             'family__guid': 'F000012_12',
-            'saved_variant_json__genomeVersion': None,
-            'saved_variant_json__transcripts': None,
-            'saved_variant_json__genotypes': None,
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
+            'saved_variant_json': {},
             'key': 100,
             'dataset_type': 'SNV_INDEL',
             'genotypes': mock.ANY,
             'gene_ids': ['ENSG00000240361', 'ENSG00000135953'],
+            'main_transcript': {
+                'aminoAcids': None, 'biotype': 'protein_coding', 'canonical': 1, 'codons': 'Gtg/Atg',
+                'consequenceTerms': ['intron_variant'], 'geneId': 'ENSG00000240361', 'hgvsc': 'ENST00000262738.3:c.3955G>A',
+                'hgvsp': 'ENST00000505820.2:c.1586-17C>G', 'loftee': [None, []], 'majorConsequence': 'intron_variant',
+                'transcriptId': 'ENST00000505820', 'transcriptRank': 0,
+            },
         })
         self.assertEqual(len(saved_variants[0]['genotypes']), 2)
         self.assertDictEqual(saved_variants[1], {
@@ -1245,16 +1245,24 @@ class IndividualAPITest(object):
             'variant_id': '1-249045487-A-G',
             'xpos': 1249045487,
             'family__guid': 'F000012_12',
-            'saved_variant_json__genomeVersion': '37',
-            'saved_variant_json__transcripts': {
-                'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+            'saved_variant_json': {
+                'alt': 'G',
+                'chrom': '1',
+                'genomeVersion': '37',
+                'genotypes': {created_individual_guid: {'numAlt': 1}},
+                'mainTranscriptId': None,
+                'pos': 249045487,
+                'ref': 'A',
+                'variantId': '1-249045487-A-G',
+                'xpos': 1249045487,
+                'transcripts': {
+                    'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+                },
             },
-            'saved_variant_json__genotypes': {created_individual_guid: {'numAlt': 1}},
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
+            'main_transcript': {},
             'key': None,
-            'dataset_type': None,
-            'genotypes': {},
+            'dataset_type': 'SNV_INDEL',
+            'genotypes': {created_individual_guid: {'numAlt': 1}},
             'gene_ids': ['ENSG00000240361'],
         })
         new_family_genotypes = {new_family_individual_guid: {'numAlt': 2}}
@@ -1263,15 +1271,12 @@ class IndividualAPITest(object):
             'variant_id': '1-248367227-TC-T',
             'xpos': 1248367227,
             'family__guid': new_family_guid,
-            'saved_variant_json__genomeVersion': None,
-            'saved_variant_json__transcripts': None,
-            'saved_variant_json__genotypes': None,
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
+            'saved_variant_json': {},
             'key': 100,
             'dataset_type': 'SNV_INDEL',
             'genotypes': new_family_genotypes,
             'gene_ids': ['ENSG00000135953'],
+            'main_transcript':  {'hgvsc': 'c.3955G>A','hgvsp': 'c.1586-17C>G', 'transcriptId': 'ENST00000505820'},
         })
 
         variant_tags = VariantTag.objects.filter(variant_tag_type__name='GREGoR Finding')

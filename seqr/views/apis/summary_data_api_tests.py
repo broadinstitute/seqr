@@ -116,8 +116,6 @@ EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     'condition_id': 'OMIM:616126',
     'condition_inheritance': 'Autosomal recessive',
     'known_condition_name': 'Immunodeficiency 38',
-    'ClinGen_allele_ID-1': 'CA1501729',
-    'ClinGen_allele_ID-2': None,
 }
 EXPECTED_SAMPLE_METADATA_ROW = {
     "dbgap_submission": "No",
@@ -180,14 +178,13 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'validated_name-1': None,
     'transcript-1': None,
     'analysis_groups': '',
-    'ClinGen_allele_ID-1': 'CA1501729',
     'alt-3': None,
     'chrom-3': '1',
     'gene_known_for_phenotype-3': 'Known',
     'phenotype_contribution-3': 'Full',
     'partial_contribution_explained-3': '',
     'pos-3': 249045487,
-    'chrom_end-3': '1',
+    'chrom_end-3': None,
     'pos_end-3': 249045898,
     'ref-3': None,
     'copy_number-3': 1,
@@ -205,7 +202,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'validated_name-3': None,
     'variant_inheritance-3': 'unknown',
     'transcript-3': None,
-    'ClinGen_allele_ID-3': None,
     'alt-2': 'C',
     'chrom-2': 'MT',
     'gene_known_for_phenotype-2': 'Candidate',
@@ -230,7 +226,6 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'validated_name-2': None,
     'variant_inheritance-2': 'unknown',
     'transcript-2': 'ENST00000361789.2',
-    'ClinGen_allele_ID-2': None,
 }
 
 AIRTABLE_SAMPLE_RECORDS = {
@@ -645,6 +640,12 @@ class SummaryDataAPITest(AirtableTest):
                 'familyGuid': 'F000002_2', 'individualGuid': 'I000006_hg00733', 'sampleType': 'WES',
             },
         })
+        self.assertDictEqual(new_saved_variant.main_transcript, {
+            'aminoAcids': None, 'biotype': 'protein_coding', 'canonical': 1, 'codons': None,
+            'consequenceTerms': ['inframe_deletion'], 'geneId': 'ENSG00000135953', 'hgvsc': 'ENST00000262738.3:c.3955G>A',
+            'hgvsp': 'ENST00000505820.2:c.1586-17C>G', 'loftee': {'isLofNagnag': None, 'lofFilters': None},
+            'majorConsequence': 'inframe_deletion', 'transcriptId': 'ENST00000505820', 'transcriptRank': 0,
+        })
 
     def _has_expected_metadata_response(self, response, expected_individuals, has_airtable=False, has_duplicate=False):
         self.assertEqual(response.status_code, 200)
@@ -704,7 +705,6 @@ class SummaryDataAPITest(AirtableTest):
         rows = response.json()['rows']
         self.assertEqual(len(rows), 3)
         test_row = next(r for r in rows if r['participant_id'] == 'NA21234')
-        self.maxDiff = None
         self.assertDictEqual(test_row, EXPECTED_NO_GENE_SAMPLE_METADATA_ROW)
 
         # Test analyst access
