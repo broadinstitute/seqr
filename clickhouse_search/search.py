@@ -37,9 +37,6 @@ SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 def get_clickhouse_variants(families, search, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False):
     inheritance_mode = search.get('inheritance_mode')
-    inheritance_filter = search.get('inheritance_filter')
-    genotype_filter = (inheritance_filter or {}).get('genotype')
-    individual_affected_status = (inheritance_filter or {}).get('affected')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
@@ -51,25 +48,12 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
     sample_data_errors = set()
     for dataset_type, entry_cls in ENTRY_CLASS_MAP[genome_version].items():
         try:
-            entry_qs = entry_cls.objects.filter_locus(**search)
-            variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
-            variants_qs = variants_cls.objects
-            parsed_filters = variants_qs.get_parsed_annotations_filters(**search)
+            entry_qs, variants_qs, parsed_filters = _parse_dataset_type_query(
+                genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors,
+                annotate_affected_males=has_x_chrom_comp_het or has_x_linked, **search,
+            )
         except InvalidDatasetTypeException:
             continue
-
-        if dataset_type in sample_data_by_dataset_type:
-            sample_data = sample_data_by_dataset_type[dataset_type]
-        else:
-            sample_data = _get_sample_data(
-                families,
-                dataset_type,
-                annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
-                inheritance_mode=inheritance_mode,
-                inheritance_filter=inheritance_filter,
-                allow_no_samples=bool(search.get('no_access_project_genome_version')),
-            )
-            sample_data_by_dataset_type[dataset_type] = sample_data
 
         if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and search.get('no_access_project_genome_version'):
             logger.info('Looking up variants in projects with no user access', user)
@@ -79,15 +63,8 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
             )
             searched_dataset_types.add(dataset_type)
 
+        sample_data = sample_data_by_dataset_type[dataset_type]
         if not sample_data:
-            continue
-        if inheritance_mode and (not sample_data['num_families'] or (individual_affected_status and all(
-            (individual_affected_status.get(s['individual_guid']) or s['affected']) != AFFECTED for s in sample_data.get('samples', [])
-        ))):
-            sample_data_errors.add('Inheritance based search is disabled in families with no data loaded for affected individuals')
-            continue
-        if genotype_filter and all(s['individual_guid'] not in genotype_filter for s in sample_data.get('samples', [])):
-            sample_data_errors.add('Invalid custom inheritance')
             continue
 
         logger.info(f'Loading {dataset_type} data for {sample_data["num_families"]} families', user)
@@ -145,6 +122,38 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
 
     logger.info(f'Total results: {len(results)}', user)
     return get_sorted_search_results(results, sort, families)
+
+def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, inheritance_mode, inheritance_filter, annotate_affected_males, no_access_project_genome_version=None, **search_kwargs):
+    entry_qs = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter_locus(inheritance_mode=inheritance_mode, **search_kwargs)
+    variants_qs = VARIANTS_CLASS_MAP[genome_version][dataset_type].objects
+    parsed_filters = variants_qs.get_parsed_annotations_filters(**search_kwargs)
+
+    if dataset_type in sample_data_by_dataset_type:
+        sample_data = sample_data_by_dataset_type[dataset_type]
+    else:
+        sample_data = _get_sample_data(
+            families,
+            dataset_type,
+            inheritance_mode=inheritance_mode,
+            inheritance_filter=inheritance_filter,
+            annotate_affected_males=annotate_affected_males,
+            allow_no_samples=bool(no_access_project_genome_version),
+        )
+        sample_data_by_dataset_type[dataset_type] = sample_data
+
+    individual_affected_status = (inheritance_filter or {}).get('affected')
+    genotype_filter = (inheritance_filter or {}).get('genotype')
+    if sample_data and inheritance_mode and (not sample_data['num_families'] or (individual_affected_status and all(
+        (individual_affected_status.get(s['individual_guid']) or s['affected']) != AFFECTED for s in sample_data.get('samples', [])
+    ))):
+        sample_data_errors.add(
+            'Inheritance based search is disabled in families with no data loaded for affected individuals')
+        sample_data_by_dataset_type[dataset_type] = None
+    if sample_data and genotype_filter and all(s['individual_guid'] not in genotype_filter for s in sample_data.get('samples', [])):
+        sample_data_errors.add('Invalid custom inheritance')
+        sample_data_by_dataset_type[dataset_type] = None
+
+    return entry_qs, variants_qs, parsed_filters
 
 
 def _get_search_results(entry_qs, variants_qs, sample_data, skip_entry_fields=False, **search_kwargs):
@@ -240,7 +249,6 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
             exclude_key_pairs=exclude_key_pairs.get(f'{Sample.DATASET_TYPE_VARIANT_CALLS},{sv_dataset_type}'),
         )
         dataset_results = _evaluate_results(result_q, is_comp_het=True)
-
         if not sv_sample_data['samples']:
             _add_individual_guids(dataset_results)
         results += dataset_results

@@ -1442,9 +1442,17 @@ class BaseEntriesManager(SearchQuerySet):
                 raise InvalidDatasetTypeException
             entries = entries.filter(self._interval_query('X', start=MIN_POS, end=MAX_POS))
 
-        if not (genes or intervals):
-            return entries
+        if intervals and self.filtered_chrom:
+            intervals = [interval for interval in intervals if interval['chrom'] == self.filtered_chrom]
+            if not intervals and not exclude_locations:
+                raise InvalidDatasetTypeException
 
+        if genes or intervals:
+            entries = self._filter_locations(entries, genes, intervals, exclude_locations=exclude_locations, require_gene_filter=require_gene_filter)
+
+        return entries
+
+    def _filter_locations(self, entries, genes, intervals, exclude_locations=False, require_gene_filter=False):
         locus_q = None
         if genes:
             should_filter_interval = self._can_filter_gene_interval(genes) or exclude_locations
@@ -1452,14 +1460,6 @@ class BaseEntriesManager(SearchQuerySet):
                 intervals = self._format_gene_intervals(genes) + (intervals or [])
             if require_gene_filter or (not should_filter_interval):
                 locus_q = Q(geneId_ids__bitmap_has_any=[gene['id'] for gene in genes.values()])
-
-        if intervals and self.filtered_chrom:
-            intervals = [interval for interval in intervals if interval['chrom'] == self.filtered_chrom]
-            if not intervals:
-                if not exclude_locations:
-                    raise InvalidDatasetTypeException
-                if not locus_q:
-                    return entries
 
         if intervals:
             interval_q = self._interval_query(**intervals[0])
