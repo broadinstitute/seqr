@@ -46,7 +46,7 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
     exclude_key_pairs = search.pop('exclude_key_pairs', None) or {}
     searched_dataset_types = set()
     sample_data_errors = set()
-    for dataset_type, entry_cls in ENTRY_CLASS_MAP[genome_version].items():
+    for dataset_type in ENTRY_CLASS_MAP[genome_version]:
         try:
             entry_qs, variants_qs, parsed_filters = _parse_dataset_type_query(
                 genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors,
@@ -77,21 +77,10 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
 
         run_x_linked_male_search = has_x_linked and not (inheritance_mode == X_LINKED_RECESSIVE and sample_data.get('samples'))
         if run_x_linked_male_search:
-            affected_male_family_guids = {
-                s['family_guid'] for s in sample_data['samples'] if s['affected'] == AFFECTED and s['sex'] in MALE_SEXES
-            } if 'samples' in sample_data else sample_data['affected_male_family_guids']
-            if affected_male_family_guids:
-                try:
-                    x_linked_entry_qs = entry_qs.filter_locus(inheritance_mode=X_LINKED_RECESSIVE_MALE_AFFECTED)
-                except InvalidDatasetTypeException:
-                    continue
-                x_linked_sample_data = _affected_male_families(sample_data, affected_male_family_guids)
-                x_linked_search = {**search, 'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED}
-                logger.info(f'Loading {dataset_type} X-linked male data for {x_linked_sample_data["num_families"]} families', user)
-                dataset_results += _get_search_results(
-                    x_linked_entry_qs, variants_qs, x_linked_sample_data, exclude_keys=exclude_keys.get(dataset_type),
-                    **x_linked_search, **parsed_filters,
-                )
+            dataset_results += _get_x_linked_male_search_results(
+                entry_qs, variants_qs, dataset_type, user, sample_data, exclude_keys=exclude_keys.get(dataset_type),
+                **search, **parsed_filters,
+            )
 
         if has_comp_het:
             comp_het_sample_data = sample_data
@@ -123,7 +112,7 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
     logger.info(f'Total results: {len(results)}', user)
     return get_sorted_search_results(results, sort, families)
 
-def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, inheritance_mode, inheritance_filter, annotate_affected_males, no_access_project_genome_version=None, **search_kwargs):
+def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, no_access_project_genome_version=None, **search_kwargs):
     entry_qs = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter_locus(inheritance_mode=inheritance_mode, **search_kwargs)
     variants_qs = VARIANTS_CLASS_MAP[genome_version][dataset_type].objects
     parsed_filters = variants_qs.get_parsed_annotations_filters(**search_kwargs)
@@ -160,6 +149,24 @@ def _get_search_results(entry_qs, variants_qs, sample_data, skip_entry_fields=Fa
     entries = entry_qs.search(sample_data, skip_entry_fields=skip_entry_fields, **search_kwargs)
     results = variants_qs.subquery_join(entries).search(skip_entry_fields=skip_entry_fields, **search_kwargs)
     return _evaluate_results(results.result_values(skip_entry_fields=skip_entry_fields))
+
+
+def _get_x_linked_male_search_results(entry_qs, variants_qs, dataset_type, user, sample_data, inheritance_mode=None, **search_kwargs):
+    affected_male_family_guids = {
+        s['family_guid'] for s in sample_data['samples'] if s['affected'] == AFFECTED and s['sex'] in MALE_SEXES
+    } if 'samples' in sample_data else sample_data['affected_male_family_guids']
+    if not affected_male_family_guids:
+        return []
+    try:
+        x_linked_entry_qs = entry_qs.filter_locus(inheritance_mode=X_LINKED_RECESSIVE_MALE_AFFECTED)
+    except InvalidDatasetTypeException:
+        return []
+
+    x_linked_sample_data = _affected_male_families(sample_data, affected_male_family_guids)
+    logger.info(f'Loading {dataset_type} X-linked male data for {x_linked_sample_data["num_families"]} families', user)
+    return _get_search_results(
+        x_linked_entry_qs, variants_qs, x_linked_sample_data, inheritance_mode=X_LINKED_RECESSIVE_MALE_AFFECTED, **search_kwargs,
+    )
 
 
 def _evaluate_results(result_q, is_comp_het=False):
