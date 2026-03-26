@@ -383,6 +383,64 @@ PROJECT_2_VARIANT = {
     'CAID': 'CA520798130',
 }
 
+FAMILY_1_VARIANT = {
+    'key': 23,
+    'variantId': '21-3343353-GAGA-G',
+    'chrom': '21',
+    'pos': 3343353,
+    'ref': 'GAGA',
+    'alt': 'G',
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': None,
+    'liftedOverPos': None,
+    'xpos': 21003343353,
+    'rsid': None,
+    'familyGuids': ['F000001_1'],
+    'genotypes':  {'I000002_na19678': {
+        'ab': 0.16, 'dp': 45, 'familyGuid': 'F000001_1', 'filters': [], 'gq': 0, 'individualGuid': 'I000002_na19678',
+        'numAlt': 1, 'sampleId': 'NA19678', 'sampleType': 'WES',
+    }},
+    'clinvar': None,
+    'hgmd': None,
+    'screenRegionType': None,
+    'populations': {
+        'seqr': {'ac': 1, 'hom': 0, 'ac_wes': 1, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0},
+        'seqr_affected': {'ac': 0, 'hom': 0},
+        'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
+        'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
+        'gnomad_genomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
+    },
+    'predictions': {
+        'cadd': None,
+        'eigen': None,
+        'fathmm': None,
+        'gnomad_noncoding': None,
+        'mpc': None,
+        'mut_pred': None,
+        'primate_ai': None,
+        'splice_ai': None,
+        'splice_ai_consequence': None,
+        'vest': None,
+        'mut_taster': None,
+        'polyphen': None,
+        'revel': None,
+        'sift': None,
+        'absplice': None,
+        'pext': None,
+        'promoter_ai': None,
+    },
+    'transcripts': {
+        'ENSG00000227232': [{'alphamissense': {'pathogenicity': None}, 'aminoAcids': 'T/I','biotype': 'protein_coding', 'canonical': 1, 'codons': 'aCc/aTc', 'consequenceTerms': ['missense_variant'], 'exon': {'index': 1, 'total': 12}, 'geneId': 'ENSG00000227232', 'hgvsc': 'ENST00000257261.10:c.131C>T', 'hgvsp': 'ENSP00000257261.6:p.Thr44Ile', 'intron': None, 'loftee': {'isLofNagnag': None, 'lofFilters': None}, 'majorConsequence': 'missense_variant', 'manePlusClinical': None, 'maneSelect': None, 'refseqTranscriptId': 'NM_001281501.1', 'spliceregion': {'extended_intronic_splice_region_variant': False}, 'transcriptId': 'ENST00000257261', 'transcriptRank': 0, 'utrannotator': {'existingInframeOorfs': None, 'existingOutofframeOorfs': None, 'existingUorfs': None, 'fiveutrAnnotation': None, 'fiveutrConsequence': None}}],
+        'ENSG00000268903': [{'aminoAcids': None, 'canonical': None, 'codons': None, 'geneId': 'ENSG00000268903', 'hgvsc': 'ENST00000426137.1:c.-64+100G>A', 'hgvsp': None, 'transcriptId': 'ENST00000426137', 'maneSelect': None, 'manePlusClinical': None, 'exon': None, 'intron': {'index': 1, 'total': 5}, 'alphamissense': {'pathogenicity': None}, 'loftee': {'isLofNagnag': None, 'lofFilters': None}, 'spliceregion': {'extended_intronic_splice_region_variant': False}, 'utrannotator': {'existingInframeOorfs': None, 'existingOutofframeOorfs': None, 'existingUorfs': None, 'fiveutrAnnotation': None, 'fiveutrConsequence': None}, 'refseqTranscriptId': None, 'biotype': 'protein_coding', 'majorConsequence': 'intron_variant', 'consequenceTerms': ['intron_variant'], 'transcriptRank': 0}],
+    },
+    'mainTranscriptId': 'ENST00000257261',
+    'selectedMainTranscriptId': None,
+    'sortedMotifFeatureConsequences': None,
+    'sortedRegulatoryFeatureConsequences': None,
+    'CAID': None,
+}
+
 GRCH37_VARIANT = {
     'key': 11,
     'variantId': '7-143270172-A-G',
@@ -1074,56 +1132,6 @@ MULTI_PROJECT_GCNV_VARIANT3 = {
     },
 }
 
-LOOKUP_GENOTYPE = {k: v for k, v in PROJECT_2_VARIANT1['genotypes']['I000015_na20885'].items() if k != 'individualGuid'}
-VARIANT_LOOKUP_VARIANT = {
-    **VARIANT1,
-    'liftedFamilyGuids': ['F000014_14'],
-    'familyGenotypes': {
-        VARIANT1['familyGuids'][0]: sorted([
-            {k: v for k, v in g.items() if k != 'individualGuid'} for gs in VARIANT1_BOTH_SAMPLE_TYPES['genotypes'].values() for g in gs
-        ], key=lambda x: (x['sampleType'] == 'WES', x['sampleId']), reverse=True),
-        'F000011_11': [{**LOOKUP_GENOTYPE, 'sampleType': 'WES'}, LOOKUP_GENOTYPE],
-        'F000014_14': [{
-            'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14',
-            'numAlt': 1, 'dp': 27, 'gq': 87, 'ab': 0.531, 'filters': [],
-        }],
-    }
-}
-SV_LOOKUP_VARIANT = {
-    **SV_VARIANT4,
-    'familyGenotypes': {
-        SV_VARIANT4['familyGuids'][0]: [{k: v for k, v in g.items() if k != 'individualGuid'} for g in SV_VARIANT4['genotypes'].values()],
-    },
-}
-GCNV_LOOKUP_VARIANT = {
-    **GCNV_VARIANT4,
-    'familyGenotypes': {
-        GCNV_VARIANT4['familyGuids'][0]: [{k: v for k, v in g.items() if k != 'individualGuid'} for g in GCNV_VARIANT4['genotypes'].values()],
-        'F000002_2_x': [
-            {**{k: v for k, v in g.items() if k != 'individualGuid'}, 'familyGuid': 'F000002_2_x'}
-            for individual_guid, g in GCNV_VARIANT4['genotypes'].items() if individual_guid != 'I000005_hg00732'
-        ],
-    },
-}
-GCNV_LOOKUP_VARIANT_3 = {
-    **MULTI_PROJECT_GCNV_VARIANT3,
-    'familyGenotypes': {
-        **{family_guid: [
-            {k: v for k, v in g.items() if k != 'individualGuid'} for g in MULTI_PROJECT_GCNV_VARIANT3['genotypes'].values()
-            if g['familyGuid'] == family_guid] for family_guid in MULTI_PROJECT_GCNV_VARIANT3['familyGuids']
-        },
-        'F000002_2_x': [
-            {**{k: v for k, v in g.items() if k != 'individualGuid'}, 'familyGuid': 'F000002_2_x'}
-            for individual_guid, g in GCNV_VARIANT3['genotypes'].items() if individual_guid != 'I000005_hg00732'
-        ],
-    },
-}
-for k in {'familyGuids', 'genotypes'}:
-    VARIANT_LOOKUP_VARIANT.pop(k)
-    SV_LOOKUP_VARIANT.pop(k)
-    GCNV_LOOKUP_VARIANT.pop(k)
-    GCNV_LOOKUP_VARIANT_3.pop(k)
-
 PROJECT_4_COMP_HET_VARIANT = {
     'key': 22,
     'variantId': '1-9310123-T-C',
@@ -1331,6 +1339,23 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'geneId': 'ENSG00000171621',
     'isManeSelect': False,
 }],
+23: [{
+    'alphamissensePathogenicity': None,
+    'canonical': 1,
+    'consequenceTerms': ['missense_variant'],
+    'extendedIntronicSpliceRegionVariant': False,
+    'fiveutrConsequence': None,
+    'geneId': 'ENSG00000227232',
+    'isManeSelect': False,
+}, {
+    'alphamissensePathogenicity': None,
+    'canonical': 1,
+    'consequenceTerms': ['intron_variant'],
+    'extendedIntronicSpliceRegionVariant': False,
+    'fiveutrConsequence': None,
+    'geneId': 'ENSG00000268903',
+    'isManeSelect': False,
+}],
 }
 
 def format_cached_variant(variant):
@@ -1393,3 +1418,76 @@ GCNV_GENE_COUNTS = {
     'ENSG00000277258': {'total': 1, 'families': {'F000002_2': 1}},
     'ENSG00000277972': {'total': 1, 'families': {'F000002_2': 1}},
 }
+
+EXPORT_DATA = [
+    ['chrom', 'pos', 'ref', 'alt', 'gene', 'gene_symbol', 'worst_consequence', 'seqr_ac', 'gnomad_genomes_freq',
+     'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'splice_ai', 'polyphen', 'sift', 'muttaster', 'fathmm',
+     'rsid', 'hgvsc', 'hgvsp', 'clinvar_clinical_significance', 'clinvar_gold_stars', 'family_id_1', 'tags_1', 'notes_1',
+     'family_id_2', 'tags_2', 'notes_2', 'sample_1', 'num_alt_alleles_1', 'filters_1', 'gq_1', 'ab_1', 'sample_2',
+     'num_alt_alleles_2', 'filters_2', 'gq_2', 'ab_2', 'sample_3', 'num_alt_alleles_3', 'filters_3', 'gq_3', 'ab_3',
+     'sample_4', 'num_alt_alleles_4', 'filters_4', 'gq_4', 'ab_4'],
+    ['1', '10439', 'AC', 'A', '', '', '', '8', '0.03444932', '0', '0.07842', '4.668', '', '', '', '', '', '', '',
+     'rs112766696', '', '', 'Likely_pathogenic', '', '2', '', '', '', '', '', 'HG00731', '1', '', '99', '0.5', 'HG00732',
+     '0', '', '0', '0', 'HG00733', '0', '', '20', '0', '', '', '', '', ''],
+    ['1', '38724419', 'T', 'G', 'ENSG00000177000', 'MTHFR', 'missense_variant', '10', '0.00344493', '0.00288997', '0.246152',
+     '25.9', '0.197', '2.001', '0', '0.1', '0.05', 'polymorphism', '0', 'rs1801131', 'ENST00000383791.8:c.156A>C', 'ENSP00000373301.3:p.Leu52Phe',
+     'Conflicting_classifications_of_pathogenicity', '1', '2', '', '', '', '', '', 'HG00731', '2', '', '99', '1', 'HG00732',
+     '1', '', '99', '0.625', 'HG00733', '0', '', '40', '0',  '', '', '', '', ''],
+    ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'CDC7', 'intron_variant', '7', '0.00380411', '0', '0.362681', '28.754', '',
+     '1.378', '0.01', '', '', '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '2', '', '', '3', '',
+     '', 'HG00731', '1', '', '99', '1', 'HG00732', '0', '', '99', '0.45946', 'HG00733', '1', '', '99', '0.40741',
+     'NA20870', '1', '', '99', '0.67857'],
+    ['1', '91511686', 'T', 'G', 'ENSG00000097046', 'CDC7', 'splice_donor_variant', '5', '0.00026519', '0', '0', '29.9',
+     '0.526', '9.491', '0', '0', '0', 'polymorphism', '0', '', 'ENST00000466716.5:c.-264+1G>A', '', '', '', '2', '', '', '', '', '',
+     'HG00731', '1', 'VQSRTrancheSNP99.95to100.00', '58', '0.27241', 'HG00732', '0', 'VQSRTrancheSNP99.95to100.00', '30',
+     '0', 'HG00733', '0', 'VQSRTrancheSNP99.95to100.00', '30', '0', '', '', '', '', ''],
+    ['14', '22438910', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '2', '', '',
+     '', '', '', 'HG00731', '1', '', '', '', 'HG00732', '0', '', '', '', 'HG00733', '0', '', '', '', '', '', '', '', ''],
+    ['16', '29809156', '', '', 'ENSG00000103495', '', 'COPY_GAIN', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+     '', '', '', '2', '', '', '', '', '', 'HG00731', '1', '', '', '', 'HG00732', '1', '', '', '', 'HG00733', '1', '', '',
+     '', '', '', '', '', ''],
+    ['17', '38717327', '', '', 'ENSG00000275023', 'CDC9', 'LOF', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+     '', '', '2', '', '', '', '', '', 'HG00731', '2', '', '', '', 'HG00732', '1', '', '', '', 'HG00733', '0', '', '', '',
+     '', '', '', '', ''],
+    ['17', '38721781', '', '', 'ENSG00000275023', 'CDC9', 'LOF', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',
+     '', '', '2', '', '', '', '', '', 'HG00731', '1', '', '', '', 'HG00732', '0', '', '', '', 'HG00733', '1', '', '', '',
+     '', '', '', '', ''],
+    ['21', '3343353', 'GAGA', 'G', 'ENSG00000227232', 'WASH7P', 'missense_variant', '1', '0', '0', '0', '', '', '', '', '', '',
+     '', '', '', 'ENST00000257261.10:c.131C>T', 'ENSP00000257261.6:p.Thr44Ile', '', '', '1',
+     'Tier 1 - Novel gene and phenotype (None)|Review (None)', '', '', '', '', 'NA19678', '1', '', '0', '0.16', '', '',
+     '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['M', '4429', 'G', 'A', 'ENSG00000210112', '', 'non_coding_transcript_exon_variant', '0', '', '', '', '', '', '', '',
+     '', '', '', '', 'rs1603219456', 'ENST00000387377.1:n.28G>A', '', 'Uncertain_significance', '1', '2', '', '', '', '',
+     '', 'HG00731', '1', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['M', '11597', 'A', 'G', 'ENSG00000198886', '', 'missense_variant', '0', '', '', '', '', '', '', '', '', '0', 'polymorphism', '',
+     '', 'ENST00000361381.2:c.838A>G', 'ENSP00000354961.2:p.Thr280Ala', '', '', '2', '', '', '', '', '', 'HG00731', '1',
+     '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+    ['M', '14783', 'T', 'C', 'ENSG00000198727', '', 'synonymous_variant', '1', '', '', '', '', '', '', '', '', '', '', '',
+     'rs193302982', 'ENST00000361789.2:c.37T>C', 'ENSP00000354554.2:p.Leu13=', 'Likely_pathogenic', '0', '2', '', '', '',
+     '', '', 'HG00731', '2', 'artifact_prone_site'],
+]
+
+SPLIT_FAMILY_EXPORT_DATA = [
+    ['chrom', 'pos', 'ref', 'alt', 'gene', 'gene_symbol', 'worst_consequence', 'seqr_ac', 'gnomad_genomes_freq',
+     'gnomad_exomes_freq', 'topmed_freq', 'cadd', 'revel', 'eigen', 'splice_ai', 'polyphen', 'sift', 'muttaster', 'fathmm',
+     'rsid', 'hgvsc', 'hgvsp', 'clinvar_clinical_significance', 'clinvar_gold_stars', 'family_id_1', 'tags_1', 'notes_1',
+     'sample_1', 'num_alt_alleles_1', 'filters_1', 'gq_1', 'ab_1', 'sample_2', 'num_alt_alleles_2', 'filters_2', 'gq_2',
+     'ab_2', 'sample_3', 'num_alt_alleles_3', 'filters_3', 'gq_3', 'ab_3'],
+    ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'CDC7', 'intron_variant', '7', '0.00380411', '0', '0.362681', '28.754', '',
+     '1.378', '0.01', '', '', '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '2', '', '', 'HG00731',
+     '1', '', '99', '1', 'HG00732', '0', '', '99', '0.45946', '', '', '', '', ''],
+    ['1', '91502721', 'G', 'A', 'ENSG00000097046', 'CDC7', 'intron_variant', '7', '0.00380411', '0', '0.362681', '28.754', '',
+     '1.378', '0.01', '', '', '', '', 'rs13447464', 'ENST00000234626.11:c.-63-251G>A', '', '', '', '3', '', '', 'HG00733',
+     '1', '', '99', '0.40741', 'NA20870', '1', '', '99', '0.67857', '', '', '', '', ''],
+    ['1', '91511686', 'T', 'G', 'ENSG00000097046', 'CDC7', 'splice_donor_variant', '5', '0.00026519', '0', '0', '29.9',
+     '0.526', '9.491', '0', '0', '0', 'polymorphism', '0', '', 'ENST00000466716.5:c.-264+1G>A', '', '', '', '2', '', '', 'HG00731', '1',
+     'VQSRTrancheSNP99.95to100.00', '58', '0.27241', 'HG00732', '0', 'VQSRTrancheSNP99.95to100.00', '30', '0', 'HG00733',
+     '0', 'VQSRTrancheSNP99.95to100.00', '30', '0'],
+]
+
+DEFAULT_PROJECT_FAMILIES = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000002_2', 'F000003_3', 'F000005_5']}]
+SINGLE_FAMILY_PROJECT_FAMILIES = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000002_2']}]
+MULTI_PROJECT_PROJECT_FAMILIES = [
+    *SINGLE_FAMILY_PROJECT_FAMILIES, {'projectGuid': 'R0003_test', 'familyGuids': ['F000011_11']}
+]
+SV_PROJECT_FAMILIES = [{'projectGuid': 'R0004_non_analyst_project', 'familyGuids': ['F000014_14']}]

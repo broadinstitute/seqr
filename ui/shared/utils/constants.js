@@ -390,9 +390,9 @@ const SHOW_ANALYSED_BY_ME = 'SHOW_ANALYSED_BY_ME'
 const SHOW_ANALYSED = 'SHOW_ANALYSED'
 const SHOW_NOT_ANALYSED = 'SHOW_NOT_ANALYSED'
 
-const hasMatchingSampleFilter = isMatchingSample => (family, user, samplesByFamily) => (
-  (family.sampleTypes || samplesByFamily[family.familyGuid] || []).some(
-    sample => sample.isActive && isMatchingSample(sample),
+const hasMatchingDatasetFilter = isMatchingDataset => (family, user, activeDatasetsByFamily) => (
+  (family.sampleTypes || activeDatasetsByFamily[family.familyGuid] || []).some(
+    sample => isMatchingDataset(sample),
   ))
 
 export const ASSIGNED_TO_ME_FILTER = {
@@ -447,7 +447,7 @@ export const CATEGORY_FAMILY_FILTERS = {
     {
       value: SHOW_DATA_LOADED,
       name: 'Data Loaded',
-      createFilter: hasMatchingSampleFilter(() => true),
+      createFilter: hasMatchingDatasetFilter(() => true),
     },
     {
       value: `${SHOW_DATA_LOADED}_RNA`,
@@ -457,7 +457,7 @@ export const CATEGORY_FAMILY_FILTERS = {
     ...[DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS].map(dataType => ({
       value: `${SHOW_DATA_LOADED}_${dataType}`,
       name: `Data Loaded -${DATASET_TITLE_LOOKUP[dataType]}`,
-      createFilter: hasMatchingSampleFilter(
+      createFilter: hasMatchingDatasetFilter(
         ({ datasetType }) => datasetType === dataType,
       ),
     })),
@@ -2089,7 +2089,6 @@ export const VARIANT_METADATA_COLUMNS = [
   { name: 'phenotype_contribution' },
   { name: 'partial_contribution_explained' },
   { name: 'notes' },
-  { name: 'ClinGen_allele_ID' },
 ]
 
 export const BASE_FAMILY_METADATA_COLUMNS = [

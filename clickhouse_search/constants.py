@@ -1,10 +1,6 @@
 from seqr.models import Individual
 
-VCF_FILE_EXTENSIONS = ('.vcf', '.vcf.gz', '.vcf.bgz')
-
 MAX_VARIANTS = 10000
-MAX_EXPORT_VARIANTS = 1000
-MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 
 XPOS_SORT_KEY = 'xpos'
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
@@ -65,7 +61,6 @@ NEW_SV_FIELD = 'new_structural_variants'
 SV_CONSEQUENCES_FIELD = 'structural_consequence'
 SV_TYPE_FILTER_FIELD = 'structural'
 SV_ANNOTATION_TYPES = {SV_CONSEQUENCES_FIELD, SV_TYPE_FILTER_FIELD, NEW_SV_FIELD}
-ALL_DATA_TYPES = 'ALL'
 
 CLINVAR_KEY = 'clinvar'
 CLINVAR_PATH_FILTER = 'pathogenic'

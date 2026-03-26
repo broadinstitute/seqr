@@ -2,13 +2,16 @@ from django.core.management import call_command
 import responses
 
 from seqr.models import Family, VariantTagType, VariantTag, Sample
-from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 
 
-class TransferFamiliesTest(object):
+class TransferFamiliesClickhouseTest(AnvilAuthenticationTestCase):
+    fixtures = ['users', '1kg_project']
 
-    DEACTIVATE_SEARCH = True
-    LOGS = []
+    LOGS = [
+        ('Disabled search for 7 samples in the following 1 families: 2', None),
+        ('Triggered Delete Families', {'detail':  {'project_guid': 'R0001_1kg', 'family_guids': ['F000002_2', 'F000004_4']}}),
+    ]
 
     @responses.activate
     def test_command(self):
@@ -44,24 +47,8 @@ class TransferFamiliesTest(object):
 
         samples = Sample.objects.filter(individual__family=family)
         self.assertEqual(samples.count(), 7)
-        self.assertEqual(samples.filter(is_active=True).count(), 0 if self.DEACTIVATE_SEARCH else 7)
+        self.assertEqual(samples.filter(is_active=True).count(), 0)
 
         family = Family.objects.get(family_id='4')
         self.assertEqual(family.project.guid, 'R0003_test')
         self.assertEqual(family.individual_set.count(), 1)
-
-
-class TransferFamiliesLocalTest(TransferFamiliesTest, AuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
-
-    DEACTIVATE_SEARCH = False
-
-
-class TransferFamiliesClickhouseTest(TransferFamiliesTest, AnvilAuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
-
-    ES_HOSTNAME = ''
-    LOGS = [
-        ('Disabled search for 7 samples in the following 1 families: 2', None),
-        ('Triggered Delete Families', {'detail':  {'project_guid': 'R0001_1kg', 'family_guids': ['F000002_2', 'F000004_4']}}),
-    ]

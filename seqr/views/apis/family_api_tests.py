@@ -16,7 +16,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
     FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
-from seqr.models import FamilyAnalysedBy, AnalysisGroup
+from seqr.models import FamilyAnalysedBy, AnalysisGroup, Sample
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -251,6 +251,12 @@ class FamilyAPITest(object):
         self.assertEqual(response.reason_phrase, "'families' not specified")
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({'families': [
+            {'familyGuid': '2', 'familyId': '2', 'description': 'Test description 1'}
+        ]}))
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error'], 'Invalid family guids: 2')
+
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'families': [
             {'familyGuid': FAMILY_GUID, 'familyId': '2', 'description': 'Test description 1'}
         ]}))
         self.assertEqual(response.status_code, 400)
@@ -291,7 +297,6 @@ class FamilyAPITest(object):
             'families': [{'familyGuid': 'F000012_12'}]}))
         self.assertEqual(response.status_code, 200)
 
-    @mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', 'testhost')
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
     def test_delete_families_handler(self, mock_pm_group, mock_internal_namespaces):
@@ -312,11 +317,6 @@ class FamilyAPITest(object):
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active MME submission: NA19675_1'])
-
-        with mock.patch('seqr.utils.search.elasticsearch.es_utils.ELASTICSEARCH_SERVICE_HOSTNAME', ''):
-            response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
-        self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to delete individuals with active MME submission: NA19675_1',
             'Unable to delete individuals with active search sample: HG00731, HG00732, HG00733, NA19675_1, NA19678',
@@ -324,6 +324,7 @@ class FamilyAPITest(object):
 
         # Test success
         MatchmakerSubmission.objects.update(deleted_date=datetime.now())
+        Sample.objects.update(is_active=False)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 200)
@@ -495,7 +496,7 @@ class FamilyAPITest(object):
         self.assertEqual(response_json['F000014_14']['displayName'], expected_id)
 
     def _anvil_enabled(self):
-        return not self.ES_HOSTNAME
+        return bool(self.MOCK_AIRTABLE_KEY)
 
     @mock.patch('seqr.views.utils.file_utils.anvil_enabled', lambda: False)
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')

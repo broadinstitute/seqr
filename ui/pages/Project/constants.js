@@ -367,18 +367,16 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
-    createSortKeyGetter: (individualsByGuid, samplesByFamily) => (family) => {
-      const loadedSamples = samplesByFamily[family.familyGuid] || []
-      return loadedSamples.length ? loadedSamples[loadedSamples.length - 1].loadedDate : '2000-01-01T01:00:00.000Z'
-    },
+    createSortKeyGetter: (individualsByGuid, minMaxDatasetsByFamily) => family => (
+      minMaxDatasetsByFamily[family.familyGuid][1]?.loadedDate || '2000-01-01T01:00:00.000Z'
+    ),
   },
   {
     value: SORT_BY_DATA_FIRST_LOADED_DATE,
     name: 'Date First Loaded',
-    createSortKeyGetter: (individualsByGuid, samplesByFamily) => (family) => {
-      const loadedSamples = samplesByFamily[family.familyGuid] || []
-      return loadedSamples.length ? loadedSamples[0].loadedDate : '2000-01-01T01:00:00.000Z'
-    },
+    createSortKeyGetter: (individualsByGuid, minMaxDatasetsByFamily) => family => (
+      minMaxDatasetsByFamily[family.familyGuid][0]?.loadedDate || '2000-01-01T01:00:00.000Z'
+    ),
   },
   {
     value: SORT_BY_ANALYSIS_STATUS,
@@ -506,12 +504,12 @@ export const CASE_REVIEW_INDIVIDUAL_EXPORT_DATA = [
 export const SAMPLE_EXPORT_DATA = [
   { header: 'Family ID', field: 'familyId' },
   { header: 'Individual ID', field: 'individualId' },
-  { header: 'Sample ID', field: 'sampleId' },
   { header: 'Loaded Date', field: 'loadedDate' },
   { header: 'Sample Type', field: 'sampleType' },
+  { header: 'Dataset Type', field: 'datasetType' },
 ]
 
-export const TAG_FIELD_NAME = 'tags'
+const TAG_FIELD_NAME = 'tags'
 
 export const TAG_FORM_FIELD = {
   name: TAG_FIELD_NAME,

@@ -11,7 +11,7 @@ export const getFamiliesByGuid = state => state.familiesByGuid
 export const getFamilyNotesByGuid = state => state.familyNotesByGuid
 export const getFamilyDetailsLoading = state => state.familyDetailsLoading
 export const getIndividualsByGuid = state => state.individualsByGuid
-export const getSamplesByGuid = state => state.samplesByGuid
+const getSamplesByGuid = state => state.samplesByGuid
 export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
 export const getAnalysisGroupIsLoading = state => state.analysisGroupsLoading.isLoading
@@ -56,7 +56,6 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
-export const getSamplesGroupedByProjectGuid = createSelector(getSamplesByGuid, groupEntitiesByProjectGuid)
 
 const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
   if (!acc[o.familyGuid]) {
@@ -65,6 +64,53 @@ const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
   acc[o.familyGuid].push(o)
   return acc
 }, {})
+
+export const getProjectDatasetTypes = createSelector(
+  getProjectsByGuid,
+  getSamplesByGuid,
+  (projectsByGuid, samplesByGuid) => {
+    const projectDatasetTypes = Object.values(projectsByGuid).reduce(
+      (acc, { projectGuid, datasetTypes }) => ({ ...acc, [projectGuid]: datasetTypes }), {},
+    )
+    const sampleDatasetTypes = Object.values(samplesByGuid).reduce(
+      (acc, { projectGuid, datasetType, isActive }) => {
+        if (projectDatasetTypes[projectGuid] || !isActive) {
+          return acc
+        }
+        if (!acc[projectGuid]) {
+          acc[projectGuid] = new Set()
+        }
+        acc[projectGuid].add(datasetType)
+        return acc
+      }, {},
+    )
+    return { ...projectDatasetTypes, ...sampleDatasetTypes }
+  },
+)
+
+export const getDatasetsByIndividual = createSelector(
+  getSamplesByGuid,
+  samplesByGuid => Object.values(samplesByGuid).sort(
+    (a, b) => a.loadedDate.localeCompare(b.loadedDate),
+  ).reduce((acc, sample) => {
+    const { individualGuid, isActive, sampleType, datasetType, loadedDate } = sample
+    if (!acc[individualGuid]) {
+      acc[individualGuid] = []
+    }
+    acc[individualGuid].push({ isActive, sampleType, datasetType, loadedDate: loadedDate.split('T')[0] })
+    return acc
+  }, {}),
+)
+
+export const getActiveDatasetsByIndividual = createSelector(
+  getDatasetsByIndividual,
+  datasetsByIndividual => Object.entries(datasetsByIndividual).reduce((acc, [individualGuid, datasets]) => ({
+    ...acc,
+    [individualGuid]: datasets.filter(({ isActive }) => isActive).map(
+      ({ sampleType, datasetType, loadedDate }) => ({ sampleType, datasetType, loadedDate, individualGuid }),
+    ),
+  }), {}),
+)
 
 export const getNotesByFamilyType = createSelector(
   getFamilyNotesByGuid,
@@ -131,23 +177,46 @@ export const getSortedIndividualsByFamily = createSelector(
   groupByFamilyGuid,
 )
 
-const getSortedSamples = createSelector(
-  getSamplesByGuid,
-  samplesByGuid => Object.values(samplesByGuid).sort((a, b) => a.loadedDate.localeCompare(b.loadedDate)),
+export const getActiveDatasetsByFamily = createSelector(
+  getFamiliesByGuid,
+  getActiveDatasetsByIndividual,
+  (familiesByGuid, activeDatasetsByIndividual) => Object.entries(familiesByGuid).reduce(
+    (acc, [familyGuid, { individualGuids = [] }]) => ({
+      ...acc,
+      [familyGuid]: individualGuids.reduce(
+        (familyAcc, individualGuid) => [...familyAcc, ...(activeDatasetsByIndividual[individualGuid] || [])], [],
+      ),
+    }),
+    {},
+  ),
 )
 
-export const getSamplesByFamily = createSelector(
-  getSortedSamples,
-  sortedSamples => groupByFamilyGuid(sortedSamples || []),
+export const getMinMaxDatasetsByFamily = createSelector(
+  getFamiliesByGuid,
+  getDatasetsByIndividual,
+  (familiesByGuid, datasetsByIndividual) => Object.entries(familiesByGuid).reduce(
+    (acc, [familyGuid, { individualGuids }]) => ({
+      ...acc,
+      [familyGuid]: individualGuids.reduce(([minLoaded, maxLoaded], individualGuid) => {
+        const individualDatasets = datasetsByIndividual[individualGuid] || []
+        if (individualDatasets.length === 0) {
+          return [minLoaded, maxLoaded]
+        }
+        const endIndex = individualDatasets.length - 1
+        return [
+          minLoaded?.loadedDate < individualDatasets[0]?.loadedDate ? minLoaded : individualDatasets[0],
+          maxLoaded?.loadedDate > individualDatasets[endIndex]?.loadedDate ? maxLoaded : individualDatasets[endIndex],
+        ]
+      }, [null, null]),
+    }),
+    {},
+  ),
 )
 
 export const getHasActiveSearchSampleByFamily = createSelector(
-  getSamplesByFamily,
-  samplesByFamily => Object.entries(samplesByFamily).reduce(
-    (acc, [familyGuid, familySamples]) => ({
-      ...acc,
-      [familyGuid]: familySamples.some(({ isActive }) => isActive),
-    }), {},
+  getActiveDatasetsByFamily,
+  activeDatasetsByFamily => Object.entries(activeDatasetsByFamily).reduce(
+    (acc, [familyGuid, familyDatasets]) => ({ ...acc, [familyGuid]: familyDatasets.length > 0 }), {},
   ),
 )
 
@@ -428,8 +497,8 @@ const isAnalysedBy = (family, analysedByFilter, user, analysedByOptions) => {
 
 export const familyPassesFilters = createSelector(
   getUser,
-  getSamplesByFamily,
-  (user, samplesByFamily) => (
+  getActiveDatasetsByFamily,
+  (user, activeDatasetsByFamily) => (
     family, groupedFilters, analysedByOptions, categoryFilters = CATEGORY_FAMILY_FILTERS,
   ) => {
     if (groupedFilters.analysedBy && !isAnalysedBy(family, groupedFilters.analysedBy, user, analysedByOptions)) {
@@ -439,7 +508,7 @@ export const familyPassesFilters = createSelector(
       const filters = categoryFilters[key]?.filter(
         opt => groupVals.includes(opt.value) && opt.createFilter,
       ).map(opt => opt.createFilter)
-      return !filters?.length || filters.some(filter => filter(family, user, samplesByFamily))
+      return !filters?.length || filters.some(filter => filter(family, user, activeDatasetsByFamily))
     })
   },
 )

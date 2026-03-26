@@ -17,12 +17,13 @@ import {
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import {
-  getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getSamplesByGuid, getGenesById, getUser,
+  getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getGenesById, getUser,
   getAnalysisGroupsGroupedByProjectGuid, getSavedVariantsByGuid, getSortedIndividualsByFamily,
   getMmeResultsByGuid, getMmeSubmissionsByGuid, getHasActiveSearchSampleByFamily, getSelectableTagTypesByProject,
-  getVariantTagsByGuid, getUserOptionsByUsername, getSamplesByFamily, getNotesByFamilyType,
-  getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual,
+  getVariantTagsByGuid, getUserOptionsByUsername, getNotesByFamilyType,
+  getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual, getActiveDatasetsByIndividual,
   getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
+  getDatasetsByIndividual, getActiveDatasetsByFamily, getMinMaxDatasetsByFamily,
 } from 'redux/selectors'
 
 import {
@@ -134,11 +135,9 @@ export const getProjectAnalysisGroupFamilySizeHistogram = createSelector(
 
 export const getProjectAnalysisGroupDataLoadedFamilySizeHistogram = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
-  getSamplesByFamily,
-  (familiesByGuid, samplesByFamily) => getFamilySizeHistogram(Object.values(familiesByGuid).map(((family) => {
-    const sampleIndividuals = new Set((samplesByFamily[family.familyGuid] || []).filter(
-      sample => sample.isActive,
-    ).map(sample => sample.individualGuid))
+  getActiveDatasetsByFamily,
+  (familiesByGuid, datasetsByFamily) => getFamilySizeHistogram(Object.values(datasetsByFamily).map(((family) => {
+    const sampleIndividuals = new Set((datasetsByFamily[family.familyGuid] || []).map(sample => sample.individualGuid))
     const hasSampleParents = (family.parents || []).reduce(
       (acc, { individualGuid, maternalGuid, paternalGuid }) => {
         const hasSampleMaternal = sampleIndividuals.has(maternalGuid)
@@ -456,16 +455,16 @@ export const getVisibleFamilies = createSelector(
 export const getVisibleFamiliesInSortedOrder = createSelector(
   getVisibleFamilies,
   getIndividualsByGuid,
-  getSamplesByFamily,
+  getMinMaxDatasetsByFamily,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilies, individualsByGuid, samplesByFamily, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilies, individualsByGuid, minMaxDatasetsByFamily, familiesSortOrder, familiesSortDirection) => {
     if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder] ||
       visibleFamilies.some(({ familyId }) => !familyId)) { // families have been loaded without any core fields
       return visibleFamilies
     }
 
-    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, samplesByFamily)
+    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](individualsByGuid, minMaxDatasetsByFamily)
     return visibleFamilies.slice(0).sort((a, b) => getSortKey(a).localeCompare(getSortKey(b)) * familiesSortDirection)
   },
 )
@@ -481,50 +480,40 @@ export const getEntityExportConfig = ({ projectName, tableName, fileName, fields
 
 const getFamiliesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
-  getSamplesByFamily,
+  getMinMaxDatasetsByFamily,
   getNotesByFamilyType,
-  (visibleFamilies, samplesByFamily, notesByFamilyType) => visibleFamilies.reduce((acc, family) => [...acc, {
+  (visibleFamilies, minMaxDatasetsByFamily, notesByFamilyType) => visibleFamilies.reduce((acc, family) => [...acc, {
     ...family,
     ...FAMILY_NOTES_FIELDS.reduce((noteAcc, { id, noteType }) => (
       { ...noteAcc, [id]: (notesByFamilyType[family.familyGuid] || {})[noteType] }), {}),
-    [FAMILY_FIELD_FIRST_SAMPLE]: (samplesByFamily[family.familyGuid] || [])[0],
+    [FAMILY_FIELD_FIRST_SAMPLE]: (minMaxDatasetsByFamily[family.familyGuid] || [])[0],
   }], []),
-)
-
-const getSamplesByIndividual = createSelector(
-  getSamplesByGuid,
-  samplesByGuid => Object.values(samplesByGuid).reduce((acc, sample) => {
-    if (!acc[sample.individualGuid]) {
-      acc[sample.individualGuid] = []
-    }
-    acc[sample.individualGuid].push(sample)
-    return acc
-  }, {}),
 )
 
 const getIndividualsExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
   getSortedIndividualsByFamily,
-  getSamplesByIndividual,
-  (families, individualsByFamily, samplesByIndividual) => families.reduce((acc, family) => [
+  getActiveDatasetsByIndividual,
+  (families, individualsByFamily, activeDatasetsByIndividual) => families.reduce((acc, family) => [
     ...acc, ...(individualsByFamily[family.familyGuid] || []).map(individual => ({
       ...individual,
       [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_HAS_DATA_FIELD]: (
-        samplesByIndividual[individual.individualGuid] || []).some(({ isActive }) => isActive),
+      [INDIVIDUAL_HAS_DATA_FIELD]: (activeDatasetsByIndividual[individual.individualGuid] || []).length > 0,
     }))], []),
 )
 
 const getSamplesExportData = createSelector(
   getVisibleFamiliesInSortedOrder,
-  getIndividualsByGuid,
-  getSamplesByFamily,
-  (visibleFamilies, individualsByGuid, samplesByFamily) => visibleFamilies.reduce((acc, family) => [
-    ...acc, ...(samplesByFamily[family.familyGuid] || []).map(sample => ({
-      ...sample,
-      [FAMILY_FIELD_ID]: family.familyId,
-      [INDIVIDUAL_FIELD_ID]: individualsByGuid[sample.individualGuid]?.individualId,
-    }))], []),
+  getSortedIndividualsByFamily,
+  getDatasetsByIndividual,
+  (visibleFamilies, individualsByFamily, datasetsByIndividual) => visibleFamilies.reduce((acc, family) => [
+    ...acc, ...(individualsByFamily[family.familyGuid] || []).reduce((indivAcc, { individualGuid, individualId }) => ([
+      ...indivAcc, ...(datasetsByIndividual[individualGuid] || []).map(sample => ({
+        ...sample,
+        [FAMILY_FIELD_ID]: family.familyId,
+        [INDIVIDUAL_FIELD_ID]: individualId,
+      })),
+    ]), [])], []),
 )
 
 export const getProjectExportUrls = createSelector(

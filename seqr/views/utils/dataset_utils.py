@@ -2,13 +2,12 @@ from collections import defaultdict
 from datetime import datetime
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import F, Q
-from django.utils import timezone
 import gzip
 import json
 import os
 from tqdm import tqdm
 
-from seqr.models import Sample, Individual, Family, Project, RnaSample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
+from seqr.models import Individual, Project, RnaSample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
 from seqr.utils.file_utils import file_iter, is_google_bucket_file_path, run_gsutil_with_wait
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -20,102 +19,6 @@ from seqr.views.utils.permissions_utils import is_internal_anvil_project, projec
 from reference_data.models import GeneInfo
 
 logger = SeqrLogger(__name__)
-
-
-def load_mapping_file(mapping_file_path, user):
-    file_content = parse_file(mapping_file_path, file_iter(mapping_file_path, user=user))
-    return load_mapping_file_content(file_content)
-
-
-def load_mapping_file_content(file_content):
-    id_mapping = {}
-    for line in file_content:
-        if len(line) != 2:
-            raise ValueError("Must contain 2 columns: " + ', '.join(line))
-        id_mapping[line[0]] = line[1]
-    return id_mapping
-
-
-def _find_or_create_samples(
-        sample_project_tuples,
-        projects,
-        user,
-        sample_type,
-        dataset_type,
-        sample_id_to_individual_id_mapping,
-        raise_no_match_error=False,
-        raise_unmatched_error_template=None,
-        sample_data=None,
-):
-    sample_params = {'sample_type': sample_type, 'dataset_type': dataset_type}
-    sample_params.update(sample_data or {})
-
-    samples_by_key = {
-        (s.pop('sample_id'), s.pop('individual__family__project__name')): s
-        for s in Sample.objects.filter(
-            individual__family__project__in=projects,
-            sample_id__in={sample_id for sample_id, _ in sample_project_tuples},
-            **sample_params
-        ).values('guid', 'individual_id', 'sample_id', 'individual__family__project__name')
-    }
-    existing_samples = {
-        key: s for key, s in samples_by_key.items() if key in sample_project_tuples
-    }
-    remaining_sample_keys = set(sample_project_tuples) - set(existing_samples.keys())
-
-    matched_individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
-    loaded_date = timezone.now()
-    samples_guids = [sample['guid'] for sample in existing_samples.values()]
-    individual_ids = {sample['individual_id'] for sample in existing_samples.values()}
-    if len(remaining_sample_keys) > 0:
-        remaining_individuals_dict = _get_individuals_by_key(projects, matched_individual_ids)
-
-        # find Individual records with exactly-matching individual_ids
-        sample_id_to_individual_record = {}
-        for sample_key in remaining_sample_keys:
-            individual_key = _get_individual_key(sample_key, sample_id_to_individual_id_mapping)
-            if individual_key not in remaining_individuals_dict:
-                continue
-            sample_id_to_individual_record[sample_key] = remaining_individuals_dict[individual_key]
-            del remaining_individuals_dict[individual_key]
-
-        logger.debug(str(len(sample_id_to_individual_record)) + " matched individual ids", user)
-
-        remaining_sample_keys -= set(sample_id_to_individual_record.keys())
-        if raise_no_match_error and len(remaining_sample_keys) == len(sample_project_tuples):
-            raise ValueError(
-                'None of the individuals or samples in the project matched the {} expected sample id(s)'.format(len(sample_project_tuples)))
-        if raise_unmatched_error_template and remaining_sample_keys:
-            raise ValueError(raise_unmatched_error_template.format(
-                sample_ids=(', '.join(sorted([sample_id for sample_id, _ in remaining_sample_keys])))))
-
-        # create new Sample records for Individual records that matches
-        new_sample_args = {
-            sample_key: {
-                'individual_id': individual['id'],
-                'sample_id': sample_key[0],
-            } for sample_key, individual in sample_id_to_individual_record.items()
-        }
-        individual_ids.update({sample['individual_id'] for sample in new_sample_args.values()})
-        new_sample_models = _create_samples(
-            new_sample_args.values(),
-            user,
-            loaded_date=loaded_date,
-            **sample_params,
-        )
-        samples_guids += [s.guid for s in new_sample_models]
-
-    return samples_guids, individual_ids, loaded_date
-
-
-def _create_samples(sample_data, user, loaded_date=timezone.now(), **kwargs):
-    new_samples = [
-        Sample(
-            loaded_date=loaded_date,
-            **created_sample_data,
-            **kwargs,
-        ) for created_sample_data in sample_data]
-    return Sample.bulk_create(user, new_samples)
 
 
 def _create_rna_samples(sample_data, sample_guid_ids_to_load, user, **kwargs):
@@ -136,103 +39,6 @@ def _get_rna_sample_data_by_key(values=None, **kwargs):
         tuple(s.pop(k) for k in key_fields): s
         for s in RnaSample.objects.filter(**kwargs).values('guid', *key_fields, **(values or {}))
     }
-
-
-def _get_individuals_by_key(projects, matched_individual_ids=None):
-    individuals = Individual.objects.filter(family__project__in=projects)
-    if matched_individual_ids:
-        individuals = individuals.exclude(id__in=matched_individual_ids)
-    return {
-        (i['individual_id'], i.pop('family__project__name')): i
-        for i in individuals.values('id', 'individual_id', 'family__project__name')
-    }
-
-
-def _get_individual_key(sample_key, sample_id_to_individual_id_mapping):
-    return ((sample_id_to_individual_id_mapping or {}).get(sample_key[0], sample_key[0]), sample_key[1])
-
-
-def _validate_samples_families(samples_guids, included_family_guids, sample_type, dataset_type, expected_families=None):
-    missing_individuals = Individual.objects.filter(
-        family__guid__in=included_family_guids,
-        sample__is_active=True,
-        sample__dataset_type=dataset_type,
-        sample__sample_type=sample_type,
-    ).exclude(sample__guid__in=samples_guids).select_related('family')
-    missing_family_individuals = defaultdict(list)
-    for individual in missing_individuals:
-        missing_family_individuals[individual.family].append(individual)
-
-    if missing_family_individuals:
-        raise ValueError(
-            'The following families are included in the callset but are missing some family members: {}.'.format(
-                ', '.join(sorted(
-                    ['{} ({})'.format(family.family_id, ', '.join(sorted([i.individual_id for i in missing_indivs])))
-                     for family, missing_indivs in missing_family_individuals.items()]
-                ))))
-
-    if expected_families:
-        missing_families = [f.family_id for f in expected_families if f.guid not in included_family_guids]
-        if missing_families:
-            raise ValueError(
-                'The following families have saved variants but are missing from the callset: {}.'.format(
-                    ', '.join(missing_families)
-                ))
-
-
-def _update_variant_samples(samples_guids, individual_ids, user, dataset_type, sample_type, sample_data):
-
-    activated_sample_guids = Sample.bulk_update(user, {
-        'is_active': True,
-        **sample_data,
-    }, guid__in=samples_guids, is_active=False)
-
-    inactivate_samples = Sample.objects.filter(
-        individual_id__in=individual_ids,
-        is_active=True,
-        dataset_type=dataset_type,
-        sample_type=sample_type,
-    ).exclude(guid__in=samples_guids)
-
-    inactivate_sample_guids = Sample.bulk_update(user, {'is_active': False}, queryset=inactivate_samples)
-
-    return activated_sample_guids, inactivate_sample_guids
-
-
-def match_and_update_search_samples(
-        projects, sample_project_tuples, sample_type, dataset_type, sample_data, user, expected_families=None,
-        sample_id_to_individual_id_mapping=None, raise_unmatched_error_template='Matches not found for sample ids: {sample_ids}',
-):
-    samples_guids, individual_ids, loaded_date = _find_or_create_samples(
-        sample_project_tuples=sample_project_tuples,
-        projects=projects,
-        user=user,
-        sample_id_to_individual_id_mapping=sample_id_to_individual_id_mapping,
-        raise_no_match_error=not raise_unmatched_error_template,
-        raise_unmatched_error_template=raise_unmatched_error_template,
-        sample_type=sample_type,
-        dataset_type=dataset_type,
-        sample_data=sample_data,
-    )
-
-    included_families = dict(Family.objects.filter(individual__id__in=individual_ids).values_list('guid', 'analysis_status'))
-    _validate_samples_families(samples_guids, included_families.keys(), sample_type, dataset_type, expected_families=expected_families)
-
-    activated_sample_guids, inactivated_sample_guids = _update_variant_samples(
-        samples_guids, individual_ids, user, dataset_type, sample_type, sample_data={'loaded_date': loaded_date, **sample_data})
-    updated_samples = Sample.objects.filter(guid__in=activated_sample_guids)
-
-    family_guids_to_update = [
-        family_guid for family_guid, analysis_status in included_families.items()
-        if analysis_status in {Family.ANALYSIS_STATUS_WAITING_FOR_DATA, Family.ANALYSIS_STATUS_LOADING_FAILED}
-    ]
-    Family.bulk_update(
-        user, {'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, guid__in=family_guids_to_update)
-
-    previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
-    new_samples = updated_samples.exclude(individual_id__in=previous_loaded_individuals)
-
-    return new_samples, updated_samples, inactivated_sample_guids, family_guids_to_update
 
 
 def _parse_tsv_row(row):
@@ -465,9 +271,10 @@ def _process_rna_errors(gene_ids, missing_required_fields, unmatched_samples, ig
         ]
         misconfigured = defaultdict(set)
         for sample_id in sorted(unmatched_samples.intersection(set((misconfigured_samples or {}).keys()))):
-            misconfigured[misconfigured_samples[sample_id]].add(sample_id)
+            for error in misconfigured_samples[sample_id]:
+                misconfigured[error].add(sample_id)
         unmatched += [
-            (samples, f'that are improperly configured in Airtable with {error}') for error, samples in misconfigured.items()
+            (samples, f'that are improperly configured in Airtable with {error}') for error, samples in sorted(misconfigured.items())
         ]
         for samples, _ in unmatched:
             unmatched_samples -= samples

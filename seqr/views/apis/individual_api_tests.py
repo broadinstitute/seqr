@@ -364,13 +364,18 @@ class IndividualAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
 
+        response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
+            'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
+        }))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA19678'])
+        Sample.objects.filter(guid__in=['S000130_na19678', 'S000143_na20885', 'S000173_na21987']).update(is_active=False)
+
         # send valid requests
         response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
         }))
-        self._assert_expected_delete_individuals(response, mock_pm_group)
 
-    def _assert_expected_delete_individuals(self, response, mock_pm_group):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'individualsByGuid', 'familiesByGuid'})
@@ -613,7 +618,8 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 200)
 
     def _assert_expected_reload_calls(self, project_guid):
-        self.assertEqual(len(responses.calls), 0)
+        self.assertEqual(len(responses.calls), 1)
+        self.assertDictEqual(json.loads(responses.calls[0].request.body), {'project_guids': [project_guid]})
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.pedigree_info_utils.NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES')
@@ -1213,9 +1219,7 @@ class IndividualAPITest(object):
         saved_variants = SavedVariant.objects.filter(
             varianttag__variant_tag_type__name='GREGoR Finding'
         ).order_by('family_id', 'variant_id').distinct().values(
-            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json__genomeVersion',
-            'saved_variant_json__transcripts', 'saved_variant_json__genotypes', 'saved_variant_json__mainTranscriptId',
-            'saved_variant_json__hgvsc', 'key', 'dataset_type', 'genotypes', 'gene_ids',
+            'guid', 'variant_id', 'xpos', 'family__guid', 'saved_variant_json', 'key', 'dataset_type', 'genotypes', 'gene_ids', 'main_transcript',
         )
         self.assertEqual(len(saved_variants), 4)
         self.assertDictEqual(saved_variants[0], {
@@ -1223,15 +1227,17 @@ class IndividualAPITest(object):
             'variant_id': '1-248367227-TC-T',
             'xpos': 1248367227,
             'family__guid': 'F000012_12',
-            'saved_variant_json__genomeVersion': None,
-            'saved_variant_json__transcripts': None,
-            'saved_variant_json__genotypes': None,
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
+            'saved_variant_json': {},
             'key': 100,
             'dataset_type': 'SNV_INDEL',
             'genotypes': mock.ANY,
             'gene_ids': ['ENSG00000240361', 'ENSG00000135953'],
+            'main_transcript': {
+                'aminoAcids': None, 'biotype': 'protein_coding', 'canonical': 1, 'codons': 'Gtg/Atg',
+                'consequenceTerms': ['intron_variant'], 'geneId': 'ENSG00000240361', 'hgvsc': 'ENST00000262738.3:c.3955G>A',
+                'hgvsp': 'ENST00000505820.2:c.1586-17C>G', 'loftee': [None, []], 'majorConsequence': 'intron_variant',
+                'transcriptId': 'ENST00000505820', 'transcriptRank': 0,
+            },
         })
         self.assertEqual(len(saved_variants[0]['genotypes']), 2)
         self.assertDictEqual(saved_variants[1], {
@@ -1239,16 +1245,24 @@ class IndividualAPITest(object):
             'variant_id': '1-249045487-A-G',
             'xpos': 1249045487,
             'family__guid': 'F000012_12',
-            'saved_variant_json__genomeVersion': '37',
-            'saved_variant_json__transcripts': {
-                'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+            'saved_variant_json': {
+                'alt': 'G',
+                'chrom': '1',
+                'genomeVersion': '37',
+                'genotypes': {created_individual_guid: {'numAlt': 1}},
+                'mainTranscriptId': None,
+                'pos': 249045487,
+                'ref': 'A',
+                'variantId': '1-249045487-A-G',
+                'xpos': 1249045487,
+                'transcripts': {
+                    'ENSG00000240361': [{'hgvsc': None, 'hgvsp': None, 'transcriptId': None}],
+                },
             },
-            'saved_variant_json__genotypes': {created_individual_guid: {'numAlt': 1}},
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
+            'main_transcript': {},
             'key': None,
-            'dataset_type': None,
-            'genotypes': {},
+            'dataset_type': 'SNV_INDEL',
+            'genotypes': {created_individual_guid: {'numAlt': 1}},
             'gene_ids': ['ENSG00000240361'],
         })
         new_family_genotypes = {new_family_individual_guid: {'numAlt': 2}}
@@ -1257,15 +1271,12 @@ class IndividualAPITest(object):
             'variant_id': '1-248367227-TC-T',
             'xpos': 1248367227,
             'family__guid': new_family_guid,
-            'saved_variant_json__genomeVersion': None,
-            'saved_variant_json__transcripts': None,
-            'saved_variant_json__genotypes': None,
-            'saved_variant_json__mainTranscriptId': None,
-            'saved_variant_json__hgvsc': None,
+            'saved_variant_json': {},
             'key': 100,
             'dataset_type': 'SNV_INDEL',
             'genotypes': new_family_genotypes,
             'gene_ids': ['ENSG00000135953'],
+            'main_transcript':  {'hgvsc': 'c.3955G>A','hgvsp': 'c.1586-17C>G', 'transcriptId': 'ENST00000505820'},
         })
 
         variant_tags = VariantTag.objects.filter(variant_tag_type__name='GREGoR Finding')
@@ -1454,11 +1465,3 @@ class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
         else:
             self.mock_subprocess.stdout.__iter__.return_value = self.gs_files[file_name]
         return self.mock_subprocess
-
-    def _assert_expected_delete_individuals(self, response, mock_pm_group):
-        self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA19678'])
-
-    def _assert_expected_reload_calls(self, project_guid):
-        self.assertEqual(len(responses.calls), 1)
-        self.assertDictEqual(json.loads(responses.calls[0].request.body), {'project_guids': [project_guid]})

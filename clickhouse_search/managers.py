@@ -12,7 +12,7 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
     IntDiv, Modulo, SplitByString, ArrayIndex, Multiply, IndexOf
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
-from seqr.utils.search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
+from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_LIKELY_PATH_FILTER, \
@@ -38,10 +38,6 @@ class SearchQuerySet(QuerySet):
             *fields.keys(),
             output_field=NamedTupleField(list(fields.values()), null_if_empty=True, null_empty_arrays=True, **kwargs),
         )
-
-    @classmethod
-    def _clinvar_path_q(cls, pathogenicity):
-        return cls._clinvar_filter_q(pathogenicity, allowed_filters=CLINVAR_PATH_SIGNIFICANCES)
 
     @classmethod
     def _clinvar_filter_q(cls, pathogenicity, allowed_filters=None):
@@ -291,7 +287,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
     @property
     def variant_detail_field(self):
-        return next(obj.name for obj in self.model._meta.related_objects if obj.name.startswith('variantdetails'))
+        return next((obj.name for obj in self.model._meta.related_objects if obj.name.startswith('variantdetails')), None)
 
     @property
     def entry_field(self):
@@ -692,14 +688,15 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
     def _annotate_filtered_transcripts(self, results, consequence_field, transcript_filters, *args, require_mane_canonical=False, **kwargs):
         if require_mane_canonical:
-            filtered_expr = ArrayFilter(consequence_field, conditions=[{'canonical': (0, '{field} > {value}')}])
             if 'isManeSelect' in self.sorted_transcript_consequence_fields:
-                filtered_expr = If(
-                    ArrayFilter(consequence_field, conditions=[{'isManeSelect': (True, '{field}')}]),
-                    filtered_expr,
-                    condition='arrayExists(x -> x.isManeSelect, sortedTranscriptConsequences), ',
-                )
-            results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: filtered_expr})
+                mane_genes_expression = 'arrayMap(a -> a.geneId, arrayFilter(b -> b.isManeSelect, sortedTranscriptConsequences))'
+                conditions=[
+                    {'isManeSelect': (True, '{field}')},
+                    {'canonical': (mane_genes_expression, 'and({field} > 0, not has({value}, x.geneId))')},
+                ]
+            else:
+                conditions = [{'canonical': (0, '{field} > {value}')}]
+            results = results.annotate(**{self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=conditions)})
             consequence_field = self.FILTERED_CONSEQUENCE_FIELD
         return super()._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
 
@@ -760,10 +757,6 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
         annotations = super().annotation_values
         annotations['transcripts'] = annotations.pop(self.model.sorted_gene_consequences.field.db_column)
         return annotations
-
-    @classmethod
-    def _clinvar_path_q(cls, pathogenicity):
-        return None
 
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
@@ -1017,6 +1010,10 @@ class BaseEntriesManager(SearchQuerySet):
     @property
     def callset_filter_field(self):
         return 'callset'
+
+    @classmethod
+    def _clinvar_path_q(cls, pathogenicity):
+        return cls._clinvar_filter_q(pathogenicity, allowed_filters=CLINVAR_PATH_SIGNIFICANCES)
 
     def search(self, sample_data, exclude_keys=None, **kwargs):
         entries = self.filter_locus(**kwargs)
@@ -1300,7 +1297,7 @@ class BaseEntriesManager(SearchQuerySet):
             fields.append('seqrPop')
         return fields
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, annotate_num_families=False, override_annotations=None, **kwargs):
+    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, override_annotations=None, **kwargs):
         if annotate_hom_alts:
             entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
 
@@ -1308,10 +1305,8 @@ class BaseEntriesManager(SearchQuerySet):
 
         if multi_sample_type_families or sample_data is None or sample_data['num_families'] > 1:
             entries = entries.values(*fields)
-            if annotate_num_families:
+            if skip_entry_fields:
                 entries = entries.annotate(numFamilies=Count('family_guid'))
-            elif skip_entry_fields:
-                entries = entries.distinct('key')
             else:
                 gt_field, gt_expression = self.genotype_expression(sample_data)
                 entries = entries.annotate(

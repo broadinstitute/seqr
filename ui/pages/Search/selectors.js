@@ -12,10 +12,11 @@ import {
   getSearchFamiliesByHash,
   getGenesById,
   getSearchesByHash,
-  getSamplesGroupedByProjectGuid,
-  getSamplesByFamily,
+  getProjectDatasetTypes,
+  getActiveDatasetsByFamily,
+  getSortedIndividualsByFamily,
 } from 'redux/selectors'
-import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
+import { getVariantMainGeneId, getVariantSummary, FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { compHetGene } from 'shared/components/panel/variants/VariantUtils'
 
@@ -196,28 +197,15 @@ export const getLocusListOptions = createListEqualSelector(
   },
 )
 
-const getSampleDatasetTypes = samples => ([
-  ...new Set((samples || []).filter(({ isActive }) => isActive).map(({ datasetType }) => datasetType)),
-])
-
-export const getProjectDatasetTypes = createSelector(
-  getProjectsByGuid,
-  getSamplesGroupedByProjectGuid,
-  (projectsByGuid, samplesByProjectGuid) => Object.values(projectsByGuid).reduce(
-    (acc, { projectGuid, datasetTypes }) => ({
-      ...acc,
-      [projectGuid]: datasetTypes || getSampleDatasetTypes(Object.values(samplesByProjectGuid[projectGuid] || {})),
-    }), {},
-  ),
-)
-
 export const getDatasetTypes = createSelector(
   (state, props) => props.projectFamilies,
   getProjectDatasetTypes,
-  getSamplesByFamily,
-  (projectFamilies, projectDatasetTypes, samplesByFamily) => {
+  getActiveDatasetsByFamily,
+  (projectFamilies, projectDatasetTypes, datasetsByFamily) => {
     const isSingleFamily = (projectFamilies || []).length === 1 && projectFamilies[0].familyGuids?.length === 1
-    const datasetTypes = isSingleFamily ? getSampleDatasetTypes(samplesByFamily[projectFamilies[0].familyGuids[0]]) : (
+    const datasetTypes = isSingleFamily ? [
+      ...new Set((datasetsByFamily[projectFamilies[0].familyGuids[0]] || []).map(({ datasetType }) => datasetType)),
+    ] : (
       projectFamilies || []
     ).reduce((acc, { projectGuid }) => new Set([
       ...acc, ...(projectDatasetTypes[projectGuid] || [])]), new Set())
@@ -290,4 +278,33 @@ export const getSearchGeneBreakdownValues = createSelector(
       geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {}, cnSensitivity: {}, sHet: {},
     }),
   })),
+)
+
+export const getVlmFamiliesByContactEmail = createSelector(
+  getSortedIndividualsByFamily,
+  (state, ownProps) => ownProps.variant,
+  (individualsByFamily, variant) => (variant.lookupFamilyGuids || []).reduce((acc, familyGuid) => {
+    const individual = individualsByFamily[familyGuid]?.[0]
+    const contactEmail = individual?.projectGuid ? 'internal' : (individual?.vlmContactEmail || 'disabled')
+    return { ...acc, [contactEmail]: [...(acc[contactEmail] || []), familyGuid] }
+  }, {}),
+)
+
+export const getVlmDefaultContactEmails = createSelector(
+  getVlmFamiliesByContactEmail,
+  getGenesById,
+  getUser,
+  (state, ownProps) => ownProps.variant,
+  (familiesByContactEmail, genesById, user, variant) => {
+    const gene = genesById[getVariantMainGeneId(variant)]?.geneSymbol
+    const subject = `${gene || variant.variantId} variant match in seqr`
+    const defaultEmailContent = `harboring ${getVariantSummary(variant)} in ${gene || 'no genes'} (${window.location.href}).
+    \n\nWe have identified the variant in a case with [replace with phenotype].
+    \n\n[List your specific questions for the researcher here.]
+    \n\nWe appreciate your assistance and look forward to hearing more from you.\n\nBest wishes,\n${user.displayName}`
+    return Object.entries(familiesByContactEmail).reduce((acc, [to, familyGuids]) => ({
+      ...acc,
+      [to]: { to, subject, body: `Dear researcher,\n\nWe are interested in learning more about your ${familyGuids.length} cases in seqr ${defaultEmailContent}` },
+    }), {})
+  },
 )

@@ -5,7 +5,6 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 import { Field } from 'react-final-form'
 import { Label, Popup, Form, Input, Loader } from 'semantic-ui-react'
-import orderBy from 'lodash/orderBy'
 
 import { SearchInput, YearSelector, RadioButtonGroup, ButtonRadioGroup, Select } from 'shared/components/form/Inputs'
 import { helpLabel, validators } from 'shared/components/form/FormHelpers'
@@ -32,7 +31,7 @@ import {
 import { snakecaseToTitlecase } from 'shared/utils/stringUtils'
 
 import { updateIndividual } from 'redux/rootReducer'
-import { getSamplesByGuid, getMmeSubmissionsByGuid, getIGVSamplesByFamilySampleIndividual } from 'redux/selectors'
+import { getDatasetsByIndividual, getMmeSubmissionsByGuid, getIGVSamplesByFamilySampleIndividual } from 'redux/selectors'
 import { HPO_FORM_FIELDS } from '../HpoTerms'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED, CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_TABLE_NAME, INDIVIDUAL_DETAIL_FIELDS,
@@ -149,10 +148,10 @@ MmeStatusLabel.propTypes = {
   mmeSubmission: PropTypes.object,
 }
 
-const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) => (
+const DataDetails = React.memo(({ loadedDatasets, individual, mmeSubmission }) => (
   <div>
-    {loadedSamples.map(
-      sample => <div key={sample.sampleGuid}><Sample {...sample} isOutdated={!sample.isActive} /></div>,
+    {loadedDatasets.map(
+      dataset => <div key={`${dataset.loadedDate}-${dataset.sampleType}-${dataset.datasetType}`}><Sample {...dataset} isOutdated={!dataset.isActive} /></div>,
     )}
     {individual.rnaSample && (
       <Sample
@@ -213,7 +212,7 @@ const DataDetails = React.memo(({ loadedSamples, individual, mmeSubmission }) =>
 DataDetails.propTypes = {
   mmeSubmission: PropTypes.object,
   individual: PropTypes.object,
-  loadedSamples: PropTypes.arrayOf(PropTypes.object),
+  loadedDatasets: PropTypes.arrayOf(PropTypes.object),
 }
 
 const formatGene = gene => `${gene.gene} ${gene.comments ? ` (${gene.comments.trim()})` : ''}`
@@ -548,7 +547,7 @@ class IndividualRow extends React.PureComponent {
     project: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     mmeSubmission: PropTypes.object,
-    samplesByGuid: PropTypes.object.isRequired,
+    datasets: PropTypes.arrayOf(PropTypes.object),
     alignmentSample: PropTypes.object,
     dispatchUpdateIndividual: PropTypes.func,
     dispatchUpdateIndividualIGV: PropTypes.func,
@@ -575,17 +574,15 @@ class IndividualRow extends React.PureComponent {
 
   render() {
     const {
-      project, individual, mmeSubmission, samplesByGuid, tableName, updateIndividualPedigree, alignmentSample,
+      project, individual, mmeSubmission, datasets, tableName, updateIndividualPedigree, alignmentSample,
       dispatchUpdateIndividualIGV,
     } = this.props
-    const { displayName, sex, affected, createdDate, sampleGuids } = individual
+    const { displayName, sex, affected, createdDate } = individual
 
-    let loadedSamples = sampleGuids.map(
-      sampleGuid => samplesByGuid[sampleGuid],
-    )
-    loadedSamples = orderBy(loadedSamples, [s => s.loadedDate], 'desc')
     // only show active or first/ last inactive samples
-    loadedSamples = loadedSamples.filter((sample, i) => sample.isActive || i === 0 || i === loadedSamples.length - 1)
+    const loadedDatasets = (datasets || []).reverse().filter(
+      ({ isActive }, i) => isActive || i === 0 || i === datasets.length - 1,
+    )
 
     const leftContent = (
       <IndividualContainer>
@@ -622,7 +619,7 @@ class IndividualRow extends React.PureComponent {
     const rightContent = editCaseReview ?
       <CaseReviewStatus individual={individual} /> : (
         <DataDetails
-          loadedSamples={loadedSamples}
+          loadedDatasets={loadedDatasets}
           individual={individual}
           mmeSubmission={mmeSubmission}
         />
@@ -646,7 +643,7 @@ export { IndividualRow as IndividualRowComponent }
 
 const mapStateToProps = (state, ownProps) => ({
   project: getCurrentProject(state),
-  samplesByGuid: getSamplesByGuid(state),
+  datasets: getDatasetsByIndividual(state)[ownProps.individual.individualGuid],
   mmeSubmission: getMmeSubmissionsByGuid(state)[ownProps.individual.mmeSubmissionGuid],
   alignmentSample: (
     getIGVSamplesByFamilySampleIndividual(state)[ownProps.individual.familyGuid]?.alignment || {}

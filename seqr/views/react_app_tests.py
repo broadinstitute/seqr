@@ -24,7 +24,6 @@ class AppPageTest(object):
             'version': mock.ANY,
             'hijakEnabled': False,
             'oauthLoginProvider': self.OAUTH_PROVIDER,
-            'elasticsearchEnabled': bool(self.ES_HOSTNAME),
             'vlmEnabled': vlm_enabled,
             'warningMessages': [{'id': 1, 'header': 'Warning!', 'message': 'A sample warning'}],
         })

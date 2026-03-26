@@ -225,12 +225,12 @@ export const updateVariantTags = (values, tagType = 'tags') => {
 
 export const updateVariantClassification = values => updateSavedVariant(values, `${values.variant.variantGuid}/update_acmg_classification`)
 
-export const updateVariantMainTranscript = (variantGuid, transcriptId) => dispatch => new HttpRequestHelper(
-  `/api/saved_variant/${variantGuid}/update_transcript/${transcriptId}`,
+export const updateVariantMainTranscript = (variantGuid, transcript) => dispatch => new HttpRequestHelper(
+  `/api/saved_variant/${variantGuid}/update_transcript/${transcript.transcriptId}`,
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-).post()
+).post(transcript)
 
 export const updateLocusList = values => (dispatch) => {
   let action = 'create'

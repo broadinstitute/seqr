@@ -14,6 +14,7 @@ from guardian.shortcuts import assign_perm
 
 from seqr.utils.logging_utils import log_model_update, log_model_bulk_update, SeqrLogger
 from seqr.utils.xpos_utils import get_chrom_pos
+from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_CHOICES
 from settings import MME_DEFAULT_CONTACT_NAME, MME_DEFAULT_CONTACT_HREF, MME_DEFAULT_CONTACT_INSTITUTION, \
@@ -843,7 +844,9 @@ class SavedVariant(ModelWithGUID):
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
     saved_variant_json = models.JSONField(default=dict)
     genotypes = models.JSONField(default=dict)
+    main_transcript = models.JSONField(default=dict, encoder=DjangoJSONEncoderWithSets)
     gene_ids = ArrayField(models.CharField(max_length=20), null=True, blank=True)
+    sv_type = models.CharField(max_length=15, null=True)
     dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES, null=True, blank=True)
 
     acmg_classification = models.JSONField(null=True) # ACMG based classification

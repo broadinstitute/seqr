@@ -200,12 +200,10 @@ class ReloadClinvarAllVariantsTest(TestCase):
 
     @responses.activate
     def test_malformed_variants(self, mock_logger, mock_safe_post_to_slack):
+        # Test errors that should still raise (not unenumerated values)
         for description, review_status, conflicting_pathogenicities, error_message in [
-            ("Pathogenic-ey", None, None, 'Found an un-enumerated clinvar assertion: Pathogenic-ey'),
-            ("Pathogenic; but unknown assertion", None, None, 'Found an un-enumerated clinvar assertion: but unknown assertion'),
             ("Pathogenic", "unhandled", None, 'Found unexpected review status unhandled'),
             ("Conflicting classifications of pathogenicity", None, "Pathogenic;", 'Failed to correctly parse conflicting pathogenicity counts: Pathogenic;'),
-            ("Conflicting classifications of pathogenicity", None, "Pathogenic(18); unhandled(1)", 'Found an un-enumerated conflicting pathogenicity: unhandled'),
             ("Conflicting classifications of pathogenicity", None, None, 'Failed to find the conflicting pathogenicities node'),
         ]:
             data = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -238,6 +236,66 @@ class ReloadClinvarAllVariantsTest(TestCase):
             )
             with self.assertRaisesMessage(CommandError, error_message):
                 call_command('reload_clinvar_all_variants')
+
+        # Test that unenumerated values are now collected instead of raising
+        unenumerated_test_cases = [
+            {
+                'allele_id': 1,
+                'description': 'Pathogenic-ey',
+                'explanation': None,
+                'alert_type': 'Assertion',
+                'alert_value': 'Pathogenic-ey',
+            },
+            {
+                'allele_id': 2,
+                'description': 'Pathogenic; but unknown assertion',
+                'explanation': None,
+                'alert_type': 'Assertion',
+                'alert_value': 'but unknown assertion',
+            },
+            {
+                'allele_id': 3,
+                'description': 'Conflicting classifications of pathogenicity',
+                'explanation': 'Pathogenic(18); unhandled(1)',
+                'alert_type': 'Conflicting Pathogenicity',
+                'alert_value': 'unhandled',
+            },
+        ]
+        data = WEEKLY_XML_RELEASE_HEADER
+        for case in unenumerated_test_cases:
+            data += f'''
+            <VariationArchive>
+                <ClassifiedRecord>
+                    <SimpleAllele AlleleID="{case['allele_id']}" VariationID="5603">
+                        <Location>
+                            <SequenceLocation Assembly="GRCh38" Chr="1" positionVCF="{case['allele_id']}" referenceAlleleVCF="G" alternateAlleleVCF="A"/>
+                        </Location>
+                    </SimpleAllele>
+                    <Classifications>
+                        <GermlineClassification>
+                            <Description>{case['description']}</Description>
+                            {f"<Explanation>{case['explanation']}</Explanation>" if case['explanation'] else ""}
+                        </GermlineClassification>
+                    </Classifications>
+                </ClassifiedRecord>
+            </VariationArchive>
+            '''
+        data += '</ClinVarVariationRelease>'
+        responses.add(
+            responses.GET,
+            WEEKLY_XML_RELEASE,
+            status=200,
+            body=gzip.compress(data.encode()),
+            stream=True,
+        )
+        DataVersions.objects.all().delete()
+        ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
+        call_command('reload_clinvar_all_variants')
+        # Command should succeed and collect all unenumerated values in single slack message
+        slack_message = mock_safe_post_to_slack.call_args[0][1]
+        self.assertIn(f'Found {len(unenumerated_test_cases)} unenumerated value(s) during parsing:', slack_message)
+        for case in unenumerated_test_cases:
+            self.assertIn(f"- {case['alert_type']}: '{case['alert_value']}' (Allele ID: {case['allele_id']})", slack_message)
 
         # Variants with missing/equivalent alleles and positions are skipped
         for simple_allele_attrs, sequence_location_attrs in [

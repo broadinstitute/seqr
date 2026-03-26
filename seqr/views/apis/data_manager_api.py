@@ -1,4 +1,3 @@
-import base64
 from collections import defaultdict
 import json
 import os
@@ -8,14 +7,11 @@ import urllib3
 from django.core.exceptions import PermissionDenied
 from django.db.models import Max, F, Q
 from django.http.response import HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import ConnectionError as RequestConnectionError
 
 from clickhouse_search.search import delete_clickhouse_project
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.search.add_data_utils import trigger_data_loading, get_missing_family_samples, get_loaded_individual_ids, trigger_delete_families_search
-from seqr.utils.search.elasticsearch.es_utils import get_elasticsearch_status, delete_es_index
-from seqr.utils.search.utils import clickhouse_only, es_only, InvalidSearchException
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
@@ -29,30 +25,9 @@ from seqr.views.utils.terra_api_utils import anvil_enabled
 
 from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
 
-from settings import KIBANA_SERVER, KIBANA_ELASTICSEARCH_PASSWORD, KIBANA_ELASTICSEARCH_USER, \
-    LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
+from settings import LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
 
 logger = SeqrLogger(__name__)
-
-
-@data_manager_required
-@es_only
-def elasticsearch_status(request):
-    return create_json_response(get_elasticsearch_status())
-
-
-@data_manager_required
-@es_only
-def delete_index(request):
-    index = json.loads(request.body)['index']
-    active_samples = Sample.objects.filter(is_active=True, elasticsearch_index=index)
-    if active_samples:
-        projects = set(active_samples.values_list('individual__family__project__name', flat=True))
-        raise InvalidSearchException(f'"{index}" is still used by: {", ".join(projects)}')
-
-    updated_indices =  delete_es_index(index)
-
-    return create_json_response({'indices': updated_indices})
 
 RNA = 'RNA'
 TISSUE_FIELD = 'TissueOfOrigin'
@@ -79,21 +54,30 @@ def update_rna_seq(request):
         ],
     )
     sample_metadata_mapping = {}
-    misconfigured_samples = {}
+    misconfigured_samples = defaultdict(list)
     for sample in airtable_samples:
         sample_ids = [
             sample[sample_id_field] for sample_id_field in ['sample_id', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping']
             if sample.get(sample_id_field)
         ]
-        error_message = None
-        if len(sample.get(TISSUE_FIELD, [])) != 1:
-            error_message = 'no tissue specified' if not sample.get(TISSUE_FIELD) else 'multiple tissues specified'
-        elif len(sample['pdos']) != 1:
-            error_message = 'multiple conflicting PDOs'
-        elif sample['pdos'][0]['project_guid'] is None:
-            error_message = 'no project specified'
-        if error_message:
-            misconfigured_samples.update({sample_id: error_message for sample_id in sample_ids})
+        error_messages = []
+        tissues = sample.get(TISSUE_FIELD, [])
+        if not tissues:
+            error_messages.append('no tissue specified')
+        elif len(tissues) > 1:
+            error_messages.append('multiple tissues specified')
+        elif tissues[0] not in TISSUE_TYPE_MAP:
+            error_messages.append('invalid tissue specified')
+
+        pdos = sample.get('pdos', [])
+        if len(pdos) > 1:
+            error_messages.append('multiple conflicting PDOs')
+        elif not pdos or pdos[0]['project_guid'] is None:
+            error_messages.append('no project specified')
+
+        if error_messages:
+            for sample_id in sample_ids:
+                misconfigured_samples[sample_id].extend(error_messages)
         else:
             metadata = {
                 'tissue': TISSUE_TYPE_MAP[sample[TISSUE_FIELD][0]],
@@ -107,10 +91,6 @@ def update_rna_seq(request):
         request_json, request.user, sample_metadata_mapping=sample_metadata_mapping, misconfigured_samples=misconfigured_samples,
     )
     return create_json_response(response_json, status=status)
-
-
-def _get_sample_file_path(file_dir, sample_guid):
-    return os.path.join(file_dir, f'{sample_guid}.json.gz')
 
 
 def _notify_phenotype_prioritization_loaded(project, tool, num_samples):
@@ -413,7 +393,6 @@ def _get_valid_search_individuals(project, airtable_samples, vcf_samples, datase
 
 
 @data_manager_required
-@clickhouse_only
 def trigger_delete_project(request):
     request_json = json.loads(request.body)
     project_guid = request_json.pop('project')
@@ -431,7 +410,6 @@ def trigger_delete_project(request):
 
 
 @data_manager_required
-@clickhouse_only
 def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')
@@ -450,25 +428,16 @@ EXCLUDE_HTTP_RESPONSE_HEADERS = {
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
 @data_manager_required
-@csrf_exempt
-def proxy_to_kibana(request):
-    headers = {}
-    if KIBANA_ELASTICSEARCH_PASSWORD:
-        token = base64.b64encode('{}:{}'.format(KIBANA_ELASTICSEARCH_USER, KIBANA_ELASTICSEARCH_PASSWORD).encode('utf-8'))
-        headers['Authorization'] = 'Basic {}'.format(token.decode('utf-8'))
-    return _proxy_iframe_page(request, 'Kibana', KIBANA_SERVER, additional_headers=headers)
+def proxy_to_luigi(request):
+    if not LUIGI_UI_SERVICE_HOSTNAME:
+        return HttpResponse('Loading Pipeline UI is not configured', status=404)
 
-
-def _proxy_iframe_page(request, page_name, host, additional_headers=None, path_prefix=None):
     headers = convert_django_meta_to_http_headers(request)
+    host = f'{LUIGI_UI_SERVICE_HOSTNAME}:{LUIGI_UI_SERVICE_PORT}'
     headers['Host'] = host
-    headers.update(additional_headers or {})
 
-    path = request.get_full_path()
-    if path_prefix:
-        path = path.replace(path_prefix, '')
+    path = request.get_full_path().replace('/luigi_ui', '')
     url = f'http://{host}{path}'
 
     request_method = getattr(requests.Session(), request.method.lower())
@@ -496,13 +465,4 @@ def _proxy_iframe_page(request, page_name, host, additional_headers=None, path_p
         return proxy_response
     except (ConnectionError, RequestConnectionError) as e:
         logger.error(str(e), request.user)
-        return HttpResponse(f'Error: Unable to connect to {page_name} {e}', status=400)
-
-
-@data_manager_required
-def proxy_to_luigi(request):
-    if not LUIGI_UI_SERVICE_HOSTNAME:
-        return HttpResponse('Loading Pipeline UI is not configured', status=404)
-    return _proxy_iframe_page(
-        request, 'Luigi UI', f'{LUIGI_UI_SERVICE_HOSTNAME}:{LUIGI_UI_SERVICE_PORT}', path_prefix='/luigi_ui',
-    )
+        return HttpResponse(f'Error: Unable to connect to Luigi UI {e}', status=400)

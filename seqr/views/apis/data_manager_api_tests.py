@@ -7,227 +7,15 @@ from requests import HTTPError
 import responses
 
 from seqr.utils.communication_utils import _set_bulk_notification_stream
-from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
-    update_rna_seq, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
+from seqr.views.apis.data_manager_api import update_rna_seq, load_phenotype_prioritization_data, validate_callset, loading_vcfs, \
     get_loaded_projects, load_data, trigger_delete_family
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
-from seqr.utils.search.elasticsearch.es_utils_tests import urllib3_responses
 from seqr.models import Individual, Sample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 PROJECT_GUID = 'R0001_1kg'
 NON_ANALYST_PROJECT_GUID = 'R0004_non_analyst_project'
-
-ES_CAT_ALLOCATION=[{
-    'node': 'node-1',
-    'shards': '113',
-    'disk.used': '67.2gb',
-    'disk.avail': '188.6gb',
-    'disk.percent': '26'
-},
-    {'node': 'UNASSIGNED',
-     'shards': '2',
-     'disk.used': None,
-     'disk.avail': None,
-     'disk.percent': None
-     }]
-
-ES_CAT_NODES=[{
-    'name': 'node-1',
-    'heap.percent': '57',
-},
-    {'name': 'no-disk-node',
-     'heap.percent': '83',
-     }]
-
-EXPECTED_DISK_ALLOCATION = [{
-    'node': 'node-1',
-    'shards': '113',
-    'diskUsed': '67.2gb',
-    'diskAvail': '188.6gb',
-    'diskPercent': '26',
-    'heapPercent': '57',
-},
-    {'node': 'UNASSIGNED',
-     'shards': '2',
-     'diskUsed': None,
-     'diskAvail': None,
-     'diskPercent': None
-     }]
-
-EXPECTED_NODE_STATS = [{'name': 'no-disk-node', 'heapPercent': '83'}]
-
-ES_CAT_INDICES = [{
-    "index": "test_index",
-    "docs.count": "122674997",
-    "store.size": "14.9gb",
-    "creation.date.string": "2019-11-04T19:33:47.522Z"
-},
-    {
-        "index": "test_index_alias_1",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-    {
-        "index": "test_index_alias_2",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-    {
-        "index": "test_index_no_project",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-    {
-        "index": "test_index_sv",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-    {
-        "index": "test_index_sv_wgs",
-        "docs.count": "672312",
-        "store.size": "233.4mb",
-        "creation.date.string": "2019-10-03T19:53:53.846Z"
-    },
-]
-
-ES_CAT_ALIAS = [
-    {
-        "alias": "test_index_second",
-        "index": "test_index_alias_1"
-    },
-    {
-        "alias": "test_index_second",
-        "index": "test_index_alias_2"
-    }]
-
-ES_INDEX_MAPPING = {
-    "test_index": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "25",
-                "genomeVersion": "38",
-                "sampleType": "WES",
-                "sourceFilePath": "test_index_file_path",
-            },
-            "_all": {
-                "enabled": False
-            }
-        }
-    },
-    "test_index_alias_1": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "25",
-                "hail_version": "0.2.24",
-                "genomeVersion": "37",
-                "sampleType": "WGS",
-                "sourceFilePath": "test_index_alias_1_path",
-            },
-            "_all": {
-                "enabled": False
-            },
-        }
-    },
-    "test_index_alias_2": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "19",
-                "genomeVersion": "37",
-                "sampleType": "WES",
-                "datasetType": "VARIANTS",
-                "sourceFilePath": "test_index_alias_2_path"
-            },
-            "_all": {
-                "enabled": False
-            },
-        }
-    },
-    "test_index_no_project": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "19",
-                "genomeVersion": "37",
-                "sampleType": "WGS",
-                "datasetType": "VARIANTS",
-                "sourceFilePath": "test_index_no_project_path"
-            },
-            "_all": {
-                "enabled": False
-            },
-        }
-    },
-    "test_index_sv": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "29",
-                "genomeVersion": "38",
-                "sampleType": "WES",
-                "datasetType": "SV",
-                "sourceFilePath": "test_sv_index_path"
-            },
-        }
-    },
-    "test_index_sv_wgs": {
-        "mappings": {
-            "_meta": {
-                "gencodeVersion": "29",
-                "genomeVersion": "38",
-                "sampleType": "WGS",
-                "datasetType": "SV",
-                "sourceFilePath": "test_sv_wgs_index_path"
-            },
-        }
-    },
-}
-
-TEST_INDEX_EXPECTED_DICT = {
-    "index": "test_index",
-    "sampleType": "WES",
-    "genomeVersion": "38",
-    "sourceFilePath": "test_index_file_path",
-    "docsCount": "122674997",
-    "storeSize": "14.9gb",
-    "creationDateString": "2019-11-04T19:33:47.522Z",
-    "gencodeVersion": "25",
-    "projects": [{'projectName': '1kg project n\xe5me with uni\xe7\xf8de', 'projectGuid': 'R0001_1kg'}]
-}
-
-TEST_SV_INDEX_EXPECTED_DICT = {
-    "index": "test_index_sv",
-    "sampleType": "WES",
-    "genomeVersion": "38",
-    "sourceFilePath": "test_sv_index_path",
-    "docsCount": "672312",
-    "storeSize": "233.4mb",
-    "creationDateString": "2019-10-03T19:53:53.846Z",
-    "gencodeVersion": "29",
-    "datasetType": "SV",
-    "projects": [{'projectName': '1kg project n\xe5me with uni\xe7\xf8de', 'projectGuid': 'R0001_1kg'}]
-}
-
-TEST_INDEX_NO_PROJECT_EXPECTED_DICT = {
-    "index": "test_index_no_project",
-    "sampleType": "WGS",
-    "genomeVersion": "37",
-    "sourceFilePath": "test_index_no_project_path",
-    "docsCount": "672312",
-    "storeSize": "233.4mb",
-    "creationDateString": "2019-10-03T19:53:53.846Z",
-    "datasetType": "VARIANTS",
-    "gencodeVersion": "19",
-    "projects": []
-}
-
-EXPECTED_ERRORS = [
-    'test_index_mito_wgs does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)',
-    'test_index_old does not exist and is used by project(s) 1kg project n\xe5me with uni\xe7\xf8de (1 samples)',
-]
 
 RNA_TPM_MUSCLE_SAMPLE_GUID = 'RS000162_T_na19675_d2'
 RNA_OUTLIER_MUSCLE_SAMPLE_GUID = 'RS000172_E_na19675_d2'
@@ -505,9 +293,8 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'CollaboratorSampleID': 'NA12346',
             'SeqrProject': [
                 'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
-                'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
             ],
-            'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
+            'PDOStatus': ['RNA ready to load'],
         }
     },
     {
@@ -528,7 +315,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'CollaboratorSampleID': 'NA12348',
             'SeqrProject': ['R0003_test'],
             'PDOStatus': ['RNA ready to load'],
-            'TissueOfOrigin': ['Muscle'],
+            'TissueOfOrigin': ['Custom Tissue'],
         }
     },
     {
@@ -559,96 +346,14 @@ class DataManagerAPITest(AirtableTest):
     VCF_SAMPLES = VCF_SAMPLES
     SKIP_TDR = False
 
-    @urllib3_responses.activate
-    def test_elasticsearch_status(self):
-        url = reverse(elasticsearch_status)
-        self.check_data_manager_login(url)
-
-        urllib3_responses.add_json(
-            '/_cat/allocation?format=json&h=node,shards,disk.avail,disk.used,disk.percent', ES_CAT_ALLOCATION)
-        urllib3_responses.add_json(
-            '/_cat/nodes?format=json&h=name,heap.percent', ES_CAT_NODES)
-        urllib3_responses.add_json(
-           '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
-        urllib3_responses.add_json('/_cat/aliases?format=json&h=alias,index', ES_CAT_ALIAS)
-        urllib3_responses.add_json('/_all/_mapping', ES_INDEX_MAPPING)
-
-        response = self.client.get(url)
-        self._assert_expected_es_status(response)
-
-    def _assert_expected_es_status(self, response):
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'indices', 'errors', 'diskStats', 'nodeStats'})
-
-        self.assertEqual(len(response_json['indices']), 6)
-        self.assertDictEqual(response_json['indices'][0], TEST_INDEX_EXPECTED_DICT)
-        self.assertDictEqual(response_json['indices'][3], TEST_INDEX_NO_PROJECT_EXPECTED_DICT)
-        self.assertDictEqual(response_json['indices'][4], TEST_SV_INDEX_EXPECTED_DICT)
-
-        self.assertListEqual(response_json['errors'], EXPECTED_ERRORS)
-
-        self.assertListEqual(response_json['diskStats'], EXPECTED_DISK_ALLOCATION)
-        self.assertListEqual(response_json['nodeStats'], EXPECTED_NODE_STATS)
-
-    @urllib3_responses.activate
-    def test_delete_index(self):
-        url = reverse(delete_index)
-        self.check_data_manager_login(url)
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'test_index'}))
-        self._assert_expected_delete_active_index_response(response)
-
-        urllib3_responses.add_json(
-            '/_cat/indices?format=json&h=index,docs.count,store.size,creation.date.string', ES_CAT_INDICES)
-        urllib3_responses.add_json('/_cat/aliases?format=json&h=alias,index', ES_CAT_ALIAS)
-        urllib3_responses.add_json('/_all/_mapping', ES_INDEX_MAPPING)
-        urllib3_responses.add(urllib3_responses.DELETE, '/unused_index')
-
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'index': 'unused_index'}))
-        self._assert_expected_delete_index_response(response)
-
-    def _assert_expected_delete_active_index_response(self, response):
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.json()['error'], '"test_index" is still used by: 1kg project n\xe5me with uni\xe7\xf8de')
-        self.assertEqual(len(urllib3_responses.calls), 0)
-
-    def _assert_expected_delete_index_response(self, response):
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'indices'})
-        self.assertEqual(len(response_json['indices']), 6)
-        self.assertDictEqual(response_json['indices'][0], TEST_INDEX_EXPECTED_DICT)
-        self.assertDictEqual(response_json['indices'][3], TEST_INDEX_NO_PROJECT_EXPECTED_DICT)
-        self.assertDictEqual(response_json['indices'][4], TEST_SV_INDEX_EXPECTED_DICT)
-
-        self.assertEqual(urllib3_responses.calls[0].request.method, 'DELETE')
-
-    @mock.patch('seqr.views.apis.data_manager_api.KIBANA_ELASTICSEARCH_PASSWORD', 'abc123')
-    @responses.activate
-    def test_kibana_proxy(self):
-        url = '/api/kibana/random/path'
-        self.check_data_manager_login(url)
-
-        self._test_request_proxy('localhost:5601', url, auth_header='Basic a2liYW5hOmFiYzEyMw==')
-
-        # Test with error response
-        response = self.client.get('{}/bad_response'.format(url))
-        self.assertEqual(response.status_code, 500)
-
-        # Test with connection error
-        response = self.client.get('{}/bad_path'.format(url))
-        self.assertContains(response, 'Error: Unable to connect to Kibana', status_code=400)
-
-    def _test_request_proxy(self, host, url, auth_header=None, proxy_path=None):
+    def _test_request_proxy(self, host, url, proxy_path):
         response_args = {
             'stream': True,
             'body': 'Test response',
             'content_type': 'text/custom',
             'headers': {'x-test-header': 'test', 'keep-alive': 'true'},
         }
-        proxy_url = f'http://{host}{proxy_path or url}'
+        proxy_url = f'http://{host}{proxy_path}'
         responses.add(responses.GET, proxy_url, status=200, **response_args)
         responses.add(responses.POST, proxy_url, status=201, **response_args)
         responses.add(responses.GET, '{}/bad_response'.format(proxy_url), body=HTTPError())
@@ -669,20 +374,14 @@ class DataManagerAPITest(AirtableTest):
         get_request = responses.calls[0].request
         self.assertEqual(get_request.headers['Host'], host)
         self.assertEqual(get_request.headers['Test-Header'], 'some/value')
-        if auth_header:
-            self.assertEqual(get_request.headers['Authorization'], auth_header)
-        else:
-            self.assertFalse('Authorization' in get_request.headers)
+        self.assertFalse('Authorization' in get_request.headers)
 
         post_request = responses.calls[1].request
         self.assertEqual(post_request.headers['Host'], host)
         self.assertEqual(post_request.headers['Content-Type'], 'application/json')
         self.assertEqual(post_request.headers['Content-Length'], '26')
         self.assertEqual(post_request.body, data.encode('utf-8'))
-        if auth_header:
-            self.assertEqual(get_request.headers['Authorization'], auth_header)
-        else:
-            self.assertFalse('Authorization' in get_request.headers)
+        self.assertFalse('Authorization' in get_request.headers)
 
     @mock.patch('seqr.views.apis.data_manager_api.LUIGI_UI_SERVICE_HOSTNAME')
     @responses.activate
@@ -807,11 +506,8 @@ class DataManagerAPITest(AirtableTest):
             (warn_log, {'severity': 'WARNING'}) for warn_log in warnings or []
         ]
         if additional_logs:
-            if additional_logs_offset:
-                for log in reversed(additional_logs):
-                    expected_logs.insert(additional_logs_offset, log)
-            else:
-                expected_logs += additional_logs
+            for log in reversed(additional_logs):
+                expected_logs.insert(additional_logs_offset, log)
 
         self.assert_json_logs(user, expected_logs)
 
@@ -937,10 +633,11 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to load the following samples from Airtable with no corresponding seqr ID: NA11111',
+            'Unable to load the following samples that are improperly configured in Airtable with invalid tissue specified: NA12348',
+            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12345, NA12347',
             'Unable to load the following samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
-            'Unable to load the following samples that are improperly configured in Airtable with no tissue specified: NA12346',
-            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12347',
             'Unable to load the following samples that are improperly configured in Airtable with no project specified: NA12348',
+            'Unable to load the following samples that are improperly configured in Airtable with no tissue specified: NA12346',
         ])
 
         _set_gzip_file_iter_stdout(mock_files[f'tmp/temp_uploads/{file_path}/muscle_samples.tsv.gz'], [header, loaded_data_row])
@@ -1016,6 +713,7 @@ class DataManagerAPITest(AirtableTest):
         self.reset_logs()
         body.update({'ignoreExtraSamples': True, 'file': RNA_FILE_ID})
         warnings = [
+            'Skipped loading for the following 1 samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12345',
             'Skipped loading for the following 1 samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
             f'Skipped loading for the following {len(params["skipped_samples"].split(","))} '
             f'samples with no match: {params["skipped_samples"]}']
@@ -1573,11 +1271,22 @@ class DataManagerAPITest(AirtableTest):
 
         Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
         response = self.client.post(url, content_type='application/json', data=json.dumps({'family': 'F000002_2'}))
-        self._assert_expected_delete_family(response)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': [
+                'Disabled search for 7 samples in the following 1 families: 2',
+                'Triggered delete family data',
+            ],
+        })
 
-    def _assert_expected_delete_family(self, response):
-        self.assertEqual(response.status_code, 500)
-        self.assertDictEqual(response.json(), {'error': 'trigger_delete_family is disabled without the clickhouse backend'})
+        family_samples = Sample.objects.filter(individual__family_id=2, is_active=True)
+        self.assertEqual(family_samples.count(), 0)
+
+        self.assertEqual(len(responses.calls), 1)
+        self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
+            'project_guid': 'R0001_1kg',
+            'family_guids': ['F000002_2'],
+        })
 
 
 class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
@@ -1790,25 +1499,6 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         self.mock_subprocess.side_effect = [
             self.mock_does_file_exist, self.mock_does_file_exist,  self.mock_file_iter, self.mock_does_file_exist, self.mock_does_file_exist, self.mock_file_iter,
         ]
-
-    def _get_expected_read_file_subprocess_calls(self, file_name, sample_guid):
-        gsutil_cat = f'gsutil cat gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz | gunzip -c -q - '
-        self.mock_subprocess.assert_called_with(gsutil_cat, stdout=-1, stderr=-2, shell=True)  # nosec
-        return [
-            (f'==> gsutil ls gs://seqr-scratch-temp/{file_name}/{sample_guid}.json.gz', None),
-            (f'==> {gsutil_cat}', None),
-        ]
-
-    def _assert_expected_es_status(self, response):
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json()['error'], 'elasticsearch_status is disabled without the elasticsearch backend')
-
-    def _assert_expected_delete_index_response(self, response):
-        self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json()['error'], 'delete_index is disabled without the elasticsearch backend')
-
-    def _assert_expected_delete_active_index_response(self, response):
-        self._assert_expected_delete_index_response(response)
 
     def _assert_expected_get_projects_requests(self):
         pdo_filter = "OR(SEARCH('Methods (Loading)',ARRAYJOIN(PDOStatus,';')),SEARCH('On hold for phenotips, but ready to load',ARRAYJOIN(PDOStatus,';')))"
@@ -2028,24 +1718,6 @@ Loading pipeline should be triggered with:
         self.assertListEqual(response.json()['errors'], ['Missing required FORMAT field(s) GQ, GT'])
 
         self._set_file_not_found()
-
-    def _assert_expected_delete_family(self, response):
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {
-            'info': [
-                'Disabled search for 7 samples in the following 1 families: 2',
-                'Triggered delete family data',
-            ],
-        })
-
-        family_samples = Sample.objects.filter(individual__family_id=2, is_active=True)
-        self.assertEqual(family_samples.count(),0)
-
-        self.assertEqual(len(responses.calls), 1)
-        self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
-            'project_guid': 'R0001_1kg',
-            'family_guids': ['F000002_2'],
-        })
 
     def _assert_expected_airtable_errors(self, url):
         responses.replace(

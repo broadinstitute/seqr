@@ -9,20 +9,23 @@ import json
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple, \
-    ArrayMap, Modulo, ArrayObjectSort
+    ArrayMap, Modulo
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
-from reference_data.models import GeneConstraint, Omim, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, PhenotypePrioritization, Individual
+from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP
+from seqr.models import Sample, PhenotypePrioritization, Family, Individual
 from seqr.utils.logging_utils import SeqrLogger
-from seqr.utils.search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
+from clickhouse_search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE, AFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
 logger = SeqrLogger(__name__)
+
+class InvalidSearchException(Exception):
+    pass
 
 BATCH_SIZE = 10000
 
@@ -31,21 +34,26 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(samples, search, user, previous_search_results, genome_version,page=1, num_results=100, sort=None, **kwargs):
+def get_clickhouse_variants(families, dataset_types, search, user, genome_version, sort=None, secondary_dataset_types=None, sample_data_by_dataset_type=None, encode_genotypes_json=False):
     inheritance_mode = search.get('inheritance_mode')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
-    sample_data_by_dataset_type = _get_sample_data(
-        samples,
+    sample_data_by_dataset_type = sample_data_by_dataset_type or _get_sample_data(
+        families,
+        dataset_types,
+        secondary_dataset_types=secondary_dataset_types,
         skip_multi_project_individual_guid=True,
         annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
+        has_comp_het=has_comp_het,
+        inheritance_mode=inheritance_mode,
+        inheritance_filter=search.get('inheritance_filter'),
+        allow_no_samples=bool(search.get('no_access_project_genome_version')),
     )
     results = []
     family_guid = None
     exclude_keys = search.pop('exclude_keys', None) or {}
     exclude_key_pairs = search.pop('exclude_key_pairs', None) or {}
-    search.pop('dataset_type', None)
     for dataset_type, sample_data in sample_data_by_dataset_type.items():
         logger.info(f'Loading {dataset_type} data for {sample_data["num_families"]} families', user)
 
@@ -73,52 +81,43 @@ def get_clickhouse_variants(samples, search, user, previous_search_results, geno
             comp_het_sample_data = sample_data
             if has_x_chrom_comp_het and 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 comp_het_sample_data = _no_affected_male_families(sample_data, user)
-            result_q = get_data_type_comp_het_results_queryset(genome_version, dataset_type, comp_het_sample_data, exclude_key_pairs=exclude_key_pairs.get(dataset_type), **search)
+            result_q = _get_data_type_comp_het_results_queryset(genome_version, dataset_type, comp_het_sample_data, exclude_key_pairs=exclude_key_pairs.get(dataset_type), **search)
             dataset_results += _evaluate_results(result_q, is_comp_het=True)
 
         if 'samples' not in sample_data:
-            add_individual_guids(dataset_results, samples)
+            _add_individual_guids(dataset_results, encode_genotypes_json=encode_genotypes_json)
         results += dataset_results
 
     if has_comp_het and Sample.DATASET_TYPE_VARIANT_CALLS in sample_data_by_dataset_type and any(
         dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS) for dataset_type in sample_data_by_dataset_type
     ):
-        results += _get_multi_data_type_comp_het_results(genome_version, samples, sample_data_by_dataset_type, user, exclude_key_pairs, **search)
+        results += _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset_type, user, exclude_key_pairs, **search)
 
     if search.get('no_access_project_genome_version'):
         logger.info('Looking up variants in projects with no user access', user)
         results += _get_search_results(
-        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **search, sample_data=None, skip_entry_fields=True, annotate_num_families=True,
+        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, **search, sample_data=None, skip_entry_fields=True,
             exclude_projects=sample_data_by_dataset_type.get(Sample.DATASET_TYPE_VARIANT_CALLS, {}).get('project_guids'),
         )
 
-    cache_results = get_clickhouse_cache_results(results, sort, family_guid)
-    previous_search_results.update(cache_results)
+    logger.info(f'Total results: {len(results)}', user)
+    return get_sorted_search_results(results, sort, family_guid)
 
-    logger.info(f'Total results: {cache_results["total_results"]}', user)
-
-    return format_clickhouse_results(cache_results['all_results'][(page-1)*num_results:page*num_results], genome_version)
-
-def get_search_queryset(genome_version, dataset_type, sample_data, **search_kwargs):
+def _get_search_results(genome_version, dataset_type, sample_data, skip_entry_fields=False, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
-    entries = entry_cls.objects.search(sample_data, **search_kwargs)
-    return variants_cls.objects.subquery_join(entries).search(**search_kwargs)
-
-
-def _get_search_results(*args, skip_entry_fields=False, **search_kwargs):
-    results = get_search_queryset(*args, skip_entry_fields=skip_entry_fields, **search_kwargs)
+    entries = entry_cls.objects.search(sample_data, **search_kwargs, skip_entry_fields=skip_entry_fields)
+    results = variants_cls.objects.subquery_join(entries).search(**search_kwargs, skip_entry_fields=skip_entry_fields)
     return _evaluate_results(results.result_values(skip_entry_fields=skip_entry_fields))
 
 
 def _evaluate_results(result_q, is_comp_het=False):
     results = [list(result[1:]) if is_comp_het else result for result in result_q[:MAX_VARIANTS + 1]]
     if len(results) > MAX_VARIANTS:
-        from seqr.utils.search.utils import InvalidSearchException
         raise InvalidSearchException('This search returned too many results')
     return results
 
-def _get_multi_data_type_comp_het_results(genome_version, samples, sample_data_by_dataset_type, user, exclude_key_pairs, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
+def _get_multi_data_type_comp_het_results(genome_version, sample_data_by_dataset_type, user, exclude_key_pairs, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
     if annotations_secondary:
         annotations = {
             **annotations,
@@ -139,7 +138,7 @@ def _get_multi_data_type_comp_het_results(genome_version, samples, sample_data_b
         logger.info(f'Loading {Sample.DATASET_TYPE_VARIANT_CALLS}/{sv_dataset_type} data for {len(families)} families', user)
 
         snv_indel_sample_type_families = {
-            sample_type: familes.intersection(sv_families)
+            sample_type: set(familes).intersection(sv_families)
             for sample_type, familes in snv_indel_sample_data['sample_type_families'].items()
         }
         snv_indel_sample_type_families = {k: v for k, v in snv_indel_sample_type_families.items() if v}
@@ -157,37 +156,31 @@ def _get_multi_data_type_comp_het_results(genome_version, samples, sample_data_b
             'samples': [s for s in sv_sample_data['samples'] if s['family_guid'] in families] if 'samples' in sv_sample_data else None,
         }
 
-        result_q = get_multi_data_type_comp_het_results_queryset(
-            genome_version, sv_dataset_type, sv_sample_data, type_snv_indel_sample_data, num_families=len(families),
-            exclude_key_pairs=exclude_key_pairs.get(f'{Sample.DATASET_TYPE_VARIANT_CALLS},{sv_dataset_type}'),
-            annotations=annotations, **search_kwargs,
+        entries = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS].objects.search(
+            type_snv_indel_sample_data, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True,
+            annotate_hom_alts=True, annotations=annotations, **search_kwargs,
+        )
+        variants_cls = VARIANTS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
+        snv_indel_q = variants_cls.objects.subquery_join(entries).search(annotations=annotations, **search_kwargs)
+
+        sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search(
+            sv_sample_data, annotations=annotations, **search_kwargs, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
+        )
+        sv_variants_cls = VARIANTS_CLASS_MAP[genome_version][sv_dataset_type]
+        sv_q = sv_variants_cls.objects.subquery_join(sv_entries).search(annotations=annotations, **search_kwargs)
+
+        result_q = _get_comp_het_results_queryset(
+            variants_cls, snv_indel_q, sv_q, len(families), exclude_key_pairs=exclude_key_pairs.get(f'{Sample.DATASET_TYPE_VARIANT_CALLS},{sv_dataset_type}'),
         )
         dataset_results = _evaluate_results(result_q, is_comp_het=True)
         if not sv_sample_data['samples']:
-            add_individual_guids(dataset_results, samples)
+            _add_individual_guids(dataset_results)
         results += dataset_results
 
     return results
 
 
-def get_multi_data_type_comp_het_results_queryset(genome_version, sv_dataset_type, sv_sample_data, snv_indel_sample_data, num_families, exclude_key_pairs=None, **kwargs):
-    entries = ENTRY_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS].objects.search(
-        snv_indel_sample_data, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True,
-        annotate_hom_alts=True, **kwargs,
-    )
-    variants_cls = VARIANTS_CLASS_MAP[genome_version][Sample.DATASET_TYPE_VARIANT_CALLS]
-    snv_indel_q = variants_cls.objects.subquery_join(entries).search(**kwargs)
-
-    sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.search(
-        sv_sample_data, **kwargs, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
-    )
-    sv_variants_cls = VARIANTS_CLASS_MAP[genome_version][sv_dataset_type]
-    sv_q = sv_variants_cls.objects.subquery_join(sv_entries).search(**kwargs)
-
-    return _get_comp_het_results_queryset(variants_cls, snv_indel_q, sv_q, num_families, exclude_key_pairs)
-
-
-def get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample_data, annotations=None, annotations_secondary=None, pathogenicity=None, inheritance_mode=None, exclude_key_pairs=None, split_pathogenicity_annotations=False, **search_kwargs):
+def _get_data_type_comp_het_results_queryset(genome_version, dataset_type, sample_data, annotations=None, annotations_secondary=None, pathogenicity=None, inheritance_mode=None, exclude_key_pairs=None, split_pathogenicity_annotations=False, **search_kwargs):
     entry_cls = ENTRY_CLASS_MAP[genome_version][dataset_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][dataset_type]
     entries = entry_cls.objects.search(
@@ -290,14 +283,14 @@ def _result_as_tuple(results, field_prefix):
     return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
 
 
-def add_individual_guids(results, samples, encode_genotypes_json=False):
+def _add_individual_guids(results, encode_genotypes_json=False):
     families = set()
     for result in results:
         for r in (result if isinstance(result, list) else [result]):
             families.update(r.get('familyGenotypes', {}).keys())
     sample_map = {
-        (family_guid, sample_id): individual_guid for family_guid, individual_guid, sample_id in samples.filter(
-            individual__family__guid__in=families,
+        (family_guid, sample_id): individual_guid for family_guid, individual_guid, sample_id in Sample.objects.filter(
+            individual__family__guid__in=families, is_active=True,
         ).values_list('individual__family__guid', 'individual__guid', 'sample_id')
     }
     for result in results:
@@ -323,14 +316,41 @@ def _set_individual_guids(result, sample_map, encode_genotypes_json):
     result['genotypes'] = genotypes
 
 
-def get_clickhouse_cache_results(results, sort, family_guid):
+def get_sorted_search_results(results, sort, family_guid):
     sort_metadata = _get_sort_gene_metadata(sort, results, family_guid)
     sort_key = _get_sort_key(sort, sort_metadata)
     sorted_results = sorted([
         sorted(result, key=sort_key) if isinstance(result, list) else result for result in results
     ], key=sort_key)
-    total_results = len(sorted_results)
-    return {'all_results': sorted_results, 'total_results': total_results}
+    return sorted_results
+
+
+def format_clickhouse_export_results(results, genome_version):
+    formatted_results = [variant for result in results for variant in (result if isinstance(result, list) else [result])]
+    keys_with_no_details = {result['key'] for result in formatted_results if not 'transcripts' in result}
+    detail_qs = get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details)
+    details_by_key = {
+        detail['key']: detail for detail in detail_qs.values(
+            'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
+            **detail_qs.split_variant_id_annotations(),
+        )
+    }
+
+    gene_ids = set()
+    for result in formatted_results:
+        if 'transcripts' in result:
+            result['mainTranscript'] = next((gene_transcripts[0] for gene_transcripts in result['transcripts'].values()), {})
+        else:
+            result.update(details_by_key.get(result['key'], {}))
+        if result.get('mainTranscript'):
+            gene_ids.add(result['mainTranscript']['geneId'])
+
+    gene_id_map = dict(GeneInfo.objects.filter(gene_id__in=gene_ids).values_list('gene_id', 'gene_symbol'))
+    for result in formatted_results:
+        if result.get('mainTranscript'):
+            result['geneSymbol'] = gene_id_map.get(result['mainTranscript']['geneId'])
+
+    return formatted_results
 
 
 def format_clickhouse_results(results, genome_version):
@@ -339,7 +359,7 @@ def format_clickhouse_results(results, genome_version):
     }
     details_by_key = {
         detail['key']: detail for detail in
-        _get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details).result_values()
+        get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details).result_values()
     }
 
     formatted_results = []
@@ -392,24 +412,43 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
      and transcript.get('spliceregion', {}).get('extended_intronic_splice_region_variant') == minimal_transcript.get('extendedIntronicSpliceRegionVariant'))
 
 
-def _get_sample_data(samples, skip_multi_project_individual_guid=False, annotate_affected_males=False):
+def _get_valid_samples(families, dataset_types, secondary_dataset_types, allow_no_samples):
+    samples = Sample.objects.filter(individual__family__in=families, is_active=True)
+    if not samples.exists():
+        if allow_no_samples:
+            return None
+        raise InvalidSearchException(f'No search data found for families {", ".join([f.family_id for f in families])}')
+
+    if dataset_types:
+        samples = samples.filter(dataset_type__in={*dataset_types, *(secondary_dataset_types or [])})
+        if not samples.exists():
+            if allow_no_samples:
+                return None
+            raise InvalidSearchException(f'Unable to search against dataset type "{dataset_types[0]}"')
+
     mismatch_affected_samples = samples.values('sample_id', 'dataset_type').annotate(
         projects=ArrayAgg('individual__family__project__name', distinct=True),
         affected=ArrayAgg('individual__affected', distinct=True),
     ).filter(affected__len__gt=1)
     if mismatch_affected_samples:
-        from seqr.utils.search.utils import InvalidSearchException
         raise InvalidSearchException(
             'The following samples are incorrectly configured and have different affected statuses in different projects: ' +
             ', '.join([f'{agg["sample_id"]} ({"/ ".join(agg["projects"])})' for agg in mismatch_affected_samples]),
         )
 
+    return samples
+
+
+def _get_grouped_samples(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males):
     skip_individual_guid = (
         skip_multi_project_individual_guid and samples.values('individual__family__project_id').distinct().count() > 1
     )
+    family_array_kwargs = {'distinct': True}
+    if affected_family_only:
+        family_array_kwargs['filter'] = Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED)
     annotations = {
         'project_guids': ArrayAgg('individual__family__project__guid', distinct=True),
-        'family_guids': ArrayAgg('individual__family__guid', distinct=True),
+        'family_guids': ArrayAgg('individual__family__guid', **family_array_kwargs),
     }
     if skip_individual_guid:
         annotations['num_unaffected'] = Count(
@@ -421,16 +460,39 @@ def _get_sample_data(samples, skip_multi_project_individual_guid=False, annotate
             ))
     else:
         annotations['samples'] = ArrayAgg(JSONObject(
-            affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type', family_guid=F('individual__family__guid'), individual_guid=F('individual__guid'),
+            affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type',
+            family_guid=F('individual__family__guid'), individual_guid=F('individual__guid'),
         ))
 
     sample_data = samples.values('dataset_type', 'sample_type').annotate(**annotations)
+    if affected_family_only:
+        sample_data = sample_data.filter(family_guids__len__gt=0)
+    return sample_data
+
+
+def _get_sample_data(families, dataset_types, skip_multi_project_individual_guid=False, annotate_affected_males=False, allow_no_samples=False, has_comp_het=False, secondary_dataset_types=None, inheritance_mode=None, inheritance_filter=None):
+    samples = _get_valid_samples(families, dataset_types, secondary_dataset_types, allow_no_samples)
+    if not samples:
+        return {}
+
+    individual_affected_status = (inheritance_filter or {}).get('affected')
+    genotype_filter = (inheritance_filter or {}).get('genotype')
+    affected_family_only = inheritance_mode and not individual_affected_status
+    sample_data = _get_grouped_samples(samples, skip_multi_project_individual_guid, affected_family_only, annotate_affected_males)
+
     samples_by_dataset_type = {}
     for data in sample_data:
         dataset_type = data.pop('dataset_type')
         sample_type = data.pop('sample_type')
         if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
             dataset_type = f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
+
+        if genotype_filter and all(s['individual_guid'] not in genotype_filter for s in data.get('samples', [])):
+            continue
+        if inheritance_mode and individual_affected_status and all(
+            (individual_affected_status.get(s['individual_guid']) or s['affected']) != AFFECTED for s in data.get('samples', [])
+        ):
+            continue
 
         family_guids = set(data.pop('family_guids'))
         if dataset_type in samples_by_dataset_type:
@@ -463,9 +525,33 @@ def _get_sample_data(samples, skip_multi_project_individual_guid=False, annotate
             'num_families': len(set().union(*data['sample_type_families'].values())),
         }
 
+    _validate_dataset_types(
+        samples_by_dataset_type, dataset_types, secondary_dataset_types, has_comp_het, genotype_filter,
+    )
     _add_missing_multi_type_samples(samples, samples_by_dataset_type)
 
     return samples_by_dataset_type
+
+
+def _validate_dataset_types(samples_by_dataset_type, dataset_types, secondary_dataset_types, has_comp_het, genotype_filter):
+    if not samples_by_dataset_type:
+        raise InvalidSearchException(
+            'Invalid custom inheritance' if genotype_filter else
+            'Inheritance based search is disabled in families with no data loaded for affected individuals'
+        )
+
+    if has_comp_het and secondary_dataset_types:
+        sample_dataset_types = {
+            Sample.DATASET_TYPE_SV_CALLS if dt.startswith(Sample.DATASET_TYPE_SV_CALLS) else dt
+            for dt in samples_by_dataset_type
+        }
+        invalid_type = next((
+            dts[0] for dts in [dataset_types, secondary_dataset_types] if dts and not sample_dataset_types.intersection(dts)
+        ), None)
+        if invalid_type:
+            raise InvalidSearchException(
+                f'Unable to search for comp-het pairs with dataset type "{invalid_type}". This may be because inheritance based search is disabled in families with no loaded affected individuals'
+            )
 
 
 def _add_missing_multi_type_samples(samples, samples_by_dataset_type):
@@ -656,17 +742,15 @@ def _get_sort_key(sort, gene_metadata):
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
 
-def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, samples=None, affected_only=False, hom_only=False):
+def _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, affected_only=False, hom_only=False):
     entry_cls = ENTRY_CLASS_MAP[genome_version][data_type]
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
-
-    sample_data = _get_sample_data(samples)[data_type] if samples else None
 
     entries = entry_cls.objects.filter_locus(
         variant_ids=[variant_id], parsed_variant_ids=[parsed_variant_id] if parsed_variant_id else [],
     )
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
-    entries = entries.result_values(sample_data)
+    entries = entries.result_values()
     results = variants_cls.objects.subquery_join(entries)
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
@@ -730,7 +814,7 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type,
 
 def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_only):
     lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
-    if not lifted_entry_cls:
+    if not (lifted_entry_cls and variant.get('liftedOverChrom') and variant.get('liftedOverPos')):
         return
     lifted_id = (variant['liftedOverChrom'], variant['liftedOverPos'], *variant_id[2:])
     lifted_entries = lifted_entry_cls.objects.filter_locus(parsed_variant_ids=[lifted_id])
@@ -742,30 +826,15 @@ def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_o
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
 
 
-def get_clickhouse_variant_by_id(variant_id, parsed_variant_id, samples, genome_version, dataset_type):
-    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
-        data_types  = [
-            f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
-            for sample_type in samples.values_list('sample_type', flat=True).distinct()
-        ]
-    else:
-        data_types = [dataset_type]
-    for data_type in data_types:
-        variant = _clickhouse_variant_lookup(variant_id, parsed_variant_id, genome_version, data_type, samples)
-        if variant:
-            return variant
-    return None
-
-
-def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, samples):
-    sample_data = _get_sample_data(samples.filter(individual__family__guid__in=family_guids))[dataset_type]
+def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, additional_fields=None):
+    sample_data = _get_sample_data(Family.objects.filter(guid__in=family_guids), None)[dataset_type]
     entries = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter(
         project_guid=project_guid, family_guid__in=family_guids, key__in=keys,
     )
     gt_field, gt_expr = entries.genotype_expression(sample_data)
     return {
-        key: _clickhouse_genotypes_json(genotypes) for key, genotypes in
-        entries.annotate(**{gt_field: gt_expr}).values_list('key', 'genotypes')
+        e['key']: {**e, 'genotypes': _clickhouse_genotypes_json(e['genotypes'])} for e in
+        entries.annotate(**{gt_field: gt_expr}).values('key', 'genotypes', *(additional_fields or []))
     }
 
 
@@ -780,14 +849,14 @@ def get_variants_queryset(genome_version, dataset_type, keys, variant_ids=None):
     return variants_cls.objects.filter(key__in=keys)
 
 
-def _get_variant_details_queryset(genome_version, dataset_type, keys):
+def get_variant_details_queryset(genome_version, dataset_type, keys):
     if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
         return VARIANT_DETAILS_CLASS_MAP[genome_version].objects.filter(key__in=keys)
     return get_variants_queryset(genome_version, dataset_type, keys)
 
 
 def get_clickhouse_variant_annotations(genome_version, dataset_type, keys):
-    qs = _get_variant_details_queryset(genome_version, dataset_type, keys)
+    qs = get_variant_details_queryset(genome_version, dataset_type, keys)
     return qs.join_annotations().result_values(skip_entry_fields=True)
 
 
@@ -801,38 +870,6 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
     return lookup
 
 
-def get_variant_main_transcripts_by_key(genome_version, dataset_type, selected_transcripts_by_key, include_clinvar=False, additional_values=None):
-    qs = _get_variant_details_queryset(genome_version, dataset_type, selected_transcripts_by_key.keys())
-    if hasattr(qs.model, 'transcripts'):
-        transcript_field = 'transcripts'
-        expr = ArrayObjectSort
-        expr_kwargs = {'sort_field': 'transcriptRank'}
-    else:
-        transcript_field = qs.TRANSCRIPT_FIELD
-        expr = ArrayMap
-        expr_kwargs = {'mapped_expression': 'x'}
-    output_field = getattr(qs.model, transcript_field).field.clone()
-    output_field.group_by_key = None
-    qs = qs.annotate(sorted_transcripts=expr(transcript_field, output_field=output_field, **expr_kwargs))
-
-    fields = ['key', 'sorted_transcripts']
-    if include_clinvar:
-        fields.append('clinvar')
-        qs = qs.join_clinvar()
-
-    variants_by_key = {}
-    for variant in qs.values(*fields, **(additional_values or {})):
-        key = variant['key']
-        transcripts = variant.pop('sorted_transcripts')
-        variant['main_transcripts'] = {
-            selected_transcript_id: _main_transcript(selected_transcript_id, transcripts)
-            for selected_transcript_id in selected_transcripts_by_key[key]
-        }
-        variants_by_key[key] = variant
-
-    return variants_by_key
-
-
 def _main_transcript(selected_transcript_id, sorted_transcripts):
     if not sorted_transcripts:
         return {}
@@ -842,7 +879,8 @@ def _main_transcript(selected_transcript_id, sorted_transcripts):
 
 
 def delete_clickhouse_project(project, dataset_type, sample_type=None):
-    dataset_type = _clickhouse_dataset_type(dataset_type, sample_type)
+    if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES:
+        dataset_type = 'GCNV'
     table_base = f'{GENOME_VERSION_LOOKUP[project.genome_version]}/{dataset_type}'
     with connections['clickhouse_write'].cursor() as cursor:
         cursor.execute(f'ALTER TABLE "{table_base}/entries" DROP PARTITION %s', [project.guid])
@@ -851,13 +889,3 @@ def delete_clickhouse_project(project, dataset_type, sample_type=None):
             PROJECT_GT_STATS_VIEW_CLASS_MAP[project.genome_version][dataset_type].refresh()
             ENTRY_CLASS_MAP[project.genome_version][dataset_type].gt_stats.rel.related_model.reload()
     return f'Deleted all {dataset_type} search data for project {project.name}'
-
-
-SV_DATASET_TYPES = {
-    Sample.SAMPLE_TYPE_WGS: Sample.DATASET_TYPE_SV_CALLS,
-    Sample.SAMPLE_TYPE_WES: 'GCNV',
-}
-def _clickhouse_dataset_type(dataset_type, sample_type):
-    if dataset_type == Sample.DATASET_TYPE_SV_CALLS:
-        dataset_type = SV_DATASET_TYPES[sample_type]
-    return dataset_type

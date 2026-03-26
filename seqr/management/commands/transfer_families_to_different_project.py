@@ -1,7 +1,6 @@
 from django.core.management.base import BaseCommand
 
 from seqr.models import Project, Family, VariantTag, VariantTagType
-from seqr.utils.search.utils import backend_specific_call
 from seqr.utils.search.add_data_utils import trigger_delete_families_search
 
 import logging
@@ -35,7 +34,7 @@ class Command(BaseCommand):
             ]
             logger.info(f'Skipping {num_found - len(families)} families with analysis groups in the project: {", ".join(group_families)}')
 
-        backend_specific_call(lambda *args: None, trigger_delete_families_search)(from_project, list(families.values_list('guid', flat=True)))
+        trigger_delete_families_search(from_project, list(families.values_list('guid', flat=True)))
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
             variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)

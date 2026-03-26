@@ -1321,7 +1321,7 @@ class ReportAPITest(AirtableTest):
             **BASE_VARIANT_METADATA_ROW,
             'alt': 'G',
             'chrom': '21',
-            'clinvar': {'alleleId': None, 'clinicalSignificance': '', 'goldStars': None, 'variationId': None},
+            'clinvar': None,
             'condition_id': 'OMIM:615120',
             'condition_inheritance': 'Autosomal recessive|X-linked',
             'displayName': '1',
@@ -1506,7 +1506,7 @@ class ReportAPITest(AirtableTest):
 
 class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
 
-    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants']
+    fixtures = ['users', '1kg_project', 'reference_data', 'report_variants',  'clickhouse_saved_variants']
     ADDITIONAL_FAMILIES = ['F000014_14']
     ADDITIONAL_FINDINGS = ['NA21234_1_248367227', 'NA21234_MT_14783', 'NA21234_1_249045487_DEL']
     HAS_PM_OVERRIDE = True

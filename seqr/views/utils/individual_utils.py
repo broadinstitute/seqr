@@ -8,7 +8,6 @@ from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.add_data_utils import trigger_rebuild_gt_stats
-from seqr.utils.search.utils import backend_specific_call
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json, \
     update_family_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
@@ -88,9 +87,9 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     updated_family_models = Family.objects.filter(id__in=updated_family_ids)
     _remove_pedigree_images(updated_family_models, user)
     if updated_affected and not skip_gt_stats_rebuild:
-        backend_specific_call(lambda *args: True, trigger_rebuild_gt_stats)(project, user)
+        trigger_rebuild_gt_stats(project, user)
     if updated_sex:
-        backend_specific_call(lambda *args: True, SexDict.reload)()
+        SexDict.reload()
 
     pedigree_json = None
     if get_update_json:
@@ -215,7 +214,7 @@ def check_project_individuals_deletable(project, individual_guids=None):
     if individual_guids is not None:
         individuals_to_delete = individuals_to_delete.filter(guid__in=individual_guids)
 
-    errors = backend_specific_call(_validate_no_submissions, _validate_no_sumissions_no_search_samples)(individuals_to_delete)
+    errors = _validate_no_sumissions_no_search_samples(individuals_to_delete)
     return errors, individuals_to_delete
 
 
@@ -227,15 +226,11 @@ def _validate_delete_individuals(individuals_to_delete, error_type, query):
     return errors
 
 
-def _validate_no_submissions(individuals_to_delete):
+def _validate_no_sumissions_no_search_samples(individuals_to_delete):
     return _validate_delete_individuals(
         individuals_to_delete, 'MME submission',
         dict(matchmakersubmission__isnull=False, matchmakersubmission__deleted_date__isnull=True)
-    )
-
-
-def _validate_no_sumissions_no_search_samples(individuals_to_delete):
-    return _validate_no_submissions(individuals_to_delete) + _validate_delete_individuals(
+    ) + _validate_delete_individuals(
         individuals_to_delete, 'search sample', dict(sample__is_active=True)
     )
 

@@ -5,7 +5,6 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.status import status_view
-from seqr.views.apis.dataset_api import add_variants_dataset_handler
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG, \
     API_POLICY_REQUIRED_URL
 from django.conf.urls import include
@@ -53,14 +52,14 @@ from seqr.views.apis.case_review_api import \
 from seqr.views.apis.saved_variant_api import \
     saved_variant_data, \
     create_saved_variant_handler, \
+    create_manual_saved_variant_handler, \
     update_variant_tags_handler, \
     update_variant_acmg_classification_handler, \
     update_variant_functional_data_handler, \
     create_variant_note_handler, \
     update_variant_note_handler, \
     delete_variant_note_handler, \
-    update_variant_main_transcript, \
-    update_saved_variant_json
+    update_variant_main_transcript
 
 from seqr.views.apis.dashboard_api import dashboard_page_data
 
@@ -92,6 +91,7 @@ from matchmaker.views.matchmaker_api import \
     update_mme_result_status, \
     update_mme_contact_note, \
     update_mme_project_contact, \
+    send_vlm_email, \
     send_mme_contact_email
 
 from seqr.views.apis.variant_search_api import \
@@ -122,8 +122,7 @@ from seqr.views.apis.users_api import \
     update_user, \
     forgot_password
 
-from seqr.views.apis.data_manager_api import elasticsearch_status, delete_index, \
-    update_rna_seq, proxy_to_kibana, load_phenotype_prioritization_data, \
+from seqr.views.apis.data_manager_api import update_rna_seq, load_phenotype_prioritization_data, \
     validate_callset, get_loaded_projects, load_data, loading_vcfs, proxy_to_luigi, \
     trigger_delete_project, trigger_delete_family
 from seqr.views.apis.report_api import \
@@ -133,7 +132,7 @@ from seqr.views.apis.report_api import \
     gregor_export, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, hpo_summary_data, \
-    bulk_update_family_external_analysis, individual_metadata, send_vlm_email
+    bulk_update_family_external_analysis, individual_metadata
 from seqr.views.apis.superuser_api import get_all_users
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
@@ -161,6 +160,7 @@ react_app_pages = [
     'gene_info/.*',
     'gene_lists/.*',
     'variant_search/.*',
+    'variant_lookup/.*',
     'report/.*',
     'data_management/.*',
     'summary_data/.*',
@@ -241,7 +241,6 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)': save_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/upload_igv_dataset': receive_igv_table_handler,
-    'project/(?P<project_guid>[^/]+)/add_dataset/variants': add_variants_dataset_handler,
     'project/(?P<project_guid>[^/]+)/update_rna_seq': update_project_rna_seq,
 
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
@@ -254,7 +253,6 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/dynamic_analysis_groups/create': update_dynamic_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/dynamic_analysis_groups/(?P<analysis_group_guid>[^/]+)/update': update_dynamic_analysis_group_handler,
     'project/(?P<project_guid>[^/]+)/dynamic_analysis_groups/(?P<analysis_group_guid>[^/]+)/delete': delete_dynamic_analysis_group_handler,
-    'project/(?P<project_guid>[^/]+)/update_saved_variant_json': update_saved_variant_json,
     'project/(?P<project_guid>[^/]+)/add_workspace_data': add_workspace_data,
 
     'search/variant/(?P<variant_id>[^/]+)': query_single_variant_handler,
@@ -270,6 +268,7 @@ api_endpoints = {
     'saved_search/(?P<saved_search_guid>[^/]+)/delete': delete_saved_search_handler,
 
     'saved_variant/create': create_saved_variant_handler,
+    'saved_variant/create_manual/(?P<family_guid>[\w.|-]+)': create_manual_saved_variant_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/update_tags': update_variant_tags_handler,
     'saved_variant/(?P<variant_guid>[^/]+)/update_acmg_classification': update_variant_acmg_classification_handler,
     'saved_variant/(?P<variant_guids>[^/]+)/update_functional_data': update_variant_functional_data_handler,
@@ -333,8 +332,6 @@ api_endpoints = {
     'report/gregor': gregor_export,
     'report/seqr_stats': seqr_stats,
 
-    'data_management/elasticsearch_status': elasticsearch_status,
-    'data_management/delete_index': delete_index,
     'data_management/get_all_users': get_all_users,
     'data_management/update_rna_seq': update_rna_seq,
     'data_management/load_phenotype_prioritization_data': load_phenotype_prioritization_data,
@@ -352,7 +349,8 @@ api_endpoints = {
     'summary_data/matchmaker': mme_details,
     'summary_data/update_external_analysis': bulk_update_family_external_analysis,
     'summary_data/individual_metadata/(?P<project_guid>[^/]+)': individual_metadata,
-    'summary_data/send_vlm_email': send_vlm_email,
+
+    'send_vlm_email': send_vlm_email,
 
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/grant_access': grant_workspace_access,
     'create_project_from_workspace/(?P<namespace>[^/]+)/(?P<name>[^/]+)/validate_vcf': validate_anvil_vcf,
@@ -395,17 +393,6 @@ urlpatterns += [
 ]
 
 handler401 = 'seqr.views.apis.auth_api.app_login_required_error'
-
-kibana_urls = '^(?:{})'.format('|'.join([
-    'app', '\d+/built_assets', '\d+/bundles', 'bundles', 'elasticsearch', 'es_admin', 'node_modules/@kbn', 'internal',
-    'plugins', 'translations', 'ui', 'api/apm', 'api/console', 'api/core', 'api/index_management', 'api/index_patterns',
-    'api/kibana', 'api/licensing', 'api/monitoring', 'api/reporting', 'api/saved_objects', 'api/telemetry',
-    'api/timelion', 'api/ui_metric', 'api/xpack', 'bootstrap',
-]))
-
-urlpatterns += [
-    re_path(kibana_urls, proxy_to_kibana, name='proxy_to_kibana'),
-]
 
 urlpatterns += [
     re_path(r'^admin/login/$', RedirectView.as_view(url=LOGIN_URL, permanent=True, query_string=True)),

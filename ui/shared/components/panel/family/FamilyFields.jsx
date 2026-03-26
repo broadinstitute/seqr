@@ -7,7 +7,7 @@ import styled from 'styled-components'
 import { loadUserOptions, updateFamily } from 'redux/rootReducer'
 import { loadProjectAnalysisGroups } from 'redux/utils/reducerUtils'
 import {
-  getSamplesByFamily,
+  getMinMaxDatasetsByFamily,
   getUserOptionsIsLoading,
   getHasActiveSearchSampleByFamily,
   getUserOptions,
@@ -28,22 +28,22 @@ const NoWrap = styled.div`
   white-space: nowrap;
 `
 
-const BaseFirstSample = React.memo(({ firstFamilySample, compact, hasActiveVariantSample }) => (
+const BaseFirstSample = React.memo(({ firstFamilyDataset, compact, hasActiveVariantSample }) => (
   <Sample
     hoverDetails={compact ? 'first loaded' : null}
     isOutdated={!hasActiveVariantSample}
-    {...(firstFamilySample || {})}
+    {...(firstFamilyDataset || {})}
   />
 ))
 
 BaseFirstSample.propTypes = {
-  firstFamilySample: PropTypes.object,
+  firstFamilyDataset: PropTypes.object,
   compact: PropTypes.bool,
   hasActiveVariantSample: PropTypes.bool,
 }
 
 const mapSampleDispatchToProps = (state, ownProps) => ({
-  firstFamilySample: (getSamplesByFamily(state)[ownProps.familyGuid] || [])[0],
+  firstFamilyDataset: (getMinMaxDatasetsByFamily(state)[ownProps.familyGuid] || [])[0],
   hasActiveVariantSample: getHasActiveSearchSampleByFamily(state)[ownProps.familyGuid],
 })
 

@@ -76,8 +76,6 @@ const DATA = [
     'phenotype_contribution-2': 'Full',
     'partial_contribution_explained-1': 'HP:0000501|HP:0000365',
     'partial_contribution_explained-2': '',
-    'ClinGen_allele_ID-1': 'CA1501729',
-    'ClinGen_allele_ID-2': null,
   },
 ]
 
@@ -93,19 +91,19 @@ test('IndividualMetadata render and export', () => {
     'filter_flags', 'consanguinity', 'family_history', 'genetic_findings_id-1', 'variant_reference_assembly-1',
     'chrom-1', 'pos-1', 'chrom_end-1', 'pos_end-1', 'ref-1', 'alt-1', 'gene_of_interest-1', 'gene_id-1', 'seqr_chosen_consequence-1', 'transcript-1',
     'hgvsc-1', 'hgvsp-1', 'zygosity-1', 'copy_number-1', 'sv_name-1', 'validated_name-1', 'sv_type-1', 'variant_inheritance-1', 'gene_known_for_phenotype-1',
-    'phenotype_contribution-1', 'partial_contribution_explained-1', 'notes-1', 'ClinGen_allele_ID-1',
+    'phenotype_contribution-1', 'partial_contribution_explained-1', 'notes-1',
     'genetic_findings_id-2', 'variant_reference_assembly-2', 'chrom-2', 'pos-2', 'chrom_end-2', 'pos_end-2',
     'ref-2', 'alt-2', 'gene_of_interest-2', 'gene_id-2', 'seqr_chosen_consequence-2', 'transcript-2', 'hgvsc-2', 'hgvsp-2',
     'zygosity-2', 'copy_number-2', 'sv_name-2', 'validated_name-2', 'sv_type-2', 'variant_inheritance-2', 'gene_known_for_phenotype-2',
-    'phenotype_contribution-2', 'partial_contribution_explained-2', 'notes-2', 'ClinGen_allele_ID-2'])
+    'phenotype_contribution-2', 'partial_contribution_explained-2', 'notes-2'])
   expect(exportConfig.processRow(DATA[0])).toEqual([
     'Test Reprocessed Project', 'R0003_test', '12', 'F000012_12', 'NA20889', 'I000017_na20889', '', '', '', '',
     'Self', 'Female (XXX)', 'Ashkenazi Jewish', 'Affected', 'HP:0011675 (Arrhythmia)|HP:0001509 ()', '', 'Yes', null,
     'OMIM:616126', 'Immunodeficiency 38', 'Autosomal recessive', null, null, undefined, 'Waiting for data', 'Tier 1',
     'WES', '2017-02-05', '', undefined, 'Yes', 'NA20889_1_248367227', undefined, '1', 248367227, null, null, 'TC', 'T',
     'OR4G11P', 'ENSG00000240361', 'intron_variant', 'ENST00000505820', 'c.3955G>A', 'c.1586-17C>G', 'Heterozygous', null, undefined, undefined, undefined,
-    'unknown', 'Candidate', 'Partial', 'HP:0000501|HP:0000365', undefined, 'CA1501729', 'NA20889_1_249045487_DEL', undefined,
+    'unknown', 'Candidate', 'Partial', 'HP:0000501|HP:0000365', undefined, 'NA20889_1_249045487_DEL', undefined,
     '12', '49045487', null, '49045898', undefined, undefined, undefined, undefined, undefined,
     undefined, undefined, undefined, 'Heterozygous', 1, 'DEL:chr12:49045487-49045898', 'DEL:chr12:49045123-49045456', 'Deletion',
-    'unknown', 'Candidate', 'Full', '', undefined, null])
+    'unknown', 'Candidate', 'Full', '', undefined])
 })

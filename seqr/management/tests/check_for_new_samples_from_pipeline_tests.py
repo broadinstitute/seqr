@@ -165,6 +165,7 @@ LOCAL_RUN_PATHS = [
     '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/auto__2023-08-09/_CLICKHOUSE_LOAD_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh37/SNV_INDEL/runs/manual__2023-11-02/_CLICKHOUSE_LOAD_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2024-08-12/_CLICKHOUSE_LOAD_SUCCESS',
+    '/seqr/seqr-hail-search-data/GRCh38/MITO/runs/auto__2025-12-02/_CLICKHOUSE_LOAD_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/GCNV/runs/auto__2024-09-14/_CLICKHOUSE_LOAD_SUCCESS',
     '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json',
     '/seqr/seqr-hail-search-data/GRCh38/SNV_INDEL/runs/hail_search_to_clickhouse_migration_WGS_R0877_neptune/_CLICKHOUSE_LOAD_SUCCESS',
@@ -184,6 +185,9 @@ RUN_PATHS = [
     b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/_CLICKHOUSE_LOAD_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/_SUCCESS',
+    b'gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/_CLICKHOUSE_LOAD_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/_SUCCESS',
     b'gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/_CLICKHOUSE_LOAD_SUCCESS',
@@ -325,8 +329,12 @@ OPENED_RUN_JSON_FILES = [{
     'family_samples': {'F0000123_ABC': ['NA22882', 'NA20885']},
 }, {
     'callsets': ['invalid_sample.vcf'],
-    'sample_type': 'WGS',
+    'sample_type': 'WES',
     'family_samples': {'F000003_3': ['NA22882', 'NA20885']},
+}, {
+    'callsets': ['invalid_sample.vcf'],
+    'sample_type': 'WES',
+    'family_samples': {'F000002_2': ['HG00732', 'HG00733']},
 }, {
     'callsets': ['gcnv.bed.gz'],
     'sample_type': 'WES',
@@ -349,11 +357,6 @@ def mock_opened_file(index):
 @mock.patch('seqr.utils.file_utils.os.path.isfile', lambda *args: True)
 class CheckNewSamplesTest(object):
 
-    CREATE_SNV_INDEL_SAMPLES_LOGS = [
-        ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
-        ('create 4 Samples', {'dbUpdate': mock.ANY}),
-        ('update 4 Samples', {'dbUpdate': mock.ANY}),
-    ]
     UPDATE_SAMPLE_LOGS = [
         ('update 2 Individuals', {'dbUpdate': {
             'dbEntity': 'Individual', 'entityIds': ['I000001_na19675', 'I000015_na20885'],
@@ -366,8 +369,6 @@ class CheckNewSamplesTest(object):
         ('Reloading genotypes for 1 SNV_INDEL variants in family F000014_14', None),
         ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
         ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
-        ('Reload Summary: ', None),
-        ('  Non-Analyst Project: Updated 1 variants', None),
     ]
 
     def set_up(self):
@@ -422,7 +423,7 @@ class CheckNewSamplesTest(object):
 
         Sample.objects.filter(guid=OLD_DATA_SAMPLE_GUID).update(sample_type='WES')
 
-    def _test_call(self, error_logs=None, run_loading_logs=None, num_runs=5):
+    def _test_call(self, error_logs=None, run_loading_logs=None, num_runs=6):
         self._set_loading_files()
         self.reset_logs()
 
@@ -434,7 +435,7 @@ class CheckNewSamplesTest(object):
         logs = self.LIST_FILE_LOGS[:1] + [(f'Loading new samples from {num_runs} run(s)', None)]
         runs = [
             ('GRCh38/SNV_INDEL', 'auto__2023-08-09'), ('GRCh37/SNV_INDEL', 'manual__2023-11-02'),
-            ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/SV', 'auto__2024-09-14'),
+            ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/MITO', 'auto__2025-12-02'), ('GRCh38/SV', 'auto__2024-09-14'),
             ('GRCh38/SNV_INDEL', 'hail_search_to_clickhouse_migration_WGS_R0877_neptune'),
         ]
         if single_call:
@@ -466,29 +467,32 @@ class CheckNewSamplesTest(object):
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
 
         self._test_call(run_loading_logs={
-            'GRCh38/SNV_INDEL': self.CREATE_SNV_INDEL_SAMPLES_LOGS + [
-                ('update 1 Samples', {'dbUpdate': mock.ANY}),
+            'GRCh38/SNV_INDEL': [
+                ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
+                ('create 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 1 Samples', {'dbUpdate': mock.ANY}),
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + self.UPDATE_SAMPLE_LOGS,
             'GRCh38/MITO': [
-                ('Loading 2 WGS MITO samples in 1 projects', None)
+                ('Loading 2 WES MITO samples in 1 projects', None)
             ],
             'GRCh38/SV': [
                 ('Loading 4 WES SV samples in 2 projects', None),
+                ('update 1 Familys', {'dbUpdate': mock.ANY}),
                 ('create 4 Samples', {'dbUpdate': mock.ANY}),
                 ('update 4 Samples', {'dbUpdate': mock.ANY}),
                 ('update 3 Samples', {'dbUpdate': mock.ANY}),
-                ('update 1 Familys', {'dbUpdate': mock.ANY}),
                 ('Reloading saved variants in 2 projects', None),
                 ('Updated 0 variants in 1 families for project 1kg project nåme with uniçøde', None),
                 ('Updated 0 variants in 1 families for project Test Reprocessed Project', None),
-                ('Reload Summary: ', None),
             ],
         }, error_logs={
             'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
             'auto__2024-08-12': 'Matches not found for sample ids: NA20885, NA22882',
+            'auto__2025-12-02': 'The following families are included in the callset but are missing some family members: 2 (HG00731)',
         })
 
         # Test notifications
@@ -588,6 +592,7 @@ The following 1 families failed sex check:
             'auto__2023-08-09': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0003_test (GRCh37)',
             'manual__2023-11-02': 'Invalid families in run metadata GRCh37/SNV_INDEL: manual__2023-11-02 - F0000123_ABC',
             'auto__2024-08-12': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37)',
+            'auto__2025-12-02': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37)',
             'auto__2024-09-14': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37), R0003_test (GRCh37)',
         }
         self._test_call(error_logs=error_logs)
@@ -718,15 +723,17 @@ The following 1 families failed sex check:
         if self.AIRTABLE_LOGS:
             airtable_logs.append(('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None))
         self._test_call(num_runs=2, run_loading_logs={
-            'GRCh38/SNV_INDEL': self.CREATE_SNV_INDEL_SAMPLES_LOGS + airtable_logs + self.UPDATE_SAMPLE_LOGS,
+            'GRCh38/SNV_INDEL': [
+                ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
+                ('create 4 Samples', {'dbUpdate': mock.ANY}),
+                ('update 4 Samples', {'dbUpdate': mock.ANY}),
+            ] + airtable_logs + self.UPDATE_SAMPLE_LOGS,
         })
 
 
-class LocalCheckNewSamplesTest(DifferentDbTransactionSupportMixin, AuthenticationTestCase, CheckNewSamplesTest):
+class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
     fixtures = ['users', '1kg_project', 'clickhouse_saved_variants']
     databases = '__all__'
-
-    ES_HOSTNAME = ''
 
     MOCK_DATA_DIR = '/seqr/seqr-hail-search-data'
     PROJECT_EMAIL_TEXT = TEXT_EMAIL_TEMPLATE.format(1, 'WES', 'Non-Analyst Project')
@@ -769,7 +776,7 @@ class LocalCheckNewSamplesTest(DifferentDbTransactionSupportMixin, Authenticatio
         self.mock_glob.assert_called_with('/seqr/seqr-hail-search-data/GRCh37/MITO/runs/*/*', recursive=False)
 
     def _set_reloading_loading_files(self):
-        self.mock_glob.return_value = [LOCAL_RUN_PATHS[3], LOCAL_RUN_PATHS[6]]
+        self.mock_glob.return_value = [LOCAL_RUN_PATHS[3], LOCAL_RUN_PATHS[7]]
 
     def _set_loading_files(self):
         if not self.mock_glob.return_value:
@@ -788,7 +795,7 @@ class LocalCheckNewSamplesTest(DifferentDbTransactionSupportMixin, Authenticatio
         self.assertEqual(self.mock_mkdir.call_count, 0 if single_call else 2)
         self.assertEqual(list(self.mock_written_files.keys()), [
             file.replace('validation_errors.json', '_ERRORS_REPORTED')
-            for file in [LOCAL_RUN_PATHS[2], LOCAL_RUN_PATHS[7]]
+            for file in [LOCAL_RUN_PATHS[2], LOCAL_RUN_PATHS[8]]
         ])
 
     def _assert_expected_airtable_calls(self, *args, **kwargs):
@@ -916,7 +923,7 @@ The following users have been notified: test_user_manager@test.com""")
         )
 
     def _set_reloading_loading_files(self):
-        self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS[6:8] + RUN_PATHS[15:17]), b''
+        self.mock_ls_process.communicate.return_value = b'\n'.join(RUN_PATHS[6:8] + RUN_PATHS[18:20]), b''
         self.mock_subprocess.side_effect = [self.mock_ls_process]
 
     def _set_loading_files(self):
@@ -940,6 +947,8 @@ The following users have been notified: test_user_manager@test.com""")
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh37/SNV_INDEL/runs/manual__2023-11-02/metadata.json', -2),
                 ('gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2024-08-12/metadata.json', -2),
+                ('gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/metadata.json', -2),
+                ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/MITO/runs/auto__2025-12-02/metadata.json', -2),
                 ('gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
                 ('gsutil cat gs://seqr-hail-search-data/v3.1/GRCh38/GCNV/runs/auto__2024-09-14/metadata.json', -2),
                 ('gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json', -2),
