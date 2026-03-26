@@ -102,12 +102,7 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
         results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, **search)
 
     if not searched_dataset_types:
-        if sample_data_errors:
-            raise InvalidSearchException(next(iter(sample_data_errors)))
-        no_data_type = next(data_type for data_type, data in sample_data_by_dataset_type.items() if not data)
-        if no_data_type.startswith(Sample.DATASET_TYPE_SV_CALLS):
-            no_data_type = Sample.DATASET_TYPE_SV_CALLS
-        raise InvalidSearchException(f'Unable to search against dataset type "{no_data_type}"')
+        _raise_dataset_type_errors(sample_data_errors, sample_data_by_dataset_type)
 
     logger.info(f'Total results: {len(results)}', user)
     return get_sorted_search_results(results, sort, families)
@@ -143,6 +138,15 @@ def _parse_dataset_type_query(genome_version, dataset_type, families, sample_dat
         sample_data_by_dataset_type[dataset_type] = None
 
     return entry_qs, variants_qs, parsed_filters
+
+
+def _raise_dataset_type_errors(sample_data_errors, sample_data_by_dataset_type):
+    if sample_data_errors:
+        raise InvalidSearchException(next(iter(sample_data_errors)))
+    no_data_type = next(data_type for data_type, data in sample_data_by_dataset_type.items() if not data)
+    if no_data_type.startswith(Sample.DATASET_TYPE_SV_CALLS):
+        no_data_type = Sample.DATASET_TYPE_SV_CALLS
+    raise InvalidSearchException(f'Unable to search against dataset type "{no_data_type}"')
 
 
 def _get_search_results(entry_qs, variants_qs, sample_data, skip_entry_fields=False, **search_kwargs):
