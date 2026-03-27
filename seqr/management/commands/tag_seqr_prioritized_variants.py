@@ -225,13 +225,22 @@ SEARCHES = {
             **RECESSIVE_SEARCH,
         },
         'Compound Heterozygous - Both High Splice AI': {
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: False
+            },
             'inheritance_mode': COMPOUND_HET,
-            **HIGH_SPLICE_AI_SEARCH,
+            'annotations':{
+                'splice_ai': 0.8,
+            },
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Compound Heterozygous - Both High Splice AI - Confirmed': {
-            'inheritance_mode': COMPOUND_HET,
-            **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: True
+            },
+            'annotations': {
+                'splice_ai': 0.5,
+            },
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': {
@@ -247,7 +256,6 @@ SEARCHES = {
                 CONFIRMED_FAMILY_FILTER: False
             },
             'inheritance_mode': COMPOUND_HET,
-            'no_secondary_annotations': True,
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'annotations_secondary':{
                 'splice_ai': 0.8,
@@ -263,7 +271,6 @@ SEARCHES = {
                 CONFIRMED_FAMILY_FILTER: True
             },
             'inheritance_mode': COMPOUND_HET,
-            'no_secondary_annotations': True,
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'annotations_secondary':{
                 'splice_ai': 0.5,
@@ -393,6 +400,7 @@ SEARCHES = {
                 'mitomap_pathogenic': True,
             },
             'freqs': {
+                'callset': {'ac': 5000},
                 'gnomad_mito': {'af': 0.05},
             },
         },
@@ -401,6 +409,7 @@ SEARCHES = {
             'inheritance_mode': DE_NOVO,
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'freqs': {
+                'callset': {'ac': 5000},
                 'gnomad_mito': {'af': 0.001},
             },
             'in_silico': {
@@ -628,7 +637,7 @@ class Command(BaseCommand):
     @staticmethod
     def _execute_search(sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map, **kwargs):
         results = get_clickhouse_variants(
-            families=None, user=None, genome_version=GENOME_VERSION_GRCh38,
+            families=family_guid_map.keys(), user=None, genome_version=GENOME_VERSION_GRCh38,
             encode_genotypes_json=True, sample_data_by_dataset_type={
                 **{dt: None for dt in ENTRY_CLASS_MAP[GENOME_VERSION_GRCh38]}, **sample_data_by_dataset_type,
             }, **kwargs

@@ -37,7 +37,7 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance_mode=None, annotations=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
+def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance_mode=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
@@ -52,9 +52,9 @@ def get_clickhouse_variants(families, user, genome_version, sort=None, sample_da
     for dataset_type in ENTRY_CLASS_MAP[genome_version]:
         try:
             entry_qs, variants_qs, parsed_filters = _parse_dataset_type_query(
-                genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, **search,
+                genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors,
                 annotate_affected_males=has_x_chrom_comp_het or has_x_linked, has_location_filter=has_location_filter,
-                allow_no_samples=bool(no_access_project_genome_version), inheritance_mode=inheritance_mode, annotations=annotations,
+                allow_no_samples=bool(no_access_project_genome_version), inheritance_mode=inheritance_mode, **search,
             )
         except InvalidDatasetTypeException:
             continue
@@ -89,7 +89,7 @@ def get_clickhouse_variants(families, user, genome_version, sort=None, sample_da
             )
 
         if has_comp_het:
-            if not annotations:
+            if not any(parsed_filters.values()):
                 raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
             comp_het_sample_data = sample_data
             if has_x_chrom_comp_het and 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
@@ -107,7 +107,7 @@ def get_clickhouse_variants(families, user, genome_version, sort=None, sample_da
         searched_dataset_types.add(dataset_type)
 
     if has_comp_het and any(dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in VARIANTS_CLASS_MAP[genome_version]):
-        results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs or {}, searched_dataset_types, annotations=annotations, **search)
+        results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs or {}, searched_dataset_types, **search)
 
     if not searched_dataset_types:
         _raise_dataset_type_errors(sample_data_errors, sample_data_by_dataset_type)
@@ -141,6 +141,7 @@ def _parse_dataset_type_query(genome_version, dataset_type, families, sample_dat
             inheritance_filter=inheritance_filter,
             annotate_affected_males=annotate_affected_males,
             has_location_filter=has_location_filter,
+            allow_no_samples=allow_no_samples,
         )
         sample_data_by_dataset_type[dataset_type] = sample_data
 
