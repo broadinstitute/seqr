@@ -140,6 +140,8 @@ def _parse_locus_search(locus, genome_version, search):
         exclude_intervals += [
             {field: gene[f'{field}Grch{genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
         ]
+        genes = None
+        intervals = None
 
     search.update({
         'genes': genes, 'intervals': intervals, 'exclude_intervals': exclude_intervals, 'raw_variant_items': locus.get('rawVariantItems'),
