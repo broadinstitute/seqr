@@ -151,11 +151,6 @@ def _parse_search(search, genome_version, user):
         parsed_search.update({'variant_ids': variant_ids, 'parsed_variant_ids': parsed_variant_ids})
 
     exclude.pop('rawItems', None)
-    if exclude.get('clinvar') and (search.get('pathogenicity') or {}).get('clinvar'):
-        duplicates = set(search['pathogenicity']['clinvar']).intersection(exclude['clinvar'])
-        if duplicates:
-            raise InvalidSearchException(f'ClinVar pathogenicity {", ".join(sorted(duplicates))} is both included and excluded')
-
     exclude.pop('previousSearch', None)
     exclude_previous_hash = exclude.pop('previousSearchHash', None)
     if exclude_previous_hash:

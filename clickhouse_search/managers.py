@@ -611,12 +611,17 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
         return results, False, in_silico_q, missing_q
 
-    def _filter_annotations(self, results, *args, exclude=None, **kwargs):
+    def _filter_annotations(self, results, *args, exclude=None, pathogenicity=None, **kwargs):
         screen_expression = self._screen_expression()
         if screen_expression:
             results = results.annotate(screen=self._screen_expression())
 
         results = super()._filter_annotations(results, *args, **kwargs)
+
+        if (exclude or {}).get(CLINVAR_KEY) and (pathogenicity or {}).get(CLINVAR_KEY):
+            duplicates = set(pathogenicity[CLINVAR_KEY]).intersection(exclude[CLINVAR_KEY])
+            if duplicates:
+                raise InvalidSearchException(f'ClinVar pathogenicity {", ".join(sorted(duplicates))} is both included and excluded')
 
         exclude_clinvar_q = self._clinvar_filter_q(exclude)
         if exclude_clinvar_q is not None:
