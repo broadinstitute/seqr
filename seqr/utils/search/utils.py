@@ -118,7 +118,6 @@ def _query_variants(search_model, user, sort=None):
 
     search = deepcopy(search_model.variant_search.search)
     families = search_model.families.all()
-    _validate_sort(sort, families)
 
     parsed_search = _parse_search(search, genome_version, user)
 
@@ -246,11 +245,6 @@ def _parse_valid_variant_id(variant_id):
     pos = int(pos)
     get_xpos(chrom, pos)
     return chrom, pos, ref, alt
-
-
-def _validate_sort(sort, families):
-    if sort == PRIORITIZED_GENE_SORT and len(families) != 1:
-        raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
 
 
 def _parse_inheritance(search):

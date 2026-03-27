@@ -679,6 +679,16 @@ def _has_x_chrom(genome_version, genes=None, intervals=None, **kwargs):
     return any('X' in gene[f'chromGrch{genome_version}'] for gene in (genes or {}).values()) or any('X' in interval['chrom'] for interval in (intervals or []))
 
 
+def _prioritized_gene_sort(gene_ids, families):
+    if len(families) != 1:
+        raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
+    return {
+        agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
+            gene_id__in=gene_ids, individual__family_id=families[0].id, rank__lte=100,
+        ).values('gene_id').annotate(min_rank=Min('rank'))
+    }
+
+
 OMIM_SORT = 'in_omim'
 GENE_SORTS = {
     'constraint': lambda gene_ids, _: {
@@ -688,11 +698,7 @@ GENE_SORTS = {
     OMIM_SORT: lambda gene_ids, _: set(Omim.objects.filter(
         gene__gene_id__in=gene_ids, phenotype_mim_number__isnull=False,
     ).values_list('gene__gene_id', flat=True)),
-    PRIORITIZED_GENE_SORT: lambda gene_ids, families: {
-        agg['gene_id']: agg['min_rank'] for agg in PhenotypePrioritization.objects.filter(
-            gene_id__in=gene_ids, individual__family_id=families[0].id, rank__lte=100,
-        ).values('gene_id').annotate(min_rank=Min('rank'))
-    },
+    PRIORITIZED_GENE_SORT: _prioritized_gene_sort,
 }
 
 def _get_sort_gene_metadata(sort, results, families):
