@@ -162,7 +162,7 @@ SV_RECESSIVE_SEARCH = {
 }
 
 NO_PANEL_APP_DE_NOVO_SEARCH = {
-    'inheritance_mode': DE_NOVO,
+    'inheritance': {'mode': DE_NOVO},
     'freqs': {
         'callset': {'ac': 100},
         'gnomad_exomes': {'ac': 100},
@@ -181,7 +181,7 @@ SEARCHES = {
     'SNV_INDEL': {
         'Clinvar Pathogenic': {
             'gene_list_moi': DOMINANT_MOI,
-            'inheritance_mode': ANY_AFFECTED,
+            'inheritance': {'mode': ANY_AFFECTED},
             'pathogenicity': CLINVAR_FILTER,
             'freqs': {
                 'callset': {'ac': 150},
@@ -190,28 +190,28 @@ SEARCHES = {
             },
         },
         'Clinvar Pathogenic - Compound Heterozygous': {
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': {},
             'annotations_secondary': HIGH_MODERATE_ANNOTATIONS,
             **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Both Pathogenic - Compound Heterozygous': {
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Pathogenic - Recessive': {
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Pathogenic - X-Linked Recessive': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             'family_filter': {
                 AFFECTED_MALE_FAMILY_FILTER: True
             },
             **CLINVAR_RECESSIVE_SEARCH,
         },
         'Compound Heterozygous': {
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': HIGH_ANNOTATIONS,
             'annotations_secondary': HIGH_MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
@@ -220,7 +220,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
         },
@@ -228,7 +228,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: False
             },
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations':{
                 'splice_ai': 0.8,
             },
@@ -244,7 +244,7 @@ SEARCHES = {
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': {
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': {},
             'annotations_secondary': {
                 'splice_ai': 0.5,
@@ -255,7 +255,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: False
             },
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'annotations_secondary':{
                 'splice_ai': 0.8,
@@ -270,7 +270,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'annotations_secondary':{
                 'splice_ai': 0.5,
@@ -319,17 +319,17 @@ SEARCHES = {
             **NO_PANEL_APP_DE_NOVO_SEARCH,
         },
         'High Splice AI - Recessive': {
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             **HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'High Splice AI - Recessive Confirmed': {
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'High Splice AI - X-Linked Recessive': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             **HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
             'family_filter': {
@@ -338,7 +338,7 @@ SEARCHES = {
             },
         },
         'High Splice AI - X-Linked Recessive Confirmed': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
             'family_filter': {
@@ -347,12 +347,12 @@ SEARCHES = {
             },
         },
         'Recessive': {
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
         },
         'X-Linked Recessive': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             'family_filter': {
                 AFFECTED_MALE_FAMILY_FILTER: True
             },
@@ -365,7 +365,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             **SV_RECESSIVE_SEARCH,
             'qualityFilter': PASS_QUALITY_FILTER,
         },
@@ -380,11 +380,11 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             **SV_RECESSIVE_SEARCH,
         },
         'SV - X-Linked Recessive': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             'family_filter': {
                 AFFECTED_MALE_FAMILY_FILTER: True,
                 CONFIRMED_FAMILY_FILTER: True,
@@ -394,7 +394,7 @@ SEARCHES = {
     },
     'MITO': {
         'Mitochondrial - Pathogenic': {
-            'inheritance_mode': ANY_AFFECTED,
+            'inheritance': {'mode': ANY_AFFECTED},
             'pathogenicity': {'clinvar': CLINVAR_FILTER['clinvar']},
             'annotations': {
                 'mitomap_pathogenic': True,
@@ -406,7 +406,7 @@ SEARCHES = {
         },
         'Mitochondrial - De Novo/ Dominant': {
             'gene_list_moi': MITO_MOI,
-            'inheritance_mode': DE_NOVO,
+            'inheritance': {'mode': DE_NOVO},
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'freqs': {
                 'callset': {'ac': 5000},
@@ -628,7 +628,7 @@ class Command(BaseCommand):
             }
             num_results = cls._execute_search(
                 sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map,
-                inheritance_mode=COMPOUND_HET, **config_search, **ALL_SEARCHES_CRITERIA, genes=genes,
+                inheritance={'mode': COMPOUND_HET}, **config_search, **ALL_SEARCHES_CRITERIA, genes=genes,
             )
             search_counts[search_name] = num_results
 
