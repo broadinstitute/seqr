@@ -19,11 +19,9 @@ from seqr.views.utils.permissions_utils import user_is_analyst
 logger = SeqrLogger(__name__)
 
 
-
 MAX_GENES_FOR_FILTER = 10000
 MIN_MULTI_FAMILY_SEQR_AC = 5000
 MAX_EXPORT_VARIANTS = 1000
-MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 
 
 def _get_search_genome_version(search_model):
@@ -123,7 +121,6 @@ def _query_variants(search_model, user, sort=None):
     _validate_sort(sort, families)
 
     parsed_search = _parse_search(search, genome_version, user)
-    _validate_search(parsed_search, families)
 
     results = get_clickhouse_variants(families, parsed_search, user, genome_version, sort=sort)
 
@@ -268,29 +265,6 @@ def _parse_inheritance(search):
 
     if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
         raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
-
-
-def _validate_search(search, families):
-    has_comp_het_search = search.get('inheritance_mode') in {RECESSIVE, COMPOUND_HET}
-    has_location_filter = any(search.get(field) for field in ['genes', 'intervals', 'variant_ids'])
-    if has_comp_het_search:
-        if not search.get('annotations'):
-            raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
-
-        if not has_location_filter and len(families) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
-            raise InvalidSearchException(
-                'Location must be specified to search for compound heterozygous variants across many families')
-
-        if search.get('no_access_project_genome_version'):
-            raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
-
-    if not has_location_filter and families.values('project_id').distinct().count() > 1:
-        raise InvalidSearchException('Location must be specified to search across multiple projects')
-    seqr_ac_filter = search.get('freqs', {}).get('callset', {}).get('ac') or (MIN_MULTI_FAMILY_SEQR_AC + 1)
-    if seqr_ac_filter > MIN_MULTI_FAMILY_SEQR_AC and len(families) > 1:
-        raise InvalidSearchException(
-            f'seqr AC frequency of at least {MIN_MULTI_FAMILY_SEQR_AC} must be specified to search across multiple families'
-        )
 
 
 LIFTOVERS = {

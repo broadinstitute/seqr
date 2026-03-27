@@ -29,6 +29,8 @@ class InvalidSearchException(Exception):
     pass
 
 BATCH_SIZE = 10000
+MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
+MIN_MULTI_FAMILY_SEQR_AC = 5000
 
 TRANSCRIPT_CONSEQUENCES_FIELD = 'sortedTranscriptConsequences'
 SELECTED_GENE_FIELD = 'selectedGeneId'
@@ -40,22 +42,28 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
+    has_location_filter = any(search.get(field) for field in ['genes', 'intervals', 'variant_ids'])
     sample_data_by_dataset_type = sample_data_by_dataset_type or {}
     results = []
     exclude_keys = search.pop('exclude_keys', None) or {}
     exclude_key_pairs = search.pop('exclude_key_pairs', None) or {}
     searched_dataset_types = set()
     sample_data_errors = set()
+
+    _validate_num_families(families, has_comp_het, has_location_filter, **search)
+
     for dataset_type in ENTRY_CLASS_MAP[genome_version]:
         try:
             entry_qs, variants_qs, parsed_filters = _parse_dataset_type_query(
                 genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors,
-                annotate_affected_males=has_x_chrom_comp_het or has_x_linked, **search,
+                annotate_affected_males=has_x_chrom_comp_het or has_x_linked, has_location_filter=has_location_filter, **search,
             )
         except InvalidDatasetTypeException:
             continue
 
         if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and search.get('no_access_project_genome_version'):
+            if has_comp_het:
+                raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
             logger.info('Looking up variants in projects with no user access', user)
             results += _get_search_results(
                 entry_qs, variants_qs, **search, **parsed_filters, sample_data=None, skip_entry_fields=True,
@@ -83,6 +91,8 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
             )
 
         if has_comp_het:
+            if not search.get('annotations'):
+                raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
             comp_het_sample_data = sample_data
             if has_x_chrom_comp_het and 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 comp_het_sample_data = _no_affected_male_families(sample_data, user)
@@ -107,7 +117,18 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
     logger.info(f'Total results: {len(results)}', user)
     return get_sorted_search_results(results, sort, families)
 
-def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, no_access_project_genome_version=None, **search_kwargs):
+def _validate_num_families(families, has_comp_het, has_location_filter, freqs=None, **kwargs):
+    if has_comp_het and not has_location_filter and len(families) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
+        raise InvalidSearchException(
+            'Location must be specified to search for compound heterozygous variants across many families',
+        )
+    seqr_ac_filter = (freqs or {}).get('callset', {}).get('ac') or (MIN_MULTI_FAMILY_SEQR_AC + 1)
+    if seqr_ac_filter > MIN_MULTI_FAMILY_SEQR_AC and len(families) > 1:
+        raise InvalidSearchException(
+            f'seqr AC frequency of at least {MIN_MULTI_FAMILY_SEQR_AC} must be specified to search across multiple families'
+        )
+
+def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, no_access_project_genome_version=None, has_location_filter=False, **search_kwargs):
     entry_qs = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter_locus(inheritance_mode=inheritance_mode, **search_kwargs)
     variants_qs = VARIANTS_CLASS_MAP[genome_version][dataset_type].objects
     parsed_filters = variants_qs.get_parsed_annotations_filters(**search_kwargs)
@@ -122,6 +143,7 @@ def _parse_dataset_type_query(genome_version, dataset_type, families, sample_dat
             inheritance_filter=inheritance_filter,
             annotate_affected_males=annotate_affected_males,
             allow_no_samples=bool(no_access_project_genome_version),
+            has_location_filter=has_location_filter,
         )
         sample_data_by_dataset_type[dataset_type] = sample_data
 
@@ -551,7 +573,7 @@ def _get_sample_metadata(samples, affected_family_only, annotate_affected_males)
     return samples.aggregate(**annotations)
 
 
-def _get_sample_data(families, dataset_type, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None):
+def _get_sample_data(families, dataset_type, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None, has_location_filter=False):
     sample_type = None
     if dataset_type.startswith(Sample.DATASET_TYPE_SV_CALLS):
         dataset_type, sample_type = dataset_type.split('_')
@@ -562,6 +584,9 @@ def _get_sample_data(families, dataset_type, annotate_affected_males=False, allo
     individual_affected_status = (inheritance_filter or {}).get('affected')
     affected_family_only = inheritance_mode and not individual_affected_status
     sample_data = _get_sample_metadata(samples, affected_family_only, annotate_affected_males)
+
+    if not has_location_filter and len(sample_data['project_guids']) > 1:
+        raise InvalidSearchException('Location must be specified to search across multiple projects')
 
     family_guids = set(sample_data.pop('family_guids'))
     sample_data['num_families'] = len(family_guids)
