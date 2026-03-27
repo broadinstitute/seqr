@@ -37,16 +37,13 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, search, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False):
-    inheritance_mode = search.get('inheritance_mode')
+def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance_mode=None, annotations=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
     has_location_filter = any(search.get(field) for field in ['genes', 'intervals', 'variant_ids'])
     sample_data_by_dataset_type = sample_data_by_dataset_type or {}
     results = []
-    exclude_keys = search.pop('exclude_keys', None) or {}
-    exclude_key_pairs = search.pop('exclude_key_pairs', None) or {}
     searched_dataset_types = set()
     sample_data_errors = set()
 
@@ -55,19 +52,20 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
     for dataset_type in ENTRY_CLASS_MAP[genome_version]:
         try:
             entry_qs, variants_qs, parsed_filters = _parse_dataset_type_query(
-                genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors,
-                annotate_affected_males=has_x_chrom_comp_het or has_x_linked, has_location_filter=has_location_filter, **search,
+                genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, **search,
+                annotate_affected_males=has_x_chrom_comp_het or has_x_linked, has_location_filter=has_location_filter,
+                allow_no_samples=bool(no_access_project_genome_version), inheritance_mode=inheritance_mode, annotations=annotations,
             )
         except InvalidDatasetTypeException:
             continue
 
-        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and search.get('no_access_project_genome_version'):
+        if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and no_access_project_genome_version:
             if has_comp_het:
                 raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
             logger.info('Looking up variants in projects with no user access', user)
             results += _get_search_results(
                 entry_qs, variants_qs, **search, **parsed_filters, sample_data=None, skip_entry_fields=True,
-                exclude_projects=sample_data_by_dataset_type[dataset_type].get('project_guids'),
+                exclude_projects=sample_data_by_dataset_type[dataset_type].get('project_guids'), inheritance_mode=inheritance_mode,
             )
             searched_dataset_types.add(dataset_type)
 
@@ -80,24 +78,24 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
         dataset_results = []
         if inheritance_mode != COMPOUND_HET:
             dataset_results += _get_search_results(
-                entry_qs, variants_qs, sample_data, exclude_keys=exclude_keys.get(dataset_type), **search, **parsed_filters,
+                entry_qs, variants_qs, sample_data, inheritance_mode=inheritance_mode, exclude_keys=(exclude_keys or {}).get(dataset_type), **search, **parsed_filters,
             )
 
         run_x_linked_male_search = has_x_linked and not (inheritance_mode == X_LINKED_RECESSIVE and sample_data.get('samples'))
         if run_x_linked_male_search:
             dataset_results += _get_x_linked_male_search_results(
-                entry_qs, variants_qs, dataset_type, user, sample_data, exclude_keys=exclude_keys.get(dataset_type),
+                entry_qs, variants_qs, dataset_type, user, sample_data, exclude_keys=(exclude_keys or {}).get(dataset_type),
                 **search, **parsed_filters,
             )
 
         if has_comp_het:
-            if not search.get('annotations'):
+            if not annotations:
                 raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
             comp_het_sample_data = sample_data
             if has_x_chrom_comp_het and 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 comp_het_sample_data = _no_affected_male_families(sample_data, user)
             result_q = _get_data_type_comp_het_results_queryset(
-                entry_qs, variants_qs, comp_het_sample_data, exclude_key_pairs=exclude_key_pairs.get(dataset_type),
+                entry_qs, variants_qs, comp_het_sample_data, exclude_key_pairs=(exclude_key_pairs or {}).get(dataset_type),
                 **search, **parsed_filters,
             )
             if result_q is not None:
@@ -109,7 +107,7 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
         searched_dataset_types.add(dataset_type)
 
     if has_comp_het and any(dt.startswith(Sample.DATASET_TYPE_SV_CALLS) for dt in VARIANTS_CLASS_MAP[genome_version]):
-        results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, **search)
+        results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs or {}, searched_dataset_types, annotations=annotations, **search)
 
     if not searched_dataset_types:
         _raise_dataset_type_errors(sample_data_errors, sample_data_by_dataset_type)
@@ -128,7 +126,7 @@ def _validate_num_families(families, has_comp_het, has_location_filter, freqs=No
             f'seqr AC frequency of at least {MIN_MULTI_FAMILY_SEQR_AC} must be specified to search across multiple families'
         )
 
-def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, no_access_project_genome_version=None, has_location_filter=False, **search_kwargs):
+def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, allow_no_samples=False, has_location_filter=False, **search_kwargs):
     entry_qs = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter_locus(inheritance_mode=inheritance_mode, **search_kwargs)
     variants_qs = VARIANTS_CLASS_MAP[genome_version][dataset_type].objects
     parsed_filters = variants_qs.get_parsed_annotations_filters(**search_kwargs)
@@ -142,7 +140,6 @@ def _parse_dataset_type_query(genome_version, dataset_type, families, sample_dat
             inheritance_mode=inheritance_mode,
             inheritance_filter=inheritance_filter,
             annotate_affected_males=annotate_affected_males,
-            allow_no_samples=bool(no_access_project_genome_version),
             has_location_filter=has_location_filter,
         )
         sample_data_by_dataset_type[dataset_type] = sample_data
@@ -177,7 +174,7 @@ def _get_search_results(entry_qs, variants_qs, sample_data, skip_entry_fields=Fa
     return _evaluate_results(results.result_values(skip_entry_fields=skip_entry_fields))
 
 
-def _get_x_linked_male_search_results(entry_qs, variants_qs, dataset_type, user, sample_data, inheritance_mode=None, **search_kwargs):
+def _get_x_linked_male_search_results(entry_qs, variants_qs, dataset_type, user, sample_data, **search_kwargs):
     affected_male_family_guids = {
         s['family_guid'] for s in sample_data['samples'] if s['affected'] == AFFECTED and s['sex'] in MALE_SEXES
     } if 'samples' in sample_data else sample_data['affected_male_family_guids']
@@ -201,7 +198,7 @@ def _evaluate_results(result_q, is_comp_het=False):
         raise InvalidSearchException('This search returned too many results')
     return results
 
-def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, annotations=None, annotations_secondary=None, inheritance_mode=None, **search_kwargs):
+def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, annotations=None, annotations_secondary=None, **search_kwargs):
     if annotations_secondary:
         annotations = {
             **annotations,
@@ -295,7 +292,7 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
     return results
 
 
-def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, annotations_secondary=None, inheritance_mode=None, exclude_key_pairs=None, **search_kwargs):
+def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, annotations_secondary=None, exclude_key_pairs=None, **search_kwargs):
     parsed_secondary_filters = {}
     if annotations_secondary:
         try:

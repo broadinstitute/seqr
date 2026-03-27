@@ -628,10 +628,10 @@ class Command(BaseCommand):
     @staticmethod
     def _execute_search(sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map, **kwargs):
         results = get_clickhouse_variants(
-            families=None, search=kwargs, user=None, genome_version=GENOME_VERSION_GRCh38,
+            families=None, user=None, genome_version=GENOME_VERSION_GRCh38,
             encode_genotypes_json=True, sample_data_by_dataset_type={
                 **{dt: None for dt in ENTRY_CLASS_MAP[GENOME_VERSION_GRCh38]}, **sample_data_by_dataset_type,
-            },
+            }, **kwargs
         )
         for result in results:
             if isinstance(result, list):

@@ -45,9 +45,8 @@ def _get_search_genome_version(search_model):
 def get_single_variant(family, variant_id, user):
     parsed_variant_id = parse_variant_id(variant_id)
     parsed_variant_ids = [parsed_variant_id] if parsed_variant_id else None
-    search = {'parsed_variant_ids': parsed_variant_ids, 'variant_ids': [variant_id]}
     genome_version = family.project.genome_version
-    variants = get_clickhouse_variants([family], search, user, genome_version)
+    variants = get_clickhouse_variants([family], user, genome_version, parsed_variant_ids=parsed_variant_ids, variant_ids=[variant_id])
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return format_clickhouse_results(variants, genome_version)[0]
@@ -121,7 +120,7 @@ def _query_variants(search_model, user, sort=None):
 
     parsed_search = _parse_search(search, genome_version, user)
 
-    results = get_clickhouse_variants(families, parsed_search, user, genome_version, sort=sort)
+    results = get_clickhouse_variants(families, user, genome_version, sort=sort, **parsed_search)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, results, expire=timedelta(weeks=2))
