@@ -120,8 +120,6 @@ def get_clickhouse_variants(families, user, genome_version, sort=None, sample_da
 
 
 def _parse_locus_search(locus, genome_version, search):
-    search['raw_variant_items'] = locus.get('rawVariantItems')
-
     exclude = search.get('exclude') or {}
     exclude_locations = bool(exclude.get('rawItems'))
     if locus and exclude_locations:
@@ -134,7 +132,18 @@ def _parse_locus_search(locus, genome_version, search):
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
     if (genes or intervals) and len(genes) + len(intervals) > MAX_GENES_FOR_FILTER:
         raise InvalidSearchException('Too many genes/intervals')
-    search.update({'genes': genes, 'intervals': intervals, 'exclude_locations': exclude_locations})
+
+    exclude_intervals = None
+    if exclude_locations:
+        exclude_intervals = intervals
+        # TODO move into db query
+        exclude_intervals += [
+            {field: gene[f'{field}Grch{genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
+        ]
+
+    search.update({
+        'genes': genes, 'intervals': intervals, 'exclude_intervals': exclude_intervals, 'raw_variant_items': locus.get('rawVariantItems'),
+    })
     exclude.pop('rawItems', None)
 
 

@@ -17,7 +17,6 @@ from seqr.views.utils.permissions_utils import user_is_analyst
 logger = SeqrLogger(__name__)
 
 
-MIN_MULTI_FAMILY_SEQR_AC = 5000
 MAX_EXPORT_VARIANTS = 1000
 
 

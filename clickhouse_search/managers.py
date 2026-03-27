@@ -100,6 +100,7 @@ class SearchQuerySet(QuerySet):
         return results.annotate(seqrPop=self.gt_stats_dict.dict_get_expression('key'))
 
     def _format_gene_intervals(self, genes):
+        # TODO deprecate
         return [
             {field: gene[f'{field}Grch{self.genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
         ]
@@ -421,12 +422,8 @@ class BaseVariantsQuerySet(SearchQuerySet):
     def _filter_frequency(self, results, **kwargs):
         return results
 
-    def _filter_annotations(self, results, annotations_filter_q=None, transcript_filters=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
-        if exclude_locations and genes:
-            intervals = self._format_gene_intervals(genes)
-            genes = None
-
-        results = self._filter_locations(results, genes, intervals, exclude_locations=exclude_locations, **kwargs)
+    def _filter_annotations(self, results, annotations_filter_q=None, transcript_filters=None, genes=None, **kwargs):
+        results = self._filter_locations(results, genes, **kwargs)
 
         if not (annotations_filter_q or transcript_filters):
             return results
@@ -451,7 +448,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
             self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
         })
 
-    def _filter_locations(self, results, genes, intervals, **kwargs):
+    def _filter_locations(self, results, genes, intervals=None, **kwargs):
         if genes:
             results = results.annotate(**{
                 self.GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
@@ -843,7 +840,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
 
         return filter_qs, transcript_filters
 
-    def _filter_locations(self, results, genes, intervals, exclude_locations=False, padded_interval_end=None, **kwargs):
+    def _filter_locations(self, results, genes, intervals=None, exclude_intervals=None, padded_interval_end=None, **kwargs):
         results = super()._filter_locations(results, genes, intervals, **kwargs)
 
         if genes:
@@ -852,7 +849,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
             end, padding = padded_interval_end
             interval_qs = [Q(end__range=(end - padding, end + padding))]
         else:
-            interval_qs = [self._interval_query(**interval) for interval in (intervals or [])]
+            interval_qs = [self._interval_query(**interval) for interval in (intervals or exclude_intervals or [])]
 
         if not interval_qs:
             return results
@@ -860,7 +857,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
         interval_q = interval_qs[0]
         for q in interval_qs[1:]:
             interval_q |= q
-        filter_func = results.exclude if exclude_locations else results.filter
+        filter_func = results.exclude if exclude_intervals else results.filter
         return filter_func(interval_q)
 
     def _interval_query(self, chrom, start, end, *args, **kwargs):
@@ -1441,7 +1438,7 @@ class BaseEntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, inheritance_mode=None, **kwargs):
+    def filter_locus(self, exclude_intervals=None, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, inheritance_mode=None, **kwargs):
         entries = self
 
         if variant_ids:
@@ -1454,11 +1451,13 @@ class BaseEntriesManager(SearchQuerySet):
 
         if intervals and self.filtered_chrom:
             intervals = [interval for interval in intervals if interval['chrom'] == self.filtered_chrom]
-            if not intervals and not exclude_locations:
+            if not intervals:
                 raise InvalidDatasetTypeException
 
         if genes or intervals:
-            entries = self._filter_locations(entries, genes, intervals, exclude_locations=exclude_locations, require_gene_filter=require_gene_filter)
+            entries = entries.filter(self._filter_locations_q(intervals, genes, require_gene_filter))
+        elif exclude_intervals:
+            entries = entries.exclude(self._filter_locations_q(exclude_intervals))
 
         return entries
 
@@ -1470,10 +1469,10 @@ class BaseEntriesManager(SearchQuerySet):
             parsed_variant_ids[variant_id] = parse_variant_id(variant_id)
         return parsed_variant_ids
 
-    def _filter_locations(self, entries, genes, intervals, exclude_locations=False, require_gene_filter=False):
+    def _filter_locations_q(self, intervals, genes=None, require_gene_filter=False):
         locus_q = None
         if genes:
-            should_filter_interval = self._can_filter_gene_interval(genes) or exclude_locations
+            should_filter_interval = self._can_filter_gene_interval(genes)
             if should_filter_interval:
                 intervals = self._format_gene_intervals(genes) + (intervals or [])
             if require_gene_filter or (not should_filter_interval):
@@ -1490,8 +1489,7 @@ class BaseEntriesManager(SearchQuerySet):
             else:
                 locus_q |= interval_q
 
-        filter_func = entries.exclude if exclude_locations else entries.filter
-        return filter_func(locus_q)
+        return locus_q
 
     def _can_filter_gene_interval(self, genes):
         return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS or self.filtered_chrom
@@ -1746,24 +1744,19 @@ class SvEntriesManager(BaseEntriesManager):
 
         return entries
 
-    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, exclude_svs=False, raw_variant_items=None, **kwargs):
+    def filter_locus(self, *args, exclude_intervals=None, intervals=None, genes=None, exclude_svs=False, raw_variant_items=None, **kwargs):
         if exclude_svs or any(self._parse_variant_ids(raw_variant_items).values()):
             raise InvalidDatasetTypeException
         # SV interval filtering occurs after joining on annotations to correctly incorporate end position
         can_filter_gene_interval = self._can_filter_gene_interval(genes)
-        if exclude_locations:
-            intervals = None
-        else:
-            chromosomes = {i['chrom'] for i in (intervals or [])}
-            if can_filter_gene_interval:
-                chromosomes.update({gene[f'chromGrch{self.genome_version}'] for gene in genes.values()})
-            intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
+        chromosomes = {i['chrom'] for i in (intervals or [])}
+        if can_filter_gene_interval:
+            chromosomes.update({gene[f'chromGrch{self.genome_version}'] for gene in genes.values()})
+        intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
 
-        entries = super().filter_locus(
-            *args, exclude_locations=exclude_locations, intervals=intervals, genes=genes, **kwargs,
-        )
+        entries = super().filter_locus(*args, intervals=intervals, genes=genes, **kwargs)
 
-        if can_filter_gene_interval and not exclude_locations:
+        if can_filter_gene_interval:
             entries = entries.filter(calls__array_all={'OR': [
                 {'geneIds': (list(genes.keys()), 'hasAny({value}, {field})')},
                 {'gt': (None, 'isNull({field})')},
