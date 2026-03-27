@@ -1663,9 +1663,9 @@ class EntriesManager(BaseEntriesManager):
             )
         return super()._join_annotations(entries)
 
-    def filter_locus(self, *args, require_any_gene=False, rawVariantItems=None, intervals=None, genes=None, variant_ids=None, **kwargs):
-        if rawVariantItems:
-            parsed_variant_ids = self._parse_variant_ids(rawVariantItems)
+    def filter_locus(self, *args, require_any_gene=False, raw_variant_items=None, intervals=None, genes=None, variant_ids=None, **kwargs):
+        if raw_variant_items:
+            parsed_variant_ids = self._parse_variant_ids(raw_variant_items)
             invalid_items = [variant_id for variant_id, parsed_id in parsed_variant_ids.items() if not parsed_id]
             if invalid_items:
                 if variant_ids:
@@ -1746,8 +1746,8 @@ class SvEntriesManager(BaseEntriesManager):
 
         return entries
 
-    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, exclude_svs=False, rawVariantItems=None, **kwargs):
-        if exclude_svs or any(self._parse_variant_ids(rawVariantItems).values()):
+    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, exclude_svs=False, raw_variant_items=None, **kwargs):
+        if exclude_svs or any(self._parse_variant_ids(raw_variant_items).values()):
             raise InvalidDatasetTypeException
         # SV interval filtering occurs after joining on annotations to correctly incorporate end position
         can_filter_gene_interval = self._can_filter_gene_interval(genes)

@@ -11,14 +11,12 @@ from seqr.models import Sample, Project, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from clickhouse_search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
-from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import parse_variant_id
 from seqr.views.utils.permissions_utils import user_is_analyst
 
 logger = SeqrLogger(__name__)
 
 
-MAX_GENES_FOR_FILTER = 10000
 MIN_MULTI_FAMILY_SEQR_AC = 5000
 MAX_EXPORT_VARIANTS = 1000
 
@@ -43,7 +41,7 @@ def _get_search_genome_version(search_model):
 
 def get_single_variant(family, variant_id, user):
     genome_version = family.project.genome_version
-    variants = get_clickhouse_variants([family], user, genome_version, rawVariantItems=variant_id, variant_ids=[variant_id])
+    variants = get_clickhouse_variants([family], user, genome_version, raw_variant_items=variant_id, variant_ids=[variant_id])
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return format_clickhouse_results(variants, genome_version)[0]
@@ -114,43 +112,17 @@ def _query_variants(search_model, user, sort=None):
     search = deepcopy(search_model.variant_search.search)
     families = search_model.families.all()
 
-    parsed_search = _parse_search(search, genome_version, user)
+    exclude_search = {}
+    exclude_previous_hash = (search.get('exclude') or {}).pop('previousSearchHash', None)
+    if exclude_previous_hash:
+        exclude_search = _get_clickhouse_exclude_keys(exclude_previous_hash, user)
 
-    results = get_clickhouse_variants(families, user, genome_version, sort=sort, **parsed_search)
+    results = get_clickhouse_variants(families, user, genome_version, sort=sort, **search, **exclude_search)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, results, expire=timedelta(weeks=2))
 
     return results, genome_version
-
-
-def _parse_search(search, genome_version, user):
-    no_access_project_genome_version = search.get('no_access_project_genome_version')
-    locus = search.pop('locus', None) or {}
-    exclude = search.get('exclude', None) or {}
-    exclude_locations = bool(exclude.get('rawItems'))
-    if locus and exclude_locations:
-        raise InvalidSearchException('Cannot specify both Location and Excluded Genes/Intervals')
-
-    parsed_search = {**search}
-    genes, intervals, invalid_items = parse_locus_list_items(locus or exclude, genome_version=genome_version, additional_model_fields=['id'])
-    if invalid_items:
-        raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
-    if no_access_project_genome_version and len(genes or []) != 1:
-        raise InvalidSearchException('Including external projects is only available when searching for a single gene')
-    if (genes or intervals) and len(genes) + len(intervals) > MAX_GENES_FOR_FILTER:
-        raise InvalidSearchException('Too many genes/intervals')
-    parsed_search.update({'genes': genes, 'intervals': intervals, 'exclude_locations': exclude_locations})
-    if not (genes or intervals):
-        parsed_search.update({'rawVariantItems': locus.get('rawVariantItems')})
-
-    exclude.pop('rawItems', None)
-    exclude.pop('previousSearch', None)
-    exclude_previous_hash = exclude.pop('previousSearchHash', None)
-    if exclude_previous_hash:
-        parsed_search.update(_get_clickhouse_exclude_keys(exclude_previous_hash, user))
-
-    return parsed_search
 
 
 def _get_clickhouse_exclude_keys(search_hash, user):

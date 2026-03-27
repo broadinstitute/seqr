@@ -847,7 +847,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     @mock.patch('seqr.utils.search.utils.MAX_EXPORT_VARIANTS', 2)
-    @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
+    @mock.patch('clickhouse_search.search.MAX_GENES_FOR_FILTER', 2)
     @mock.patch('clickhouse_search.search.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
     def test_invalid_search(self):

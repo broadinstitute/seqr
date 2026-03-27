@@ -17,6 +17,7 @@ from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvG
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
 from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP
 from seqr.models import Sample, PhenotypePrioritization, Family, Individual
+from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.logging_utils import SeqrLogger
 from clickhouse_search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE, AFFECTED, MALE_SEXES, \
@@ -27,6 +28,7 @@ logger = SeqrLogger(__name__)
 
 
 BATCH_SIZE = 10000
+MAX_GENES_FOR_FILTER = 10000
 MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
 MIN_MULTI_FAMILY_SEQR_AC = 5000
 
@@ -35,9 +37,10 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
+def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance=None, locus=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
     search['inheritance_filter'] = (inheritance or {}).get('filter') or {}
     inheritance_mode = None if search['inheritance_filter'].get('genotype') else (inheritance or {}).get('mode')
+    _parse_locus_search(locus or {}, genome_version, search)
 
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
@@ -58,6 +61,8 @@ def get_clickhouse_variants(families, user, genome_version, sort=None, sample_da
             continue
 
         if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and no_access_project_genome_version:
+            if len(search.get('genes') or []) != 1:
+                raise InvalidSearchException('Including external projects is only available when searching for a single gene')
             if has_comp_het:
                 raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
             logger.info('Looking up variants in projects with no user access', user)
@@ -112,6 +117,25 @@ def get_clickhouse_variants(families, user, genome_version, sort=None, sample_da
 
     logger.info(f'Total results: {len(results)}', user)
     return get_sorted_search_results(results, sort, families)
+
+
+def _parse_locus_search(locus, genome_version, search):
+    search['raw_variant_items'] = locus.get('rawVariantItems')
+
+    exclude = search.get('exclude') or {}
+    exclude_locations = bool(exclude.get('rawItems'))
+    if locus and exclude_locations:
+        raise InvalidSearchException('Cannot specify both Location and Excluded Genes/Intervals')
+
+    genes, intervals, invalid_items = parse_locus_list_items(
+        locus or exclude, genome_version=genome_version, additional_model_fields=['id'],
+    )
+    if invalid_items:
+        raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
+    if (genes or intervals) and len(genes) + len(intervals) > MAX_GENES_FOR_FILTER:
+        raise InvalidSearchException('Too many genes/intervals')
+    search.update({'genes': genes, 'intervals': intervals, 'exclude_locations': exclude_locations})
+    exclude.pop('rawItems', None)
 
 
 def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, allow_no_samples=False, has_location_filter=False, **search_kwargs):
@@ -836,7 +860,7 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
     for dataset_type, entry_cls in sorted(ENTRY_CLASS_MAP[genome_version].items()):
         try:
             entry_qs = entry_cls.objects.filter_locus(
-                variant_ids=[variant_id], rawVariantItems=variant_id,
+                variant_ids=[variant_id], raw_variant_items=variant_id,
             )
         except InvalidDatasetTypeException:
             continue
@@ -866,7 +890,7 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
             liftover_results = run_liftover(lifted_genome_version, chrom, int(pos))
             if liftover_results:
                 lifted_id = variant_id.replace(pos, str(liftover_results[1]))
-                entry_qs = lifted_entry_cls.objects.filter_locus(rawVariantItems=lifted_id)
+                entry_qs = lifted_entry_cls.objects.filter_locus(raw_variant_items=lifted_id)
                 variant = _clickhouse_variant_lookup(
                     entry_qs, lifted_genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
                 )
@@ -901,7 +925,7 @@ def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_o
     if not (lifted_entry_cls and variant.get('liftedOverChrom') and variant.get('liftedOverPos')):
         return
     lifted_id = variant_id.replace(str(variant['pos']), str(variant['liftedOverPos']))
-    lifted_entries = lifted_entry_cls.objects.filter_locus(rawVariantItems=lifted_id)
+    lifted_entries = lifted_entry_cls.objects.filter_locus(raw_variant_items=lifted_id)
     lifted_entries = _filter_lookup_entries(lifted_entries, affected_only, hom_only)
     gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression()
     lifted_entry_data = lifted_entries.values('key').annotate(**{gt_field: GroupArrayArray(gt_expr)})
