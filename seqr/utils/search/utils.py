@@ -12,7 +12,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from clickhouse_search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.gene_utils import parse_locus_list_items
-from seqr.utils.xpos_utils import get_xpos, format_chrom
+from seqr.utils.xpos_utils import parse_variant_id
 from seqr.views.utils.permissions_utils import user_is_analyst
 
 logger = SeqrLogger(__name__)
@@ -42,10 +42,8 @@ def _get_search_genome_version(search_model):
 
 
 def get_single_variant(family, variant_id, user):
-    parsed_variant_id = parse_variant_id(variant_id)
-    parsed_variant_ids = [parsed_variant_id] if parsed_variant_id else None
     genome_version = family.project.genome_version
-    variants = get_clickhouse_variants([family], user, genome_version, parsed_variant_ids=parsed_variant_ids, variant_ids=[variant_id])
+    variants = get_clickhouse_variants([family], user, genome_version, rawVariantItems=variant_id, variant_ids=[variant_id])
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return format_clickhouse_results(variants, genome_version)[0]
@@ -62,8 +60,7 @@ def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_
     if variants:
         return variants
 
-    parsed_variant_id = parse_variant_id(variant_id)
-    variants = clickhouse_variant_lookup(user, variant_id, parsed_variant_id, sample_type, genome_version, affected_only, hom_only)
+    variants = clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, affected_only, hom_only)
 
     safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
     return variants
@@ -145,10 +142,7 @@ def _parse_search(search, genome_version, user):
         raise InvalidSearchException('Too many genes/intervals')
     parsed_search.update({'genes': genes, 'intervals': intervals, 'exclude_locations': exclude_locations})
     if not (genes or intervals):
-        variant_ids, parsed_variant_ids, invalid_items = _parse_variant_items(locus)
-        if invalid_items:
-            raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
-        parsed_search.update({'variant_ids': variant_ids, 'parsed_variant_ids': parsed_variant_ids})
+        parsed_search.update({'rawVariantItems': locus.get('rawVariantItems')})
 
     exclude.pop('rawItems', None)
     exclude.pop('previousSearch', None)
@@ -196,41 +190,6 @@ def get_variant_query_gene_counts(search_model, user):
             for family_guid in var['familyGuids']:
                 gene_aggs[gene_id]['families'][family_guid] += 1
     return gene_aggs
-
-
-def _parse_variant_items(search_json):
-    raw_items = search_json.get('rawVariantItems')
-    if not raw_items:
-        return None, None, None
-
-    invalid_items = []
-    variant_ids = []
-    parsed_variant_ids = []
-    for item in raw_items.replace(',', ' ').split():
-        variant_id = item.lstrip('chr')
-        parsed_variant_id = parse_variant_id(variant_id)
-        if parsed_variant_id:
-            parsed_variant_ids.append(parsed_variant_id)
-            variant_ids.append(variant_id)
-        else:
-            invalid_items.append(item)
-
-    return variant_ids, parsed_variant_ids, invalid_items
-
-
-def parse_variant_id(variant_id):
-    try:
-        return _parse_valid_variant_id(variant_id)
-    except (KeyError, ValueError):
-        return None
-
-
-def _parse_valid_variant_id(variant_id):
-    chrom, pos, ref, alt = variant_id.split('-')
-    chrom = format_chrom(chrom)
-    pos = int(pos)
-    get_xpos(chrom, pos)
-    return chrom, pos, ref, alt
 
 
 LIFTOVERS = {

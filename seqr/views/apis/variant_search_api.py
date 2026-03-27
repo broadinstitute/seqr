@@ -15,11 +15,12 @@ import re
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
-    variant_lookup, parse_variant_id, export_variants
+    variant_lookup, export_variants
 from seqr.utils.search.utils import InvalidSearchException
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.xpos_utils import parse_variant_id
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json

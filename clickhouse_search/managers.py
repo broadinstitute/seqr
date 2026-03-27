@@ -19,7 +19,7 @@ from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
     CLINVAR_CONFLICTING_P_LP, CLINVAR_CONFLICTING_NO_P, CLINVAR_CONFLICTING, PATH_FREQ_OVERRIDE_CUTOFF, \
     HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, \
     X_LINKED_RECESSIVE_MALE_AFFECTED, FEMALE_SEXES, SV_ANNOTATION_TYPES
-from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, CHROMOSOME_CHOICES
+from seqr.utils.xpos_utils import get_xpos, parse_variant_id, MIN_POS, MAX_POS, CHROMOSOME_CHOICES
 
 
 class InvalidSearchException(Exception):
@@ -1462,6 +1462,14 @@ class BaseEntriesManager(SearchQuerySet):
 
         return entries
 
+    @staticmethod
+    def _parse_variant_ids(raw_variant_items):
+        parsed_variant_ids = {}
+        for item in (raw_variant_items or '').replace(',', ' ').split():
+            variant_id = item.replace('chr', '')
+            parsed_variant_ids[variant_id] = parse_variant_id(variant_id)
+        return parsed_variant_ids
+
     def _filter_locations(self, entries, genes, intervals, exclude_locations=False, require_gene_filter=False):
         locus_q = None
         if genes:
@@ -1655,14 +1663,18 @@ class EntriesManager(BaseEntriesManager):
             )
         return super()._join_annotations(entries)
 
-    def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, variant_ids=None, **kwargs):
-        if parsed_variant_ids:
+    def filter_locus(self, *args, require_any_gene=False, rawVariantItems=None, intervals=None, genes=None, variant_ids=None, **kwargs):
+        if rawVariantItems:
+            parsed_variant_ids = self._parse_variant_ids(rawVariantItems)
+            invalid_items = [variant_id for variant_id, parsed_id in parsed_variant_ids.items() if not parsed_id]
+            if invalid_items:
+                if variant_ids:
+                    raise InvalidDatasetTypeException
+                raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
             # although technically redundant, the interval query is applied to the entries table to
             # improve performance by using the xpos projection
-            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
-            variant_ids = ['-'.join([str(o) for o in variant_id]) for variant_id in parsed_variant_ids]
-        elif variant_ids:
-            raise InvalidDatasetTypeException
+            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids.values()]
+            variant_ids = parsed_variant_ids.keys()
 
         entries = super().filter_locus(*args, intervals=intervals, genes=genes, variant_ids=variant_ids, **kwargs)
 
@@ -1734,8 +1746,8 @@ class SvEntriesManager(BaseEntriesManager):
 
         return entries
 
-    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, exclude_svs=False, parsed_variant_ids=None, **kwargs):
-        if exclude_svs or parsed_variant_ids:
+    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, exclude_svs=False, rawVariantItems=None, **kwargs):
+        if exclude_svs or any(self._parse_variant_ids(rawVariantItems).values()):
             raise InvalidDatasetTypeException
         # SV interval filtering occurs after joining on annotations to correctly incorporate end position
         can_filter_gene_interval = self._can_filter_gene_interval(genes)

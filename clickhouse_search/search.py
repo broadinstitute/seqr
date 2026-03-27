@@ -831,12 +831,12 @@ def _filter_lookup_entries(entries, affected_only, hom_only):
         entries = entries.filter(calls__array_exists={'gt': (2,)})
     return entries
 
-def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, sample_type, genome_version, affected_only, hom_only):
+def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, affected_only, hom_only):
     data_type = entry_qs = None
     for dataset_type, entry_cls in sorted(ENTRY_CLASS_MAP[genome_version].items()):
         try:
             entry_qs = entry_cls.objects.filter_locus(
-                variant_ids=[variant_id], parsed_variant_ids=[parsed_variant_id] if parsed_variant_id else [],
+                variant_ids=[variant_id], rawVariantItems=variant_id,
             )
         except InvalidDatasetTypeException:
             continue
@@ -856,16 +856,17 @@ def clickhouse_variant_lookup(user, variant_id, parsed_variant_id, sample_type, 
         entry_qs, genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
     )
     if variant:
-        _add_liftover_genotypes(variant, data_type, parsed_variant_id, affected_only, hom_only)
+        _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_only)
     else:
         lifted_genome_version = next(gv for gv in ENTRY_CLASS_MAP.keys() if gv != genome_version)
         lifted_entry_cls = ENTRY_CLASS_MAP[lifted_genome_version].get(data_type)
         if lifted_entry_cls:
             from seqr.utils.search.utils import run_liftover
-            liftover_results = run_liftover(lifted_genome_version, parsed_variant_id[0], parsed_variant_id[1])
+            chrom, pos, ref, alt = variant_id.split('-')
+            liftover_results = run_liftover(lifted_genome_version, chrom, int(pos))
             if liftover_results:
-                lifted_id = (liftover_results[0], liftover_results[1], *parsed_variant_id[2:])
-                entry_qs = lifted_entry_cls.objects.filter_locus(parsed_variant_ids=[lifted_id])
+                lifted_id = variant_id.replace(pos, str(liftover_results[1]))
+                entry_qs = lifted_entry_cls.objects.filter_locus(rawVariantItems=lifted_id)
                 variant = _clickhouse_variant_lookup(
                     entry_qs, lifted_genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
                 )
@@ -899,8 +900,8 @@ def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_o
     lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
     if not (lifted_entry_cls and variant.get('liftedOverChrom') and variant.get('liftedOverPos')):
         return
-    lifted_id = (variant['liftedOverChrom'], variant['liftedOverPos'], *variant_id[2:])
-    lifted_entries = lifted_entry_cls.objects.filter_locus(parsed_variant_ids=[lifted_id])
+    lifted_id = variant_id.replace(str(variant['pos']), str(variant['liftedOverPos']))
+    lifted_entries = lifted_entry_cls.objects.filter_locus(rawVariantItems=lifted_id)
     lifted_entries = _filter_lookup_entries(lifted_entries, affected_only, hom_only)
     gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression()
     lifted_entry_data = lifted_entries.values('key').annotate(**{gt_field: GroupArrayArray(gt_expr)})

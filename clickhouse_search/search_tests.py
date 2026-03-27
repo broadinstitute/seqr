@@ -861,7 +861,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search_error('Invalid search: no projects/ families specified', project_families=[])
 
         search_hash = self._assert_expected_search_error(
-            'Invalid variants: chr2-A-C', locus={'rawVariantItems': 'chr2-A-C'},
+            'Invalid variants: 2-A-C', locus={'rawVariantItems': 'chr2-A-C'},
         )
 
         self.set_cache(f'search_results__VRS{search_hash:07d}__xpos', [VARIANT1, VARIANT2, VARIANT3, VARIANT4])
