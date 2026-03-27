@@ -22,6 +22,9 @@ from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, CHROMOSOME_CHOICES
 
 
+class InvalidSearchException(Exception):
+    pass
+
 class InvalidDatasetTypeException(Exception):
     pass
 
@@ -1036,7 +1039,7 @@ class BaseEntriesManager(SearchQuerySet):
             entries = entries.exclude(key__in=exclude_keys)
 
         entries = self._join_annotations(entries)
-        entries = self._prefilter_entries(entries, **kwargs)
+        entries = self._prefilter_entries(entries, sample_data=sample_data, **kwargs)
 
         return self._search_call_data(entries, sample_data, **kwargs)
 
@@ -1090,6 +1093,8 @@ class BaseEntriesManager(SearchQuerySet):
        quality_q = None
        gt_filter = None
        quality_filter = qualityFilter or {}
+       if not inheritance_mode and list((inheritance_filter or {}).keys()) == ['affected']:
+           raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
        if inheritance_mode or (inheritance_filter or {}).get('genotype') or quality_filter:
             clinvar_override_q = self._clinvar_path_q(pathogenicity)
             inheritance_q, quality_q, gt_filter, carriers_expression = self._get_inheritance_quality_qs(
@@ -1507,6 +1512,7 @@ class BaseEntriesManager(SearchQuerySet):
 
 
 class EntriesManager(BaseEntriesManager):
+    MIN_MULTI_FAMILY_SEQR_AC = 5000
 
     @staticmethod
     def _clinvar_range_q(path_range):
@@ -1533,7 +1539,15 @@ class EntriesManager(BaseEntriesManager):
         entries = self._filter_in_silico(entries, **kwargs)
         return entries
 
-    def _filter_frequency(self, entries, frequencies, pathogenicity=None, **kwargs):
+    def _filter_frequency(self, entries, frequencies, pathogenicity=None, sample_data=None, **kwargs):
+        callset_filter = frequencies.get(self.callset_filter_field) or {}
+        if (not callset_filter.get('ac') or callset_filter['ac'] >= self.MIN_MULTI_FAMILY_SEQR_AC) and (
+            len(sample_data['sample_type_families']) > 0 or len(next((sample_data['sample_type_families'].values()))) > 0
+        ):
+            raise InvalidSearchException(
+                f'seqr AC frequency of at least {self.MIN_MULTI_FAMILY_SEQR_AC} must be specified to search across multiple families'
+            )
+
         gnomad_filter = frequencies.get('gnomad_genomes') or {}
         if hasattr(self.model, 'is_gnomad_gt_5_percent') and (
             (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])

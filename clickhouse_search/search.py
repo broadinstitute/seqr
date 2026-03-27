@@ -10,7 +10,7 @@ import json
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple, \
     ArrayMap, Modulo
-from clickhouse_search.managers import InvalidDatasetTypeException
+from clickhouse_search.managers import InvalidDatasetTypeException, InvalidSearchException
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, \
@@ -25,8 +25,6 @@ from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 
 logger = SeqrLogger(__name__)
 
-class InvalidSearchException(Exception):
-    pass
 
 BATCH_SIZE = 10000
 MAX_NO_LOCATION_COMP_HET_FAMILIES = 100
@@ -38,11 +36,8 @@ SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
 def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
-    inheritance_filter = inheritance.get('filter') or {}
-    search['inheritance_filter'] = inheritance_filter
-    inheritance_mode = None if inheritance_filter.get('genotype') else inheritance.get('mode')
-    if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
-        raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+    search['inheritance_filter'] = inheritance.get('filter') or {}
+    inheritance_mode = None if search['inheritance_filter'].get('genotype') else inheritance.get('mode')
 
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
@@ -52,9 +47,6 @@ def get_clickhouse_variants(families, user, genome_version, sort=None, sample_da
     results = []
     searched_dataset_types = set()
     sample_data_errors = set()
-
-    _validate_num_families(families, has_comp_het, has_location_filter, **search)
-
     for dataset_type in ENTRY_CLASS_MAP[genome_version]:
         try:
             entry_qs, variants_qs, parsed_filters = _parse_dataset_type_query(
@@ -121,16 +113,6 @@ def get_clickhouse_variants(families, user, genome_version, sort=None, sample_da
     logger.info(f'Total results: {len(results)}', user)
     return get_sorted_search_results(results, sort, families)
 
-def _validate_num_families(families, has_comp_het, has_location_filter, freqs=None, **kwargs):
-    if has_comp_het and not has_location_filter and len(families) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
-        raise InvalidSearchException(
-            'Location must be specified to search for compound heterozygous variants across many families',
-        )
-    seqr_ac_filter = (freqs or {}).get('callset', {}).get('ac') or (MIN_MULTI_FAMILY_SEQR_AC + 1)
-    if seqr_ac_filter > MIN_MULTI_FAMILY_SEQR_AC and len(families) > 1:
-        raise InvalidSearchException(
-            f'seqr AC frequency of at least {MIN_MULTI_FAMILY_SEQR_AC} must be specified to search across multiple families'
-        )
 
 def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, allow_no_samples=False, has_location_filter=False, **search_kwargs):
     entry_qs = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter_locus(inheritance_mode=inheritance_mode, **search_kwargs)
@@ -589,10 +571,15 @@ def _get_sample_data(families, dataset_type, annotate_affected_males=False, allo
     affected_family_only = inheritance_mode and not individual_affected_status
     sample_data = _get_sample_metadata(samples, affected_family_only, annotate_affected_males)
 
-    if not has_location_filter and len(sample_data['project_guids']) > 1:
-        raise InvalidSearchException('Location must be specified to search across multiple projects')
-
     family_guids = set(sample_data.pop('family_guids'))
+    if not has_location_filter:
+        if len(sample_data['project_guids']) > 1:
+            raise InvalidSearchException('Location must be specified to search across multiple projects')
+        if inheritance_mode in {RECESSIVE, COMPOUND_HET} and len(family_guids) > MAX_NO_LOCATION_COMP_HET_FAMILIES:
+            raise InvalidSearchException(
+                'Location must be specified to search for compound heterozygous variants across many families',
+            )
+
     sample_data['num_families'] = len(family_guids)
     if sample_type:
         sample_data['sample_type_families'] = {sample_type: family_guids}
