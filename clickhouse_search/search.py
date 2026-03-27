@@ -36,8 +36,8 @@ SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
 def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
-    search['inheritance_filter'] = inheritance.get('filter') or {}
-    inheritance_mode = None if search['inheritance_filter'].get('genotype') else inheritance.get('mode')
+    search['inheritance_filter'] = (inheritance or {}).get('filter') or {}
+    inheritance_mode = None if search['inheritance_filter'].get('genotype') else (inheritance or {}).get('mode')
 
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
