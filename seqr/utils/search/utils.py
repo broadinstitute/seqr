@@ -161,13 +161,6 @@ def _parse_search(search, genome_version, user):
     if exclude_previous_hash:
         parsed_search.update(_get_clickhouse_exclude_keys(exclude_previous_hash, user))
 
-    for annotation_key in ['annotations', 'annotations_secondary']:
-        if parsed_search.get(annotation_key):
-            parsed_search[annotation_key] = {k: v for k, v in parsed_search[annotation_key].items() if v}
-
-    if parsed_search.get('inheritance'):
-        _parse_inheritance(parsed_search)
-
     return parsed_search
 
 
@@ -243,20 +236,6 @@ def _parse_valid_variant_id(variant_id):
     pos = int(pos)
     get_xpos(chrom, pos)
     return chrom, pos, ref, alt
-
-
-def _parse_inheritance(search):
-    inheritance = search.pop('inheritance')
-    inheritance_mode = inheritance.get('mode')
-    inheritance_filter = inheritance.get('filter') or {}
-
-    if inheritance_filter.get('genotype'):
-        inheritance_mode = None
-
-    search.update({'inheritance_mode': inheritance_mode, 'inheritance_filter': inheritance_filter})
-
-    if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
-        raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
 
 
 LIFTOVERS = {

@@ -37,7 +37,13 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance_mode=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
+def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
+    inheritance_filter = inheritance.get('filter') or {}
+    search['inheritance_filter'] = inheritance_filter
+    inheritance_mode = None if inheritance_filter.get('genotype') else inheritance.get('mode')
+    if not inheritance_mode and list(inheritance_filter.keys()) == ['affected']:
+        raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
+
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
@@ -203,7 +209,7 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
     if annotations_secondary:
         annotations = {
             **annotations,
-            **{k: v + annotations[k] if k in annotations else v for k, v in annotations_secondary.items()},
+            **{k: v + annotations[k] if annotations.get(k) else v for k, v in annotations_secondary.items()},
         }
 
     try:
