@@ -88,15 +88,11 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
             )
 
         if has_comp_het:
-            comp_het_sample_data = sample_data
-            if has_x_chrom_comp_het and 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-                comp_het_sample_data = _no_affected_male_families(sample_data, user)
-            result_q = _get_data_type_comp_het_results_queryset(
-                entry_qs, variants_qs, comp_het_sample_data, parsed_filters,
-                exclude_key_pairs=(exclude_key_pairs or {}).get(dataset_type), **search,
+            dataset_results += _get_data_type_comp_het_results_queryset(
+                entry_qs, variants_qs, sample_data, user, parsed_filters, **search,
+                exclude_key_pairs=(exclude_key_pairs or {}).get(dataset_type),
+                is_x_chrom=has_x_chrom_comp_het and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS,
             )
-            if result_q is not None:
-                dataset_results += _evaluate_results(result_q, is_comp_het=True)
 
         if 'samples' not in sample_data:
             _add_individual_guids(dataset_results, encode_genotypes_json=encode_genotypes_json)
@@ -337,7 +333,7 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
     return results
 
 
-def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, parsed_filters, annotations_secondary=None, exclude_key_pairs=None, **search_kwargs):
+def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, user, parsed_filters, is_x_chrom=False, annotations_secondary=None, exclude_key_pairs=None, **search_kwargs):
     if not any(parsed_filters.values()):
         raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
@@ -346,7 +342,10 @@ def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data,
         try:
             parsed_secondary_filters = variants_qs.get_parsed_annotations_filters(annotations=annotations_secondary)
         except InvalidDatasetTypeException:
-            return None
+            return []
+
+    if is_x_chrom and 'affected_male_family_guids' in sample_data:
+        sample_data = _no_affected_male_families(sample_data, user)
 
     entries = entry_qs.search(
         sample_data, **search_kwargs, **parsed_filters, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
@@ -356,7 +355,8 @@ def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data,
     secondary_kwargs = {**search_kwargs, **parsed_filters, **parsed_secondary_filters}
     secondary_q = variants_qs.subquery_join(entries).search(**secondary_kwargs)
 
-    return _get_comp_het_results_queryset(variants_qs, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
+    result_q = _get_comp_het_results_queryset(variants_qs, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
+    return _evaluate_results(result_q, is_comp_het=True) if result_q is not None else []
 
 
 def _get_comp_het_results_queryset(variants_qs, primary_q, secondary_q, num_families, exclude_key_pairs):
