@@ -608,7 +608,6 @@ export const getMmeResultsBySubmission = createSelector(
   }, { }),
 )
 
-// TODO genes, end, mainTranscript
 export const getMmeDefaultContactEmail = createSelector(
   getMmeResultsByGuid,
   getMmeSubmissionsByGuid,

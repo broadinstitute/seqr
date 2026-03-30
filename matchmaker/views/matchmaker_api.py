@@ -2,7 +2,7 @@ import json
 import requests
 from datetime import datetime
 from django.core.mail.message import EmailMessage
-from django.db.models import prefetch_related_objects, Q, Value, CharField
+from django.db.models import prefetch_related_objects, F, Q, Value, CharField
 from django.db.models.functions import Coalesce
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission, MatchmakerSubmissionGenes, \
@@ -14,6 +14,7 @@ from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack, set_email_message_stream
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -59,9 +60,15 @@ def get_individual_mme_matches(request, submission_guid):
     variants = get_json_for_saved_variants(
         SavedVariant.objects.filter(guid__in=variant_guids), additional_values={
             'genomeVersion': Coalesce('saved_variant_json__genomeVersion', Value(project.genome_version), output_field=CharField()),
+            'selectedMainTranscript': F('main_transcript'),
+            'xposEnd': F('xpos_end'),
         },
     )
-    response_json['savedVariantsByGuid'] = {variant['variantGuid']: variant for variant in variants}
+    response_json['savedVariantsByGuid'] = {}
+    for variant in variants:
+        _, end = get_chrom_pos(variant['xposEnd'])
+        variant.update({'end': end})
+        response_json['savedVariantsByGuid'][variant['variantGuid']] = variant
 
     return _parse_mme_results(
         submission, results, request.user, additional_genes=gene_ids, response_json=response_json)
