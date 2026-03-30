@@ -37,7 +37,9 @@ AIRTABLE_TISSUE_TYPE_MAP = {
     'muscle':  'Muscle',
     'airway_cultured_epithelium': 'Nasal Epithelium',
     'brain': 'Brain',
-    'lymphocytes': 'LCL Pellet'
+    'lymphocytes': 'LCL Pellet',
+    'liver': 'Liver',
+    'skin': 'Skin Epidermis',
 }
 TISSUE_TYPE_MAP = {
     AIRTABLE_TISSUE_TYPE_MAP[name]: type
