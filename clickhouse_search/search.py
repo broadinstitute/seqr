@@ -37,14 +37,16 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance=None, locus=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
+def get_clickhouse_variants(families, user, genome_version=None, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False, inheritance=None, locus=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
+    genome_version = genome_version or no_access_project_genome_version or _get_search_genome_version(families)
+
     search['inheritance_filter'] = (inheritance or {}).get('filter') or {}
     inheritance_mode = None if search['inheritance_filter'].get('genotype') else (inheritance or {}).get('mode')
     _parse_locus_search(locus or {}, genome_version, search)
 
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
-    has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
-    has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(genome_version, **search)
+    has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(**search)
+    has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(**search)
     has_location_filter = any(search.get(field) for field in ['genes', 'intervals', 'variant_ids'])
     sample_data_by_dataset_type = sample_data_by_dataset_type or {}
     results = []
@@ -117,6 +119,20 @@ def get_clickhouse_variants(families, user, genome_version, sort=None, sample_da
 
     logger.info(f'Total results: {len(results)}', user)
     return get_sorted_search_results(results, sort, families)
+
+
+def  _get_search_genome_version(families):
+    genome_versions = families.values_list('project__genome_version', flat=True).distinct()
+    if len (genome_versions) > 1:
+        project_versions = families.values('project__genome_version').annotate(
+            projects=ArrayAgg('project__name', distinct=True)
+        )
+        summary = '; '.join(
+            sorted([f"{agg['project__genome_version']} - {', '.join(sorted(agg['projects']))}" for agg in project_versions]))
+        raise InvalidSearchException(
+            f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
+
+    return genome_versions[0]
 
 
 def _parse_locus_search(locus, genome_version, search):
@@ -697,16 +713,16 @@ def _affected_male_families(sample_data, affected_male_family_guids):
     }
 
 
-def _is_x_chrom_only(genome_version, genes=None, intervals=None, **kwargs):
+def _is_x_chrom_only(genes=None, intervals=None, **kwargs):
     if not (genes or intervals):
         return False
-    return all('X' in gene[f'chromGrch{genome_version}'] for gene in (genes or {}).values()) and all('X' in interval['chrom'] for interval in (intervals or []))
+    return all('X' in interval['chrom'] for interval in list((genes or {}).values()) + (intervals or []))
 
 
-def _has_x_chrom(genome_version, genes=None, intervals=None, **kwargs):
+def _has_x_chrom(genes=None, intervals=None, **kwargs):
     if not (genes or intervals):
         return True
-    return any('X' in gene[f'chromGrch{genome_version}'] for gene in (genes or {}).values()) or any('X' in interval['chrom'] for interval in (intervals or []))
+    return any('X' in interval['chrom'] for interval in list((genes or {}).values()) + (intervals or []))
 
 
 def _prioritized_gene_sort(gene_ids, families):

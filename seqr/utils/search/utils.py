@@ -7,7 +7,7 @@ from pyliftover.liftover import LiftOver
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
     get_sorted_search_results, clickhouse_variant_lookup, InvalidSearchException
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Sample, Project, VariantSearchResults
+from seqr.models import Sample, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from clickhouse_search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
@@ -20,30 +20,11 @@ logger = SeqrLogger(__name__)
 MAX_EXPORT_VARIANTS = 1000
 
 
-def _get_search_genome_version(search_model):
-    projects = Project.objects.filter(family__in=search_model.families.all()).values_list('genome_version', 'name').distinct()
-    project_versions = defaultdict(set)
-    for genome_version, project_name in projects:
-        project_versions[genome_version].add(project_name)
-
-    if len(project_versions) > 1:
-        summary = '; '.join(
-            [f"{build} - {', '.join(sorted(projects))}" for build, projects in sorted(project_versions.items())])
-        raise InvalidSearchException(
-            f'Searching across multiple genome builds is not supported. Remove projects with differing genome builds from search: {summary}')
-
-    if not project_versions:
-        return search_model.variant_search.search.get('no_access_project_genome_version')
-
-    return next(iter(project_versions.keys()))
-
-
 def get_single_variant(family, variant_id, user):
-    genome_version = family.project.genome_version
-    variants = get_clickhouse_variants([family], user, genome_version, raw_variant_items=variant_id, variant_ids=[variant_id])
+    variants = get_clickhouse_variants([family], user, raw_variant_items=variant_id, variant_ids=[variant_id])
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
-    return format_clickhouse_results(variants, genome_version)[0]
+    return format_clickhouse_results(variants, family.project.genome_version)[0]
 
 
 def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_only=False, hom_only=False):
@@ -68,10 +49,11 @@ def _get_search_cache_key(search_model, sort=None):
 
 
 def export_variants(search_model, user):
-    search_results, genome_version = _query_variants(search_model, user)
+    search_results = _query_variants(search_model, user)
     total_variants = len(search_results)
     if total_variants > MAX_EXPORT_VARIANTS:
         raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
+    genome_version = search_model.families.first().project.genome_version
     return format_clickhouse_export_results(search_results, genome_version)
 
 
@@ -95,18 +77,18 @@ def _get_previous_search_results(search_model, sort):
 def query_variants(search_model, sort, page, num_results, user):
     if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(user):
         sort = PATHOGENICTY_HGMD_SORT_KEY
-    all_results, genome_version = _query_variants(search_model, user, sort=sort or XPOS_SORT_KEY)
+    all_results = _query_variants(search_model, user, sort=sort or XPOS_SORT_KEY)
 
+    genome_version = search_model.families.first().project.genome_version
     results_page = format_clickhouse_results(all_results[(page-1)*num_results:page*num_results], genome_version)
 
     return results_page, len(all_results)
 
 
 def _query_variants(search_model, user, sort=None):
-    genome_version = _get_search_genome_version(search_model)
     previous_search_results = _get_previous_search_results(search_model, sort) or {}
     if previous_search_results:
-        return previous_search_results, genome_version
+        return previous_search_results
 
     search = deepcopy(search_model.variant_search.search)
     families = search_model.families.all()
@@ -116,17 +98,17 @@ def _query_variants(search_model, user, sort=None):
     if exclude_previous_hash:
         exclude_search = _get_clickhouse_exclude_keys(exclude_previous_hash, user)
 
-    results = get_clickhouse_variants(families, user, genome_version, sort=sort, **search, **exclude_search)
+    results = get_clickhouse_variants(families, user, sort=sort, **search, **exclude_search)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, results, expire=timedelta(weeks=2))
 
-    return results, genome_version
+    return results
 
 
 def _get_clickhouse_exclude_keys(search_hash, user):
     previous_search_model = VariantSearchResults.objects.get(search_hash=search_hash)
-    results, _ = _query_variants(previous_search_model, user)
+    results = _query_variants(previous_search_model, user)
     exclude_keys = defaultdict(list)
     exclude_key_pairs = defaultdict(list)
     for variant in results:
@@ -149,7 +131,7 @@ def variant_dataset_type(variant):
 
 
 def get_variant_query_gene_counts(search_model, user):
-    results, _ = _query_variants(search_model, user)
+    results = _query_variants(search_model, user)
     flat_variants = [
         v for variants in results for v in (variants if isinstance(variants, list) else [variants])
     ]
