@@ -477,8 +477,12 @@ def get_sorted_search_results(results, sort, families):
     return sorted_results
 
 
-def format_clickhouse_export_results(results, genome_version):
+def format_clickhouse_export_results(results):
     formatted_results = [variant for result in results for variant in (result if isinstance(result, list) else [result])]
+    if not formatted_results:
+        return []
+
+    genome_version = formatted_results[0]['genomeVersion']
     keys_with_no_details = {result['key'] for result in formatted_results if not 'transcripts' in result}
     detail_qs = get_variant_details_queryset(genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details)
     details_by_key = {
@@ -505,7 +509,11 @@ def format_clickhouse_export_results(results, genome_version):
     return formatted_results
 
 
-def format_clickhouse_results(results, genome_version):
+def format_clickhouse_results(results):
+    if not results:
+        return []
+
+    genome_version = (results[0] if isinstance(results[0], list) else results)[0]['genomeVersion']
     keys_with_no_details = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
     }
@@ -876,7 +884,7 @@ def _clickhouse_variant_lookup(entries, genome_version, data_type, affected_only
 
     variant = results.result_values().first()
     if variant:
-        variant = format_clickhouse_results([variant], genome_version)[0]
+        variant = format_clickhouse_results([variant])[0]
     return variant
 
 def _filter_lookup_entries(entries, affected_only, hom_only):

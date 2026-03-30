@@ -24,7 +24,7 @@ def get_single_variant(family, variant_id, user):
     variants = get_clickhouse_variants([family], user, raw_variant_items=variant_id, variant_ids=[variant_id])
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
-    return format_clickhouse_results(variants, family.project.genome_version)[0]
+    return format_clickhouse_results(variants)[0]
 
 
 def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_only=False, hom_only=False):
@@ -53,8 +53,7 @@ def export_variants(search_model, user):
     total_variants = len(search_results)
     if total_variants > MAX_EXPORT_VARIANTS:
         raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
-    genome_version = search_model.families.first().project.genome_version
-    return format_clickhouse_export_results(search_results, genome_version)
+    return format_clickhouse_export_results(search_results)
 
 
 def _get_previous_search_results(search_model, sort):
@@ -79,8 +78,7 @@ def query_variants(search_model, sort, page, num_results, user):
         sort = PATHOGENICTY_HGMD_SORT_KEY
     all_results = _query_variants(search_model, user, sort=sort or XPOS_SORT_KEY)
 
-    genome_version = search_model.families.first().project.genome_version
-    results_page = format_clickhouse_results(all_results[(page-1)*num_results:page*num_results], genome_version)
+    results_page = format_clickhouse_results(all_results[(page-1)*num_results:page*num_results])
 
     return results_page, len(all_results)
 
