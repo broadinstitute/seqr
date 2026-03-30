@@ -139,7 +139,7 @@ def query_single_variant_handler(request, variant_id):
     family = families.first()
     check_project_permissions(family.project, request.user)
 
-    variant = get_single_variant(family, variant_id, request.user)
+    variant = get_single_variant(families, variant_id, request.user)
 
     response = _process_variants([variant], families, request, add_all_context=True, add_locus_list_detail=True)
 

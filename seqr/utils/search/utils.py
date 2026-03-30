@@ -20,8 +20,8 @@ logger = SeqrLogger(__name__)
 MAX_EXPORT_VARIANTS = 1000
 
 
-def get_single_variant(family, variant_id, user):
-    variants = get_clickhouse_variants([family], user, raw_variant_items=variant_id, variant_ids=[variant_id])
+def get_single_variant(families, variant_id, user):
+    variants = get_clickhouse_variants(families, user, raw_variant_items=variant_id, variant_ids=[variant_id])
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return format_clickhouse_results(variants)[0]
