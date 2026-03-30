@@ -47,7 +47,7 @@ def family_page_data(request, family_guid):
 
     sample_models = Sample.objects.filter(individual__family=family)
     samples = get_json_for_samples(
-        sample_models, project_guid=project.guid, family_guid=family_guid, skip_nested=True, is_analyst=is_analyst
+        sample_models, project_guid=project.guid, family_guid=family_guid, is_analyst=is_analyst
     )
     response = {
         'samplesByGuid': {s['sampleGuid']: s for s in samples}
@@ -58,7 +58,7 @@ def family_page_data(request, family_guid):
 
     discovery_variants = family.savedvariant_set.filter(varianttag__variant_tag_type__category=DISCOVERY_CATEGORY).values(
         'xpos', 'xpos_end', 'gene_ids', 'key', 'dataset_type',
-        svType=F('saved_variant_json__svType')
+        svType=F('sv_type')
     )
     gene_ids = {gene_id for variant in discovery_variants for gene_id in variant['gene_ids']}
     discovery_variant_intervals = [dict(zip(
@@ -127,7 +127,7 @@ def family_variant_tag_summary(request, family_guid):
     project = family.project
     check_project_permissions(project, request.user)
 
-    response = families_discovery_tags([{'familyGuid': family_guid}], genome_version=project.genome_version)
+    response = families_discovery_tags([{'familyGuid': family_guid}])
 
     tags = VariantTag.objects.filter(saved_variants__family=family)
     family_tag_type_counts = tags.values('variant_tag_type__name').annotate(count=Count('*'))

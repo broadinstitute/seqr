@@ -3,16 +3,16 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Divider, Accordion } from 'semantic-ui-react'
 
-import { updateVariantTags } from 'redux/rootReducer'
 import { getUser, getSortedIndividualsByFamily } from 'redux/selectors'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { Select, IntegerInput, LargeMultiselect } from 'shared/components/form/Inputs'
 import { validators, configuredField } from 'shared/components/form/FormHelpers'
 import { AwesomeBarFormInput } from 'shared/components/page/AwesomeBar'
-import { GENOME_VERSION_FIELD, SV_TYPES } from 'shared/utils/constants'
+import { SV_TYPES } from 'shared/utils/constants'
 
-import { TAG_FORM_FIELD, TAG_FIELD_NAME } from '../constants'
+import { TAG_FORM_FIELD } from '../constants'
+import { createManualVariant } from '../reducers'
 import { getTaggedVariantsByFamilyType, getProjectTagTypeOptions, getCurrentProject } from '../selectors'
 import SelectSavedVariantsTable, { VARIANT_POS_COLUMN, TAG_COLUMN, GENES_COLUMN } from './SelectSavedVariantsTable'
 
@@ -25,9 +25,6 @@ const TRANSCRIPT_ID_FIELD_NAME = 'mainTranscriptId'
 const HGVSC_FIELD_NAME = 'hgvsc'
 const HGVSP_FIELD_NAME = 'hgvsp'
 const VARIANTS_FIELD_NAME = 'variants'
-const FORMAT_RESPONSE_FIELDS = [
-  GENE_ID_FIELD_NAME, HGVSC_FIELD_NAME, HGVSP_FIELD_NAME, TAG_FIELD_NAME, VARIANTS_FIELD_NAME,
-]
 
 const ZygosityInput = React.memo(({ individuals, name, title, individualField, error }) => (
   <div>
@@ -88,8 +85,6 @@ const SAVED_VARIANT_COLUMNS = [
 ]
 const SAVED_SV_COLUMNS = [{ name: 'svType', content: 'SV Type', width: 2 }, ...SAVED_VARIANT_COLUMNS]
 
-const GENOME_FIELD = { ...GENOME_VERSION_FIELD, inline: false, width: null }
-
 const ZYGOSITY_FIELD = {
   name: 'genotypes',
   component: connect(mapZygosityInputStateToProps)(ZygosityInput),
@@ -127,7 +122,6 @@ const GENE_FIELD = {
 const SAVED_VARIANT_FIELD = {
   name: VARIANTS_FIELD_NAME,
   idField: 'variantGuid',
-  includeSelectedRowData: true,
   control: SavedVariantField,
 }
 
@@ -156,7 +150,6 @@ const SNV_FIELDS = [
   { name: TRANSCRIPT_ID_FIELD_NAME, label: 'Transcript ID', width: 6 },
   { name: HGVSC_FIELD_NAME, label: 'HGVSC', width: 5, validate: validateHasTranscriptId },
   { name: HGVSP_FIELD_NAME, label: 'HGVSP', width: 5, validate: validateHasTranscriptId },
-  GENOME_FIELD,
   TAG_FIELD,
   { accordionLabel: 'Multinucleotide Variant', columns: SAVED_VARIANT_COLUMNS, ...SAVED_VARIANT_FIELD },
   {
@@ -176,7 +169,6 @@ const SV_FIELDS = [
   START_FIELD,
   END_FIELD,
   GENE_FIELD,
-  GENOME_FIELD,
   TAG_FIELD,
   { name: SV_FIELD_NAME, validate: validators.required, label: 'SV Name', width: 8 },
   {
@@ -206,7 +198,6 @@ const BaseCreateVariantButton = React.memo(({ variantType, family, user, project
   (project.isAnalystProject ? user.isAnalyst : project.canEdit) ? (
     <UpdateButton
       key={`manual${variantType}`}
-      initialValues={project}
       modalTitle={`Add a Manual ${variantType} for Family ${family.displayName}`}
       modalId={`${family.familyGuid}-addVariant-${variantType || 'SNV'}`}
       formMetaId={family.familyGuid}
@@ -234,39 +225,7 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
-  onSubmit: (values) => {
-    const variant = ownProps.formFields.map(({ name }) => name).filter(
-      name => !FORMAT_RESPONSE_FIELDS.includes(name),
-    ).reduce(
-      (acc, name) => ({ ...acc, [name]: values[name] }), {},
-    )
-
-    if (variant.svName) {
-      variant.variantId = values.svName
-      if (values[GENE_ID_FIELD_NAME]) {
-        variant.transcripts = { [values[GENE_ID_FIELD_NAME]]: [] }
-      }
-    } else {
-      variant.variantId = `${values.chrom}-${values.pos}-${values.ref}-${values.alt}`
-      variant.transcripts = {
-        [values[GENE_ID_FIELD_NAME]]: values[TRANSCRIPT_ID_FIELD_NAME] ? [{
-          transcriptId: values[TRANSCRIPT_ID_FIELD_NAME],
-          [HGVSC_FIELD_NAME]: values[HGVSC_FIELD_NAME],
-          [HGVSP_FIELD_NAME]: values[HGVSP_FIELD_NAME],
-        }] : [],
-      }
-    }
-
-    const variants = Object.values(values[VARIANTS_FIELD_NAME] || {}).filter(v => v)
-
-    const formattedValues = {
-      familyGuid: ownProps.family.familyGuid,
-      tags: values[TAG_FIELD_NAME],
-      variant: [variant, ...variants],
-    }
-
-    return dispatch(updateVariantTags(formattedValues))
-  },
+  onSubmit: values => dispatch(createManualVariant(ownProps.family.familyGuid, values)),
 })
 
 const CreateVariantButton = connect(mapStateToProps, mapDispatchToProps)(BaseCreateVariantButton)

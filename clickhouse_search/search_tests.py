@@ -223,11 +223,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         return search_hash
 
     def _format_cached_variants(self, variants, cached_variant_fields=None):
-        cached_variants = [
+        return [
             self._get_cached_variant(variant, (cached_variant_fields[i] if cached_variant_fields else None))
             for i, variant in enumerate(variants)
         ]
-        return {'all_results': cached_variants, 'total_results': len(variants)}
 
     @classmethod
     def _get_cached_variant(cls, variant, cached_variant_fields):
@@ -275,10 +274,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, VARIANT3, VARIANT4, SV_VARIANT3, GCNV_VARIANT1,
-                         GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            gene_counts={**variant_gene_counts, **MITO_GENE_COUNTS, **GCNV_GENE_COUNTS, **SV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
-            project_families=[*SINGLE_FAMILY_PROJECT_FAMILIES, *SV_PROJECT_FAMILIES],
+            [VARIANT1, VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT1,
+                         GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            gene_counts={**variant_gene_counts, **MITO_GENE_COUNTS, **GCNV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}},
+            project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
         self._set_grch37_search()
@@ -374,27 +373,28 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self.login_manager()
+        locus = {'rawItems': 'chr1:1-100000000, chr13:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, chr21:1-100000000, M:1-100000000'}
         project_families += SV_PROJECT_FAMILIES
         results = [
             VARIANT1, SV_VARIANT1, SV_VARIANT2, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, SV_VARIANT3, GCNV_VARIANT1,
             GCNV_VARIANT2, GCNV_VARIANT3, SV_VARIANT4, GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,
         ]
         self._assert_expected_search(
-            results, request_body=request_body, project_families=project_families, additional_response=additional_response,
+            results, request_body=request_body, project_families=project_families, additional_response=additional_response, locus=locus,
         )
 
         request_body['unsolvedFamiliesOnly'] = True
         project_families[0]['familyGuids'].remove('F000007_7')
         project_families[0]['familyGuids'].remove('F000010_10')
         self._assert_expected_search(
-            results, request_body=request_body, project_families=project_families, additional_response=additional_response,
+            results, request_body=request_body, project_families=project_families, additional_response=additional_response, locus=locus,
         )
 
         request_body['trioFamiliesOnly'] = True
         self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3,
              GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            request_body=request_body, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
+            request_body=request_body, project_families=SINGLE_FAMILY_PROJECT_FAMILIES, locus=locus,
         )
 
     def test_both_sample_types_search(self):
@@ -660,9 +660,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.mock_results_guid.return_value = 'VRS00079516'
         vsr = VariantSearchResults.objects.create(variant_search_id=79516, search_hash='abc1234')
         cache_key = f'search_results__{vsr.guid}__gnomad'
-        self.set_cache(cache_key, {'all_results': [
+        self.set_cache(cache_key, [
             VARIANT1, VARIANT2, [VARIANT3, VARIANT2], [GCNV_VARIANT4, GCNV_VARIANT3],
-        ]})
+        ])
 
         request_body = {'projectFamilies': DEFAULT_PROJECT_FAMILIES, 'previousSearchHash': 'abc1234'}
         exclude = {'previousSearch': True}
@@ -677,9 +677,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], check_login=self.check_collaborator_login,
         )
 
-        self.set_cache(cache_key, {'all_results': [
+        self.set_cache(cache_key, [
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3,
-        ]})
+        ])
         self._assert_expected_search(
             [VARIANT2, [GCNV_VARIANT3, GCNV_VARIANT4]], exclude=exclude, **COMP_HET_ALL_PASS_FILTERS,
             request_body=request_body, response_search=response_search, inheritance_mode='recessive', cached_variant_fields=[
@@ -846,6 +846,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
+    @mock.patch('seqr.utils.search.utils.MAX_EXPORT_VARIANTS', 2)
     @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
     @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
@@ -863,11 +864,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'Invalid variants: chr2-A-C', locus={'rawVariantItems': 'chr2-A-C'},
         )
 
-        self.set_cache(f'search_results__VRS{search_hash:07d}__xpos', {'total_results': 20000})
+        self.set_cache(f'search_results__VRS{search_hash:07d}__xpos', [VARIANT1, VARIANT2, VARIANT3, VARIANT4])
         export_url = reverse(export_variants_handler, args=[search_hash])
         response = self.client.get(export_url)
         self.assertEqual(response.status_code, 400)
-        self.assertDictEqual(response.json(), {'error': 'Unable to export more than 1000 variants (20000 requested)'})
+        self.assertDictEqual(response.json(), {'error': 'Unable to export more than 2 variants (4 requested)'})
 
         self._assert_expected_search_error('Invalid variants: rs9876', locus={'rawVariantItems': 'rs9876'})
 
@@ -897,9 +898,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search_error('Annotations must be specified to search for compound heterozygous variants', inheritance_mode='recessive')
 
+        annotations = {'frameshift': ['frameshift_variant']}
         self._assert_expected_search_error(
             'Location must be specified to search for compound heterozygous variants across many families',
-            annotations={'frameshift': ['frameshift_variant']}, inheritance_mode='recessive',
+            annotations=annotations, inheritance_mode='recessive',
         )
 
         self._assert_expected_search_error(
@@ -912,6 +914,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search_error(
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
             inheritance_mode='recessive', project_families=[{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000005_5']}],
+            annotations=annotations,
         )
 
         no_sv_project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000003_3']}]
@@ -928,6 +931,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search_error(
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
             inheritance_mode='recessive', inheritance_filter={'affected': {'I000007_na20870': 'N'}}, project_families=no_sv_project_families,
+            annotations=annotations,
         )
 
         self._assert_expected_search_error('Inheritance must be specified if custom affected status is set', inheritance_filter={'affected': {'I000007_na20870': 'N'}})
@@ -2350,9 +2354,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         })
 
         # Test cross-project discovery for analyst users
-        self.set_cache('search_results__VRS0009876__xpos',{'total_results': 1, 'all_results': [{
+        self.set_cache('search_results__VRS0009876__xpos',[{
             'key': 100, 'familyGuids': ['F000002_2'], 'xpos': 1248367227, 'genomeVersion': '38', 'sortedTranscriptConsequences': [],
-        }]})
+        }])
         response, _, _ = self._execute_search(search_hash=9876)
         self.assertEqual(response.status_code, 200)
         variants = response.json()['searchedVariants']
@@ -2416,8 +2420,9 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         self.check_data_manager_login(url)
 
         Project.objects.filter(guid='R0001_1kg').update(genome_version='38')
+        body = {'project': 'R0001_1kg', 'datasetType': 'SNV_INDEL'}
         response = self.client.post(
-            url, content_type='application/json', data=json.dumps({'project': 'R0001_1kg', 'datasetType': 'SNV_INDEL'})
+            url, content_type='application/json', data=json.dumps(body)
         )
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
@@ -2445,5 +2450,17 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         project_samples = Sample.objects.filter(individual__family__project__guid='R0001_1kg', is_active=True)
         self.assertEqual(project_samples.filter(dataset_type='SNV_INDEL').count(), 0)
         self.assertEqual(project_samples.count(), 4)
+
+        body['datasetType'] = 'SV'
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {
+            'info': [
+                'Deactivated search for 3 individuals',
+                'Deleted all GCNV search data for project 1kg project n\xe5me with uni\xe7\xf8de',
+            ],
+        })
+        self.assertEqual(project_samples.filter(dataset_type='SV').count(), 0)
+        self.assertEqual(project_samples.count(), 1)
 
 

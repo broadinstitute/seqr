@@ -159,11 +159,6 @@ def _map_anvil_seqr_permission(anvil_permission):
     return CAN_VIEW if access_level == 'READER' else None
 
 
-def anvil_has_perm(user, permission_level, project):
-    if not project_has_anvil(project):
-        return False
-    return has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
-
 
 def has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
     kwargs = {'meta_fields': meta_fields } if meta_fields else {}
@@ -211,7 +206,7 @@ def has_project_permissions(project, user, can_edit=False):
 
 def _user_project_permission(user, permission_level, project):
     if anvil_enabled():
-        return anvil_has_perm(user, permission_level, project)
+        return has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
     return user.has_perm(permission_level, project)
 
 

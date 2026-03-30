@@ -509,7 +509,7 @@ export const SAMPLE_EXPORT_DATA = [
   { header: 'Dataset Type', field: 'datasetType' },
 ]
 
-export const TAG_FIELD_NAME = 'tags'
+const TAG_FIELD_NAME = 'tags'
 
 export const TAG_FORM_FIELD = {
   name: TAG_FIELD_NAME,

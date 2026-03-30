@@ -1,22 +1,20 @@
-from collections import defaultdict
+from collections import defaultdict, abc
 from clickhouse_backend.models import ArrayField, StringField
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import F, Q, Count, prefetch_related_objects
+from django.db.models import F, Q, Count, Value
 import json
 import logging
 import redis
 
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
-from clickhouse_search.search import get_variants_queryset, get_clickhouse_genotypes
+from clickhouse_search.search import get_variants_queryset
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
 from seqr.utils.search.utils import variant_dataset_type
 from seqr.utils.gene_utils import get_genes_for_variants
-from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
@@ -32,44 +30,46 @@ DISCOVERY_CATEGORY = 'CMG Discovery Tags'
 OMIM_GENOME_VERSION = GENOME_VERSION_GRCh38
 
 
-def parse_saved_variant_json(variant_json, family_id, variant_id=None, dataset_type=None):
-    if 'xpos' not in variant_json:
-        variant_json['xpos'] = get_xpos(variant_json['chrom'], variant_json['pos'])
+def parse_saved_variant_json(variant_json, family_id):
     xpos = variant_json['xpos']
     ref = variant_json.get('ref')
-    alt = variant_json.get('alt')
     var_length = variant_json['end'] - variant_json['pos'] if variant_json.get('end') is not None else len(ref) - 1
-    variant_id = variant_json.get('variantId', variant_id)
-    if variant_json.get('key'):
-        update_json = {
-            'key': variant_json['key'],
-            'genotypes': variant_json.get('genotypes', {}),
-            'dataset_type': dataset_type or variant_dataset_type({'variantId': variant_id, **variant_json}),
-        }
-    else:
-        update_json = {'saved_variant_json': variant_json}
     if 'transcripts' in variant_json:
-        update_json['gene_ids'] = sorted(variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json))
-    elif 'gene_ids' in variant_json:
-        update_json['gene_ids'] = variant_json['gene_ids']
+        main_transcript_id = variant_json.get('mainTranscriptId')
+        gene_ids = sorted(
+            variant_json['transcripts'].keys(), key=lambda gene_id: _transcript_sort(gene_id, variant_json, main_transcript_id)
+        )
+        main_gene_transcripts = variant_json['transcripts'][gene_ids[0]] if gene_ids else []
+        main_transcript = next(
+            t for t in main_gene_transcripts if t.get('transcriptId') == main_transcript_id
+        ) if main_transcript_id else {}
+    else:
+        gene_ids = variant_json['gene_ids']
+        main_transcript = variant_json['main_transcript']
     return {
+        'key': variant_json['key'],
         'xpos': xpos,
         'xpos_end': xpos + var_length,
         'ref': ref,
-        'alt': alt,
+        'alt': variant_json.get('alt'),
+        'sv_type': variant_json.get('svType'),
         'family_id': family_id,
-        'variant_id': variant_id,
-    }, update_json
+        'variant_id': variant_json['variantId'],
+        'genotypes': variant_json.get('genotypes', {}),
+        'dataset_type': variant_json.get('dataset_type') or variant_dataset_type(variant_json),
+        'gene_ids': gene_ids,
+        'main_transcript': main_transcript,
+        'saved_variant_json': variant_json.get('saved_variant_json', {}),
+    }
 
 
-def _transcript_sort(gene_id, saved_variant_json):
+def _transcript_sort(gene_id, saved_variant_json, main_transcript_id):
     gene_transcripts = saved_variant_json['transcripts'][gene_id]
-    main_transcript_id = saved_variant_json.get('mainTranscriptId')
     is_main_gene = bool(main_transcript_id) and any(t.get('transcriptId') == main_transcript_id for t in gene_transcripts)
     return (not is_main_gene, min(t.get('transcriptRank', 100) for t in gene_transcripts) if gene_transcripts else 100)
 
 
-def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, user, project=None, get_comp_het_metadata=None, load_new_variant_data=False, remove_missing_metadata=True, primary_id_field='variant_id', dataset_type=None, **kwargs):
+def bulk_create_tagged_variants(family_variant_data, tag_name, parse_new_saved_variants, get_metadata, user, project=None, get_comp_het_metadata=None, remove_missing_metadata=True, primary_id_field='variant_id'):
     all_family_ids = {family_id for family_id, _ in family_variant_data.keys()}
     all_variant_ids = {variant_id for _, variant_id in family_variant_data.keys()}
 
@@ -80,20 +80,11 @@ def bulk_create_tagged_variants(family_variant_data, tag_name, get_metadata, use
 
     new_variant_keys = set(family_variant_data.keys()) - set(saved_variant_map.keys())
     if new_variant_keys:
-        if load_new_variant_data:
-            genome_version = Family.objects.filter(id__in=all_family_ids).values_list('project__genome_version', flat=True).first()
-            new_variant_data = _search_new_saved_variants(new_variant_keys, genome_version)
-        else:
-            new_variant_data = {k: v for k, v in family_variant_data.items() if k in new_variant_keys}
-            new_variant_data = _get_clickhouse_variant_annotations(
-                new_variant_data, primary_id_field, project=project, dataset_type=dataset_type, **kwargs,
-            )
-
-        new_variant_models = []
-        for (family_id, variant_id), variant in new_variant_data.items():
-            create_json, update_json = parse_saved_variant_json(variant, family_id, variant_id=variant_id, dataset_type=dataset_type)
-            new_variant_models.append(SavedVariant(**create_json, **update_json))
-
+        new_variant_data = parse_new_saved_variants(new_variant_keys, family_variant_data)
+        new_variant_models = [
+            SavedVariant(**parse_saved_variant_json(variant, family_id))
+            for (family_id, _), variant in new_variant_data.items()
+        ]
         saved_variant_map.update({
             (v.family_id, getattr(v, primary_id_field)): v for v in SavedVariant.bulk_create(user, new_variant_models)
         })
@@ -179,75 +170,16 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
     return updated_tag
 
 
-def _search_new_saved_variants(family_variant_ids: set[tuple[int, str]], genome_version: str) -> dict[tuple[int, str], dict]:
-    family_ids = set()
-    variant_families = defaultdict(list)
-    for family_id, variant_id in family_variant_ids:
-        family_ids.add(family_id)
-        variant_families[variant_id].append(family_id)
-    families_by_id = {f.id: f for f in Family.objects.filter(id__in=family_ids)}
-
-    samples = Sample.objects.filter(is_active=True, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
-    search_variants_by_id = {
-        v['variantId']: v for v in  _get_clickhouse_variants(samples, families_by_id, family_variant_ids, genome_version)
-    }
-
-    new_variants = {}
-    missing = defaultdict(list)
-    for variant_id, family_ids in variant_families.items():
-        variant = search_variants_by_id.get(variant_id) or {'familyGuids': []}
-        for family_id in family_ids:
-            family = families_by_id[family_id]
-            if family.guid in variant['familyGuids']:
-                new_variants[(family_id, variant_id)] = variant
-            else:
-                missing[family.family_id].append(variant_id)
-
-    if missing:
-        missing_summary = [f'{family} ({", ".join(sorted(variant_ids))})' for family, variant_ids in missing.items()]
-        raise ErrorsWarningsException([
-            f"Unable to find the following family's variants in the search backend: {', '.join(missing_summary)}",
-        ])
-
-    return new_variants
-
-
-def _get_clickhouse_variants(samples: Sample.objects, families_by_id: dict[int, Family], family_variant_ids: set[tuple[int, str]], genome_version: str) -> list[dict]:
-    variant_data = _get_clickhouse_variant_annotations(
-        {variant_id: {'genotypes': {}, 'familyGuids': []} for  variant_id in family_variant_ids}, genome_version=genome_version,
-    )
-    variants_by_key = {variant['key']: variant for variant in variant_data.values() if variant.get('key')}
-
-    families = list(families_by_id.values())
-    prefetch_related_objects(families, 'project')
-    families_by_project = defaultdict(list)
-    for family in families:
-        families_by_project[family.project.guid].append(family.guid)
-    for project_guid, family_guids in families_by_project.items():
-        genotype_keys = get_clickhouse_genotypes(
-            project_guid, family_guids, genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variants_by_key.keys(),
-            samples,
-        )
-        for key, genotypes in genotype_keys.items():
-            variants_by_key[key]['genotypes'].update(genotypes)
-            variants_by_key[key]['familyGuids'] += sorted({g['familyGuid'] for g in genotypes.values()})
-
-    return list(variants_by_key.values())
-
-
-def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict], primary_id_field: str = 'variant_id', genome_version: str = None, project: Project = None, dataset_type: str = None) -> dict[tuple[int, str], dict]:
+def get_saved_variant_annotations(variant_keys: abc.Iterable[tuple[int, str]], genome_version: str, primary_id_field: str = 'variant_id', group_by_field=None, dataset_type: str = None) -> dict[str, dict]:
     dataset_type = dataset_type or Sample.DATASET_TYPE_VARIANT_CALLS
-    variant_ids = {
-        variant_id for (_, variant_id), variant in variant_data.items()
-        if not (variant.get('key') and variant.get('variantId'))
-    }
+    variant_ids = {variant_id for _, variant_id in variant_keys}
     keys = None
     if primary_id_field == 'key':
         keys = variant_ids
         variant_ids = None
     qs = get_variants_queryset(
-        genome_version or project.genome_version, dataset_type, keys=keys, variant_ids=variant_ids,
-    )
+        genome_version, dataset_type, keys=keys, variant_ids=variant_ids,
+    ).join_variant_id()
     key_field = 'variantId' if primary_id_field == 'variant_id' else primary_id_field
     variant_fields = ['key']
     variant_values = {
@@ -258,14 +190,18 @@ def _get_clickhouse_variant_annotations(variant_data: dict[tuple[int, str], dict
         ),
     }
     if dataset_type.startswith('SV'):
-        variant_fields += ['chrom', 'pos', 'end']
+        variant_fields += ['chrom', 'pos', 'end', 'sv_type']
+        variant_values.update({
+            'svType': F('sv_type'),
+            'main_transcript': Value(None, output_field=StringField()),
+        })
     else:
         variant_values.update(qs.split_variant_id_annotations())
-    variants_by_id = {v[key_field]: v for v in qs.join_variant_id().values(*variant_fields, **variant_values)}
-    for (_, variant_id), variant in variant_data.items():
-        if variant_id in variants_by_id:
-            variant.update(variants_by_id[variant_id])
-    return variant_data
+        if qs.variant_detail_field:
+            variant_values['main_transcript'] = F(f'{qs.variant_detail_field}__transcripts__0')
+        else:
+            variant_values['main_transcript'] = F('sorted_transcript_consequences__0')
+    return {v[group_by_field or key_field]: v for v in qs.values(*variant_fields, **variant_values)}
 
 
 def reset_cached_search_results(project, reset_index_metadata=False):

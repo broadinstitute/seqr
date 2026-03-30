@@ -3,9 +3,9 @@ import json
 
 from django.db.models import Q
 
-from clickhouse_search.search import get_variant_main_transcripts_by_key
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project, Sample
+from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -48,6 +48,56 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 
 
 @login_and_policies_required
+def create_manual_saved_variant_handler(request, family_guid):
+    family = Family.objects.get(guid=family_guid)
+    check_project_permissions(family.project, request.user)
+
+    variant_json = json.loads(request.body)
+    tags = variant_json.pop('tags', [])
+    saved_variant_guids = {guid for guid, is_selected in variant_json.pop('variants', {}).items() if is_selected}
+
+    genome_version = family.project.genome_version
+    try:
+        xpos = get_xpos(variant_json['chrom'], variant_json['pos'])
+        variant_id = variant_json.get('svName') or f"{variant_json['chrom']}-{variant_json['pos']}-{variant_json['ref']}-{variant_json['alt']}"
+    except (KeyError, ValueError) as e:
+        return create_json_response({'error': str(e)}, status=400)
+
+    variant_json.update({
+        'genomeVersion': genome_version,
+        'transcripts': {},
+        'variantId': variant_id,
+        'xpos': xpos,
+    })
+
+    gene_id = variant_json.pop('geneId', None)
+    if gene_id:
+        variant_json['transcripts'][gene_id] = []
+        if variant_json.get('mainTranscriptId'):
+            variant_json['transcripts'][gene_id].append({
+                'transcriptId': variant_json['mainTranscriptId'],
+                'hgvsc': variant_json.pop('hgvsc', None),
+                'hgvsp': variant_json.pop('hgvsp', None),
+            })
+
+    variant_json['saved_variant_json'] = {**variant_json}
+    variant_json.update({
+        'key': None,
+        'dataset_type': Sample.DATASET_TYPE_SV_CALLS if variant_json.get('svName') else Sample.DATASET_TYPE_VARIANT_CALLS,
+    })
+
+    model_json = parse_saved_variant_json(variant_json, family.id)
+    saved_variant = create_model_from_json(SavedVariant, model_json, request.user)
+    saved_variant_guids.add(saved_variant.guid)
+
+    saved_variants = SavedVariant.objects.filter(family=family, guid__in=saved_variant_guids)
+    _update_tags(saved_variants, {'tags': tags}, request.user)
+
+    response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=genome_version)
+    return create_json_response(response)
+
+
+@login_and_policies_required
 def create_saved_variant_handler(request):
     variant_json = json.loads(request.body)
     family_guid = variant_json['familyGuid']
@@ -61,19 +111,17 @@ def create_saved_variant_handler(request):
 
     saved_variant_guids = []
     for single_variant_json in variants_json:
-        try:
-            create_json, update_json = parse_saved_variant_json(single_variant_json, family.id)
-        except ValueError as e:
-            return create_json_response({'error': str(e)}, status=400)
+        parsed_json = parse_saved_variant_json(single_variant_json, family.id)
+        create_json = {field: parsed_json[field] for field in ['key', 'xpos', 'variant_id', 'family_id']}
         saved_variant, _ = get_or_create_model_from_json(
-            SavedVariant, create_json=create_json, update_json=update_json,
+            SavedVariant, create_json=create_json, update_json=parsed_json,
             user=request.user, update_on_create_only=True)
         saved_variant_guids.append(saved_variant.guid)
     saved_variants = SavedVariant.objects.filter(guid__in=saved_variant_guids)
 
     response = {}
     if variant_json.get('note'):
-        _, response = _create_variant_note(saved_variants, variant_json, request.user, family.project.genome_version)
+        _, response = _create_variant_note(saved_variants, variant_json, request.user)
     elif variant_json.get('tags'):
         _update_tags(saved_variants, variant_json, request.user)
 
@@ -100,7 +148,7 @@ def create_variant_note_handler(request, variant_guids):
         return create_json_response({'error': 'Note is required'}, status=400)
 
     # update saved_variants
-    note, response = _create_variant_note(saved_variants, request_json, request.user, family.project.genome_version)
+    note, response = _create_variant_note(saved_variants, request_json, request.user)
     note_json = get_json_for_variant_note(note)
     note_json['variantGuids'] = all_variant_guids
     response.update({
@@ -113,7 +161,7 @@ def create_variant_note_handler(request, variant_guids):
     return create_json_response(response)
 
 
-def _create_variant_note(saved_variants, note_json, user, genome_version):
+def _create_variant_note(saved_variants, note_json, user):
     note = create_model_from_json(VariantNote, {
         'note': note_json.get('note'),
         'report': note_json.get('report') or False,
@@ -123,21 +171,15 @@ def _create_variant_note(saved_variants, note_json, user, genome_version):
 
     response = {}
     if note_json.get('saveAsGeneNote'):
-        gene_id = _variant_gene_id(saved_variants[0], genome_version)
+        variant = saved_variants[0]
+        gene_id = variant.gene_ids[0] if len(variant.gene_ids) == 1 or not variant.selected_main_transcript_id \
+            else variant.main_transcript.get('geneId')
         create_model_from_json(GeneNote, {'note': note_json.get('note'), 'gene_id': gene_id}, user)
         response['genesById'] = {gene_id: {
             'notes': get_json_for_gene_notes_by_gene_id([gene_id], user)[gene_id],
         }}
 
     return note, response
-
-
-def _variant_gene_id(variant, genome_version):
-    if len(variant.gene_ids) == 1 or not variant.selected_main_transcript_id:
-        return variant.gene_ids[0]
-    return get_variant_main_transcripts_by_key(
-        genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, {variant.key: [variant.selected_main_transcript_id]},
-    )[variant.key]['main_transcripts'][variant.selected_main_transcript_id].get('geneId')
 
 
 @login_and_policies_required
@@ -304,6 +346,9 @@ def update_variant_main_transcript(request, variant_guid, transcript_id):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
     check_project_permissions(saved_variant.family.project, request.user, can_edit=True)
 
-    update_model_from_json(saved_variant, {'selected_main_transcript_id': transcript_id}, request.user)
+    update_model_from_json(saved_variant, {
+        'selected_main_transcript_id': transcript_id,
+        'main_transcript': json.loads(request.body),
+    }, request.user)
 
     return create_json_response({'savedVariantsByGuid': {variant_guid: {'selectedMainTranscriptId': transcript_id}}})

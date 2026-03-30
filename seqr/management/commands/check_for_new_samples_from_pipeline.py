@@ -3,7 +3,6 @@ from collections import defaultdict
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
-from django.db.models import Q
 from django.utils import timezone
 import json
 import logging
@@ -395,21 +394,17 @@ class Command(BaseCommand):
         for family_guid in family_guids:
             variant_models_by_key = {
                 v.key: v for v in
-                SavedVariant.objects.filter(dataset_type=dataset_type, family__guid=family_guid).filter(
-                    Q(saved_variant_json__genomeVersion__isnull=True) |
-                    Q(saved_variant_json__genomeVersion=project.genome_version.replace('GRCh', ''))
-                )
+                SavedVariant.objects.filter(dataset_type=dataset_type, family__guid=family_guid, key__isnull=False)
             }
             if not variant_models_by_key:
                 continue
             variants = []
             genotypes_by_key = get_clickhouse_genotypes(
                 project.guid, [family_guid], project.genome_version, dataset_type, variant_models_by_key.keys(),
-                samples=Sample.objects.filter(is_active=True),
             )
             for key, genotypes in genotypes_by_key.items():
                 variant = variant_models_by_key[key]
-                variant.genotypes = genotypes
+                variant.genotypes = genotypes['genotypes']
                 variants.append(variant)
             logger.info(f'Reloading genotypes for {len(variants)} {dataset_type} variants in family {family_guid}')
             SavedVariant.bulk_update_models(None, variants, ['genotypes'])
