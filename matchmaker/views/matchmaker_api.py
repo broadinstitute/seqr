@@ -66,7 +66,7 @@ def get_individual_mme_matches(request, submission_guid):
     )
     response_json['savedVariantsByGuid'] = {}
     for variant in variants:
-        _, end = get_chrom_pos(variant['xposEnd'])
+        _, end = get_chrom_pos(variant.pop('xposEnd'))
         variant.update({'end': end})
         response_json['savedVariantsByGuid'][variant['variantGuid']] = variant
 
