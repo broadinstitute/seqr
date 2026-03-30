@@ -923,16 +923,16 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
         entry_qs, genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
     )
     if variant:
-        _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_only)
+        _add_liftover_genotypes(variant, data_type, affected_only, hom_only)
     else:
         lifted_genome_version = next(gv for gv in ENTRY_CLASS_MAP.keys() if gv != genome_version)
         lifted_entry_cls = ENTRY_CLASS_MAP[lifted_genome_version].get(data_type)
         if lifted_entry_cls:
             from seqr.utils.search.utils import run_liftover
-            chrom, pos, _ = variant_id.split('-', 2)
+            chrom, pos, base_id = variant_id.split('-', 2)
             liftover_results = run_liftover(lifted_genome_version, chrom, int(pos))
             if liftover_results:
-                lifted_id = variant_id.replace(pos, str(liftover_results[1]))
+                lifted_id = f'{liftover_results[0]}-{liftover_results[1]}-{base_id}'
                 entry_qs = lifted_entry_cls.objects.filter_locus(raw_variant_items=lifted_id)
                 variant = _clickhouse_variant_lookup(
                     entry_qs, lifted_genome_version, data_type, affected_only=affected_only, hom_only=hom_only,
@@ -963,11 +963,11 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
     return variants
 
 
-def _add_liftover_genotypes(variant, data_type, variant_id, affected_only, hom_only):
+def _add_liftover_genotypes(variant, data_type, affected_only, hom_only):
     lifted_entry_cls = ENTRY_CLASS_MAP.get(variant.get('liftedOverGenomeVersion'), {}).get(data_type)
     if not (lifted_entry_cls and variant.get('liftedOverChrom') and variant.get('liftedOverPos')):
         return
-    lifted_id = variant_id.replace(str(variant['pos']), str(variant['liftedOverPos']))
+    lifted_id = f"{variant['liftedOverChrom']}-{variant['liftedOverPos']}-{variant['ref']}-{variant['alt']}"
     lifted_entries = lifted_entry_cls.objects.filter_locus(raw_variant_items=lifted_id)
     lifted_entries = _filter_lookup_entries(lifted_entries, affected_only, hom_only)
     gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression()
