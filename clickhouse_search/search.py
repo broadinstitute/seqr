@@ -47,7 +47,6 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(**search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(**search)
-    has_location_filter = any(search.get(field) for field in ['genes', 'intervals', 'variant_ids'])
     sample_data_by_dataset_type = sample_data_by_dataset_type or {}
     results = []
     searched_dataset_types = set()
@@ -56,20 +55,15 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
         try:
             entry_qs, variants_qs, parsed_filters = _parse_dataset_type_query(
                 genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors,
-                annotate_affected_males=has_x_chrom_comp_het or has_x_linked, has_location_filter=has_location_filter,
+                annotate_affected_males=has_x_chrom_comp_het or has_x_linked,
                 allow_no_samples=bool(no_access_project_genome_version), inheritance_mode=inheritance_mode, **search,
             )
         except InvalidDatasetTypeException:
             continue
 
         if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS and no_access_project_genome_version:
-            if len(search.get('genes') or []) != 1:
-                raise InvalidSearchException('Including external projects is only available when searching for a single gene')
-            if has_comp_het:
-                raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
-            logger.info('Looking up variants in projects with no user access', user)
-            results += _get_search_results(
-                entry_qs, variants_qs, **search, **parsed_filters, sample_data=None, skip_entry_fields=True,
+            results += _get_no_access_search_results(
+                entry_qs, variants_qs, has_comp_het, user, **search, **parsed_filters,
                 exclude_projects=sample_data_by_dataset_type[dataset_type].get('project_guids'), inheritance_mode=inheritance_mode,
             )
             searched_dataset_types.add(dataset_type)
@@ -94,14 +88,12 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
             )
 
         if has_comp_het:
-            if not any(parsed_filters.values()):
-                raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
             comp_het_sample_data = sample_data
             if has_x_chrom_comp_het and 'affected_male_family_guids' in sample_data and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
                 comp_het_sample_data = _no_affected_male_families(sample_data, user)
             result_q = _get_data_type_comp_het_results_queryset(
-                entry_qs, variants_qs, comp_het_sample_data, exclude_key_pairs=(exclude_key_pairs or {}).get(dataset_type),
-                **search, **parsed_filters,
+                entry_qs, variants_qs, comp_het_sample_data, parsed_filters,
+                exclude_key_pairs=(exclude_key_pairs or {}).get(dataset_type), **search,
             )
             if result_q is not None:
                 dataset_results += _evaluate_results(result_q, is_comp_het=True)
@@ -169,7 +161,7 @@ def _get_genes(gene_ids, genome_version):
     return {gene.pop('gene_id'): gene for gene in genes}
 
 
-def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, allow_no_samples=False, has_location_filter=False, **search_kwargs):
+def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, allow_no_samples=False, **search_kwargs):
     entry_qs = ENTRY_CLASS_MAP[genome_version][dataset_type].objects.filter_locus(inheritance_mode=inheritance_mode, **search_kwargs)
     variants_qs = VARIANTS_CLASS_MAP[genome_version][dataset_type].objects
     parsed_filters = variants_qs.get_parsed_annotations_filters(**search_kwargs)
@@ -183,7 +175,7 @@ def _parse_dataset_type_query(genome_version, dataset_type, families, sample_dat
             inheritance_mode=inheritance_mode,
             inheritance_filter=inheritance_filter,
             annotate_affected_males=annotate_affected_males,
-            has_location_filter=has_location_filter,
+            has_location_filter=any(search_kwargs.get(field) for field in ['genes', 'intervals', 'variant_ids']),
             allow_no_samples=allow_no_samples,
         )
         sample_data_by_dataset_type[dataset_type] = sample_data
@@ -216,6 +208,15 @@ def _get_search_results(entry_qs, variants_qs, sample_data, skip_entry_fields=Fa
     entries = entry_qs.search(sample_data, skip_entry_fields=skip_entry_fields, **search_kwargs)
     results = variants_qs.subquery_join(entries).search(skip_entry_fields=skip_entry_fields, **search_kwargs)
     return _evaluate_results(results.result_values(skip_entry_fields=skip_entry_fields))
+
+
+def _get_no_access_search_results(entry_qs, variants_qs, has_comp_het, user, **search_kwargs):
+    if len(search_kwargs.get('genes') or []) != 1:
+        raise InvalidSearchException('Including external projects is only available when searching for a single gene')
+    if has_comp_het:
+        raise InvalidSearchException('Compound heterozygous search is not supported when including external projects')
+    logger.info('Looking up variants in projects with no user access', user)
+    return _get_search_results(entry_qs, variants_qs, **search_kwargs, sample_data=None, skip_entry_fields=True)
 
 
 def _get_x_linked_male_search_results(entry_qs, variants_qs, dataset_type, user, sample_data, **search_kwargs):
@@ -336,7 +337,10 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
     return results
 
 
-def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, annotations_secondary=None, exclude_key_pairs=None, **search_kwargs):
+def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, parsed_filters, annotations_secondary=None, exclude_key_pairs=None, **search_kwargs):
+    if not any(parsed_filters.values()):
+        raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
+
     parsed_secondary_filters = {}
     if annotations_secondary:
         try:
@@ -345,11 +349,11 @@ def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data,
             return None
 
     entries = entry_qs.search(
-        sample_data, **search_kwargs, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
+        sample_data, **search_kwargs, **parsed_filters, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
     )
 
-    primary_q = variants_qs.subquery_join(entries).search(**search_kwargs)
-    secondary_kwargs = {**search_kwargs, **parsed_secondary_filters}
+    primary_q = variants_qs.subquery_join(entries).search(**search_kwargs, **parsed_filters)
+    secondary_kwargs = {**search_kwargs, **parsed_filters, **parsed_secondary_filters}
     secondary_q = variants_qs.subquery_join(entries).search(**secondary_kwargs)
 
     return _get_comp_het_results_queryset(variants_qs, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
@@ -925,7 +929,7 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
         lifted_entry_cls = ENTRY_CLASS_MAP[lifted_genome_version].get(data_type)
         if lifted_entry_cls:
             from seqr.utils.search.utils import run_liftover
-            chrom, pos, ref, alt = variant_id.split('-')
+            chrom, pos, _ = variant_id.split('-', 2)
             liftover_results = run_liftover(lifted_genome_version, chrom, int(pos))
             if liftover_results:
                 lifted_id = variant_id.replace(pos, str(liftover_results[1]))
