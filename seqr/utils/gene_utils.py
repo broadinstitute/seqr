@@ -158,7 +158,7 @@ def _get_json_for_genes(genes, user=None, gene_fields=None, **kwargs):
     return _get_json_for_models(genes, process_result=_process_result, **kwargs)
 
 
-def parse_locus_list_items(request_json, genome_version=None, **kwargs):
+def parse_locus_list_items(request_json, genome_version=None, get_genes_func=get_genes):
     raw_items = request_json.get('rawItems')
     if not raw_items:
         return None, None, None
@@ -196,6 +196,6 @@ def parse_locus_list_items(request_json, genome_version=None, **kwargs):
     gene_symbols_to_ids = get_gene_ids_for_gene_symbols(gene_symbols, genome_version=genome_version)
     invalid_items += [symbol for symbol in gene_symbols if not gene_symbols_to_ids.get(symbol)]
     gene_ids.update({gene_ids[0] for gene_ids in gene_symbols_to_ids.values() if len(gene_ids)})
-    genes_by_id = get_genes(list(gene_ids), genome_version=genome_version, **kwargs) if gene_ids else {}
+    genes_by_id = get_genes_func(list(gene_ids), genome_version=genome_version) if gene_ids else {}
     invalid_items += [gene_id for gene_id in gene_ids if not genes_by_id.get(gene_id)]
     return genes_by_id, intervals, invalid_items

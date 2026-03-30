@@ -126,7 +126,7 @@ def _parse_locus_search(locus, genome_version, search):
         raise InvalidSearchException('Cannot specify both Location and Excluded Genes/Intervals')
 
     genes, intervals, invalid_items = parse_locus_list_items(
-        locus or exclude, genome_version=genome_version, additional_model_fields=['id'],
+        locus or exclude, genome_version=genome_version, get_genes_func=_get_genes,
     )
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
@@ -136,10 +136,7 @@ def _parse_locus_search(locus, genome_version, search):
     exclude_intervals = None
     if exclude_locations:
         exclude_intervals = intervals
-        # TODO move into db query
-        exclude_intervals += [
-            {field: gene[f'{field}Grch{genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
-        ]
+        exclude_intervals += list(genes.values())
         genes = None
         intervals = None
 
@@ -147,6 +144,13 @@ def _parse_locus_search(locus, genome_version, search):
         'genes': genes, 'intervals': intervals, 'exclude_intervals': exclude_intervals, 'raw_variant_items': locus.get('rawVariantItems'),
     })
     exclude.pop('rawItems', None)
+
+
+def _get_genes(gene_ids, genome_version):
+    genes = GeneInfo.objects.filter(**{'gene_id__in': gene_ids, f'start_grch{genome_version}__isnull': False}).values(
+        'id', 'gene_id', **{field: F(f'{field}_grch{genome_version}') for field in ['chrom', 'start', 'end']},
+    )
+    return {gene.pop('gene_id'): gene for gene in genes}
 
 
 def _parse_dataset_type_query(genome_version, dataset_type, families, sample_data_by_dataset_type, sample_data_errors, annotate_affected_males, inheritance_mode=None, inheritance_filter=None, allow_no_samples=False, has_location_filter=False, **search_kwargs):

@@ -99,12 +99,6 @@ class SearchQuerySet(QuerySet):
             return results
         return results.annotate(seqrPop=self.gt_stats_dict.dict_get_expression('key'))
 
-    def _format_gene_intervals(self, genes):
-        # TODO deprecate
-        return [
-            {field: gene[f'{field}Grch{self.genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
-        ]
-
     @classmethod
     def _prediction_expression(cls, model):
         pred_expressions = []
@@ -1474,7 +1468,7 @@ class BaseEntriesManager(SearchQuerySet):
         if genes:
             should_filter_interval = self._can_filter_gene_interval(genes)
             if should_filter_interval:
-                intervals = self._format_gene_intervals(genes) + (intervals or [])
+                intervals = list((genes or {}).values()) + (intervals or [])
             if require_gene_filter or (not should_filter_interval):
                 locus_q = Q(geneId_ids__bitmap_has_any=[gene['id'] for gene in genes.values()])
 
@@ -1751,7 +1745,7 @@ class SvEntriesManager(BaseEntriesManager):
         can_filter_gene_interval = self._can_filter_gene_interval(genes)
         chromosomes = {i['chrom'] for i in (intervals or [])}
         if can_filter_gene_interval:
-            chromosomes.update({gene[f'chromGrch{self.genome_version}'] for gene in genes.values()})
+            chromosomes.update({gene['chrom'] for gene in genes.values()})
         intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
 
         entries = super().filter_locus(*args, intervals=intervals, genes=genes, **kwargs)
