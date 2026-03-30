@@ -860,7 +860,8 @@ class SavedVariant(ModelWithGUID):
     class Meta:
         unique_together = ('xpos', 'xpos_end', 'variant_id', 'family')
 
-        json_fields = ['guid', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id', 'acmg_classification']
+        json_fields = ['guid', 'key', 'xpos', 'ref', 'alt', 'variant_id', 'selected_main_transcript_id', 'acmg_classification',
+                        'sv_type', 'gene_ids', 'genotypes']
 
 
 class VariantTagType(ModelWithGUID):

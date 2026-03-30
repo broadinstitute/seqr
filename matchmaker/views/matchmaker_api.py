@@ -14,7 +14,6 @@ from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack, set_email_message_stream
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -58,15 +57,11 @@ def get_individual_mme_matches(request, submission_guid):
     variant_guids = {gv['variantGuid'] for gv in gene_variants}
 
     variants = get_json_for_saved_variants(
-        SavedVariant.objects.filter(guid__in=variant_guids), genome_version=project.genome_version, additional_values={
+        SavedVariant.objects.filter(guid__in=variant_guids), additional_values={
             'genomeVersion': Coalesce('saved_variant_json__genomeVersion', Value(project.genome_version), output_field=CharField()),
         },
     )
-    response_json['savedVariantsByGuid'] = {}
-    for variant in variants:
-        chrom, pos = get_chrom_pos(variant['xpos'])
-        variant.update({'chrom': chrom, 'pos': pos})
-        response_json['savedVariantsByGuid'][variant['variantGuid']] = variant
+    response_json['savedVariantsByGuid'] = {variant['variantGuid']: variant for variant in variants}
 
     return _parse_mme_results(
         submission, results, request.user, additional_genes=gene_ids, response_json=response_json)

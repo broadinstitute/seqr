@@ -93,7 +93,7 @@ def create_manual_saved_variant_handler(request, family_guid):
     saved_variants = SavedVariant.objects.filter(family=family, guid__in=saved_variant_guids)
     _update_tags(saved_variants, {'tags': tags}, request.user)
 
-    response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=genome_version)
+    response = get_json_for_saved_variants_with_tags(saved_variants)
     return create_json_response(response)
 
 
@@ -125,7 +125,7 @@ def create_saved_variant_handler(request):
     elif variant_json.get('tags'):
         _update_tags(saved_variants, variant_json, request.user)
 
-    response.update(get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=family.project.genome_version))
+    response.update(get_json_for_saved_variants_with_tags(saved_variants))
     return create_json_response(response)
 
 
