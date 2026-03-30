@@ -246,6 +246,7 @@ def _get_variants_reference_data_response(variants, genome_versions, get_family_
         if not isinstance(variant, list):
             variant = [variant]
         for var in variant:
+            gene_ids.update(var.get('geneIds', []))
             for gene_id, transcripts in var.get('transcripts', {}).items():
                 gene_ids.add(gene_id)
                 if _requires_transcript_metadata(variant):
