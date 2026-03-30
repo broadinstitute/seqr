@@ -48,7 +48,6 @@ const variantSummary = (variant, includeGenomeVersion) => (
   </div>
 )
 
-// TODO chrom pos, ref, alt, genomeVersion
 const BaseSubmissionGeneVariants = React.memo((
   { geneVariants, savedVariantsByGuid, modalId, genesById, dispatch, ...listProps },
 ) => (

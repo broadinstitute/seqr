@@ -116,7 +116,7 @@ const getSummaryDataSavedVariantsSelection = createSelector(
     }
     const pairedFilters = []
     if (gene) {
-      pairedFilters.push(({ transcripts }) => gene in (transcripts || {}))
+      pairedFilters.push(({ geneIds }) => gene in (geneIds || []))
     } if (tag && tag !== SHOW_ALL) {
       const tags = tag.split(';')
       pairedFilters.push(({ tagGuids }) => tags.every(t => tagGuids.some(tagGuid => (
@@ -129,7 +129,6 @@ const getSummaryDataSavedVariantsSelection = createSelector(
   },
 )
 
-// TODO geneIds
 export const getPairedSelectedSavedVariants = createSelector(
   getProjectSavedVariantsSelection,
   getSummaryDataSavedVariantsSelection,
