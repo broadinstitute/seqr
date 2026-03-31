@@ -496,6 +496,7 @@ export const STATE_WITH_2_FAMILIES = {
         lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3", geneId: 'ENSG00000228198',
         majorConsequence: 'frameshift_variant', transcriptId: 'ENST00000456743'
       }]},
+      geneIds: ['ENSG00000228198'],
       noteGuids: ['VN0727076_116042722_r0390_1000'],
       origAltAlleles: ["T"],
       pos: 45919065,
@@ -593,6 +594,7 @@ export const STATE_WITH_2_FAMILIES = {
       origAltAlleles: ["T"],
       mainTranscriptId: 'ENST00000262738',
       transcripts: {ENSG00000228198: [{transcriptId: 'ENST00000262738',  majorConsequence: 'missense_variant'}]},
+      geneIds: ['ENSG00000228198'],
       pos: 248367227,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "TC",
