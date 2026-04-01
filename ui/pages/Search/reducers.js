@@ -127,7 +127,7 @@ export const loadSingleSearchedVariant = ({ variantId, familyGuid }) => (dispatc
   return new HttpRequestHelper(url,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
+      dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariantIds })
     },
     (e) => {
       dispatch({ type: RECEIVE_SEARCHED_VARIANTS, error: e.message, newValue: [] })
@@ -194,7 +194,7 @@ export const loadSearchedVariants = (
   new HttpRequestHelper(url,
     (responseJson) => {
       dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
-      dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariants })
+      dispatch({ type: RECEIVE_SEARCHED_VARIANTS, newValue: responseJson.searchedVariantIds })
       dispatch({ type: RECEIVE_SAVED_SEARCHES, updatesById: { searchesByHash: { [searchHash]: responseJson.search } } })
     },
     (e) => {
@@ -231,7 +231,7 @@ export const reducers = {
     REQUEST_MULTI_PROJECT_SEARCH_CONTEXT, RECEIVE_MULTI_PROJECT_SEARCH_CONTEXT,
   ),
   flattenCompoundHet: createSingleObjectReducer(UPDATE_COMPOUND_HET_DISPLAY),
-  searchedVariants: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
+  searchedVariantIds: createSingleValueReducer(RECEIVE_SEARCHED_VARIANTS, []),
   searchedVariantsLoading: loadingReducer(REQUEST_SEARCHED_VARIANTS, RECEIVE_SEARCHED_VARIANTS),
   searchGeneBreakdown: createObjectsByIdReducer(RECEIVE_SEARCH_GENE_BREAKDOWN, 'searchGeneBreakdown'),
   searchGeneBreakdownLoading: loadingReducer(REQUEST_SEARCH_GENE_BREAKDOWN, RECEIVE_SEARCH_GENE_BREAKDOWN),

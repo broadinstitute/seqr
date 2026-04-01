@@ -156,7 +156,9 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
     response_json = get_variants_response(
         request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context,
         add_locus_list_detail=add_locus_list_detail, genome_version=genome_version or families[0].project.genome_version)
-    response_json['searchedVariants'] = variants
+    response_json['searchedVariantIds'] = [
+        [v['variantId'] for v in variant] if isinstance(variant, list) else variant['variantId'] for variant in variants
+    ]
 
     for saved_variant in response_json['savedVariantsByGuid'].values():
         family_guids = saved_variant['familyGuids']
