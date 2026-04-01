@@ -767,6 +767,8 @@ class RnaSample(ModelWithGUID):
         ('L', 'lymphocytes'),
         ('A', 'airway_cultured_epithelium'),
         ('B', 'brain'),
+        ('LV', 'liver'),
+        ('S', 'skin'),
     )
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
