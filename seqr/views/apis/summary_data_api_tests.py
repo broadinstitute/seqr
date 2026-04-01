@@ -27,7 +27,7 @@ EXPECTED_MME_DETAILS_METRICS = {
 }
 
 VARIANT_TAG_RESPONSE_KEYS = {
-    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'variantsById',
 }
 SAVED_VARIANT_RESPONSE_KEYS = {
     *VARIANT_TAG_RESPONSE_KEYS, 'projectsByGuid', 'locusListsByGuid', 'genesById', 'totalSampleCounts',
