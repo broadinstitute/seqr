@@ -474,10 +474,10 @@ def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, ta
     return tags, variant_tag_map
 
 
-def get_json_for_saved_variants_with_tags(saved_variants):
+def get_json_for_saved_variants_with_tags(saved_variants, additional_model_fields=None):
     variants_by_guid = {
         variant['variantGuid']: dict(tagGuids=[], functionalDataGuids=[], noteGuids=[], **variant)
-        for variant in get_json_for_saved_variants(saved_variants, additional_model_fields=['id'])
+        for variant in get_json_for_saved_variants(saved_variants, additional_model_fields=(additional_model_fields or []) + ['id'])
     }
 
     saved_variant_id_map = {}
