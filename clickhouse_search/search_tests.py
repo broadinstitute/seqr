@@ -1208,11 +1208,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         }])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json()['variants'][0], {
+        self.assertDictEqual(response.json()['variantsById'], {'1-10439-AC-A': {
             **VARIANT1,
             'familyGuids': [],
             'lookupFamilyGuids': VARIANT1['familyGuids'],
-        })
+        }})
 
         cache_key = 'variant_lookup_results__7-143270172-A-G__37'
         self._assert_expected_lookup(
@@ -1331,11 +1331,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'individualsByGuid': expected_individuals or {i: mock.ANY for i in individual_guids or []},
             'locusListsByGuid': {'LL00049_pid_genes_autosomal_do': mock.ANY, 'LL00005_retina_proteome': mock.ANY},
             'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}} if genome_version == '38' else {},
-            'variants': [{
+            'variantsById': {v['variantId']: {
                 **v,
                 'familyGuids': [],
                 'lookupFamilyGuids': v['familyGuids'] + v.get('liftedFamilyGuids', []),
-            } for v in variants],
+            } for v in variants},
             **kwargs,
         }
         self.assertDictEqual(response.json(), expected_body)
@@ -1367,7 +1367,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
-            'searchedVariants': [FAMILY_1_VARIANT],
+            'searchedVariantIds': ['21-3343353-GAGA-G'],
+            'variantsById': {'21-3343353-GAGA-G': FAMILY_1_VARIANT},
             'familiesByGuid': {'F000001_1': mock.ANY},
             'projectsByGuid': {'R0001_1kg': mock.ANY},
             'locusListsByGuid': {'LL00049_pid_genes_autosomal_do': {
@@ -1384,21 +1385,21 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         response = self.client.get(url_template.format('M-4429-G-A', 'F000002_2'))
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['searchedVariants'], [MITO_VARIANT1])
+        self.assertDictEqual(response.json()['variantsById'], {'M-4429-G-A': MITO_VARIANT1})
 
         response = self.client.get(url_template.format('suffix_140608_DUP', 'F000002_2'))
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['searchedVariants'], [GCNV_VARIANT4])
+        self.assertDictEqual(response.json()['variantsById'], {'suffix_140608_DUP': GCNV_VARIANT4})
 
         self.login_manager()
         response = self.client.get(url_template.format('phase2_DEL_chr14_4640', 'F000014_14'))
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['searchedVariants'], [SV_VARIANT4])
+        self.assertDictEqual(response.json()['variantsById'], {'phase2_DEL_chr14_4640': SV_VARIANT4})
 
         self._set_grch37_search()
         response = self.client.get(url_template.format('7-143270172-A-G', 'F000002_2'))
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual(response.json()['searchedVariants'], [GRCH37_VARIANT])
+        self.assertDictEqual(response.json()['variantsById'], {'7-143270172-A-G': GRCH37_VARIANT})
 
         self.mock_redis.get.assert_not_called()
         self.mock_redis.set.assert_not_called()
@@ -2362,16 +2363,16 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         }])
         response, _, _ = self._execute_search(search_hash=9876)
         self.assertEqual(response.status_code, 200)
-        variants = response.json()['searchedVariants']
+        variants = response.json()['variantsById']
         self.assertEqual(len(variants), 1)
-        self.assertFalse('discoveryTags' in variants[0])
+        self.assertFalse('discoveryTags' in variants['1-248367227-TC-T'])
 
         self.login_analyst_user()
         response, _, _ = self._execute_search(search_hash=9876)
         self.assertEqual(response.status_code, 200)
-        variants = response.json()['searchedVariants']
+        variants = response.json()['variantsById']
         self.assertEqual(len(variants), 1)
-        self.assertListEqual(variants[0]['discoveryTags'], [{
+        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], [{
             'savedVariant': {
                 'variantGuid': 'SV0000006_1248367227_r0003_tes',
                 'familyGuid': 'F000012_12',
