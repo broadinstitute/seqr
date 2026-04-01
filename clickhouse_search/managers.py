@@ -22,6 +22,10 @@ from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
 from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, CHROMOSOME_CHOICES
 
 
+class InvalidDatasetTypeException(Exception):
+    pass
+
+
 class SearchQuerySet(QuerySet):
 
     @property
@@ -414,37 +418,30 @@ class BaseVariantsQuerySet(SearchQuerySet):
     def _filter_frequency(self, results, **kwargs):
         return results
 
-    def _filter_annotations(self, results, annotations=None, pathogenicity=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
+    def _filter_annotations(self, results, annotations_filter_q=None, transcript_filters=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
         if exclude_locations and genes:
             intervals = self._format_gene_intervals(genes)
             genes = None
+
         results = self._filter_locations(results, genes, intervals, exclude_locations=exclude_locations, **kwargs)
 
-        filter_qs, transcript_filters = self._parse_annotation_filters(annotations or {}, pathogenicity) if (annotations or pathogenicity) else ([], [])
-
-        if not (filter_qs or transcript_filters):
-            if any(val for key, val in (annotations or {}).items() if key != NEW_SV_FIELD) or any(val for val in (pathogenicity or {}).values()):
-                #  Annotation filters restrict search to other dataset types
-                results = results.none()
+        if not (annotations_filter_q or transcript_filters):
             return results
 
-        filter_q = filter_qs[0] if filter_qs else None
-        for q in filter_qs[1:]:
-            filter_q |= q
-        if filter_q:
-            results = results.annotate(passes_annotation=filter_q)
-            filter_q = Q(passes_annotation=True)
+        if annotations_filter_q:
+            results = results.annotate(passes_annotation=annotations_filter_q)
+            annotations_filter_q = Q(passes_annotation=True)
 
         if transcript_filters:
             consequence_field = self.GENE_CONSEQUENCE_FIELD if genes else self.TRANSCRIPT_FIELD
             results = self._annotate_filtered_transcripts(results, consequence_field, transcript_filters, **kwargs)
             transcript_q = Q(filtered_transcript_consequences__not_empty=True)
-            if filter_q:
-                filter_q |= transcript_q
+            if annotations_filter_q:
+                annotations_filter_q |= transcript_q
             else:
-                filter_q = transcript_q
+                annotations_filter_q = transcript_q
 
-        return results.filter(filter_q)
+        return results.filter(annotations_filter_q)
 
     def _annotate_filtered_transcripts(self, results, consequence_field, transcript_filters, **kwargs):
         return results.annotate(**{
@@ -471,6 +468,16 @@ class BaseVariantsQuerySet(SearchQuerySet):
             start = max(start - offset_pos, MIN_POS)
             end = min(end + offset_pos, MAX_POS)
         return Q(xpos__range=(get_xpos(chrom, start), get_xpos(chrom, end)))
+
+    def get_parsed_annotations_filters(self, annotations=None, pathogenicity=None, **kwargs):
+        annotations = {k: v for k, v in (annotations or {}).items() if v}
+        pathogenicity = {k: v for k, v in (pathogenicity or {}).items() if v}
+        filter_qs, transcript_filters = self._parse_annotation_filters(annotations, pathogenicity)
+        filter_q = filter_qs[0] if filter_qs else None
+        for q in filter_qs[1:]:
+            filter_q |= q
+
+        return {'annotations_filter_q': filter_q, 'transcript_filters': transcript_filters}
 
     def _parse_annotation_filters(self, annotations, pathogenicity):
         raise NotImplementedError
@@ -642,11 +649,7 @@ class VariantsQuerySet(BaseVariantsQuerySet):
                     filter_qs.append(Q(mitomapPathogenic=value))
             elif field == SPLICE_AI_FIELD:
                 if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS:
-                    pred_index = next (
-                        i for i, (pred_field, _) in enumerate(self.query.annotations['preds'].output_field.base_fields)
-                        if pred_field == SPLICE_AI_FIELD
-                    )
-                    filter_qs.append(Q(**{f'preds__{pred_index}__gte': float(value)}))
+                    filter_qs.append(Q(preds__0__gte=float(value)))
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
 
@@ -664,6 +667,9 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
         if allowed_consequences:
             transcript_filters += self._allowed_consequences_filters(allowed_consequences)
+
+        if (annotations or pathogenicity) and not (filter_qs or transcript_filters):
+            raise InvalidDatasetTypeException
 
         return filter_qs, transcript_filters
 
@@ -822,6 +828,10 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
                 sv_type.replace(self.model.SV_TYPE_FILTER_PREFIX, '') for sv_type in annotations[SV_TYPE_FILTER_FIELD]
                 if sv_type.startswith(self.model.SV_TYPE_FILTER_PREFIX)
             ]))
+
+        if not (filter_qs or transcript_filters) and (pathogenicity or any(key for key in annotations.keys() if key != NEW_SV_FIELD)):
+            #  Annotation filters restrict search to other dataset types
+            raise InvalidDatasetTypeException
 
         return filter_qs, transcript_filters
 
@@ -1008,6 +1018,10 @@ class BaseEntriesManager(SearchQuerySet):
         return self.annotations_model.ANNOTATION_CONSTANTS['genomeVersion']
 
     @property
+    def filtered_chrom(self):
+        return self.annotations_model.ANNOTATION_CONSTANTS.get('chrom')
+
+    @property
     def callset_filter_field(self):
         return 'callset'
 
@@ -1016,7 +1030,7 @@ class BaseEntriesManager(SearchQuerySet):
         return cls._clinvar_filter_q(pathogenicity, allowed_filters=CLINVAR_PATH_SIGNIFICANCES)
 
     def search(self, sample_data, exclude_keys=None, **kwargs):
-        entries = self.filter_locus(**kwargs)
+        entries = self
 
         if exclude_keys:
             entries = entries.exclude(key__in=exclude_keys)
@@ -1071,9 +1085,6 @@ class BaseEntriesManager(SearchQuerySet):
            entries, multi_sample_type_families = self._filter_project_families(entries, sample_data)
        elif exclude_projects:
            entries = entries.exclude(project_guid__in=exclude_projects)
-
-       if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}:
-           entries = entries.filter(self._interval_query('X', start=MIN_POS, end=MAX_POS))
 
        inheritance_q = None
        quality_q = None
@@ -1420,15 +1431,28 @@ class BaseEntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, **kwargs):
+    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, inheritance_mode=None, **kwargs):
         entries = self
 
         if variant_ids:
             entries = entries.filter_variant_ids(variant_ids)
 
-        if not (genes or intervals):
-            return entries
+        if inheritance_mode in {X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED}:
+            if self.filtered_chrom and self.filtered_chrom != 'X':
+                raise InvalidDatasetTypeException
+            entries = entries.filter(self._interval_query('X', start=MIN_POS, end=MAX_POS))
 
+        if intervals and self.filtered_chrom:
+            intervals = [interval for interval in intervals if interval['chrom'] == self.filtered_chrom]
+            if not intervals and not exclude_locations:
+                raise InvalidDatasetTypeException
+
+        if genes or intervals:
+            entries = self._filter_locations(entries, genes, intervals, exclude_locations=exclude_locations, require_gene_filter=require_gene_filter)
+
+        return entries
+
+    def _filter_locations(self, entries, genes, intervals, exclude_locations=False, require_gene_filter=False):
         locus_q = None
         if genes:
             should_filter_interval = self._can_filter_gene_interval(genes) or exclude_locations
@@ -1452,7 +1476,7 @@ class BaseEntriesManager(SearchQuerySet):
         return filter_func(locus_q)
 
     def _can_filter_gene_interval(self, genes):
-        return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS
+        return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS or self.filtered_chrom
 
     def search_padded_interval(self, chrom, pos, padding):
         interval_q = self._interval_query(chrom, start=max(pos - padding, MIN_POS), end=min(pos + padding, MAX_POS))
@@ -1618,6 +1642,8 @@ class EntriesManager(BaseEntriesManager):
             # improve performance by using the xpos projection
             intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
             variant_ids = ['-'.join([str(o) for o in variant_id]) for variant_id in parsed_variant_ids]
+        elif variant_ids:
+            raise InvalidDatasetTypeException
 
         entries = super().filter_locus(*args, intervals=intervals, genes=genes, variant_ids=variant_ids, **kwargs)
 
@@ -1689,7 +1715,9 @@ class SvEntriesManager(BaseEntriesManager):
 
         return entries
 
-    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, **kwargs):
+    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, exclude_svs=False, parsed_variant_ids=None, **kwargs):
+        if exclude_svs or parsed_variant_ids:
+            raise InvalidDatasetTypeException
         # SV interval filtering occurs after joining on annotations to correctly incorporate end position
         can_filter_gene_interval = self._can_filter_gene_interval(genes)
         if exclude_locations:

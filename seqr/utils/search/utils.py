@@ -11,7 +11,7 @@ from seqr.models import Sample, Project, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from clickhouse_search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
-    SV_ANNOTATION_TYPES, X_LINKED_RECESSIVE, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+    PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.xpos_utils import get_xpos, format_chrom
 from seqr.views.utils.permissions_utils import user_is_analyst
@@ -46,11 +46,10 @@ def _get_search_genome_version(search_model):
 
 def get_single_variant(family, variant_id, user):
     parsed_variant_id = parse_variant_id(variant_id)
-    dataset_type = _variant_id_dataset_type(parsed_variant_id)
     parsed_variant_ids = [parsed_variant_id] if parsed_variant_id else None
     search = {'parsed_variant_ids': parsed_variant_ids, 'variant_ids': [variant_id]}
     genome_version = family.project.genome_version
-    variants = get_clickhouse_variants([family], [dataset_type], search, user, genome_version)
+    variants = get_clickhouse_variants([family], search, user, genome_version)
     if not variants:
         raise InvalidSearchException('Variant {} not found'.format(variant_id))
     return format_clickhouse_results(variants, genome_version)[0]
@@ -68,20 +67,10 @@ def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_
         return variants
 
     parsed_variant_id = parse_variant_id(variant_id)
-    dataset_type = _variant_id_dataset_type(parsed_variant_id)
-    _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version)
-
-    variants = clickhouse_variant_lookup(user, variant_id, parsed_variant_id, dataset_type, sample_type, genome_version, affected_only, hom_only)
+    variants = clickhouse_variant_lookup(user, variant_id, parsed_variant_id, sample_type, genome_version, affected_only, hom_only)
 
     safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
     return variants
-
-
-def _validate_dataset_type_genome_version(dataset_type, sample_type, genome_version):
-    if genome_version == GENOME_VERSION_GRCh37 and dataset_type != Sample.DATASET_TYPE_VARIANT_CALLS:
-        raise InvalidSearchException(f'{dataset_type} variants are not available for GRCh37')
-    if dataset_type == Sample.DATASET_TYPE_SV_CALLS and not sample_type:
-        raise InvalidSearchException('Sample type must be specified to look up a structural variant')
 
 
 def _get_search_cache_key(search_model, sort=None):
@@ -106,7 +95,7 @@ def _get_previous_search_results(search_model, sort):
         previous_search_results = safe_redis_get_wildcard_json(wildcard_cache_key)
         if previous_search_results and sort:
             previous_search_results = get_sorted_search_results(
-                previous_search_results, sort, family_guid=search_model.families.first().guid,
+                previous_search_results, sort, families=search_model.families.all(),
             )
             cache_key = _get_search_cache_key(search_model, sort=sort)
             safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
@@ -134,10 +123,9 @@ def _query_variants(search_model, user, sort=None):
     _validate_sort(sort, families)
 
     parsed_search = _parse_search(search, genome_version, user)
-    dataset_types, secondary_dataset_types = _search_dataset_type(parsed_search, genome_version)
     _validate_search(parsed_search, families)
 
-    results = get_clickhouse_variants(families, dataset_types, parsed_search, user, genome_version, sort=sort, secondary_dataset_types=secondary_dataset_types)
+    results = get_clickhouse_variants(families, parsed_search, user, genome_version, sort=sort)
 
     cache_key = _get_search_cache_key(search_model, sort=sort)
     safe_redis_set_json(cache_key, results, expire=timedelta(weeks=2))
@@ -266,64 +254,6 @@ def _parse_valid_variant_id(variant_id):
 def _validate_sort(sort, families):
     if sort == PRIORITIZED_GENE_SORT and len(families) != 1:
         raise InvalidSearchException('Phenotype sort is only supported for single-family search.')
-
-
-def _search_dataset_type(search, genome_version):
-    parsed_variant_ids = search.get('parsed_variant_ids')
-    secondary_dataset_types = None
-    if parsed_variant_ids:
-        dataset_types = _chromosome_filter_dataset_types([vid[0] for vid in parsed_variant_ids])
-    else:
-        chroms = [gene[f'chromGrch{genome_version}'] for gene in (search.get('genes') or {}).values()] + [
-            interval['chrom'] for interval in (search.get('intervals') or [])
-        ] if not search.get('exclude_locations') else None
-        dataset_types = _annotation_dataset_type(search.get('annotations'), chroms, pathogenicity=search.get('pathogenicity'), exclude_svs=search.pop('exclude_svs', False))
-        secondary_dataset_types = _annotation_dataset_type(search['annotations_secondary'], chroms) if search.get('annotations_secondary') else None
-        if secondary_dataset_types and len(dataset_types or []) == 1 and dataset_types[0] == Sample.DATASET_TYPE_SV_CALLS:
-            secondary_dataset_types = [dt for dt in secondary_dataset_types if dt != Sample.DATASET_TYPE_MITO_CALLS]
-
-    if search.get('inheritance_mode') == X_LINKED_RECESSIVE:
-        if not dataset_types:
-            dataset_types = [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_SV_CALLS]
-        elif Sample.DATASET_TYPE_MITO_CALLS in dataset_types:
-            dataset_types.remove(Sample.DATASET_TYPE_MITO_CALLS)
-
-    return dataset_types, secondary_dataset_types
-
-
-def _variant_id_dataset_type(parsed_variant_id):
-    if not parsed_variant_id:
-        return Sample.DATASET_TYPE_SV_CALLS
-    if parsed_variant_id[0].replace('chr', '').startswith('M'):
-        return Sample.DATASET_TYPE_MITO_CALLS
-    return Sample.DATASET_TYPE_VARIANT_CALLS
-
-
-def _chromosome_filter_dataset_types(chroms):
-    has_mito = [chrom for chrom in chroms if chrom.replace('chr', '').startswith('M')]
-    if len(has_mito) == len(chroms):
-        return [Sample.DATASET_TYPE_MITO_CALLS]
-    dataset_types = [Sample.DATASET_TYPE_VARIANT_CALLS]
-    if has_mito:
-        dataset_types.append(Sample.DATASET_TYPE_MITO_CALLS)
-    return dataset_types
-
-
-def _annotation_dataset_type(annotations, chroms, pathogenicity=None, exclude_svs=False):
-    if not (annotations or chroms):
-        return [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS] if (pathogenicity or exclude_svs) else None
-
-    annotation_types = set((annotations or {}).keys())
-    if annotations and annotation_types.issubset(SV_ANNOTATION_TYPES) and not pathogenicity:
-        return [Sample.DATASET_TYPE_SV_CALLS]
-
-    dataset_types = _chromosome_filter_dataset_types(chroms) if chroms else [Sample.DATASET_TYPE_VARIANT_CALLS, Sample.DATASET_TYPE_MITO_CALLS]
-
-    no_svs = exclude_svs or (annotations and annotation_types.isdisjoint(SV_ANNOTATION_TYPES))
-    if not no_svs:
-        dataset_types.append(Sample.DATASET_TYPE_SV_CALLS)
-
-    return dataset_types
 
 
 def _parse_inheritance(search):
