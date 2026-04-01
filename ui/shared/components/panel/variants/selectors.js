@@ -116,7 +116,7 @@ const getSummaryDataSavedVariantsSelection = createSelector(
     }
     const pairedFilters = []
     if (gene) {
-      pairedFilters.push(({ transcripts, geneIds }) => transcripts ? gene in transcripts : geneIds.includes(gene))
+      pairedFilters.push(({ transcripts, geneIds }) => (transcripts ? gene in transcripts : geneIds.includes(gene)))
     } if (tag && tag !== SHOW_ALL) {
       const tags = tag.split(';')
       pairedFilters.push(({ tagGuids }) => tags.every(t => tagGuids.some(tagGuid => (
