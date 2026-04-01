@@ -1262,15 +1262,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733'],
         )
 
-        url = url.replace('38', '37')
+        url = url.replace('M-4429-G-A', 'phase2_DEL_chr14_4640').replace('38', '37')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {'error': 'MITO variants are not available for GRCh37'})
-
-        url = url.replace('M-4429-G-A', 'phase2_DEL_chr14_4640')
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json(), {'error': 'SV variants are not available for GRCh37'})
+        self.assertEqual(response.json(), {'error': 'Invalid genome build for dataset type'})
 
         url = url.replace('37', '38')
         response = self.client.get(url)
