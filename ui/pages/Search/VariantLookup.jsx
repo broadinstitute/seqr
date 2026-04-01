@@ -242,13 +242,14 @@ const mapVariantStateToProps = (state, ownProps) => ({
 
 const LookupVariant = connect(mapVariantStateToProps)(BaseLookupVariant)
 
-// TODO
-const VariantDisplay = ({ variants }) => (
-  (variants || [])[0]?.lookupFamilyGuids ? <LookupVariant variant={variants[0]} /> : <Variants variants={variants} />
+const VariantDisplay = ({ variantsById = {} }) => (
+  Object.values(variantsById)[0]?.lookupFamilyGuids ?
+    <LookupVariant variant={Object.values(variantsById)[0]} /> :
+    <Variants variants={Object.values(variantsById)} />
 )
 
 VariantDisplay.propTypes = {
-  variants: PropTypes.arrayOf(PropTypes.object),
+  variantsById: PropTypes.object,
 }
 
 const onQueryParamSubmit = (updateQueryParams, data) => {

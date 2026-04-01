@@ -536,7 +536,6 @@ def variant_lookup_handler(request):
         request, saved_variants=saved_variants, response_variants=variants,
         add_all_context=True, add_locus_list_detail=True, genome_version=genome_version,
     )
-    response['variants'] = variants
 
     individual_guid_map = {
         (i['familyGuid'], i['individualId']): i['individualGuid'] for i in response['individualsByGuid'].values()
