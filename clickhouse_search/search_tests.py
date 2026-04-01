@@ -168,7 +168,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
         self.assertEqual(response.status_code, 200)
         expected_response = {
-            'searchedVariants': results_page or expected_results,
+            'searchedVariantIds': [],
+            'variantsById': {},
             'search': {
                 'search': {**search_body, **(response_search or {})},
                 'projectFamilies': DEFAULT_PROJECT_FAMILIES if project_families is None else project_families,
@@ -176,6 +177,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             },
 
         }
+        for variant in results_page or expected_results:
+            if isinstance(variant, list):
+                expected_response['searchedVariantIds'].append([v['variantId'] for v in variant])
+                expected_response['variantsById'].update({v['variantId']: v for v in variant})
+            else:
+                expected_response['searchedVariantIds'].append(variant['variantId'])
+                expected_response['variantsById'][variant['variantId']] = variant
         if expected_results:
             expected_response.update({
                 **{key: mock.ANY for key in SEARCH_RESPONSE_KEYS},

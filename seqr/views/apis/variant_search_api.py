@@ -147,7 +147,7 @@ def query_single_variant_handler(request, variant_id):
 
 def _process_variants(variants, families, request, add_all_context=False, add_locus_list_detail=False, genome_version=None):
     if not variants:
-        return {'searchedVariants': variants}
+        return {'searchedVariantIds': [], 'variantsById': {}}
 
     flat_variants = _flatten_variants(variants)
     variants_by_id = {v['variantId']: v for v in flat_variants}
