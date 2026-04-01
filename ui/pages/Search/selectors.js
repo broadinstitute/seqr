@@ -244,6 +244,7 @@ export const getAnalysisGroupOptions = createSelector(
   }).map(group => ({ value: group.analysisGroupGuid, text: group.name, icon: group.criteria ? 'sync' : null })),
 )
 
+// TODO
 export const getDisplayVariants = createSelector(
   getFlattenCompoundHet,
   getSearchedVariants,

@@ -16,7 +16,7 @@ import {
 import {
   getVariantTagsByGuid, getVariantNotesByGuid, getSavedVariantsByGuid, getAnalysisGroupsByGuid, getGenesById, getUser,
   getFamiliesByGuid, getProjectsByGuid, getIndividualsByGuid, getRnaSeqDataByIndividual,
-  getPhenotypeGeneScoresByIndividual, getCurrentAnalysisGroupFamilyGuids,
+  getPhenotypeGeneScoresByIndividual, getCurrentAnalysisGroupFamilyGuids, getVariantsById,
 } from 'redux/selectors'
 
 export const getIndividualGeneDataByFamilyGene = createSelector(
@@ -135,10 +135,13 @@ export const getPairedSelectedSavedVariants = createSelector(
   getSavedVariantsByGuid,
   getVariantTagsByGuid,
   getVariantNotesByGuid,
-  (projectVariants, summaryDataVariants, savedVariants, tagsByGuid, notesByGuid) => {
+  getVariantsById,
+  (projectVariants, summaryDataVariants, savedVariants, tagsByGuid, notesByGuid, variantsById) => {
     const [variantFilter, pairedFilters] = projectVariants || summaryDataVariants
 
-    let variants = Object.values(savedVariants)
+    let variants = Object.values(savedVariants).map(
+      variant => ({ ...variant, ...(variantsById[variant.variantId] || {}) }),
+    )
     if (variantFilter) {
       variants = variants.filter(variantFilter)
     }
@@ -228,7 +231,6 @@ export const getSavedVariantVisibleIndices = createSelector(
   ({ page = 1, recordsPerPage = 25 }) => ([(page - 1) * recordsPerPage, page * recordsPerPage]),
 )
 
-// TODO full data for sort
 export const getVisibleSortedSavedVariants = createSelector(
   getPairedFilteredSavedVariants,
   getSavedVariantTableState,
@@ -257,7 +259,6 @@ export const getSavedVariantTotalPages = createSelector(
   ),
 )
 
-// TODO full data for export
 const getSavedVariantExportData = createSelector(
   getPairedFilteredSavedVariants,
   getFamiliesByGuid,

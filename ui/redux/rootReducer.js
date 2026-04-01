@@ -283,6 +283,7 @@ const rootReducer = combineReducers({
   variantTagsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantTagsByGuid'),
   variantNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantNotesByGuid'),
   variantFunctionalDataByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'variantFunctionalDataByGuid'),
+  variantsById: createObjectsByIdReducer(RECEIVE_DATA, 'variantsById'),
   searchesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchesByHash'),
   searchFamiliesByHash: createObjectsByIdReducer(RECEIVE_SAVED_SEARCHES, 'searchFamiliesByHash'),
   transcriptsById: createObjectsByIdReducer(RECEIVE_DATA, 'transcriptsById'),

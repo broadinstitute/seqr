@@ -19,6 +19,7 @@ export const getSavedVariantsByGuid = state => state.savedVariantsByGuid
 export const getVariantTagsByGuid = state => state.variantTagsByGuid
 export const getVariantNotesByGuid = state => state.variantNotesByGuid
 export const getVariantFunctionalDataByGuid = state => state.variantFunctionalDataByGuid
+export const getVariantsById = state => state.variantsById
 export const getMmeSubmissionsByGuid = state => state.mmeSubmissionsByGuid
 export const getMmeResultsByGuid = state => state.mmeResultsByGuid
 export const getGenesById = state => state.genesById

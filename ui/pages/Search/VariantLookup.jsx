@@ -242,6 +242,7 @@ const mapVariantStateToProps = (state, ownProps) => ({
 
 const LookupVariant = connect(mapVariantStateToProps)(BaseLookupVariant)
 
+// TODO
 const VariantDisplay = ({ variants }) => (
   (variants || [])[0]?.lookupFamilyGuids ? <LookupVariant variant={variants[0]} /> : <Variants variants={variants} />
 )
