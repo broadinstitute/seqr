@@ -62,12 +62,12 @@ const SAVED_VARIANT = {
     },
   },
   noteGuids: [],
-  pos: 248367227,
+  pos: 248367227, // NOPMD
   ref: "TC",
   tagGuids: ['VT1708635_1248367227_r0390_100', 'VT1726942_1248367227_r0390_100'],
   variantId: "1-248367227-TC-T",
   variantGuid: "SV0000002_1248367227_r0390_100",
-  xpos: 1248367227,
+  xpos: 1248367227, // NOPMD
 }
 export const VARIANT = {
   ...SAVED_VARIANT,
