@@ -179,8 +179,8 @@ def anvil_export(request, project_guid):
             'congenital_status': Individual.ONSET_AGE_LOOKUP[individual.onset_age] if individual.onset_age else 'Unknown',
             **anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission),
         },
-        get_additional_sample_fields=lambda sample, *args: {
-            'entity:sample_id': sample.individual.individual_id,
+        get_additional_sample_fields=lambda individual, *args: {
+            'entity:sample_id': individual.individual_id,
             'sequencing_center': 'Broad',
         },
         family_fields={'phenotype_group': {
@@ -382,11 +382,11 @@ def gregor_export(request):
     grouped_data_type_individuals = _get_individual_data_types(projects)
 
     # If multiple individual records, prefer WGS
-    individual_lookup = {
+    individual_lookup = [
         next(data_type_individuals[data_type.upper()] for data_type in GREGOR_DATA_TYPES
-             if data_type_individuals.get(data_type.upper())): None
+             if data_type_individuals.get(data_type.upper()))
         for data_type_individuals in grouped_data_type_individuals.values()
-    }
+    ]
 
     participant_rows = []
     family_map = {}
@@ -405,7 +405,7 @@ def gregor_export(request):
     parse_anvil_metadata(
         projects,
         user=request.user,
-        individual_samples=individual_lookup,
+        individuals=individual_lookup,
         individual_data_types=grouped_data_type_individuals,
         add_row=_add_row,
         format_id=_format_gregor_id,
@@ -992,7 +992,8 @@ def variant_metadata(request, project_guid):
     individuals = Individual.objects.filter(
         family__project__in=projects, family__savedvariant__varianttag__variant_tag_type__category=DISCOVERY_CATEGORY,
     ).distinct().annotate(
-        data_types=ArrayAgg('sample__sample_type', distinct=True, filter=Q(sample__isnull=False))
+        active_data_types=ArrayAgg('active_datasets__sample_type', distinct=True),
+        inactive_data_types=ArrayAgg('inactive_datasets__sample_type', distinct=True),
     )
 
     families_by_id = {}
@@ -1018,8 +1019,8 @@ def variant_metadata(request, project_guid):
     parse_anvil_metadata(
         projects,
         user=request.user,
-        individual_samples={i: None for i in individuals},
-        individual_data_types={i.individual_id: i.data_types for i in individuals},
+        individuals=individuals,
+        individual_data_types={i.individual_id: {*i.active_data_types, *i.inactive_data_types} for i in individuals},
         add_row=_add_row,
         mme_value=ArrayAgg('matchmakersubmissiongenes__saved_variant__variant_id'),
         include_family_name_display=True,
