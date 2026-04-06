@@ -616,7 +616,6 @@ class Individual(ModelWithGUID):
     sex = models.CharField(max_length=3, choices=SEX_CHOICES, default='U')
     affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default=AFFECTED_STATUS_UNKNOWN)
 
-    # TODO once sample and individual ids are fully decoupled no reason to maintain this field
     display_name = models.TextField(default="", blank=True)
 
     notes = models.TextField(blank=True, null=True)
@@ -746,6 +745,43 @@ class Sample(ModelWithGUID):
        json_fields = [
            'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
        ]
+
+
+class Dataset(ModelWithGUID):
+    SAMPLE_TYPE_WES = 'WES'
+    SAMPLE_TYPE_WGS = 'WGS'
+    SAMPLE_TYPE_CHOICES = (
+        (SAMPLE_TYPE_WES, 'Exome'),
+        (SAMPLE_TYPE_WGS, 'Whole Genome'),
+    )
+    SAMPLE_TYPE_LOOKUP = dict(SAMPLE_TYPE_CHOICES)
+
+    DATASET_TYPE_VARIANT_CALLS = 'SNV_INDEL'
+    DATASET_TYPE_SV_CALLS = 'SV'
+    DATASET_TYPE_MITO_CALLS = 'MITO'
+    DATASET_TYPE_CHOICES = (
+        (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (DATASET_TYPE_SV_CALLS, 'SV Calls'),
+        (DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
+    )
+    DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
+
+    active_individuals = models.ManyToManyField('Individual', related_name='active_datasets')
+    inactive_individuals = models.ManyToManyField('Individual', related_name='inactive_datasets')
+
+    sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
+    dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES)
+
+    data_source = models.TextField(null=True)
+    loaded_date = models.DateTimeField()
+
+    def __unicode__(self):
+        return f'{self.dataset_type}_{self.sample_type}_{self.loaded_date}'
+
+    GUID_PREFIX = 'D'
+
+    class Meta:
+       json_fields = ['guid', 'sample_type', 'dataset_type', 'loaded_date']
 
 
 class RnaSample(ModelWithGUID):
