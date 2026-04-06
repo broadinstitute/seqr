@@ -10,7 +10,7 @@ import re
 
 from clickhouse_search.search import get_clickhouse_genotypes
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Family, Sample, Project, Individual, SavedVariant
+from seqr.models import Family, Sample, Dataset, Project, Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
@@ -30,10 +30,10 @@ VALIDATION_ERRORS_FILE_NAME = 'validation_errors.json'
 ERRORS_REPORTED_FILE_NAME = '_ERRORS_REPORTED'
 RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
 
-DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
+DATASET_TYPE_MAP = {'GCNV': Dataset.DATASET_TYPE_SV_CALLS}
 CLICKHOUSE_DATASET_TYPE_MAP = {
-    'GCNV': f'{Sample.DATASET_TYPE_SV_CALLS}_WES',
-    Sample.DATASET_TYPE_SV_CALLS: f'{Sample.DATASET_TYPE_SV_CALLS}_WGS',
+    'GCNV': f'{Dataset.DATASET_TYPE_SV_CALLS}_WES',
+    Dataset.DATASET_TYPE_SV_CALLS: f'{Dataset.DATASET_TYPE_SV_CALLS}_WGS',
 }
 RELATEDNESS_CHECK_NAME = 'relatedness_check'
 
@@ -271,7 +271,7 @@ class Command(BaseCommand):
                     project, is_internal, dataset_type, sample_type, new_samples_by_project.get(project.id, []),
                     num_samples=len(sample_ids),
                 )
-                if session and is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+                if session and is_internal and dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS:
                     split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
             except Exception as e:
                 logger.error(f'Error reporting loading success for project {project.name} in {run_version}: {e}')

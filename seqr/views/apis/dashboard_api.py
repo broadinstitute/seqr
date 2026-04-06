@@ -3,7 +3,7 @@ APIs used by the main seqr dashboard page
 """
 from django.db import models
 
-from seqr.models import ProjectCategory, Sample, RnaSample, Family, Project
+from seqr.models import ProjectCategory, Sample, Dataset, RnaSample, Family, Project
 from seqr.views.utils.individual_utils import check_project_individuals_deletable
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
@@ -60,7 +60,7 @@ def _get_projects_json(user):
         projects_by_guid[project_guid]['analysisStatusCounts'][agg['analysis_status']] = agg['count']
 
     sample_type_status_counts = _sample_type_counts(
-        Sample.objects.filter(individual__family__project__in=projects, dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+        Sample.objects.filter(individual__family__project__in=projects, dataset_type=Dataset.DATASET_TYPE_VARIANT_CALLS)
     ) + _sample_type_counts(
         RnaSample.objects.filter(individual__family__project__in=projects).annotate(sample_type=models.Value('RNA'))
     )

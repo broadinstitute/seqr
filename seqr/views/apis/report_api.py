@@ -24,7 +24,7 @@ from seqr.views.utils.permissions_utils import user_is_analyst, get_project_and_
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
-from seqr.models import Project, Family, FamilyAnalysedBy, Sample, RnaSample, Individual
+from seqr.models import Project, Family, FamilyAnalysedBy, Sample, Dataset, RnaSample, Individual
 from settings import GREGOR_DATA_MODEL_URL
 
 
@@ -1065,6 +1065,6 @@ def _get_clickhouse_metadata(dataset_type, genome_version, keys, include_clinvar
     if include_clinvar:
         fields.append('clinvar')
         qs = qs.join_clinvar()
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+    if dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS:
         fields.append('caid')
     return {(dataset_type, genome_version, v.pop('key')): v for v in qs.values(*fields)}

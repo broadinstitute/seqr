@@ -864,10 +864,10 @@ class IgvSample(ModelWithGUID):
 
 class SavedVariant(ModelWithGUID):
     DATASET_TYPE_CHOICES = (
-        (Sample.DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
-        (Sample.DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
-        (f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}', 'SV WGS Calls'),
-        (f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}', 'gCNV Calls'),
+        (Dataset.DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (Dataset.DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
+        (f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WGS}', 'SV WGS Calls'),
+        (f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WES}', 'gCNV Calls'),
     )
 
     family = models.ForeignKey('Family', on_delete=models.CASCADE)

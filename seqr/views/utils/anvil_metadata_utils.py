@@ -10,7 +10,7 @@ from typing import Callable, Iterable
 
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
-from seqr.models import Project, Family, Individual, Sample, SavedVariant, VariantTagType
+from seqr.models import Project, Family, Individual, Sample, Dataset, SavedVariant, VariantTagType
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
@@ -96,8 +96,8 @@ FAMILY_NAME_DISPLAY_VALUES = {
 }
 
 METHOD_MAP = {
-    Sample.SAMPLE_TYPE_WES: 'SR-ES',
-    Sample.SAMPLE_TYPE_WGS: 'SR-GS',
+    Dataset.SAMPLE_TYPE_WES: 'SR-ES',
+    Dataset.SAMPLE_TYPE_WGS: 'SR-GS',
 }
 
 FAMILY_INDIVIDUAL_FIELDS = ['family_id', 'internal_project_id', 'phenotype_description', 'pmid_id', 'solve_status']
@@ -510,7 +510,7 @@ def _get_genetic_findings_rows(rows: list[dict], individual: Individual, family_
                 ])
             if individual_data_types is not None:
                 parsed_row['method_of_discovery'] = '|'.join([
-                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type in Sample.SAMPLE_TYPE_LOOKUP
+                    METHOD_MAP.get(data_type) for data_type in individual_data_types if data_type in Dataset.SAMPLE_TYPE_LOOKUP
                 ])
             if sample is not None:
                 parsed_row['sample_id'] = sample.sample_id

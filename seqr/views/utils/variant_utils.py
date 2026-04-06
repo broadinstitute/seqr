@@ -12,7 +12,7 @@ from clickhouse_search.search import get_variants_queryset
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
+    RnaSeqTpm, PhenotypePrioritization, Project, Sample, Dataset, RnaSample, VariantTag, VariantTagType
 from seqr.utils.search.utils import variant_dataset_type
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
@@ -171,7 +171,7 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
 
 
 def get_saved_variant_annotations(variant_keys: abc.Iterable[tuple[int, str]], genome_version: str, primary_id_field: str = 'variant_id', group_by_field=None, dataset_type: str = None) -> dict[str, dict]:
-    dataset_type = dataset_type or Sample.DATASET_TYPE_VARIANT_CALLS
+    dataset_type = dataset_type or Dataset.DATASET_TYPE_VARIANT_CALLS
     variant_ids = {variant_id for _, variant_id in variant_keys}
     keys = None
     if primary_id_field == 'key':

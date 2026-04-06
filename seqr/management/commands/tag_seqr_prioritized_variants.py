@@ -8,7 +8,7 @@ from django.db.models.functions import JSONObject
 from clickhouse_search.search import get_clickhouse_variants, ENTRY_CLASS_MAP
 from panelapp.models import PaLocusListGene
 from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, Family, Individual, Sample, LocusList
+from seqr.models import Project, Family, Individual, Sample, Dataset, LocusList
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.gene_utils import get_genes
 from clickhouse_search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO, COMPOUND_HET
@@ -506,7 +506,7 @@ class Command(BaseCommand):
 
     @classmethod
     def _run_dataset_type_searches(cls, dataset_type, searches, sample_qs, updates, search_counts, samples_by_dataset_type, family_guid_map, project, exclude_genes, gene_by_moi):
-        is_sv = dataset_type == Sample.DATASET_TYPE_SV_CALLS
+        is_sv = dataset_type == Dataset.DATASET_TYPE_SV_CALLS
         sample_qs = sample_qs.filter(dataset_type=dataset_type)
         if is_sv:
             sample_qs = sample_qs.exclude(
@@ -596,12 +596,12 @@ class Command(BaseCommand):
     def _run_multi_data_type_comp_het_search(cls, updates, search_counts, samples_by_dataset_type, family_guid_map, project, genes):
         sv_dataset_type = next(dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV'))
         sample_type = sv_dataset_type.split('_')[-1]
-        families = set(samples_by_dataset_type[sv_dataset_type].keys()).intersection(samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].keys())
+        families = set(samples_by_dataset_type[sv_dataset_type].keys()).intersection(samples_by_dataset_type[Dataset.DATASET_TYPE_VARIANT_CALLS].keys())
         sv_samples_by_family = {
             guid: sample_data for guid, sample_data in samples_by_dataset_type[sv_dataset_type].items() if guid in families
         }
         snv_indel_samples_by_family = {
-            guid: sample_data for guid, sample_data in samples_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS].items()
+            guid: sample_data for guid, sample_data in samples_by_dataset_type[Dataset.DATASET_TYPE_VARIANT_CALLS].items()
             if guid in families
         }
         family_variant_data = defaultdict(lambda: {'matched_searches': set(), 'matched_comp_het_searches': set(), 'support_vars': set()})
@@ -615,7 +615,7 @@ class Command(BaseCommand):
                 project, sample_type, snv_indel_samples_by_family, config_search.get('family_filter'),
             )
             sample_data_by_dataset_type = {
-                Sample.DATASET_TYPE_VARIANT_CALLS: snv_indel_sample_data, sv_dataset_type: sv_sample_data,
+                Dataset.DATASET_TYPE_VARIANT_CALLS: snv_indel_sample_data, sv_dataset_type: sv_sample_data,
             }
             num_results = cls._execute_search(
                 sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map,

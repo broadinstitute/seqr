@@ -13,7 +13,7 @@ from math import ceil
 import re
 
 from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample, Dataset
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
     variant_lookup, parse_variant_id, export_variants
 from seqr.utils.search.utils import InvalidSearchException
@@ -104,7 +104,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
             families = families.exclude(analysis_status__in=Family.SOLVED_ANALYSIS_STATUSES)
         if search_context.get('trioFamiliesOnly'):
             families = families.annotate(search_sample_count=Count('individual__sample__id', filter=Q(
-                individual__sample__is_active=True, individual__sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+                individual__sample__is_active=True, individual__sample__dataset_type=Dataset.DATASET_TYPE_VARIANT_CALLS,
             ))).filter(
                 search_sample_count__gte=3, individual__mother__isnull=False, individual__father__isnull=False,
             ).distinct()

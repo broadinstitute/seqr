@@ -5,7 +5,7 @@ import json
 import requests
 
 from reference_data.models import GeneInfo, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, Individual, Project
+from seqr.models import Sample, Dataset, Individual, Project
 from seqr.utils.communication_utils import send_project_notification, safe_post_to_slack
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
@@ -21,7 +21,7 @@ logger = SeqrLogger(__name__)
 
 
 def basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples, email_template=None, is_internal=True):
-    msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
+    msg_dataset_type = '' if dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
     num_new_samples = len(new_samples)
     sample_summary = f'{num_new_samples} new {sample_type}{msg_dataset_type} samples'
 
@@ -142,7 +142,7 @@ def _enqueue_pipeline_request(name: str, variables: dict, user: User, raise_erro
 
 
 def _loading_dataset_type(sample_type: str, dataset_type: str):
-    return 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
+    return 'GCNV' if dataset_type == Dataset.DATASET_TYPE_SV_CALLS and sample_type == Dataset.SAMPLE_TYPE_WES \
         else dataset_type
 
 
