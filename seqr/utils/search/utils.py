@@ -7,7 +7,7 @@ from pyliftover.liftover import LiftOver
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
     get_sorted_search_results, clickhouse_variant_lookup, InvalidSearchException
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Sample, Project, VariantSearchResults
+from seqr.models import Dataset, Project, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from clickhouse_search.constants import XPOS_SORT_KEY, PRIORITIZED_GENE_SORT, RECESSIVE, COMPOUND_HET, \
@@ -196,9 +196,9 @@ def _get_clickhouse_exclude_keys(search_hash, user):
 
 def variant_dataset_type(variant):
     if not parse_variant_id(variant['variantId']):
-        sample_type = Sample.SAMPLE_TYPE_WGS if 'endChrom' in variant else Sample.SAMPLE_TYPE_WES
-        return f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
-    return Sample.DATASET_TYPE_MITO_CALLS if 'mitomapPathogenic' in variant else Sample.DATASET_TYPE_VARIANT_CALLS
+        sample_type = Dataset.SAMPLE_TYPE_WGS if 'endChrom' in variant else Dataset.SAMPLE_TYPE_WES
+        return f'{Dataset.DATASET_TYPE_SV_CALLS}_{sample_type}'
+    return Dataset.DATASET_TYPE_MITO_CALLS if 'mitomapPathogenic' in variant else Dataset.DATASET_TYPE_VARIANT_CALLS
 
 
 def get_variant_query_gene_counts(search_model, user):

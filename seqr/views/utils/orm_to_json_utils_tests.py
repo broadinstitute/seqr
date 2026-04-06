@@ -1,12 +1,12 @@
 from django.contrib.auth.models import User
 import mock
 from copy import deepcopy
-from seqr.models import Project, Sample, IgvSample, SavedVariant, VariantNote, LocusList, VariantSearch
+from seqr.models import Project, IgvSample, SavedVariant, VariantNote, LocusList, VariantSearch
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, _get_json_for_project, \
     get_json_for_sample, get_json_for_variant_note, get_json_for_locus_list, \
     get_json_for_saved_searches, get_json_for_saved_variants_with_tags, get_json_for_current_user
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
-    PROJECT_FIELDS, SAMPLE_FIELDS, SAVED_VARIANT_FIELDS,  \
+    PROJECT_FIELDS, SAVED_VARIANT_FIELDS,  \
     FUNCTIONAL_FIELDS, SAVED_SEARCH_FIELDS, LOCUS_LIST_DETAIL_FIELDS, PA_LOCUS_LIST_FIELDS, IGV_SAMPLE_FIELDS, \
     TAG_FIELDS, VARIANT_NOTE_FIELDS
 
@@ -94,12 +94,6 @@ class JSONUtilsTest(object):
         json = _get_json_for_project(project, user)
 
         self.assertSetEqual(set(json.keys()), PROJECT_FIELDS)
-
-    def test_json_for_sample(self):
-        sample = Sample.objects.first()
-        json = get_json_for_sample(sample)
-
-        self.assertSetEqual(set(json.keys()), SAMPLE_FIELDS)
 
     def test_json_for_igv_sample(self):
         sample = IgvSample.objects.first()

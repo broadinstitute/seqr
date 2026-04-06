@@ -7,7 +7,7 @@ import logging
 
 from clickhouse_search.search import get_clickhouse_key_lookup
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import SavedVariant, Sample
+from seqr.models import SavedVariant, Dataset
 from seqr.utils.search.utils import parse_variant_id
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ class Command(BaseCommand):
             saved_variant_json__populations__isnull=False, # Omit manual variants
         ).values_list('variant_id', flat=True).distinct()
         ids_by_dataset_type = {
-            Sample.DATASET_TYPE_VARIANT_CALLS: [], Sample.DATASET_TYPE_MITO_CALLS: [], Sample.DATASET_TYPE_SV_CALLS: [],
+            Dataset.DATASET_TYPE_VARIANT_CALLS: [], Dataset.DATASET_TYPE_MITO_CALLS: [], Dataset.DATASET_TYPE_SV_CALLS: [],
         }
         for variant_id in variant_ids:
             parsed_id = parse_variant_id(variant_id)
@@ -32,23 +32,23 @@ class Command(BaseCommand):
                 parsed_id = parse_variant_id(variant_id[:-1])
             if parsed_id:
                 is_mito = parsed_id[0].replace('chr', '').startswith('M')
-                dataset_type = Sample.DATASET_TYPE_MITO_CALLS if is_mito else Sample.DATASET_TYPE_VARIANT_CALLS
+                dataset_type = Dataset.DATASET_TYPE_MITO_CALLS if is_mito else Dataset.DATASET_TYPE_VARIANT_CALLS
             else:
-                dataset_type = Sample.DATASET_TYPE_SV_CALLS
+                dataset_type = Dataset.DATASET_TYPE_SV_CALLS
             ids_by_dataset_type[dataset_type].append(variant_id)
 
-        no_key_mito = self._set_variant_keys(ids_by_dataset_type[Sample.DATASET_TYPE_MITO_CALLS], Sample.DATASET_TYPE_MITO_CALLS)
+        no_key_mito = self._set_variant_keys(ids_by_dataset_type[Dataset.DATASET_TYPE_MITO_CALLS], Dataset.DATASET_TYPE_MITO_CALLS)
 
         no_key_snv_indel = self._set_variant_keys(
-            ids_by_dataset_type[Sample.DATASET_TYPE_VARIANT_CALLS] + list(no_key_mito), Sample.DATASET_TYPE_VARIANT_CALLS,
+            ids_by_dataset_type[Dataset.DATASET_TYPE_VARIANT_CALLS] + list(no_key_mito), Dataset.DATASET_TYPE_VARIANT_CALLS,
         )
         if no_key_snv_indel:
             self._resolve_missing_variants(no_key_snv_indel, GENOME_VERSION_GRCh38)
 
         no_keys_svs = self._set_variant_keys(
-            ids_by_dataset_type[Sample.DATASET_TYPE_SV_CALLS], f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}',
+            ids_by_dataset_type[Dataset.DATASET_TYPE_SV_CALLS], f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WGS}',
         )
-        no_keys_svs = self._set_variant_keys(list(no_keys_svs), f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}')
+        no_keys_svs = self._set_variant_keys(list(no_keys_svs), f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WES}')
         if no_keys_svs:
             self._resolve_reloaded_svs(no_keys_svs)
 
@@ -56,7 +56,7 @@ class Command(BaseCommand):
             key__isnull=True, family__project__genome_version=GENOME_VERSION_GRCh37,
         ).values_list('variant_id', flat=True).distinct()
 
-        no_keys_37 = self._set_variant_keys(variant_ids_37, Sample.DATASET_TYPE_VARIANT_CALLS, genome_version=GENOME_VERSION_GRCh37)
+        no_keys_37 = self._set_variant_keys(variant_ids_37, Dataset.DATASET_TYPE_VARIANT_CALLS, genome_version=GENOME_VERSION_GRCh37)
         if no_keys_37:
             self._resolve_missing_variants(no_keys_37, GENOME_VERSION_GRCh37)
 
