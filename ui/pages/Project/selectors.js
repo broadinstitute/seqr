@@ -136,7 +136,7 @@ export const getProjectAnalysisGroupFamilySizeHistogram = createSelector(
 export const getProjectAnalysisGroupDataLoadedFamilySizeHistogram = createSelector(
   getProjectAnalysisGroupFamiliesByGuid,
   getActiveDatasetsByFamily,
-  (familiesByGuid, datasetsByFamily) => getFamilySizeHistogram(Object.values(datasetsByFamily).map(((family) => {
+  (familiesByGuid, datasetsByFamily) => getFamilySizeHistogram(Object.values(familiesByGuid).map(((family) => {
     const sampleIndividuals = new Set((datasetsByFamily[family.familyGuid] || []).map(sample => sample.individualGuid))
     const hasSampleParents = (family.parents || []).reduce(
       (acc, { individualGuid, maternalGuid, paternalGuid }) => {
