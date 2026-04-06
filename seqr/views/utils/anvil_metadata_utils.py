@@ -186,7 +186,7 @@ def parse_anvil_metadata(
     for individual in individuals:
         individuals_by_family_id[individual.family_id].append(individual)
         individual_ids_map[individual.id] = (individual.individual_id, individual.guid)
-        if getattr(individuals, 'sample_type', None):
+        if getattr(individual, 'sample_type', None):
             sample_ids.add(individual.individual_id)
 
     saved_variants_by_family = _get_parsed_saved_discovery_variants_by_family(

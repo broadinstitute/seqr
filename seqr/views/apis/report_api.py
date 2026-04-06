@@ -518,14 +518,14 @@ def _process_participant_row(participant, phenotype_rows, missing_participant_id
 def _get_individual_data_types(projects):
     rna_individuals = set(RnaSample.objects.filter(individual__family__project__in=projects).values_list('individual_id', flat=True))
     individuals = Individual.objects.filter(family__project__in=projects).annotate(
-        sample_types=ArrayAgg('active_datasets__sample_type', distinct=True),
-    ).prefetch_related(
-        'family__project', 'mother', 'father')
+        active_sample_types=ArrayAgg('active_datasets__sample_type', distinct=True, filter=Q(active_datasets__isnull=False)),
+        inactive_sample_types=ArrayAgg('inactive_datasets__sample_type', distinct=True, filter=Q(inactive_datasets__isnull=False)),
+    ).prefetch_related('family__project', 'mother', 'father')
 
     grouped_data_type_individuals = defaultdict(dict)
     for i in individuals:
         participant_id = _format_gregor_id(i.individual_id)
-        data_types = set(i.sample_types) | ({'RNA'} if i.id in rna_individuals else set())
+        data_types = {*i.active_sample_types, *i.inactive_sample_types} | ({'RNA'} if i.id in rna_individuals else set())
         if data_types:
             grouped_data_type_individuals[participant_id].update({data_type: i for data_type in data_types})
     return grouped_data_type_individuals
