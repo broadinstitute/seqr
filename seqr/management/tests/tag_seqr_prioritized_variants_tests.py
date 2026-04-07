@@ -151,7 +151,7 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             'MITO', 1, MITO_MATCHES, **creation_stats.get('MITO', {}),
         ) + self._dataset_type_logs(
             'multi data type', 1, MULTI_TYPE_MATCHES, **creation_stats.get('MULTI', {}),
-            search_dataset_types=['SNV_INDEL', 'SV_WES', 'SNV_INDEL/SV_WES'],
+            search_dataset_types=['SNV_INDEL', 'SNV_INDEL/SV_WES'],
         ) + [
             (f'Tagged {num_new} new and 0 previously tagged variants in 1 families, found {num_unchanged} unchanged tags:', None)
         ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in  SNV_INDEL_MATCHES.items()] + [
