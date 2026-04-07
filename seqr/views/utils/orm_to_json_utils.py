@@ -221,7 +221,7 @@ FAMILY_ADDITIONAL_VALUES = {
         createdBy=_user_expr('familyanalysedby__created_by'),
         dataType='familyanalysedby__data_type',
         lastModifiedDate='familyanalysedby__last_modified_date',
-    ), filter=Q(familyanalysedby__isnull=False)),
+    ), filter=Q(familyanalysedby__isnull=False), distinct=True),
     'assignedAnalyst': Case(
         When(assigned_analyst__isnull=False, then=JSONObject(
             fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),

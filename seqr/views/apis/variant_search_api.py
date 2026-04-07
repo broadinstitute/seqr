@@ -13,7 +13,7 @@ from math import ceil
 import re
 
 from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample, Dataset
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Dataset
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
     variant_lookup, parse_variant_id, export_variants
 from seqr.utils.search.utils import InvalidSearchException
@@ -361,16 +361,16 @@ def search_context_handler(request):
         projectGuid=Value(project_guid) if project_guid else F('project__guid'),
         familyGuid=F('guid'),
         analysisStatus=F('analysis_status'),
+        sampleTypes=ArrayAgg(
+            JSONObject(sampleType='individual__active_datasets__sample_type', datasetType='individual__active_datasets__dataset_type', isActive=Value(True)),
+            distinct=True, filter=Q(individual__active_datasets__dataset_type__isnull=False),
+        ),
         **FAMILY_ADDITIONAL_VALUES,
     )}
 
-    family_sample_types = Sample.objects.filter(individual__family__project__in=projects, is_active=True).values('individual__family__guid').annotate(
-        samples=ArrayAgg(JSONObject(sampleType='sample_type', datasetType='dataset_type', isActive=Value(True)), distinct=True))
     project_dataset_types = defaultdict(set)
-    for agg in family_sample_types:
-        family = response['familiesByGuid'][agg['individual__family__guid']]
-        family['sampleTypes'] = agg['samples']
-        project_dataset_types[family['projectGuid']].update([s['datasetType'] for s in agg['samples']])
+    for family in response['familiesByGuid'].values():
+        project_dataset_types[family['projectGuid']].update([s['datasetType'] for s in family['sampleTypes']])
     for project_guid, dataset_types in project_dataset_types.items():
         response['projectsByGuid'][project_guid]['datasetTypes'] = list(dataset_types)
 
