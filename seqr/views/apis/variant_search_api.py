@@ -103,8 +103,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
         if search_context.get('unsolvedFamiliesOnly'):
             families = families.exclude(analysis_status__in=Family.SOLVED_ANALYSIS_STATUSES)
         if search_context.get('trioFamiliesOnly'):
-            families = families.annotate(search_sample_count=Count('individual__sample__id', filter=Q(
-                individual__sample__is_active=True, individual__sample__dataset_type=Dataset.DATASET_TYPE_VARIANT_CALLS,
+            families = families.annotate(search_sample_count=Count('individual__id', filter=Q(
+                individual__active_datasets__dataset_type=Dataset.DATASET_TYPE_VARIANT_CALLS,
             ))).filter(
                 search_sample_count__gte=3, individual__mother__isnull=False, individual__father__isnull=False,
             ).distinct()
