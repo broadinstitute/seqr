@@ -963,7 +963,7 @@
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.052Z",
         "sample_type": "WES",
-        "inactive_individuals": [8, 10, 11, 12, 14, 17],
+        "inactive_individuals": [8, 10, 11, 12, 14],
         "dataset_type": "SNV_INDEL",
         "data_source": "1kg.vcf.gz",
         "loaded_date": "2017-02-05T06:20:55.397Z"
@@ -1072,6 +1072,21 @@
         "tissue_type": "M",
         "data_source": "muscle_samples.tsv.gz",
         "data_type": "S"
+    }
+},
+{
+    "model": "seqr.dataset",
+    "pk": 154,
+    "fields": {
+        "guid": "S000154_na20889",
+        "created_date": "2017-02-05T06:42:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:50.277Z",
+        "sample_type": "WES",
+        "inactive_individuals": [17],
+        "dataset_type": "SNV_INDEL",
+        "data_source": "auto__2023-08-08",
+        "loaded_date": "2017-02-05T06:28:55.397Z"
     }
 },
 {

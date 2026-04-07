@@ -165,7 +165,7 @@ def parse_anvil_metadata(
         max_loaded_date: str = None, family_fields: dict = None, format_id: Callable[[str], str] = lambda s: s,
         get_additional_sample_fields: Callable[[Individual, dict], dict] = None,
         get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
-        individuals: dict[Individual, Sample] = None, individual_data_types: dict[str, Iterable[str]] = None,
+        individuals: list[Individual] = None, individual_data_types: dict[str, Iterable[str]] = None,
         airtable_fields: Iterable[str] = None, mme_value: Aggregate = None,
         get_variant_json: Callable[[Iterable[SavedVariant], list[str], dict], dict] = _get_variant_json, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,

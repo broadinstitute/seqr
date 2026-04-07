@@ -2,8 +2,9 @@
 APIs used by the main seqr dashboard page
 """
 from django.db import models
+from django.db.models.functions import Coalesce
 
-from seqr.models import ProjectCategory, Sample, Dataset, RnaSample, Family, Project
+from seqr.models import ProjectCategory, Individual, Dataset, RnaSample, Family, Project
 from seqr.views.utils.individual_utils import check_project_individuals_deletable
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
@@ -59,24 +60,25 @@ def _get_projects_json(user):
             projects_by_guid[project_guid]['analysisStatusCounts'] = {}
         projects_by_guid[project_guid]['analysisStatusCounts'][agg['analysis_status']] = agg['count']
 
-    sample_type_status_counts = _sample_type_counts(
-        Sample.objects.filter(individual__family__project__in=projects, dataset_type=Dataset.DATASET_TYPE_VARIANT_CALLS)
-    ) + _sample_type_counts(
-        RnaSample.objects.filter(individual__family__project__in=projects).annotate(sample_type=models.Value('RNA'))
+    sample_type_status_counts = list(
+        Individual.objects.filter(family__project__in=projects).annotate(sample_type=Coalesce(
+            models.F('active_datasets__sample_type'), models.F('inactive_datasets__sample_type'),
+        )).filter(sample_type__isnull=False).values('sample_type', project_guid=models.F('family__project__guid')).annotate(
+            count=models.Count('id', distinct=True)
+        )
+    ) + list(
+        RnaSample.objects.filter(individual__family__project__in=projects).values(
+            project_guid=models.F('individual__family__project__guid')
+        ).annotate(sample_type=models.Value('RNA'), count=models.Count('individual_id', distinct=True))
     )
     for agg in sample_type_status_counts:
-        project_guid = agg['individual__family__project__guid']
+        project_guid = agg['project_guid']
         if 'sampleTypeCounts' not in projects_by_guid[project_guid]:
             projects_by_guid[project_guid]['sampleTypeCounts'] = {}
         projects_by_guid[project_guid]['sampleTypeCounts'][agg['sample_type']] = agg['count']
 
     return projects_by_guid
 
-
-def _sample_type_counts(sample_q):
-    return list(sample_q.values(
-        'individual__family__project__guid', 'sample_type',
-    ).annotate(count=models.Count('individual_id', distinct=True)))
 
 def _retrieve_project_categories_by_guid(project_guids):
     """Retrieves project categories from the database, and returns a 'project_categories_by_guid' dictionary,

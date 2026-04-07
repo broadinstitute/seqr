@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from datetime import datetime, timedelta
-from django.db.models import Count, Q, F, Sum, Value
+from django.db.models import Count, Q, F, Value
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
 import re
