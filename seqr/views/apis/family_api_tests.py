@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
+import pdb
+
 import mock
 from copy import deepcopy
 from datetime import datetime
@@ -16,7 +18,7 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticat
     FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
     SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
-from seqr.models import FamilyAnalysedBy, AnalysisGroup, Sample
+from seqr.models import FamilyAnalysedBy, AnalysisGroup, Individual
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -324,7 +326,7 @@ class FamilyAPITest(object):
 
         # Test success
         MatchmakerSubmission.objects.update(deleted_date=datetime.now())
-        Sample.objects.update(is_active=False)
+        Individual.active_datasets.through.objects.all().delete()
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 200)

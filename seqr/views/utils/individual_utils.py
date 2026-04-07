@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from clickhouse_search.models.postgres_dicts import SexDict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
-from seqr.models import Sample, IgvSample, RnaSample, Individual, Family, FamilyNote
+from seqr.models import Dataset, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.search.add_data_utils import trigger_rebuild_gt_stats
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json, \
@@ -193,7 +193,15 @@ def delete_individuals(project, individual_guids, user):
     if errors:
         raise ErrorsWarningsException(errors)
 
-    Sample.bulk_delete(user, individual__in=individuals_to_delete)
+    datasets = Dataset.objects.filter(inactive_individuals__in=individuals_to_delete)
+    if individual_guids is None:
+        Dataset.bulk_delete(user, queryset=datasets)
+    else:
+        for dataset in datasets:
+            dataset.inactive_individuals.remove(*individuals_to_delete)
+            if not dataset.inactive_individuals.exists():
+                dataset.delete_model(user, user_can_delete=True)
+
     IgvSample.bulk_delete(user, individual__in=individuals_to_delete)
     RnaSample.bulk_delete(user, individual__in=individuals_to_delete)
     MatchmakerResult.bulk_delete(user, submission__individual__in=individuals_to_delete, submission__deleted_date__isnull=False)
@@ -231,7 +239,7 @@ def _validate_no_sumissions_no_search_samples(individuals_to_delete):
         individuals_to_delete, 'MME submission',
         dict(matchmakersubmission__isnull=False, matchmakersubmission__deleted_date__isnull=True)
     ) + _validate_delete_individuals(
-        individuals_to_delete, 'search sample', dict(sample__is_active=True)
+        individuals_to_delete, 'search sample', dict(active_datasets__isnull=False)
     )
 
 

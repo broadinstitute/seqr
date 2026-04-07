@@ -448,9 +448,7 @@ def _delete_project(project_guid, user):
     project = Project.objects.get(guid=project_guid)
     check_user_created_object_permissions(project, user)
 
-    individual_guids_to_delete = Individual.objects.filter(
-        family__project__guid=project_guid).values_list('guid', flat=True)
-    delete_individuals(project, individual_guids_to_delete, user)
+    delete_individuals(project, individual_guids=None, user=user)
 
     Family.bulk_delete(user, project=project)
 
