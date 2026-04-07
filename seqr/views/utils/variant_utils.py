@@ -12,7 +12,7 @@ from clickhouse_search.search import get_variants_queryset
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqTpm, PhenotypePrioritization, Project, Sample, Dataset, RnaSample, VariantTag, VariantTagType
+    RnaSeqTpm, PhenotypePrioritization, Project, Dataset, RnaSample, VariantTag, VariantTagType
 from seqr.utils.search.utils import variant_dataset_type
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
@@ -455,9 +455,9 @@ def _set_response_gene_scores(response, family_genes, gene_ids):
 
 
 def _add_sample_count_stats(response, genome_versions):
-    sample_counts = Sample.objects.filter(
-        is_active=True, individual__family__project__is_demo=False, individual__family__project__genome_version__in=genome_versions,
-    ).values('sample_type', 'dataset_type').annotate(count=Count('*'))
+    sample_counts = Dataset.objects.filter(
+        active_individuals__family__project__is_demo=False, active_individuals__family__project__genome_version__in=genome_versions,
+    ).values('sample_type', 'dataset_type').annotate(count=Count('active_individuals', distinct=True))
     counts_by_dataset_type = defaultdict(dict)
     for sample_type, dataset_type, count in sample_counts.values_list('sample_type', 'dataset_type', 'count'):
         counts_by_dataset_type[dataset_type][sample_type] = count
