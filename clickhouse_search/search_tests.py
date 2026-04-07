@@ -401,7 +401,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         Sample.objects.filter(dataset_type='MITO').update(is_active=False)
 
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
-        self._add_sample_type_samples('WES', individual__family__guid='F000011_11')
+        self._add_sample_type_samples('WES', active_individuals__family__guid='F000011_11')
 
         self._assert_expected_search(
             MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS, locus={'rawItems': 'chr1:1-100000000'},
@@ -462,12 +462,14 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     @staticmethod
     def _add_sample_type_samples(sample_type, dataset_type=None, **sample_filter):
-        for sample in Sample.objects.filter(**sample_filter):
-            sample.pk = None
-            sample.sample_type = sample_type
+        for dataset in Dataset.objects.filter(**sample_filter):
+            individuals = dataset.active_individuals.all()
+            dataset.pk = None
+            dataset.sample_type = sample_type
             if dataset_type:
-                sample.dataset_type = dataset_type
-            sample.save()
+                dataset.dataset_type = dataset_type
+            dataset.save()
+            dataset.active_individuals.set(individuals)
 
     def test_inheritance_filter(self):
         inheritance_mode = 'any_affected'
@@ -826,7 +828,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ],
         )
 
-        self._add_sample_type_samples('WES', individual__family__guid='F000014_14')
+        self._add_sample_type_samples('WES', active_individuals__family__guid='F000014_14')
         self._assert_expected_search(
             [SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_GCNV_VARIANT3, GCNV_VARIANT4], locus=sv_locus,
             project_families=[*SINGLE_FAMILY_PROJECT_FAMILIES, *SV_PROJECT_FAMILIES],
@@ -1829,7 +1831,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ],
         )
 
-        self._add_sample_type_samples('WES', individual__family__guid='F000014_14')
+        self._add_sample_type_samples('WES', active_individuals__family__guid='F000014_14')
         self._assert_expected_search(
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',

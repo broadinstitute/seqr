@@ -16,7 +16,7 @@ from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
 from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, Dataset, PhenotypePrioritization, Family, Individual
+from seqr.models import Dataset, PhenotypePrioritization, Family, Individual
 from seqr.utils.logging_utils import SeqrLogger
 from clickhouse_search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE, AFFECTED, MALE_SEXES, \
@@ -378,9 +378,9 @@ def _add_individual_guids(results, encode_genotypes_json=False):
         for r in (result if isinstance(result, list) else [result]):
             families.update(r.get('familyGenotypes', {}).keys())
     sample_map = {
-        (family_guid, sample_id): individual_guid for family_guid, individual_guid, sample_id in Sample.objects.filter(
-            individual__family__guid__in=families, is_active=True,
-        ).values_list('individual__family__guid', 'individual__guid', 'sample_id')
+        (family_guid, sample_id): individual_guid for family_guid, individual_guid, sample_id in Individual.objects.filter(
+            family__guid__in=families, active_datasets__isnull=False,
+        ).values_list('family__guid', 'guid', 'individual_id')
     }
     for result in results:
         if isinstance(result, list):
@@ -502,66 +502,66 @@ def _is_matched_minimal_transcript(transcript, minimal_transcript):
 
 
 def _get_valid_samples(families, dataset_type, sample_type, allow_no_samples):
-    samples = Sample.objects.filter(individual__family__in=families, is_active=True)
-    if not samples.exists():
+    individuals = Individual.objects.filter(family__in=families, active_datasets__isnull=False)
+    if not individuals.exists():
         if allow_no_samples:
             return None
         raise InvalidSearchException(f'No search data found for families {", ".join([f.family_id for f in families])}')
 
-    samples = samples.filter(dataset_type=dataset_type)
+    individuals = individuals.filter(active_datasets__dataset_type=dataset_type)
     if sample_type:
-        samples = samples.filter(sample_type=sample_type)
+        individuals = individuals.filter(active_datasets__sample_type=sample_type)
 
-    mismatch_affected_samples = samples.values('sample_id').annotate(
-        projects=ArrayAgg('individual__family__project__name', distinct=True),
-        affected=ArrayAgg('individual__affected', distinct=True),
+    mismatch_affected_samples = individuals.values('individual_id').annotate(
+        projects=ArrayAgg('family__project__name', distinct=True),
+        affected=ArrayAgg('affected', distinct=True),
     ).filter(affected__len__gt=1)
     if mismatch_affected_samples:
         raise InvalidSearchException(
             'The following samples are incorrectly configured and have different affected statuses in different projects: ' +
-            ', '.join([f'{agg["sample_id"]} ({"/ ".join(agg["projects"])})' for agg in mismatch_affected_samples]),
+            ', '.join([f'{agg["individual_id"]} ({"/ ".join(agg["projects"])})' for agg in mismatch_affected_samples]),
         )
 
-    return samples
+    return individuals
 
 
-def _get_sample_metadata(samples, affected_family_only, annotate_affected_males):
-    skip_individual_guid = samples.values('individual__family__project_id').distinct().count() > 1
+def _get_sample_metadata(individuals, affected_family_only, annotate_affected_males):
+    skip_individual_guid = individuals.values('family__project_id').distinct().count() > 1
     family_array_kwargs = {'distinct': True}
     if affected_family_only:
-        family_array_kwargs['filter'] = Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED)
+        family_array_kwargs['filter'] = Q(affected=Individual.AFFECTED_STATUS_AFFECTED)
     annotations = {
-        'project_guids': ArrayAgg('individual__family__project__guid', distinct=True),
-        'family_guids': ArrayAgg('individual__family__guid', **family_array_kwargs),
+        'project_guids': ArrayAgg('family__project__guid', distinct=True),
+        'family_guids': ArrayAgg('family__guid', **family_array_kwargs),
     }
     if skip_individual_guid:
         annotations['num_unaffected'] = Count(
-            'individual_id', distinct=True, filter=Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED),
+            'id', distinct=True, filter=Q(affected=Individual.AFFECTED_STATUS_UNAFFECTED),
         )
         if annotate_affected_males:
-            annotations['affected_male_family_guids'] = ArrayAgg('individual__family__guid', distinct=True, filter=Q(
-                individual__affected=Individual.AFFECTED_STATUS_AFFECTED, individual__sex__in=Individual.MALE_SEXES,
+            annotations['affected_male_family_guids'] = ArrayAgg('family__guid', distinct=True, filter=Q(
+                affected=Individual.AFFECTED_STATUS_AFFECTED, sex__in=Individual.MALE_SEXES,
             ))
     else:
         annotations['samples'] = ArrayAgg(JSONObject(
-            affected='individual__affected', sex='individual__sex', sample_id='sample_id', sample_type='sample_type',
-            family_guid=F('individual__family__guid'), individual_guid=F('individual__guid'),
+            affected='affected', sex='sex', sample_id='individual_id', sample_type='active_datasets__sample_type',
+            family_guid=F('family__guid'), individual_guid=F('guid'),
         ))
 
-    return samples.aggregate(**annotations)
+    return individuals.aggregate(**annotations)
 
 
 def _get_sample_data(families, dataset_type, annotate_affected_males=False, allow_no_samples=False, inheritance_mode=None, inheritance_filter=None):
     sample_type = None
     if dataset_type.startswith(Dataset.DATASET_TYPE_SV_CALLS):
         dataset_type, sample_type = dataset_type.split('_')
-    samples = _get_valid_samples(families, dataset_type, sample_type, allow_no_samples)
-    if not samples:
+    individuals = _get_valid_samples(families, dataset_type, sample_type, allow_no_samples)
+    if not individuals:
         return {}
 
     individual_affected_status = (inheritance_filter or {}).get('affected')
     affected_family_only = inheritance_mode and not individual_affected_status
-    sample_data = _get_sample_metadata(samples, affected_family_only, annotate_affected_males)
+    sample_data = _get_sample_metadata(individuals, affected_family_only, annotate_affected_males)
 
     family_guids = set(sample_data.pop('family_guids'))
     sample_data['num_families'] = len(family_guids)
@@ -574,8 +574,8 @@ def _get_sample_data(families, dataset_type, annotate_affected_males=False, allo
                 sample_data['sample_type_families'][sample['sample_type']].add(sample['family_guid'])
         else:
             sample_data['sample_type_families'] = dict(
-                samples.filter(individual__family__guid__in=family_guids).values('sample_type').values_list(
-                    'sample_type', ArrayAgg('individual__family__guid', distinct=True),
+                individuals.filter(family__guid__in=family_guids).values('active_datasets__sample_type').values_list(
+                    'active_datasets__sample_type', ArrayAgg('family__guid', distinct=True),
                 )
             )
         if len(sample_data['sample_type_families']) == 2:
@@ -588,12 +588,12 @@ def _get_sample_data(families, dataset_type, annotate_affected_males=False, allo
                     if set(families) - multi_families
                 }
                 sample_data['sample_type_families']['multi'] = multi_families
-                _add_missing_multi_type_samples(samples, sample_data)
+                _add_missing_multi_type_samples(individuals, sample_data)
 
     return sample_data
 
 
-def _add_missing_multi_type_samples(samples, data):
+def _add_missing_multi_type_samples(individuals, data):
     data['family_missing_type_samples'] = defaultdict(lambda: defaultdict(list))
     if 'samples'  in data:
         individual_sample_types = defaultdict(list)
@@ -604,9 +604,9 @@ def _add_missing_multi_type_samples(samples, data):
             for samples in individual_sample_types.values() if len(samples) == 1
         ]
     else:
-        individual_samples = samples.filter(individual__family__guid__in=data['sample_type_families']['multi'],
-        ).values('individual_id', family_guid=F('individual__family__guid')).annotate(
-            samples=ArrayAgg(JSONObject(sample_id='sample_id', sample_type='sample_type'))
+        individual_samples = individuals.filter(family__guid__in=data['sample_type_families']['multi'],
+        ).values('id', family_guid=F('individual__family__guid')).annotate(
+            samples=ArrayAgg(JSONObject(sample_id='individual_id', sample_type='active_datasets__sample_type'))
         ).filter(samples__len=1)
     for agg in individual_samples:
         sample = agg['samples'][0]
