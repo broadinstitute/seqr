@@ -408,7 +408,7 @@ def trigger_delete_project(request):
     for dataset in datasets:
         active_individuals = dataset.active_individuals.all()
         updated += len(active_individuals)
-        dataset.inactive_individuals.set(active_individuals)
+        dataset.inactive_individuals.add(*active_individuals)
         dataset.active_individuals.clear()
     info = [f'Deactivated search for {updated} individuals']
     for sample_type in sample_types:

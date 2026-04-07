@@ -2445,6 +2445,7 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         project_datasets = Dataset.objects.filter(active_individuals__family__project__guid='R0001_1kg')
         self.assertEqual(project_datasets.filter(dataset_type='SNV_INDEL').count(), 0)
         self.assertEqual(project_datasets.count(), 4)
+        self.assertEqual(Dataset.objects.get(guid='S000129_na19675').inactive_individuals.count(), 7)
 
         body['datasetType'] = 'SV'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))

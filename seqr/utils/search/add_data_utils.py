@@ -64,12 +64,17 @@ def update_airtable_loading_tracking_status(project, status, additional_update=N
     )
 
 def trigger_delete_families_search(project, family_guids, user=None):
-    search_samples = Sample.objects.filter(is_active=True, individual__family__guid__in=family_guids)
+    num_updated = 0
+    updated_families = set()
+    for dataset in Dataset.objects.filter(active_individuals__family__guid__in=family_guids).distinct():
+        active_individuals = dataset.active_individuals.filter(family__guid__in=family_guids)
+        num_updated += len(active_individuals)
+        updated_families.update(active_individuals.values_list('family__family_id', flat=True).distinct())
+        dataset.inactive_individuals.add(*active_individuals)
+        dataset.active_individuals.remove(*active_individuals)
     info = []
-    if search_samples:
-        updated_families = search_samples.values_list("individual__family__family_id", flat=True).distinct()
+    if num_updated:
         family_summary = ", ".join(sorted(updated_families))
-        num_updated = search_samples.update(is_active=False)
         message = f'Disabled search for {num_updated} samples in the following {len(updated_families)} families: {family_summary}'
         info.append(message)
         logger.info(message, user)
