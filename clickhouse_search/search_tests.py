@@ -38,7 +38,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
     format_cached_variant
 from reference_data.models import Omim
-from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults, SavedVariant, Individual
+from seqr.models import Project, Family, Sample, Dataset, VariantSearch, VariantSearchResults, SavedVariant, Individual
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
     SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
@@ -2442,9 +2442,9 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
             23: {'ac_wes': 0, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 0, 'hom_affected': 0},
         })
 
-        project_samples = Sample.objects.filter(individual__family__project__guid='R0001_1kg', is_active=True)
-        self.assertEqual(project_samples.filter(dataset_type='SNV_INDEL').count(), 0)
-        self.assertEqual(project_samples.count(), 4)
+        project_datasets = Dataset.objects.filter(active_individuals__family__project__guid='R0001_1kg')
+        self.assertEqual(project_datasets.filter(dataset_type='SNV_INDEL').count(), 0)
+        self.assertEqual(project_datasets.count(), 4)
 
         body['datasetType'] = 'SV'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -2455,7 +2455,7 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
                 'Deleted all GCNV search data for project 1kg project n\xe5me with uni\xe7\xf8de',
             ],
         })
-        self.assertEqual(project_samples.filter(dataset_type='SV').count(), 0)
-        self.assertEqual(project_samples.count(), 1)
+        self.assertEqual(project_datasets.filter(dataset_type='SV').count(), 0)
+        self.assertEqual(project_datasets.count(), 1)
 
 

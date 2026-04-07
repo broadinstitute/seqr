@@ -10,7 +10,7 @@ from typing import Callable, Iterable
 
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology, Omim, GENOME_VERSION_LOOKUP
-from seqr.models import Project, Family, Individual, Sample, Dataset, SavedVariant, VariantTagType
+from seqr.models import Project, Family, Individual, Dataset, SavedVariant, VariantTagType
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.utils.gene_utils import get_genes
 from seqr.utils.middleware import ErrorsWarningsException
@@ -287,10 +287,6 @@ def _get_sample_annotated_individuals(projects, max_loaded_date):
             Min('active_datasets__loaded_date', filter=active_filter),
         ),
     )
-
-
-def _get_sorted_search_samples(projects):
-    return Sample.objects.filter(individual__family__project__in=projects).order_by('-loaded_date')
 
 
 HET = 'Heterozygous'

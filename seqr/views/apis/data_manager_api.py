@@ -23,7 +23,7 @@ from seqr.views.utils.pedigree_info_utils import get_validated_related_individua
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
-from seqr.models import Sample, Dataset, RnaSample, Individual, Project, PhenotypePrioritization
+from seqr.models import Dataset, RnaSample, Individual, Project, PhenotypePrioritization
 
 from settings import LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
 
@@ -400,12 +400,17 @@ def trigger_delete_project(request):
     project_guid = request_json.pop('project')
     dataset_type = request_json.get('datasetType')
     project = Project.objects.get(guid=project_guid)
-    samples = Sample.objects.filter(individual__family__project=project, dataset_type=dataset_type, is_active=True)
+    datasets = Dataset.objects.filter(active_individuals__family__project=project, dataset_type=dataset_type)
     sample_types = list(
-        samples.values_list('sample_type', flat=True).distinct()
+        datasets.values_list('sample_type', flat=True).distinct()
     ) if dataset_type == Dataset.DATASET_TYPE_SV_CALLS else [None]
-    updated = Sample.bulk_update(user=request.user, update_json={'is_active': False}, queryset=samples)
-    info = [f'Deactivated search for {len(updated)} individuals']
+    updated = 0
+    for dataset in datasets:
+        active_individuals = dataset.active_individuals.all()
+        updated += len(active_individuals)
+        dataset.inactive_individuals.set(active_individuals)
+        dataset.active_individuals.clear()
+    info = [f'Deactivated search for {updated} individuals']
     for sample_type in sample_types:
         info.append(delete_clickhouse_project(project, dataset_type=dataset_type, sample_type=sample_type))
     return create_json_response({'info': info})

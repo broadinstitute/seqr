@@ -12,7 +12,7 @@ from django.urls.base import reverse
 from io import BytesIO
 from openpyxl import load_workbook
 
-from seqr.models import Individual, Sample, Dataset, SavedVariant, VariantTag
+from seqr.models import Individual, Dataset, SavedVariant, VariantTag
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
@@ -206,7 +206,9 @@ class IndividualAPITest(object):
         ])
 
         # send valid request
-        Sample.objects.filter(guid__in=['S000130_na19678', 'S000135_na20870']).update(is_active=False)
+        for dataset in Dataset.objects.filter(guid__in=['S000130_na19678', 'S000129_na19675']):
+            dataset.inactive_individuals.set(dataset.active_individuals.all())
+            dataset.active_individuals.set(set())
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA, INDIVIDUAL_FAMILY_UPDATE_DATA]
         }))
