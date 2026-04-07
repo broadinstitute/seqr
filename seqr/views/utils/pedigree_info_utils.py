@@ -15,7 +15,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.json_utils import _to_snake_case, _to_title_case
 from seqr.views.utils.permissions_utils import user_is_pm, get_pm_user_emails
-from seqr.models import Individual, Sample
+from seqr.models import Individual
 
 logger = SeqrLogger(__name__)
 
@@ -361,22 +361,24 @@ def get_validated_related_individuals(project, records_by_id, errors, related_gu
         affected = records_by_id[individual_id].get(JsonConstants.AFFECTED_COLUMN, Individual.AFFECTED_STATUS_UNKNOWN)
         affected_status_by_family[family_id].append(affected)
 
-    search_samples =  Sample.objects.filter(individual__family__project=project, is_active=True)
+    search_individuals =  Individual.objects.filter(family__project=project)
 
     sample_type = None
     if search_dataset_type:
-        search_samples = search_samples.filter(dataset_type=search_dataset_type)
+        search_individuals = search_individuals.filter(active_datasets__dataset_type=search_dataset_type)
         if search_sample_type:
-            search_samples = search_samples.filter(sample_type=search_sample_type)
-        elif search_samples:
-            sample_type = search_samples.first().sample_type
+            search_individuals = search_individuals.filter(active_datasets__sample_type=search_sample_type)
+        elif search_individuals:
+            sample_type = search_individuals.first().active_datasets.first().sample_type
+    else:
+        search_individuals = search_individuals.filter(active_datasets__dataset_type__isnull=False)
     previous_loaded_individuals = {
         i[JsonConstants.INDIVIDUAL_ID_COLUMN]: i
-        for i in search_samples.values(
-            'individual_id', **{
-                JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual__individual_id'),
-                JsonConstants.FAMILY_ID_COLUMN: F('individual__family__family_id'),
-            })
+        for i in search_individuals.values(
+            **{
+                JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual_id'),
+                JsonConstants.FAMILY_ID_COLUMN: F('family__family_id'),
+            }).annotate(individual_id=F('id'))
     }
 
     if validate_expected_samples:
