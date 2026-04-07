@@ -38,7 +38,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
     format_cached_variant
 from reference_data.models import Omim
-from seqr.models import Project, Family, Sample, Dataset, VariantSearch, VariantSearchResults, SavedVariant, Individual
+from seqr.models import Project, Family, Dataset, VariantSearch, VariantSearchResults, SavedVariant, Individual
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
     SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
@@ -242,8 +242,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     def _set_grch37_search(self):
         Project.objects.filter(id=1).update(genome_version='37')
-        Sample.objects.filter(sample_id='HG00732').update(is_active=False)
-        Sample.objects.exclude(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).update(is_active=False)
 
     def test_single_family_search(self):
         variant_gene_counts = {
@@ -318,7 +316,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             gene_counts={**variant_gene_counts, **GCNV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}}
         )
 
-        self._add_sample_type_samples('WES', dataset_type='SV', guid__in=['S000135_na20870'])
+        self._add_sample_type_samples('WES', dataset_type='SV', guid__in=['S000129_na19675'])
         self._assert_expected_search(
             [GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], gene_counts={
                 'ENSG00000129562': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
@@ -398,7 +396,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_both_sample_types_search(self):
-        Sample.objects.filter(dataset_type='MITO').update(is_active=False)
+        Dataset.objects.get(guid='S000149_hg00733').active_individuals.clear()
 
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
         self._add_sample_type_samples('WES', active_individuals__family__guid='F000011_11')
@@ -637,10 +635,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         # Test deletion in trans with hom alt snp/indel
-        for sample in Sample.objects.filter(individual__family_id=14):
-            sample.pk = None
-            sample.dataset_type = 'SNV_INDEL'
-            sample.save()
+        dataset = Dataset.objects.get(guid='S000147_na21234')
+        dataset_individuals = dataset.active_individuals.all()
+        dataset.pk = None
+        dataset.dataset_type = 'SNV_INDEL'
+        dataset.save()
+        dataset.active_individuals.set(dataset_individuals)
         self._assert_expected_search(
             [[SV_VARIANT1, SV_VARIANT2], [SV_VARIANT1, PROJECT_4_COMP_HET_VARIANT], PROJECT_4_COMP_HET_VARIANT, SV_VARIANT4],
             inheritance_mode=inheritance_mode, inheritance_filter=sv_affected, **COMP_HET_ALL_PASS_FILTERS,
@@ -948,7 +948,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search_error('Location must be specified to search across multiple projects', project_families=MULTI_PROJECT_PROJECT_FAMILIES)
 
-        Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
+        Individual.objects.filter(guid='I000015_na20885').update(individual_id='HG00732')
         self._assert_expected_search_error(
             'The following samples are incorrectly configured and have different affected statuses in different projects: '
             'HG00732 (1kg project nåme with uniçøde/ Test Reprocessed Project)',
@@ -1855,7 +1855,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'familyGuids': ['F000002_2_x'],
             'genotypes': {k: {**v, 'familyGuid': 'F000002_2_x'} for k, v in MULTI_DATA_TYPE_COMP_HET_VARIANT2['genotypes'].items()}
         }
-        Sample.objects.filter(guid='S000146_hg00732').update(is_active=False)
         Family.objects.filter(guid='F000002_2').update(guid='F000002_2_x')
         self._assert_expected_search(
             [[missing_gt_comp_het_variant, missing_gt_gcnv_variant]],
