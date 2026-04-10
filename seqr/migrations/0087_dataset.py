@@ -111,4 +111,7 @@ class Migration(migrations.Migration):
         ),
         migrations.RunPython(set_individual_id),
         migrations.RunPython(populate_datasets),
+        migrations.DeleteModel(
+            name='Sample',
+        ),
     ]
