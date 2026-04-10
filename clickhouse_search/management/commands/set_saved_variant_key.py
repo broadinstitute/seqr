@@ -104,7 +104,7 @@ class Command(BaseCommand):
             variant_id__in=variant_ids, family__project__genome_version=genome_version,
         )
         num_missing = missing_variants.count()
-        missing_with_data_qs = missing_variants.filter(family__individual__sample__is_active=True).distinct()
+        missing_with_data_qs = missing_variants.filter(family__individual__active_datasets__isnull=False).distinct()
         missing_with_search_data = missing_with_data_qs.values(
             'variant_id', *variant_fields,
         ).annotate(family_ids=ArrayAgg('family__family_id', distinct=True)).order_by('variant_id')
@@ -129,7 +129,7 @@ class Command(BaseCommand):
     @classmethod
     def _resolve_reloaded_svs(cls, variant_ids):
         missing_with_search_data, num_missing = cls._query_missing_variants(
-            list(variant_ids), ['family__individual__sample__sample_type'],
+            list(variant_ids), ['family__individual__active_datasets__sample_type'],
         )
         logger.info(
             f'{num_missing} SV variants have no key, {num_missing - len(missing_with_search_data)} of which have no search data'
@@ -140,7 +140,7 @@ class Command(BaseCommand):
         missing_by_sample_type = defaultdict(list)
         for variant in missing_with_search_data:
             variant_id = variant['variant_id']
-            sample_type = variant['family__individual__sample__sample_type']
+            sample_type = variant['family__individual__active_datasets__sample_type']
             missing_by_sample_type[sample_type].append(f"{variant_id} - {'; '.join(variant['family_ids'])}" )
 
         for sample_type, variants in missing_by_sample_type.items():
