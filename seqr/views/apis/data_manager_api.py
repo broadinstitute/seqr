@@ -222,14 +222,14 @@ def get_loaded_projects(request, genome_version, sample_type, dataset_type):
     if dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS:
         exclude_sample_type = Dataset.SAMPLE_TYPE_WES if sample_type == Dataset.SAMPLE_TYPE_WGS else Dataset.SAMPLE_TYPE_WGS
         # Include projects with either the matched sample type OR with no loaded data
-        projects = projects.exclude(family__individual__sample__sample_type=exclude_sample_type)
+        projects = projects.exclude(family__individual__active_datasets__sample_type=exclude_sample_type)
     else:
         # All other data types can only be loaded to projects which already have loaded data
-        projects = projects.filter(family__individual__sample__sample_type=sample_type)
+        projects = projects.filter(family__individual__active_datasets__sample_type=sample_type)
 
     projects = projects.distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
-        'family__individual__sample__loaded_date',
-        filter=Q(family__individual__sample__dataset_type=dataset_type) & Q(family__individual__sample__sample_type=sample_type),
+        'family__individual__active_datasets__loaded_date',
+        filter=Q(family__individual__active_datasets__dataset_type=dataset_type) & Q(family__individual__active_datasets__sample_type=sample_type),
     ))
 
     if project_samples:

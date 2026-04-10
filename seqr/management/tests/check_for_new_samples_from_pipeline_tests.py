@@ -553,7 +553,7 @@ The following 1 families failed sex check:
         self.assertDictEqual(self.mock_email.return_value.merge_data, {})
 
         self.assertEqual(self.manager_user.notifications.count(), 5)
-        manager_notification = self.manager_user.notifications.first()
+        manager_notification = self.manager_user.notifications.order_by('-id').first()
         self.assertEqual(manager_notification.actor.name, 'Test Reprocessed Project')
         self.assertEqual(manager_notification.verb, 'Loaded 1 new WES SV samples')
         self.assertEqual(manager_notification.timestamp.isoformat(), '2025-09-23T00:00:00+00:00')
