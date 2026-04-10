@@ -327,7 +327,6 @@ def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid
     return {'guid_key': 'sampleGuid', 'nested_fields': nested_fields, **kwargs}
 
 
-#  TODO deprecate
 def get_json_for_samples(samples, **kwargs):
     """Returns a JSON representation of the given list of Samples.
 

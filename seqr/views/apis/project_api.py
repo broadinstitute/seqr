@@ -21,7 +21,7 @@ from seqr.views.utils.file_utils import get_temp_file_path
 from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case, _to_camel_case
 from seqr.views.utils.json_to_orm_utils import update_project_from_json, create_model_from_json, update_model_from_json
-from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_samples, get_json_for_datasets, \
+from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_for_datasets, \
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, \
     get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups, \
     FAMILY_ADDITIONAL_VALUES
@@ -319,16 +319,6 @@ def project_individuals(request, project_guid):
 
     return create_json_response({
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
-    })
-
-
-@login_and_policies_required
-def project_samples(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
-    samples = Sample.objects.filter(individual__family__project=project)
-
-    return create_json_response({
-        'samplesByGuid': {s['sampleGuid']: s for s in get_json_for_samples(samples, project_guid=project_guid)},
     })
 
 
