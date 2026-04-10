@@ -406,7 +406,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             project_families=MULTI_PROJECT_PROJECT_FAMILIES, check_login=self.check_collaborator_login,
         )
 
-        self._add_sample_type_samples('WGS', guid__in=['S000132_hg00731'])
+        self._add_sample_type_samples('WGS', guid='S000129_na19675')
+        dataset = Dataset.objects.get(guid='S000129_na19675')
+        dataset.pk = None
+        dataset.sample_type = 'WGS'
+        dataset.save()
+        dataset.active_individuals.add(4)
 
         # Variant 1 is de novo in exome but inherited and homozygous in genome.
         # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome, so it fails de-novo inheritance when parental data is missing in genome.
@@ -428,7 +433,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_mode='de_novo', quality_filter=None, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
-        self._add_sample_type_samples('WGS', guid__in=['S000133_hg00732', 'S000134_hg00733'])
+        dataset.active_individuals.add(5, 6)
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES,
              VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],

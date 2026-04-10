@@ -602,7 +602,7 @@ def _add_missing_multi_type_samples(individuals, data):
         ]
     else:
         individual_samples = individuals.filter(family__guid__in=data['sample_type_families']['multi'],
-        ).values('id', family_guid=F('individual__family__guid')).annotate(
+        ).values('id', family_guid=F('family__guid')).annotate(
             samples=ArrayAgg(JSONObject(sample_id='individual_id', sample_type='active_datasets__sample_type'))
         ).filter(samples__len=1)
     for agg in individual_samples:
