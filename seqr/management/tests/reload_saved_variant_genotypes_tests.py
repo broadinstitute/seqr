@@ -1,7 +1,7 @@
 from django.core.management import call_command
 
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
-from seqr.models import SavedVariant, Sample
+from seqr.models import SavedVariant, Dataset
 
 
 class ReloadSavedVariantGenotypesTest(AnvilAuthenticationTestCase):
@@ -9,7 +9,8 @@ class ReloadSavedVariantGenotypesTest(AnvilAuthenticationTestCase):
 
     def test_command(self):
         # Update fixture data
-        Sample.objects.filter(id__in=[143, 149]).update(individual_id=18, sample_id='NA21234')
+        for dataset in Dataset.objects.filter(id__in=[143, 149]):
+            dataset.active_individuals.set([18])
 
         call_command('reload_saved_variant_genotypes', 'R0004_non_analyst_project')
         self.assert_json_logs(user=None, expected=[
