@@ -19,8 +19,11 @@ from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFEC
     CLINVAR_CONFLICTING_P_LP, CLINVAR_CONFLICTING_NO_P, CLINVAR_CONFLICTING, PATH_FREQ_OVERRIDE_CUTOFF, \
     HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, \
     X_LINKED_RECESSIVE_MALE_AFFECTED, FEMALE_SEXES, SV_ANNOTATION_TYPES
-from seqr.utils.xpos_utils import get_xpos, MIN_POS, MAX_POS, CHROMOSOME_CHOICES
+from seqr.utils.xpos_utils import get_xpos, parse_variant_id, MIN_POS, MAX_POS, CHROMOSOME_CHOICES
 
+
+class InvalidSearchException(Exception):
+    pass
 
 class InvalidDatasetTypeException(Exception):
     pass
@@ -95,11 +98,6 @@ class SearchQuerySet(QuerySet):
         if self.gt_stats_dict is None:
             return results
         return results.annotate(seqrPop=self.gt_stats_dict.dict_get_expression('key'))
-
-    def _format_gene_intervals(self, genes):
-        return [
-            {field: gene[f'{field}Grch{self.genome_version}'] for field in ['chrom', 'start', 'end']} for gene in genes.values()
-        ]
 
     @classmethod
     def _prediction_expression(cls, model):
@@ -418,12 +416,8 @@ class BaseVariantsQuerySet(SearchQuerySet):
     def _filter_frequency(self, results, **kwargs):
         return results
 
-    def _filter_annotations(self, results, annotations_filter_q=None, transcript_filters=None, genes=None, intervals=None, exclude_locations=False, **kwargs):
-        if exclude_locations and genes:
-            intervals = self._format_gene_intervals(genes)
-            genes = None
-
-        results = self._filter_locations(results, genes, intervals, exclude_locations=exclude_locations, **kwargs)
+    def _filter_annotations(self, results, annotations_filter_q=None, transcript_filters=None, genes=None, **kwargs):
+        results = self._filter_locations(results, genes, **kwargs)
 
         if not (annotations_filter_q or transcript_filters):
             return results
@@ -448,7 +442,7 @@ class BaseVariantsQuerySet(SearchQuerySet):
             self.FILTERED_CONSEQUENCE_FIELD: ArrayFilter(consequence_field, conditions=transcript_filters),
         })
 
-    def _filter_locations(self, results, genes, intervals, **kwargs):
+    def _filter_locations(self, results, genes, intervals=None, **kwargs):
         if genes:
             results = results.annotate(**{
                 self.GENE_CONSEQUENCE_FIELD: ArrayFilter(self.TRANSCRIPT_FIELD, conditions=[{
@@ -608,12 +602,17 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
         return results, False, in_silico_q, missing_q
 
-    def _filter_annotations(self, results, *args, exclude=None, **kwargs):
+    def _filter_annotations(self, results, *args, exclude=None, pathogenicity=None, **kwargs):
         screen_expression = self._screen_expression()
         if screen_expression:
             results = results.annotate(screen=self._screen_expression())
 
         results = super()._filter_annotations(results, *args, **kwargs)
+
+        if (exclude or {}).get(CLINVAR_KEY) and (pathogenicity or {}).get(CLINVAR_KEY):
+            duplicates = set(pathogenicity[CLINVAR_KEY]).intersection(exclude[CLINVAR_KEY])
+            if duplicates:
+                raise InvalidSearchException(f'ClinVar pathogenicity {", ".join(sorted(duplicates))} is both included and excluded')
 
         exclude_clinvar_q = self._clinvar_filter_q(exclude)
         if exclude_clinvar_q is not None:
@@ -835,7 +834,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
 
         return filter_qs, transcript_filters
 
-    def _filter_locations(self, results, genes, intervals, exclude_locations=False, padded_interval_end=None, **kwargs):
+    def _filter_locations(self, results, genes, intervals=None, exclude_intervals=None, padded_interval_end=None, **kwargs):
         results = super()._filter_locations(results, genes, intervals, **kwargs)
 
         if genes:
@@ -844,7 +843,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
             end, padding = padded_interval_end
             interval_qs = [Q(end__range=(end - padding, end + padding))]
         else:
-            interval_qs = [self._interval_query(**interval) for interval in (intervals or [])]
+            interval_qs = [self._interval_query(**interval) for interval in (intervals or exclude_intervals or [])]
 
         if not interval_qs:
             return results
@@ -852,7 +851,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
         interval_q = interval_qs[0]
         for q in interval_qs[1:]:
             interval_q |= q
-        filter_func = results.exclude if exclude_locations else results.filter
+        filter_func = results.exclude if exclude_intervals else results.filter
         return filter_func(interval_q)
 
     def _interval_query(self, chrom, start, end, *args, **kwargs):
@@ -1036,7 +1035,7 @@ class BaseEntriesManager(SearchQuerySet):
             entries = entries.exclude(key__in=exclude_keys)
 
         entries = self._join_annotations(entries)
-        entries = self._prefilter_entries(entries, **kwargs)
+        entries = self._prefilter_entries(entries, sample_data=sample_data, **kwargs)
 
         return self._search_call_data(entries, sample_data, **kwargs)
 
@@ -1090,6 +1089,8 @@ class BaseEntriesManager(SearchQuerySet):
        quality_q = None
        gt_filter = None
        quality_filter = qualityFilter or {}
+       if not inheritance_mode and list((inheritance_filter or {}).keys()) == ['affected']:
+           raise InvalidSearchException('Inheritance must be specified if custom affected status is set')
        if inheritance_mode or (inheritance_filter or {}).get('genotype') or quality_filter:
             clinvar_override_q = self._clinvar_path_q(pathogenicity)
             inheritance_q, quality_q, gt_filter, carriers_expression = self._get_inheritance_quality_qs(
@@ -1431,7 +1432,7 @@ class BaseEntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_locations=False, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, inheritance_mode=None, **kwargs):
+    def filter_locus(self, exclude_intervals=None, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, inheritance_mode=None, **kwargs):
         entries = self
 
         if variant_ids:
@@ -1444,20 +1445,30 @@ class BaseEntriesManager(SearchQuerySet):
 
         if intervals and self.filtered_chrom:
             intervals = [interval for interval in intervals if interval['chrom'] == self.filtered_chrom]
-            if not intervals and not exclude_locations:
+            if not intervals:
                 raise InvalidDatasetTypeException
 
         if genes or intervals:
-            entries = self._filter_locations(entries, genes, intervals, exclude_locations=exclude_locations, require_gene_filter=require_gene_filter)
+            entries = entries.filter(self._filter_locations_q(intervals, genes, require_gene_filter))
+        elif exclude_intervals:
+            entries = entries.exclude(self._filter_locations_q(exclude_intervals))
 
         return entries
 
-    def _filter_locations(self, entries, genes, intervals, exclude_locations=False, require_gene_filter=False):
+    @staticmethod
+    def _parse_variant_ids(raw_variant_items):
+        parsed_variant_ids = {}
+        for item in (raw_variant_items or '').replace(',', ' ').split():
+            variant_id = item.replace('chr', '')
+            parsed_variant_ids[variant_id] = parse_variant_id(variant_id)
+        return parsed_variant_ids
+
+    def _filter_locations_q(self, intervals, genes=None, require_gene_filter=False):
         locus_q = None
         if genes:
-            should_filter_interval = self._can_filter_gene_interval(genes) or exclude_locations
+            should_filter_interval = self._can_filter_gene_interval(genes)
             if should_filter_interval:
-                intervals = self._format_gene_intervals(genes) + (intervals or [])
+                intervals = list((genes or {}).values()) + (intervals or [])
             if require_gene_filter or (not should_filter_interval):
                 locus_q = Q(geneId_ids__bitmap_has_any=[gene['id'] for gene in genes.values()])
 
@@ -1472,8 +1483,7 @@ class BaseEntriesManager(SearchQuerySet):
             else:
                 locus_q |= interval_q
 
-        filter_func = entries.exclude if exclude_locations else entries.filter
-        return filter_func(locus_q)
+        return locus_q
 
     def _can_filter_gene_interval(self, genes):
         return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS or self.filtered_chrom
@@ -1507,6 +1517,7 @@ class BaseEntriesManager(SearchQuerySet):
 
 
 class EntriesManager(BaseEntriesManager):
+    MIN_MULTI_FAMILY_SEQR_AC = 5000
 
     @staticmethod
     def _clinvar_range_q(path_range):
@@ -1533,7 +1544,15 @@ class EntriesManager(BaseEntriesManager):
         entries = self._filter_in_silico(entries, **kwargs)
         return entries
 
-    def _filter_frequency(self, entries, frequencies, pathogenicity=None, **kwargs):
+    def _filter_frequency(self, entries, frequencies, pathogenicity=None, sample_data=None, **kwargs):
+        callset_filter = frequencies.get(self.callset_filter_field) or {}
+        if (not callset_filter.get('ac') or callset_filter['ac'] >= self.MIN_MULTI_FAMILY_SEQR_AC) and (
+            len(sample_data['sample_type_families']) > 1 or len(next(iter(sample_data['sample_type_families'].values()))) > 1
+        ):
+            raise InvalidSearchException(
+                f'seqr AC frequency of at least {self.MIN_MULTI_FAMILY_SEQR_AC} must be specified to search across multiple families'
+            )
+
         gnomad_filter = frequencies.get('gnomad_genomes') or {}
         if hasattr(self.model, 'is_gnomad_gt_5_percent') and (
             (gnomad_filter.get('af') or 1) <= 0.05 or any(gnomad_filter.get(field) is not None for field in ['ac', 'hh'])
@@ -1636,14 +1655,18 @@ class EntriesManager(BaseEntriesManager):
             )
         return super()._join_annotations(entries)
 
-    def filter_locus(self, *args, require_any_gene=False, parsed_variant_ids=None, intervals=None, genes=None, variant_ids=None, **kwargs):
-        if parsed_variant_ids:
+    def filter_locus(self, *args, require_any_gene=False, raw_variant_items=None, intervals=None, genes=None, variant_ids=None, **kwargs):
+        if raw_variant_items:
+            parsed_variant_ids = self._parse_variant_ids(raw_variant_items)
+            invalid_items = [variant_id for variant_id, parsed_id in parsed_variant_ids.items() if not parsed_id]
+            if invalid_items:
+                if variant_ids:
+                    raise InvalidDatasetTypeException
+                raise InvalidSearchException('Invalid variants: {}'.format(', '.join(invalid_items)))
             # although technically redundant, the interval query is applied to the entries table to
             # improve performance by using the xpos projection
-            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids]
-            variant_ids = ['-'.join([str(o) for o in variant_id]) for variant_id in parsed_variant_ids]
-        elif variant_ids:
-            raise InvalidDatasetTypeException
+            intervals = [{'chrom': chrom, 'start': pos, 'end': pos} for chrom, pos, _, _ in parsed_variant_ids.values()]
+            variant_ids = parsed_variant_ids.keys()
 
         entries = super().filter_locus(*args, intervals=intervals, genes=genes, variant_ids=variant_ids, **kwargs)
 
@@ -1715,24 +1738,19 @@ class SvEntriesManager(BaseEntriesManager):
 
         return entries
 
-    def filter_locus(self, *args, exclude_locations=False, intervals=None, genes=None, exclude_svs=False, parsed_variant_ids=None, **kwargs):
-        if exclude_svs or parsed_variant_ids:
+    def filter_locus(self, *args, exclude_intervals=None, intervals=None, genes=None, exclude_svs=False, raw_variant_items=None, **kwargs):
+        if exclude_svs or any(self._parse_variant_ids(raw_variant_items).values()):
             raise InvalidDatasetTypeException
         # SV interval filtering occurs after joining on annotations to correctly incorporate end position
         can_filter_gene_interval = self._can_filter_gene_interval(genes)
-        if exclude_locations:
-            intervals = None
-        else:
-            chromosomes = {i['chrom'] for i in (intervals or [])}
-            if can_filter_gene_interval:
-                chromosomes.update({gene[f'chromGrch{self.genome_version}'] for gene in genes.values()})
-            intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
+        chromosomes = {i['chrom'] for i in (intervals or [])}
+        if can_filter_gene_interval:
+            chromosomes.update({gene['chrom'] for gene in genes.values()})
+        intervals = [{'chrom': chrom, 'start': MIN_POS, 'end': MAX_POS} for chrom in chromosomes]
 
-        entries = super().filter_locus(
-            *args, exclude_locations=exclude_locations, intervals=intervals, genes=genes, **kwargs,
-        )
+        entries = super().filter_locus(*args, intervals=intervals, genes=genes, **kwargs)
 
-        if can_filter_gene_interval and not exclude_locations:
+        if can_filter_gene_interval:
             entries = entries.filter(calls__array_all={'OR': [
                 {'geneIds': (list(genes.keys()), 'hasAny({value}, {field})')},
                 {'gt': (None, 'isNull({field})')},

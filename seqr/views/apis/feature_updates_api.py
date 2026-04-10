@@ -11,18 +11,20 @@ FEED_URL = (
 TIMEOUT = 5
 
 
+def fetch_feature_updates():
+    response = requests.get(FEED_URL, timeout=TIMEOUT)
+    response.raise_for_status()
+    feed = parse(response.content)
+    return feed.entries
+
+
 def get_feature_updates(request):
     """
     Fetches the feature-updates GitHub Discussion Atom feed, converts feed entries into markdown, and returns
     markdown and information for each feed entry.
     """
-    response = requests.get(FEED_URL, timeout=TIMEOUT)
-    response.raise_for_status()
-
-    feed = parse(response.content)
-
     entries = []
-    for entry in feed.entries:
+    for entry in fetch_feature_updates():
         # Atom feeds can have multiple content elements per feed entry
         markdown = "".join(md(content.value) for content in entry.content)
         entries.append(

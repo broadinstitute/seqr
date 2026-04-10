@@ -10,7 +10,6 @@ from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
 import json
 
-from clickhouse_search.search import get_clickhouse_variant_annotations
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
@@ -428,6 +427,7 @@ def get_json_for_saved_variants(saved_variants, add_details=False, additional_mo
 
 
 def _add_clickhouse_annotations(results, genome_version):
+    from clickhouse_search.search import get_clickhouse_variant_annotations
     results_by_genome_version_dataset_type = defaultdict(lambda: defaultdict(list))
     for result in results:
         dataset_type = result.pop('datasetType')

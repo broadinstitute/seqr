@@ -2,13 +2,12 @@ from collections import defaultdict
 
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand
-from django.db.models import F
 import logging
 
 from clickhouse_search.search import get_clickhouse_key_lookup
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import SavedVariant, Dataset
-from seqr.utils.search.utils import parse_variant_id
+from seqr.utils.xpos_utils import parse_variant_id
 
 logger = logging.getLogger(__name__)
 
