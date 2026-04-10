@@ -9,7 +9,7 @@ import json
 from clickhouse_search.search import get_clickhouse_variants, ENTRY_CLASS_MAP
 from panelapp.models import PaLocusListGene
 from reference_data.models import GENOME_VERSION_GRCh38
-from seqr.models import Project, Family, Individual, Sample, Dataset, LocusList
+from seqr.models import Project, Family, Individual, Dataset, LocusList
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.gene_utils import get_genes
 from clickhouse_search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO, COMPOUND_HET
@@ -473,7 +473,7 @@ class Command(BaseCommand):
         updates = {update: set() for update in ['matched_families', 'new_tag_keys', 'update_tag_keys', 'skipped_tag_keys']}
         search_counts = {}
         samples_by_dataset_type = {}
-        sample_qs = Sample.objects.filter(individual__family__project=project, is_active=True)
+        sample_qs = Individual.objects.filter(family__project=project)
         for dataset_type, searches in SEARCHES.items():
             self._run_dataset_type_searches(
                 dataset_type, searches, sample_qs, updates, search_counts, samples_by_dataset_type, family_guid_map,
@@ -509,24 +509,24 @@ class Command(BaseCommand):
     @classmethod
     def _run_dataset_type_searches(cls, dataset_type, searches, sample_qs, updates, search_counts, samples_by_dataset_type, family_guid_map, project, exclude_genes, gene_by_moi):
         is_sv = dataset_type == Dataset.DATASET_TYPE_SV_CALLS
-        sample_qs = sample_qs.filter(dataset_type=dataset_type)
+        sample_qs = sample_qs.filter(active_datasets__dataset_type=dataset_type)
         if is_sv:
             sample_qs = sample_qs.exclude(
-                individual__sv_flags__contains=['outlier_num._calls'], individual__affected=Individual.AFFECTED_STATUS_AFFECTED,
+                sv_flags__contains=['outlier_num._calls'], affected=Individual.AFFECTED_STATUS_AFFECTED,
             )
-        sample_types = list(sample_qs.values_list('sample_type', flat=True).distinct())
+        sample_types = list(sample_qs.values_list('active_datasets__sample_type', flat=True).distinct())
         if len(sample_types) > 1:
             raise CommandError('Variant prioritization not supported for projects with multiple sample types')
         sample_type = sample_types[0]
         if is_sv:
             dataset_type = f'{dataset_type}_{sample_type}'
         samples_by_family = {
-            agg['individual__family__guid']: agg for agg in sample_qs.values('individual__family__guid').annotate(
+            agg['family__guid']: agg for agg in sample_qs.values('family__guid').annotate(
                 affecteds=ArrayAgg(
-                    JSONObject(maternal_guid='individual__mother__guid', paternal_guid='individual__father__guid', sex='individual__sex'),
-                    filter=Q(individual__affected=Individual.AFFECTED_STATUS_AFFECTED),
+                    JSONObject(maternal_guid='mother__guid', paternal_guid='father__guid', sex='sex'),
+                    filter=Q(affected=Individual.AFFECTED_STATUS_AFFECTED),
                 ),
-                unaffected_guids=ArrayAgg('individual__guid', filter=Q(individual__affected=Individual.AFFECTED_STATUS_UNAFFECTED)),
+                unaffected_guids=ArrayAgg('guid', filter=Q(affected=Individual.AFFECTED_STATUS_UNAFFECTED)),
             ).filter(affecteds__len__gt=0)
         }
         samples_by_dataset_type[dataset_type] = samples_by_family
