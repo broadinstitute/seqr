@@ -15,6 +15,7 @@ import {
   SIMPLIFIED_SEX_LOOKUP,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
+import { compareObjects } from 'shared/utils/sortUtils'
 
 import {
   getProjectsByGuid, getFamiliesGroupedByProjectGuid, getIndividualsByGuid, getGenesById, getUser,
@@ -23,7 +24,7 @@ import {
   getVariantTagsByGuid, getUserOptionsByUsername, getNotesByFamilyType,
   getVariantTagNotesByFamilyVariants, getPhenotypeGeneScoresByIndividual, getActiveDatasetsByIndividual,
   getRnaSeqDataByIndividual, familyPassesFilters, getAnalysisGroupGuid, getCurrentAnalysisGroupFamilyGuids,
-  getDatasetsByIndividual, getActiveDatasetsByFamily, getMinMaxDatasetsByFamily,
+  getDatasetsByIndividual, getActiveDatasetsByFamily, getMinMaxDatasetsByFamily, getDatasetsGroupedByProjectGuid,
 } from 'redux/selectors'
 
 import {
@@ -170,9 +171,32 @@ export const getProjectAnalysisGroupIndividualsByGuid = createSelector(
 )
 
 export const getProjectAnalysisGroupSamplesByTypes = createSelector(
+  getProjectGuid,
+  getCurrentAnalysisGroupFamilyGuids,
+  getProjectAnalysisGroupIndividualsByGuid,
+  getDatasetsGroupedByProjectGuid,
+  (projectGuid, analysisGroupFamilyGuids, analysisGroupIndividuals, datasetsByProject) => Object.values(
+    datasetsByProject[projectGuid] || {},
+  ).sort(compareObjects('loadedDate')).reduce((acc, { sampleType, datasetType, loadedDate, activeIndividuals, inactiveIndividuals }) => {
+    const key = `${sampleType}__${datasetType}`
+    if (!acc[key]) {
+      acc[key] = []
+    }
+    const individualGuids = [...activeIndividuals, ...inactiveIndividuals]
+    const count = !analysisGroupFamilyGuids ? individualGuids.length : individualGuids.filter(
+      individualGuid => individualGuid in analysisGroupIndividuals,
+    ).length
+    if (count) {
+      acc[key].push({ loadedDate, count })
+    }
+    return acc
+  }, {}),
+)
+
+export const getProjectAnalysisGroupRnaSamplesByTypes = createSelector(
   getCurrentProject,
   getCurrentAnalysisGroupFamilyGuids,
-  (project, analysisGroupFamilyGuids) => Object.entries(project.sampleCounts || {}).map(
+  (project, analysisGroupFamilyGuids) => Object.entries(project.rnaSampleCounts || {}).map(
     ([key, typeCounts]) => ([key, typeCounts.map(({ familyCounts, ...data }) => ({
       ...data,
       count: Object.entries(familyCounts).reduce((total, [familyGuid, count]) => (

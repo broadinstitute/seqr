@@ -29,6 +29,7 @@ import {
   getProjectAnalysisGroupFamilySizeHistogram,
   getProjectAnalysisGroupDataLoadedFamilySizeHistogram,
   getProjectAnalysisGroupSamplesByTypes,
+  getProjectAnalysisGroupRnaSamplesByTypes,
   getProjectAnalysisGroupMmeSubmissionDetails,
   getMmeSubmissionsLoading,
 } from '../selectors'
@@ -303,15 +304,19 @@ class DatasetSection extends React.PureComponent {
 
 }
 
-const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, user }) => {
-  const datasetSections = samplesByType.map(([sampleTypeKey, loadedSampleCounts]) => {
+const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, rnaSamplesByType, user }) => {
+  const datasetSections = [...Object.entries(samplesByType).map(([sampleTypeKey, loadedSampleCounts]) => {
     const [sampleType, datasetType] = sampleTypeKey.split('__')
     return {
       key: sampleTypeKey,
       title: `${SAMPLE_TYPE_LOOKUP[sampleType] || sampleType}${DATASET_TITLE_LOOKUP[datasetType] || ''} Datasets`,
       content: <DatasetSection loadedSampleCounts={loadedSampleCounts} />,
     }
-  }).sort((a, b) => a.title.localeCompare(b.title))
+  }), ...rnaSamplesByType.map(([dataType, loadedSampleCounts]) => ({
+    key: dataType,
+    title: `RNA${DATASET_TITLE_LOOKUP[dataType]} Datasets`,
+    content: <DatasetSection loadedSampleCounts={loadedSampleCounts} />,
+  }))].sort((a, b) => a.title.localeCompare(b.title))
 
   const noLoadedData = !datasetSections.length
   if (noLoadedData) {
@@ -358,6 +363,7 @@ const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, us
 
 Dataset.propTypes = {
   samplesByType: PropTypes.object.isRequired,
+  rnaSamplesByType: PropTypes.arrayOf(PropTypes.object).isRequired,
   hasAnvil: PropTypes.bool,
   showLoadWorkspaceData: PropTypes.bool,
   user: PropTypes.object.isRequired,
@@ -366,6 +372,7 @@ Dataset.propTypes = {
 const mapDatasetStateToProps = (state, ownProps) => ({
   user: getUser(state),
   samplesByType: getProjectAnalysisGroupSamplesByTypes(state, ownProps),
+  rnaSamplesByType: getProjectAnalysisGroupRnaSamplesByTypes(state, ownProps),
 })
 
 const DatasetOverview = connect(mapDatasetStateToProps)(Dataset)

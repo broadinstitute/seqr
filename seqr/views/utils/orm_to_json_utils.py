@@ -327,6 +327,7 @@ def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid
     return {'guid_key': 'sampleGuid', 'nested_fields': nested_fields, **kwargs}
 
 
+#  TODO deprecate
 def get_json_for_samples(samples, **kwargs):
     """Returns a JSON representation of the given list of Samples.
 
@@ -337,6 +338,14 @@ def get_json_for_samples(samples, **kwargs):
     """
 
     return get_json_for_queryset(samples, **_get_sample_json_kwargs(**kwargs))
+
+
+def get_json_for_datasets(datasets, project_guid):
+    return get_json_for_queryset(datasets, additional_values={
+        'projectGuid': Value(project_guid),
+        'activeIndividuals': ArrayAgg('active_individuals__guid', filter=Q(active_individuals__isnull=False)),
+        'inactiveIndividuals': ArrayAgg('inactive_individuals__guid', filter=Q(inactive_individuals__isnull=False)),
+    })
 
 
 def get_json_for_sample(sample, **kwargs):
