@@ -343,8 +343,8 @@ def get_json_for_samples(samples, **kwargs):
 def get_json_for_datasets(datasets, project_guid):
     return get_json_for_queryset(datasets, additional_values={
         'projectGuid': Value(project_guid),
-        'activeIndividuals': ArrayAgg('active_individuals__guid', filter=Q(active_individuals__isnull=False)),
-        'inactiveIndividuals': ArrayAgg('inactive_individuals__guid', filter=Q(inactive_individuals__isnull=False)),
+        'activeIndividuals': ArrayAgg('active_individuals__guid', distinct=True, filter=Q(active_individuals__isnull=False)),
+        'inactiveIndividuals': ArrayAgg('inactive_individuals__guid', distinct=True, filter=Q(inactive_individuals__isnull=False)),
     })
 
 
