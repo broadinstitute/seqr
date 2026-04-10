@@ -5,7 +5,7 @@ import json
 import requests
 
 from reference_data.models import GeneInfo, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, Dataset, Individual, Project
+from seqr.models import Dataset, Individual, Project
 from seqr.utils.communication_utils import send_project_notification, safe_post_to_slack
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.logging_utils import SeqrLogger

@@ -4,7 +4,7 @@ APIs used by the main seqr dashboard page
 from django.db import models
 from django.db.models.functions import Coalesce
 
-from seqr.models import ProjectCategory, Individual, Dataset, RnaSample, Family, Project
+from seqr.models import ProjectCategory, Individual, RnaSample, Family, Project
 from seqr.views.utils.individual_utils import check_project_individuals_deletable
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects

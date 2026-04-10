@@ -35,7 +35,6 @@ class Command(BaseCommand):
             ]
             logger.info(f'Skipping {num_found - len(families)} families with analysis groups in the project: {", ".join(group_families)}')
 
-        family_guids = list(families.values_list('guid', flat=True))
         trigger_delete_families_search(from_project, list(families.values_list('guid', flat=True)))
 
         remaining_families = Family.objects.filter(project=from_project).exclude(id__in={f.id for f in families})

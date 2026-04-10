@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import json
-import pdb
 
 import mock
 from copy import deepcopy
