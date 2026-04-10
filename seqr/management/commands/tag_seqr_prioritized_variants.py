@@ -4,6 +4,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from django.db.models.functions import JSONObject
+import json
 
 from clickhouse_search.search import get_clickhouse_variants, ENTRY_CLASS_MAP
 from panelapp.models import PaLocusListGene
@@ -12,6 +13,7 @@ from seqr.models import Project, Family, Individual, Sample, LocusList
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.gene_utils import get_genes
 from clickhouse_search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO, COMPOUND_HET
+from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.orm_to_json_utils import SEQR_TAG_TYPE
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants, get_saved_variant_annotations
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
@@ -596,7 +598,7 @@ class Command(BaseCommand):
                 dataset_type=dataset_type, genome_version=GENOME_VERSION_GRCh38, primary_id_field='key',
             )
             return {
-                k: {**v, 'dataset_type': dataset_type, **(variants_by_id.get(k[1], {}))}
+                k: {**v, 'dataset_type': dataset_type, **json.loads(json.dumps(variants_by_id.get(k[1], {}), cls=DjangoJSONEncoderWithSets))}
                 for k, v in family_variant_data.items() if k in new_variant_keys
             }
         return wrapped
@@ -638,7 +640,7 @@ class Command(BaseCommand):
     def _execute_search(sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map, **kwargs):
         results = get_clickhouse_variants(
             families=family_guid_map.keys(), user=None, genome_version=GENOME_VERSION_GRCh38,
-            encode_genotypes_json=True, sample_data_by_dataset_type={
+            sample_data_by_dataset_type={
                 **{dt: None for dt in ENTRY_CLASS_MAP[GENOME_VERSION_GRCh38]}, **sample_data_by_dataset_type,
             }, **kwargs
         )
@@ -648,12 +650,14 @@ class Command(BaseCommand):
                     for variant, support_id in [(result[0], result[1]['key']), (result[1], result[0]['key'])]:
                         variant_data = family_variant_data[(family_guid_map[family_guid], variant['key'])]
                         variant_data.update(variant)
+                        variant_data['genotypes'] = json.loads(json.dumps(variant_data['genotypes'], cls=DjangoJSONEncoderWithSets))
                         variant_data['support_vars'].add(support_id)
                         variant_data['matched_comp_het_searches'].add(search_name)
             else:
                 for family_guid in result.pop('familyGuids'):
                     variant_data = family_variant_data[(family_guid_map[family_guid], result['key'])]
                     variant_data.update(result)
+                    variant_data['genotypes'] = json.loads(json.dumps(variant_data['genotypes'], cls=DjangoJSONEncoderWithSets))
                     variant_data['matched_searches'].add(search_name)
 
         return len(results)
