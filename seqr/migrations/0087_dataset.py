@@ -99,7 +99,7 @@ class Migration(migrations.Migration):
                 ('last_modified_date', models.DateTimeField(blank=True, db_index=True, null=True)),
                 ('sample_type', models.CharField(choices=[('WES', 'Exome'), ('WGS', 'Whole Genome')], max_length=10)),
                 ('dataset_type', models.CharField(choices=[('SNV_INDEL', 'Variant Calls'), ('SV', 'SV Calls'), ('MITO', 'Mitochondria calls')], max_length=13)),
-                ('data_source', models.TextField(null=True)),
+                ('data_source', models.TextField()),
                 ('loaded_date', models.DateTimeField()),
                 ('active_individuals', models.ManyToManyField(related_name='active_datasets', to='seqr.individual')),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),

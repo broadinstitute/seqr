@@ -772,7 +772,7 @@ class Dataset(ModelWithGUID):
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
     dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES)
 
-    data_source = models.TextField(null=True)
+    data_source = models.TextField()
     loaded_date = models.DateTimeField()
 
     def __unicode__(self):
