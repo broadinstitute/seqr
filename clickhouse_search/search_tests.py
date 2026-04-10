@@ -847,8 +847,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     @mock.patch('seqr.utils.search.utils.MAX_EXPORT_VARIANTS', 2)
-    @mock.patch('seqr.utils.search.utils.MAX_GENES_FOR_FILTER', 2)
-    @mock.patch('seqr.utils.search.utils.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
+    @mock.patch('clickhouse_search.search.MAX_GENES_FOR_FILTER', 2)
+    @mock.patch('clickhouse_search.search.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
     def test_invalid_search(self):
         url = reverse(query_variants_handler, args=['not_a_hash'])
@@ -861,7 +861,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search_error('Invalid search: no projects/ families specified', project_families=[])
 
         search_hash = self._assert_expected_search_error(
-            'Invalid variants: chr2-A-C', locus={'rawVariantItems': 'chr2-A-C'},
+            'Invalid variants: 2-A-C', locus={'rawVariantItems': 'chr2-A-C'},
         )
 
         self.set_cache(f'search_results__VRS{search_hash:07d}__xpos', [VARIANT1, VARIANT2, VARIANT3, VARIANT4])
@@ -896,12 +896,14 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             pathogenicity={'clinvar': ['pathogenic', 'vus']}, exclude={'clinvar': ['benign', 'vus']},
         )
 
-        self._assert_expected_search_error('Annotations must be specified to search for compound heterozygous variants', inheritance_mode='recessive')
-
-        annotations = {'frameshift': ['frameshift_variant']}
         self._assert_expected_search_error(
             'Location must be specified to search for compound heterozygous variants across many families',
-            annotations=annotations, inheritance_mode='recessive',
+            inheritance_mode='recessive',
+        )
+
+        self._assert_expected_search_error(
+            'Annotations must be specified to search for compound heterozygous variants',
+            inheritance_mode='recessive', locus={'rawItems': GENE_IDS[0]},
         )
 
         self._assert_expected_search_error(
@@ -911,6 +913,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search_error('seqr AC frequency of at least 5000 must be specified to search across multiple families', freqs={})
 
+        annotations = {'frameshift': ['frameshift_variant']}
         self._assert_expected_search_error(
             'Inheritance based search is disabled in families with no data loaded for affected individuals',
             inheritance_mode='recessive', project_families=[{'projectGuid': 'R0001_1kg', 'familyGuids': ['F000005_5']}],
