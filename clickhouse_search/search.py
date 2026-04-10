@@ -35,7 +35,7 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, search, user, genome_version, sort=None, sample_data_by_dataset_type=None, encode_genotypes_json=False):
+def get_clickhouse_variants(families, search, user, genome_version, sort=None, sample_data_by_dataset_type=None):
     inheritance_mode = search.get('inheritance_mode')
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(genome_version, **search)
@@ -94,7 +94,7 @@ def get_clickhouse_variants(families, search, user, genome_version, sort=None, s
                 dataset_results += _evaluate_results(result_q, is_comp_het=True)
 
         if 'samples' not in sample_data:
-            _add_individual_guids(dataset_results, encode_genotypes_json=encode_genotypes_json)
+            _add_individual_guids(dataset_results)
         results += dataset_results
         searched_dataset_types.add(dataset_type)
 
@@ -372,7 +372,7 @@ def _result_as_tuple(results, field_prefix):
     return Tuple(*fields.keys(), output_field=NamedTupleField(list(fields.values())))
 
 
-def _add_individual_guids(results, encode_genotypes_json=False):
+def _add_individual_guids(results):
     families = set()
     for result in results:
         for r in (result if isinstance(result, list) else [result]):
@@ -385,12 +385,12 @@ def _add_individual_guids(results, encode_genotypes_json=False):
     for result in results:
         if isinstance(result, list):
             for variant in result:
-                _set_individual_guids(variant, sample_map, encode_genotypes_json)
+                _set_individual_guids(variant, sample_map)
         else:
-            _set_individual_guids(result, sample_map, encode_genotypes_json)
+            _set_individual_guids(result, sample_map)
 
 
-def _set_individual_guids(result, sample_map, encode_genotypes_json):
+def _set_individual_guids(result, sample_map):
     if 'familyGenotypes' not in result:
         return
     result['familyGuids'] = sorted(result['familyGenotypes'].keys())
@@ -399,10 +399,7 @@ def _set_individual_guids(result, sample_map, encode_genotypes_json):
         for genotype in genotypes:
             individual_guid = sample_map[(family_guid, genotype['sampleId'])]
             individual_genotypes[individual_guid].append({**genotype, 'individualGuid': individual_guid})
-    genotypes = {k: v[0] if len(v) == 1 else v for k, v in individual_genotypes.items()}
-    if encode_genotypes_json:
-        genotypes = _clickhouse_genotypes_json(genotypes)
-    result['genotypes'] = genotypes
+    result['genotypes'] = {k: v[0] if len(v) == 1 else v for k, v in individual_genotypes.items()}
 
 
 def get_sorted_search_results(results, sort, families):
