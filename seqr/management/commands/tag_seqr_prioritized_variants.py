@@ -4,6 +4,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from django.db.models.functions import JSONObject
+import json
 
 from clickhouse_search.search import get_clickhouse_variants, ENTRY_CLASS_MAP
 from panelapp.models import PaLocusListGene
@@ -12,6 +13,7 @@ from seqr.models import Project, Family, Individual, Sample, LocusList
 from seqr.utils.communication_utils import send_project_notification
 from seqr.utils.gene_utils import get_genes
 from clickhouse_search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO, COMPOUND_HET
+from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.orm_to_json_utils import SEQR_TAG_TYPE
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants, get_saved_variant_annotations
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
@@ -162,7 +164,7 @@ SV_RECESSIVE_SEARCH = {
 }
 
 NO_PANEL_APP_DE_NOVO_SEARCH = {
-    'inheritance_mode': DE_NOVO,
+    'inheritance': {'mode': DE_NOVO},
     'freqs': {
         'callset': {'ac': 100},
         'gnomad_exomes': {'ac': 100},
@@ -181,7 +183,7 @@ SEARCHES = {
     'SNV_INDEL': {
         'Clinvar Pathogenic': {
             'gene_list_moi': DOMINANT_MOI,
-            'inheritance_mode': ANY_AFFECTED,
+            'inheritance': {'mode': ANY_AFFECTED},
             'pathogenicity': CLINVAR_FILTER,
             'freqs': {
                 'callset': {'ac': 150},
@@ -190,28 +192,28 @@ SEARCHES = {
             },
         },
         'Clinvar Pathogenic - Compound Heterozygous': {
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': {},
             'annotations_secondary': HIGH_MODERATE_ANNOTATIONS,
             **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Both Pathogenic - Compound Heterozygous': {
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Pathogenic - Recessive': {
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             **CLINVAR_RECESSIVE_SEARCH,
         },
         'Clinvar Pathogenic - X-Linked Recessive': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             'family_filter': {
                 AFFECTED_MALE_FAMILY_FILTER: True
             },
             **CLINVAR_RECESSIVE_SEARCH,
         },
         'Compound Heterozygous': {
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': HIGH_ANNOTATIONS,
             'annotations_secondary': HIGH_MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
@@ -220,22 +222,31 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
         },
         'Compound Heterozygous - Both High Splice AI': {
-            'inheritance_mode': COMPOUND_HET,
-            **HIGH_SPLICE_AI_SEARCH,
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: False
+            },
+            'inheritance': {'mode': COMPOUND_HET},
+            'annotations':{
+                'splice_ai': 0.8,
+            },
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Compound Heterozygous - Both High Splice AI - Confirmed': {
-            'inheritance_mode': COMPOUND_HET,
-            **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
+            'family_filter': {
+                CONFIRMED_FAMILY_FILTER: True
+            },
+            'annotations': {
+                'splice_ai': 0.5,
+            },
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'Compound Heterozygous - Clinvar Pathogenic/ High Splice AI': {
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': {},
             'annotations_secondary': {
                 'splice_ai': 0.5,
@@ -246,8 +257,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: False
             },
-            'inheritance_mode': COMPOUND_HET,
-            'no_secondary_annotations': True,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'annotations_secondary':{
                 'splice_ai': 0.8,
@@ -262,8 +272,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'inheritance_mode': COMPOUND_HET,
-            'no_secondary_annotations': True,
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'annotations_secondary':{
                 'splice_ai': 0.5,
@@ -312,17 +321,17 @@ SEARCHES = {
             **NO_PANEL_APP_DE_NOVO_SEARCH,
         },
         'High Splice AI - Recessive': {
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             **HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'High Splice AI - Recessive Confirmed': {
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
         },
         'High Splice AI - X-Linked Recessive': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             **HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
             'family_filter': {
@@ -331,7 +340,7 @@ SEARCHES = {
             },
         },
         'High Splice AI - X-Linked Recessive Confirmed': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             **CONFIRMED_HIGH_SPLICE_AI_SEARCH,
             **RECESSIVE_SEARCH_NO_IN_SILICO,
             'family_filter': {
@@ -340,12 +349,12 @@ SEARCHES = {
             },
         },
         'Recessive': {
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             **RECESSIVE_SEARCH,
         },
         'X-Linked Recessive': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             'family_filter': {
                 AFFECTED_MALE_FAMILY_FILTER: True
             },
@@ -358,7 +367,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'inheritance_mode': COMPOUND_HET,
+            'inheritance': {'mode': COMPOUND_HET},
             **SV_RECESSIVE_SEARCH,
             'qualityFilter': PASS_QUALITY_FILTER,
         },
@@ -373,11 +382,11 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
-            'inheritance_mode': HOMOZYGOUS_RECESSIVE,
+            'inheritance': {'mode': HOMOZYGOUS_RECESSIVE},
             **SV_RECESSIVE_SEARCH,
         },
         'SV - X-Linked Recessive': {
-            'inheritance_mode': X_LINKED_RECESSIVE_MALE_AFFECTED,
+            'inheritance': {'mode': X_LINKED_RECESSIVE_MALE_AFFECTED},
             'family_filter': {
                 AFFECTED_MALE_FAMILY_FILTER: True,
                 CONFIRMED_FAMILY_FILTER: True,
@@ -387,20 +396,22 @@ SEARCHES = {
     },
     'MITO': {
         'Mitochondrial - Pathogenic': {
-            'inheritance_mode': ANY_AFFECTED,
+            'inheritance': {'mode': ANY_AFFECTED},
             'pathogenicity': {'clinvar': CLINVAR_FILTER['clinvar']},
             'annotations': {
                 'mitomap_pathogenic': True,
             },
             'freqs': {
+                'callset': {'ac': 5000},
                 'gnomad_mito': {'af': 0.05},
             },
         },
         'Mitochondrial - De Novo/ Dominant': {
             'gene_list_moi': MITO_MOI,
-            'inheritance_mode': DE_NOVO,
+            'inheritance': {'mode': DE_NOVO},
             'annotations': HIGH_MODERATE_ANNOTATIONS,
             'freqs': {
+                'callset': {'ac': 5000},
                 'gnomad_mito': {'af': 0.001},
             },
             'in_silico': {
@@ -587,7 +598,7 @@ class Command(BaseCommand):
                 dataset_type=dataset_type, genome_version=GENOME_VERSION_GRCh38, primary_id_field='key',
             )
             return {
-                k: {**v, 'dataset_type': dataset_type, **(variants_by_id.get(k[1], {}))}
+                k: {**v, 'dataset_type': dataset_type, **json.loads(json.dumps(variants_by_id.get(k[1], {}), cls=DjangoJSONEncoderWithSets))}
                 for k, v in family_variant_data.items() if k in new_variant_keys
             }
         return wrapped
@@ -619,7 +630,7 @@ class Command(BaseCommand):
             }
             num_results = cls._execute_search(
                 sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map,
-                inheritance_mode=COMPOUND_HET, **config_search, **ALL_SEARCHES_CRITERIA, genes=genes,
+                inheritance={'mode': COMPOUND_HET}, **config_search, **ALL_SEARCHES_CRITERIA, genes=genes,
             )
             search_counts[search_name] = num_results
 
@@ -628,10 +639,10 @@ class Command(BaseCommand):
     @staticmethod
     def _execute_search(sample_data_by_dataset_type, search_name, family_variant_data, family_guid_map, **kwargs):
         results = get_clickhouse_variants(
-            families=None, search=kwargs, user=None, genome_version=GENOME_VERSION_GRCh38,
-            encode_genotypes_json=True, sample_data_by_dataset_type={
+            families=family_guid_map.keys(), user=None, genome_version=GENOME_VERSION_GRCh38,
+            sample_data_by_dataset_type={
                 **{dt: None for dt in ENTRY_CLASS_MAP[GENOME_VERSION_GRCh38]}, **sample_data_by_dataset_type,
-            },
+            }, **kwargs
         )
         for result in results:
             if isinstance(result, list):
@@ -639,12 +650,14 @@ class Command(BaseCommand):
                     for variant, support_id in [(result[0], result[1]['key']), (result[1], result[0]['key'])]:
                         variant_data = family_variant_data[(family_guid_map[family_guid], variant['key'])]
                         variant_data.update(variant)
+                        variant_data['genotypes'] = json.loads(json.dumps(variant_data['genotypes'], cls=DjangoJSONEncoderWithSets))
                         variant_data['support_vars'].add(support_id)
                         variant_data['matched_comp_het_searches'].add(search_name)
             else:
                 for family_guid in result.pop('familyGuids'):
                     variant_data = family_variant_data[(family_guid_map[family_guid], result['key'])]
                     variant_data.update(result)
+                    variant_data['genotypes'] = json.loads(json.dumps(variant_data['genotypes'], cls=DjangoJSONEncoderWithSets))
                     variant_data['matched_searches'].add(search_name)
 
         return len(results)

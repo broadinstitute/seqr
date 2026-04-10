@@ -73,7 +73,7 @@ const LOOKUP_FIELDS = [
 ]
 
 const validateAnnotations = (value, { search }) => (
-  value || Object.values(search.annotations || {}).some(val => val.length) ? undefined : 'At least one consequence filter is required'
+  value || Object.values(search?.annotations || {}).some(val => val.length) ? undefined : 'At least one consequence filter is required'
 )
 
 const CONSEQUENCE_FIELDS = [
