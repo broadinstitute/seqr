@@ -1298,7 +1298,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     PROJECT_OPTION = PROJECT_OPTION
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION]
     WES_PROJECT_OPTIONS = [
-        {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
+        {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:13:55.397Z'},
         EMPTY_PROJECT_OPTION,
     ]
     PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
