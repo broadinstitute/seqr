@@ -139,7 +139,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.mock_redis.expire.reset_mock()
 
     def _execute_search(self, sort='xpos', inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=None, request_body=None, check_login=None, query_params=None, search_hash=None, **search_kwargs):
-        search_hash = search_hash or random.randint(1000, 10000)  # nosec
+        search_hash = search_hash or random.randint(1000, 9000000)  # nosec
         self.mock_results_guid.return_value = f'VRS{search_hash:07d}'
         url = reverse(query_variants_handler, args=[search_hash])
 
