@@ -63,7 +63,7 @@ def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str
         pos = lifted.position
         genome_build = liftover_genome_build
     genome_build = genome_build.replace('GRCh', '')
-    return f'{SEQR_BASE_URL}summary_data/variant_lookup?genomeVersion={genome_build}&variantId={chrom}-{pos}-{ref}-{alt}'
+    return f'{SEQR_BASE_URL}variant_lookup?genomeVersion={genome_build}&variantId={chrom}-{pos}-{ref}-{alt}'
 
 
 def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
