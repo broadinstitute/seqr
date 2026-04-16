@@ -806,7 +806,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
 
         self.mock_gzip_temp_open.assert_called_with(f'{TEMP_PATH}/db_id_to_gene_id.csv.gz', 'wt')
         gene_file = self.mock_gzip_temp_open.return_value.__enter__.return_value.write.call_args.args[0].split('\n')
-        self.assertEqual(len(gene_file), 52)
+        self.assertEqual(len(gene_file), 59)
         self.assertListEqual(gene_file[:3], ['db_id,gene_id', '1,ENSG00000223972', '2,ENSG00000227232'])
 
         gs_path = f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/'
