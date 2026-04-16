@@ -52,7 +52,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'id': 'TestVLM',
                         'label': 'TestVLM browser',
                     },
-                    'url': 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=38&variantId=chr1-38724419-T-G',
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=chr1-38724419-T-G',
                     'email': None,
                 }
             ],
@@ -124,7 +124,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'id': 'TestVLM',
                         'label': 'TestVLM browser',
                     },
-                    'url': 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=37&variantId=7-143270172-A-G',
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=37&variantId=7-143270172-A-G',
                     'email': None,
                 }
             ],
@@ -195,7 +195,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'id': 'TestVLM',
                         'label': 'TestVLM browser',
                     },
-                    'url': 'https://test-seqr.org/summary_data/variant_lookup?genomeVersion=38&variantId=chr7-143270172-A-G',
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=chr7-143270172-A-G',
                     'email': None,
                 }
             ],
