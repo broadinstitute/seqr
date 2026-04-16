@@ -252,7 +252,7 @@ def _get_updated_pedigree_json(updated_individuals, updated_families, updated_no
         individual['individualGuid']: individual for individual in
         _get_json_for_individuals(Individual.objects.filter(id__in=[
             i.id for i in updated_individuals
-        ]), user, add_sample_guids_field=True)
+        ]), user)
     }
     families_by_guid = {
         family['familyGuid']: family for family in

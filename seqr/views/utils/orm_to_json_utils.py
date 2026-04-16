@@ -264,7 +264,7 @@ def get_json_for_family_note(note):
 INDIVIDUAL_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'individual_id', output_field=CharField())
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sample_guids_field=False,
+def _get_json_for_individuals(individuals, user=None, project_guid=None,
                               add_hpo_details=False, is_analyst=None, has_case_review_perm=False):
     additional_model_fields = _get_case_review_fields(individuals.model, has_case_review_perm)
     nested_fields = [
@@ -283,11 +283,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sam
         'paternalId': F('father__individual_id'),
         'displayName': INDIVIDUAL_DISPLAY_NAME_EXPR,
     }
-    if add_sample_guids_field:
-        additional_values.update({
-            f'{field}Guids': ArrayAgg(f'{field.lower()}__guid', filter=Q(**{f'{field.lower()}__isnull': False}))
-            for field in ['sample', 'igvSample']
-        })
 
     parsed_individuals = get_json_for_queryset(
         individuals, user=user, is_analyst=is_analyst, additional_values=additional_values,
