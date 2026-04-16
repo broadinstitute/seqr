@@ -80,3 +80,14 @@ def get_chrom_pos(xpos):
         CHROM_NUMBER_TO_CHROM[chrom_idx],
         xpos % int(1e9)
     )
+
+
+def parse_variant_id(variant_id):
+    try:
+        chrom, pos, ref, alt = variant_id.split('-')
+        chrom = format_chrom(chrom)
+        pos = int(pos)
+        get_xpos(chrom, pos)
+        return chrom, pos, ref, alt
+    except (KeyError, ValueError):
+        return None
