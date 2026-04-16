@@ -406,7 +406,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             project_families=MULTI_PROJECT_PROJECT_FAMILIES, check_login=self.check_collaborator_login,
         )
 
-        self._add_sample_type_samples('WGS', guid='S000129_na19675')
         dataset = Dataset.objects.get(guid='S000129_na19675')
         dataset.pk = None
         dataset.sample_type = 'WGS'
