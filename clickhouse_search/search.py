@@ -618,7 +618,7 @@ def _get_sample_metadata(individuals, affected_family_only, annotate_affected_ma
         annotations['samples'] = ArrayAgg(JSONObject(
             affected='affected', sex='sex', sample_id='individual_id', sample_type='active_datasets__sample_type',
             family_guid=F('family__guid'), individual_guid=F('guid'),
-        ))
+        ), distinct=True)
 
     return individuals.aggregate(**annotations)
 
