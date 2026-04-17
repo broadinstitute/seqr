@@ -310,7 +310,7 @@ class VariantSearchAPITest(AuthenticationTestCase):
         expected_logs = [
             ('VLM match request to Node 1', {'detail': expected_params}),
             ('VLM match request to Node 2', {'detail': expected_params}),
-            (f'VLM match error for Node 2: 400 Client Error: Bad Request for url: {node_2_url}', {
+            (f'VLM Node 2 match error: 400 Client Error: Bad Request for url: {node_2_url}', {
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
                 'detail': expected_params,
