@@ -359,7 +359,7 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
         engine = CollapsingMergeTree(
             'sign',
             order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'),
-            partition_by='project_guid, partition_id',
+            partition_by=['project_guid', 'partition_id'],
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
         )

@@ -5,6 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import connections
 from django.db.models import Count, F, Min, Q
 from django.db.models.functions import JSONObject
+from django.db.utils import OperationalError
 import json
 
 from clickhouse_search.backend.fields import NamedTupleField
@@ -13,9 +14,9 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
 from clickhouse_search.managers import InvalidDatasetTypeException, InvalidSearchException
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
-from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, \
+from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, EntriesSnvIndel,  \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
-from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP
+from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
 from seqr.models import Sample, PhenotypePrioritization, Family, Individual
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.logging_utils import SeqrLogger
@@ -1030,8 +1031,20 @@ def delete_clickhouse_project(project, dataset_type, sample_type=None):
     if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES:
         dataset_type = 'GCNV'
     table_base = f'{GENOME_VERSION_LOOKUP[project.genome_version]}/{dataset_type}'
+    partition_id = f"'{project.guid}'"
+    partition_ids = [partition_id]
+    if project.genome_version == GENOME_VERSION_GRCh38 and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+        partition_ids = [
+            f'({partition_id}, {pid})' for pid in
+            EntriesSnvIndel.objects.filter(project_guid=project.guid).values_list('partition_id', flat=True).distinct()
+        ]
     with connections['clickhouse_write'].cursor() as cursor:
-        cursor.execute(f'ALTER TABLE "{table_base}/entries" DROP PARTITION %s', [project.guid])
+        for partition_id in partition_ids:
+            try:
+                cursor.execute(f"ALTER TABLE `{table_base}/entries` DROP PARTITION {partition_id}")
+            except OperationalError:
+                # Repartitioning of this table was not rolled out via a standard migration and may be skipped in some local installs
+                raise OperationalError('Unable to delete project data due to a partitioning migration error. Please reach out to the seqr team for assistance.')
         if dataset_type != 'GCNV':
             cursor.execute(f'ALTER TABLE "{table_base}/project_gt_stats" DROP PARTITION %s', [project.guid])
             PROJECT_GT_STATS_VIEW_CLASS_MAP[project.genome_version][dataset_type].refresh()
