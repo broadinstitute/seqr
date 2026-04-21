@@ -5,6 +5,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import connections
 from django.db.models import Count, F, Min, Q
 from django.db.models.functions import JSONObject
+from django.db.utils import OperationalError
 import json
 
 from clickhouse_search.backend.fields import NamedTupleField
@@ -1039,7 +1040,11 @@ def delete_clickhouse_project(project, dataset_type, sample_type=None):
         ]
     with connections['clickhouse_write'].cursor() as cursor:
         for partition_id in partition_ids:
-            cursor.execute(f"ALTER TABLE `{table_base}/entries` DROP PARTITION {partition_id}")
+            try:
+                cursor.execute(f"ALTER TABLE `{table_base}/entries` DROP PARTITION {partition_id}")
+            except OperationalError:
+                # Repartitioning of this table was not rolled out via a standard migration and may be skipped in some local installs
+                raise OperationalError('Unable to delete project data due to a partitioning migration error. Please reach out to the seqr team for assistance.')
         if dataset_type != 'GCNV':
             cursor.execute(f'ALTER TABLE "{table_base}/project_gt_stats" DROP PARTITION %s', [project.guid])
             PROJECT_GT_STATS_VIEW_CLASS_MAP[project.genome_version][dataset_type].refresh()
