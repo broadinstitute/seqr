@@ -50,7 +50,7 @@ def vlm_lookup(user, chrom, pos, ref, alt, genome_version=None, **kwargs):
                 result_id =  parsed_id[0] if len(parsed_id) == 2 else next(iter(results[client_name].keys()))
                 results[client_name][result_id]['counts'][count_type] = result['resultsCount']
         except Exception as e:
-            logger.error(f'VLM match error for {client_name}: {e}', user, detail=params)
+            logger.error(f'VLM {client_name} match error: {e}', user, detail=params)
 
     return results
 
