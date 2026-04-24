@@ -2,7 +2,7 @@ import json
 import requests
 from datetime import datetime
 from django.core.mail.message import EmailMessage
-from django.db.models import prefetch_related_objects, Q, Value, CharField
+from django.db.models import prefetch_related_objects, F, Q, Value, CharField
 from django.db.models.functions import Coalesce
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission, MatchmakerSubmissionGenes, \
@@ -58,14 +58,16 @@ def get_individual_mme_matches(request, submission_guid):
     variant_guids = {gv['variantGuid'] for gv in gene_variants}
 
     variants = get_json_for_saved_variants(
-        SavedVariant.objects.filter(guid__in=variant_guids), genome_version=project.genome_version, additional_values={
+        SavedVariant.objects.filter(guid__in=variant_guids), additional_values={
             'genomeVersion': Coalesce('saved_variant_json__genomeVersion', Value(project.genome_version), output_field=CharField()),
+            'selectedMainTranscript': F('main_transcript'),
+            'xposEnd': F('xpos_end'),
         },
     )
     response_json['savedVariantsByGuid'] = {}
     for variant in variants:
-        chrom, pos = get_chrom_pos(variant['xpos'])
-        variant.update({'chrom': chrom, 'pos': pos})
+        _, end = get_chrom_pos(variant.pop('xposEnd'))
+        variant.update({'end': end})
         response_json['savedVariantsByGuid'][variant['variantGuid']] = variant
 
     return _parse_mme_results(

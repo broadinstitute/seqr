@@ -27,7 +27,7 @@ EXPECTED_MME_DETAILS_METRICS = {
 }
 
 VARIANT_TAG_RESPONSE_KEYS = {
-    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'variantsById',
 }
 SAVED_VARIANT_RESPONSE_KEYS = {
     *VARIANT_TAG_RESPONSE_KEYS, 'projectsByGuid', 'locusListsByGuid', 'genesById', 'totalSampleCounts',
@@ -331,7 +331,7 @@ class SummaryDataAPITest(AirtableTest):
                             {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
         self.assertEqual(len(response_json['submissions']), self.NUM_MANAGER_SUBMISSIONS)
         self.assertSetEqual(set(next(iter(response_json['savedVariantsByGuid'].values())).keys()), {
-            'chrom', 'pos',  'genomeVersion', *SAVED_VARIANT_FIELDS,
+            'genomeVersion', *SAVED_VARIANT_FIELDS,
         })
 
         # Test analyst behavior

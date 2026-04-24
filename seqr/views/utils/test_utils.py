@@ -711,9 +711,10 @@ IGV_SAMPLE_FIELDS = {
     'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'filePath', 'indexFilePath', 'sampleId', 'sampleType',
 }
 
-SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification'}
+SAVED_VARIANT_FIELDS = {'variantGuid', 'variantId', 'familyGuids', 'xpos', 'ref', 'alt', 'selectedMainTranscriptId', 'acmgClassification',
+                        'chrom', 'pos', 'key', 'geneIds', 'genotypes', 'svType'}
 SAVED_VARIANT_DETAIL_FIELDS = {
-    'chrom', 'pos', 'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
+    'genomeVersion', 'liftedOverGenomeVersion', 'liftedOverChrom', 'liftedOverPos', 'tagGuids',
     'functionalDataGuids', 'noteGuids', 'genotypes', 'hgmd', 'CAID',
     'transcripts', 'populations', 'predictions', 'rsid', 'clinvar', 'acmgClassification'
 }

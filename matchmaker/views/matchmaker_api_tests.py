@@ -231,7 +231,7 @@ class MatchmakerAPITest(AuthenticationTestCase):
             set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000001_2103343353_r0390_100'}
         )
-        saved_variant_fields = {*SAVED_VARIANT_FIELDS, 'chrom', 'pos', 'genomeVersion'}
+        saved_variant_fields = {*SAVED_VARIANT_FIELDS, 'selectedMainTranscript', 'end', 'genomeVersion'}
         self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000001_2103343353_r0390_100'].keys()), saved_variant_fields)
         self.assertDictEqual(response_json['mmeContactNotes'], {})
 

@@ -1546,7 +1546,7 @@ class EntriesManager(BaseEntriesManager):
 
     def _filter_frequency(self, entries, frequencies, pathogenicity=None, sample_data=None, **kwargs):
         callset_filter = frequencies.get(self.callset_filter_field) or {}
-        if (not callset_filter.get('ac') or callset_filter['ac'] >= self.MIN_MULTI_FAMILY_SEQR_AC) and (
+        if (not callset_filter.get('ac') or callset_filter['ac'] > self.MIN_MULTI_FAMILY_SEQR_AC) and (
             len(sample_data['sample_type_families']) > 1 or len(next(iter(sample_data['sample_type_families'].values()))) > 1
         ):
             raise InvalidSearchException(

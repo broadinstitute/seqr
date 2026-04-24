@@ -416,31 +416,245 @@ export const STATE_WITH_2_FAMILIES = {
   savedVariantsByGuid: {
     SV0000004_116042722_r0390_1000: {
       alt: "T",
-      annotation: {
-        cadd_phred: "27.2",
-        freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
-        popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
-        vepAnnotations: [
-          {
-            aminoAcids: "P/X",
-            canonical: "YES",
-            cdnaPosition: "897",
-            cdsPosition: "859",
-            codons: "Ccc/cc",
-            consequence: "frameshift_variant",
-            hgvsc: "ENST00000456743.1:c.862delC",
-            hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-            isChosenTranscript: true,
-            transcriptId: "ENST00000456743",
-          }
-        ],
-        vepConsequence: "frameshift_variant",
-        vepGroup: "frameshift",
-        worstVepAnnotation: {
-          aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-          lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
-        }
+      chrom: "22",
+      clinvar: { clinsig: "", variantId: null },
+      familyGuids: ["F011652_1"],
+      functionalDataGuids: [],
+      genomeVersion: "37",
+      genotypes: {
+        I021475_na19675_1: {
+          ab: 1,
+          ad: "0,74",
+          alleles: ["T", "T"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "74",
+          filter: "pass",
+          gq: 99,
+          numAlt: 2,
+          pl: "358,132,0",
+        },
+        NA19678: {
+          ab: 0,
+          ad: "77,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "77",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,232,3036",
+        },
+        NA19679: {
+          ab: 0,
+          ad: "71,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "71",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,213,1918",
+        },
       },
+      geneIds: ['ENSG00000228198'],
+      noteGuids: ['VN0727076_116042722_r0390_1000'],
+      pos: 45919065,
+      ref: "TTTC",
+      tagGuids: ['VT1726942_1248367227_r0390_101'],
+      selectedMainTranscript: {
+        aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10", lof: "HC",
+        lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3", geneId: 'ENSG00000228198',
+        majorConsequence: 'frameshift_variant', transcriptId: 'ENST00000456743'
+      },
+      variantId: "22-45919065-TTTC-T",
+      variantGuid: "SV0000004_116042722_r0390_1000",
+      xpos: 22045919065,
+    },
+    SV0000002_1248367227_r0390_100: {
+      alt: "T",
+      chrom: "1",
+      familyGuids: ["F011652_1"],
+      functionalDataGuids: ['FD_248367227_r0390_100_1', 'FD_248367227_r0390_100_2'],
+      genomeVersion: "37",
+      genotypes: {
+        I021475_na19675_1: {
+          ab: 1,
+          ad: "0,74",
+          alleles: ["T", "T"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "74",
+          filter: "pass",
+          gq: 99,
+          numAlt: 2,
+          pl: "358,132,0",
+        },
+        NA19678: {
+          ab: 0,
+          ad: "77,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "77",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,232,3036",
+        },
+        NA19679: {
+          ab: 0,
+          ad: "71,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "71",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,213,1918",
+        },
+      },
+      noteGuids: [],
+      geneIds: ['ENSG00000228198'],
+      pos: 248367227,
+      ref: "TC",
+      tagGuids: ["VT1726942_1248367227_r0390_100", "VT1708635_1248367227_r0390_100"],
+      variantId: "1-248367227-TC-T",
+      variantGuid: "SV0000002_1248367227_r0390_100",
+      xpos: 1248367227,
+    },
+    SV0000002_SV48367227_r0390_100: {
+      alt: null,
+      chrom: "1",
+      familyGuids: ["F011652_1"],
+      functionalDataGuids: [],
+      genomeVersion: "37",
+      geneIds: ['ENSG00000228198', 'ENSG00000164458'],
+      genotypes: {
+        I021475_na19675_1: {
+          cn: 0,
+          qs: 57,
+          numAlt: -1,
+        },
+        NA19678: {
+          cn: 2,
+          numAlt: -1,
+        },
+        NA19679: {
+          cn: 2,
+          numAlt: -1,
+        },
+      },
+      noteGuids: [],
+      pos: 248367227,
+      end: 248369100,
+      ref: null,
+      tagGuids: [],
+      variantId: "batch_123_DEL",
+      variantGuid: "SV0000002_SV48367227_r0390_100",
+      xpos: 1248367227,
+    },
+    SV0000003_2246859832_r0390_100: {
+      alt: "T",
+      chrom: "22",
+      familyGuids: ["F011652_2"],
+      functionalDataGuids: [],
+      genomeVersion: "37",
+      genotypes: {
+        I021475_na19675_1: {
+          ab: 1,
+          ad: "0,74",
+          alleles: ["T", "T"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "74",
+          filter: "pass",
+          gq: 99,
+          numAlt: 2,
+          pl: "358,132,0",
+        },
+        NA19678: {
+          ab: 0,
+          ad: "77,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "77",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,232,3036",
+        },
+        NA19679: {
+          ab: 0,
+          ad: "71,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "71",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,213,1918",
+        },
+      },
+      noteGuids: [],
+      origAltAlleles: ["T"],
+      pos: 248367227,
+      ref: "C",
+      tagGuids: ['VT1726942_1248367227_r0390_102'],
+      variantId: "22-248367227-C-T",
+      variantGuid: "SV0000003_2246859832_r0390_100",
+      xpos: 22046859832,
+    },
+    SV0000005_2246859833_r0390_100: {
+      alt: "T",
+      chrom: "22",
+      familyGuids: ["F011652_2"],
+      functionalDataGuids: [],
+      genomeVersion: "37",
+      genotypes: {
+        I021475_na19675_1: {
+          ab: 1,
+          ad: "0,74",
+          alleles: ["T", "T"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "74",
+          filter: "pass",
+          gq: 99,
+          numAlt: 2,
+          pl: "358,132,0",
+        },
+        NA19678: {
+          ab: 0,
+          ad: "77,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "77",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,232,3036",
+        },
+        NA19679: {
+          ab: 0,
+          ad: "71,0",
+          alleles: ["TC", "TC"],
+          cnvs: {LRR_median: null, LRR_sd: null, array: null, caller: null, cn: null, freq: null, size: null},
+          dp: "71",
+          filter: "pass",
+          gq: 99,
+          numAlt: 0,
+          pl: "0,213,1918",
+        },
+      },
+      noteGuids: [],
+      pos: 248367228,
+      projectGuid: 'R0237_1000_genomes_demo',
+      ref: "C",
+      tagGuids: ['VT1726942_1248367227_r0390_102'],
+      variantId: "22-248367228-C-T",
+      variantGuid: "SV0000005_2246859833_r0390_100",
+      xpos: 22046859833,
+    },
+  },
+  variantsById: {
+    "22-45919065-TTTC-T": {
+      alt: "T",
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_1"],
@@ -501,49 +715,12 @@ export const STATE_WITH_2_FAMILIES = {
       variantGuid: "SV0000004_116042722_r0390_1000",
       xpos: 22045919065,
     },
-    SV0000002_1248367227_r0390_100: {
+    "1-248367227-TC-T": {
       alt: "T",
-      annotation: {
-        cadd_phred: "27.2",
-        freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
-        popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
-        vepAnnotations: [
-          {
-            aminoAcids: "P/X",
-            canonical: "YES",
-            cdnaPosition: "897",
-            cdsPosition: "859",
-            codons: "Ccc/cc",
-            consequence: "frameshift_variant",
-            hgvsc: "ENST00000456743.1:c.862delC",
-            hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-            isChosenTranscript: true,
-            transcriptId: "ENST00000456743",
-          }
-        ],
-        vepConsequence: "frameshift_variant",
-        vepGroup: "frameshift",
-        worstVepAnnotation: {
-          aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-          lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
-        }
-      },
       chrom: "1",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_1"],
       functionalDataGuids: ['FD_248367227_r0390_100_1', 'FD_248367227_r0390_100_2'],
-      genes: [
-        {
-          constraints: {
-            lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
-            missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
-          },
-          diseaseDbPhenotypes: [],
-          diseaseGeneLists: [],
-          geneId: "ENSG00000228198",
-          symbol: "OR2M3",
-        }
-      ],
       genomeVersion: "37",
       genotypes: {
         I021475_na19675_1: {
@@ -589,14 +766,13 @@ export const STATE_WITH_2_FAMILIES = {
       mainTranscriptId: 'ENST00000262738',
       transcripts: {ENSG00000228198: [{transcriptId: 'ENST00000262738',  majorConsequence: 'missense_variant'}]},
       pos: 248367227,
-      projectGuid: 'R0237_1000_genomes_demo',
       ref: "TC",
       tagGuids: ["VT1726942_1248367227_r0390_100", "VT1708635_1248367227_r0390_100"],
       variantId: "1-248367227-TC-T",
       variantGuid: "SV0000002_1248367227_r0390_100",
       xpos: 1248367227,
     },
-    SV0000002_SV48367227_r0390_100: {
+    "batch_123_DEL": {
       alt: null,
       chrom: "1",
       familyGuids: ["F011652_1"],
@@ -652,49 +828,12 @@ export const STATE_WITH_2_FAMILIES = {
       variantGuid: "SV0000002_SV48367227_r0390_100",
       xpos: 1248367227,
     },
-    SV0000003_2246859832_r0390_100: {
+    "22-248367227-C-T": {
       alt: "T",
-      annotation: {
-        cadd_phred: "27.2",
-        freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
-        popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
-        vepAnnotations: [
-          {
-            aminoAcids: "P/X",
-            canonical: "YES",
-            cdnaPosition: "897",
-            cdsPosition: "859",
-            codons: "Ccc/cc",
-            consequence: "frameshift_variant",
-            hgvsc: "ENST00000456743.1:c.862delC",
-            hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-            isChosenTranscript: true,
-            transcriptId: "ENST00000456743",
-          }
-        ],
-        vepConsequence: "frameshift_variant",
-        vepGroup: "frameshift",
-        worstVepAnnotation: {
-          aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-          lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
-        }
-      },
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_2"],
       functionalDataGuids: [],
-      genes: [
-        {
-          constraints: {
-            lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
-            missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
-          },
-          diseaseDbPhenotypes: [],
-          diseaseGeneLists: [],
-          geneId: "ENSG00000228198",
-          symbol: "OR2M3",
-        }
-      ],
       genomeVersion: "37",
       genotypes: {
         I021475_na19675_1: {
@@ -747,49 +886,12 @@ export const STATE_WITH_2_FAMILIES = {
       variantGuid: "SV0000003_2246859832_r0390_100",
       xpos: 22046859832,
     },
-    SV0000005_2246859833_r0390_100: {
+    "22-248367228-C-T": {
       alt: "T",
-      annotation: {
-        cadd_phred: "27.2",
-        freqs: { AF: null, exac: 0.0006726888333653661, g1k: 0, gnomad_exomes: 0.00006505916317651364 },
-        popCounts: { AC: null, AN: null, exac_hemi: null, exac_hom: null, gnomadExomesAC: null, gnomadGenomesAC: null} ,
-        vepAnnotations: [
-          {
-            aminoAcids: "P/X",
-            canonical: "YES",
-            cdnaPosition: "897",
-            cdsPosition: "859",
-            codons: "Ccc/cc",
-            consequence: "frameshift_variant",
-            hgvsc: "ENST00000456743.1:c.862delC",
-            hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-            isChosenTranscript: true,
-            transcriptId: "ENST00000456743",
-          }
-        ],
-        vepConsequence: "frameshift_variant",
-        vepGroup: "frameshift",
-        worstVepAnnotation: {
-          aminoAcids: "P/X", hgvsc: "ENST00000456743.1:c.862delC", hgvsp: "ENSP00000389625.1:p.Leu288SerfsTer10",
-          lof: "HC", lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3"
-        }
-      },
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_2"],
       functionalDataGuids: [],
-      genes: [
-        {
-          constraints: {
-            lof: { constraint: 0.0671997116609769, rank: 8248, totalGenes: 18225 },
-            missense: { constraint: -0.7885573790993861, rank: 15052, totalGenes: 18225 },
-          },
-          diseaseDbPhenotypes: [],
-          diseaseGeneLists: [],
-          geneId: "ENSG00000228198",
-          symbol: "OR2M3",
-        }
-      ],
       genomeVersion: "37",
       genotypes: {
         I021475_na19675_1: {

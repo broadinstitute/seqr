@@ -8,7 +8,7 @@ import logging
 import redis
 
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
-from clickhouse_search.search import get_variants_queryset
+from clickhouse_search.search import get_variants_queryset, get_clickhouse_variant_annotations
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
@@ -373,13 +373,24 @@ LOAD_FAMILY_CONTEXT_PARAM = 'loadFamilyContext'
 
 def get_variants_response(request, saved_variants, response_variants=None, add_all_context=False, include_igv=True,
                           add_locus_list_detail=False, include_individual_gene_scores=True, include_project_name=False, genome_version=None):
-    response = get_json_for_saved_variants_with_tags(saved_variants, add_details=True, genome_version=genome_version) \
+    additional_model_fields = []
+    if response_variants is None:
+        additional_model_fields = ['dataset_type', 'saved_variant_json']
+        if not genome_version:
+            additional_model_fields.append('family__project__genome_version')
+    response = get_json_for_saved_variants_with_tags(saved_variants, additional_model_fields=additional_model_fields) \
         if saved_variants is not None else {'savedVariantsByGuid': {}}
 
-    variants = list(response['savedVariantsByGuid'].values()) if response_variants is None else response_variants
-    if not variants:
+    if response_variants is None:
+        variants_by_id = _get_clickhouse_variant_annotations(response['savedVariantsByGuid'].values(), genome_version)
+    else:
+        variants_by_id = {variant['variantId']: variant for variant in response_variants}
+
+    response['variantsById'] = variants_by_id
+    if not variants_by_id:
         return response
 
+    variants = variants_by_id.values()
     family_guids = {family_guid for variant in variants for family_guid in variant.get('familyGuids', [])}
     projects = Project.objects.filter(family__guid__in=family_guids).distinct()
     project = list(projects)[0] if len(projects) == 1 else None
@@ -391,7 +402,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     discovery_tags = None
     is_analyst = user_is_analyst(request.user)
     if is_analyst:
-        discovery_tags, discovery_response = get_json_for_discovery_tags(response['savedVariantsByGuid'].values(), request.user)
+        discovery_tags, discovery_response = get_json_for_discovery_tags(variants, request.user)
         response.update(discovery_response)
 
     response['locusListsByGuid'] = _add_locus_lists(
@@ -429,6 +440,30 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
             response['familiesByGuid'][family_guid].update(data)
 
     return response
+
+def _get_clickhouse_variant_annotations(variants, genome_version):
+    variant_keys_by_genome_version_dataset_type = defaultdict(lambda: defaultdict(set))
+    variants_by_id = defaultdict(dict)
+    for variant in variants:
+        dataset_type = variant.pop('datasetType')
+        gv = genome_version or variant.pop('familyProjectGenomeVersion')
+        variant_json = variant.pop('savedVariantJson')
+        variants_by_id[variant['variantId']] = {
+            **variant_json,
+            **variants_by_id[variant['variantId']],
+            **variant,
+            'familyGuids': variant['familyGuids'] + variants_by_id[variant['variantId']].get('familyGuids', []),
+            'genotypes': {**variant['genotypes'], **variants_by_id[variant['variantId']].get('genotypes', {})},
+        }
+        if variant['key']:
+            variant_keys_by_genome_version_dataset_type[gv][dataset_type].add(variant['key'])
+
+    for gv, gv_keys in variant_keys_by_genome_version_dataset_type.items():
+        for dataset_type, keys in gv_keys.items():
+            for annotations in get_clickhouse_variant_annotations(gv, dataset_type, keys):
+                variants_by_id[annotations['variantId']].update(annotations)
+
+    return variants_by_id
 
 def _mme_response_context(saved_variants_by_guid):
     mme_submission_genes = MatchmakerSubmissionGenes.objects.filter(
