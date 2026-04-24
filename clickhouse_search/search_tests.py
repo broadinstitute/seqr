@@ -222,7 +222,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         url = reverse(export_variants_handler, args=[search_hash])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], export_data)
+        self.assertListEqual([line.split('\t') for line in response.content.decode().strip('\n').split('\n')], export_data)
 
     def _assert_expected_search_error(self, error, **kwargs):
         response, search_hash, _ = self._execute_search(**kwargs)
@@ -455,7 +455,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_mode='de_novo', quality_filter={'min_gq': 40}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
-        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES,
              [{**VARIANT2_BOTH_SAMPLE_TYPES, 'selectedMainTranscriptId': 'ENST00000450625'}, GCNV_VARIANT4],
@@ -2143,10 +2142,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
         del variant4['genotypes']
+        self.maxDiff = None
         self._assert_expected_search(
             [variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
-            annotations=annotations, freqs=freqs, locus=locus, project_families=[],
+            annotations=annotations, freqs=freqs, locus=locus, project_families=[], export_data=[
+                EXPORT_DATA[0][:27], EXPORT_DATA[4][:24] + ['3 Families', '', ''],
+            ],
         )
 
         freqs = {'callset': freqs['callset']}
