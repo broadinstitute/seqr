@@ -455,6 +455,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_mode='de_novo', quality_filter={'min_gq': 40}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
+        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES,
              [{**VARIANT2_BOTH_SAMPLE_TYPES, 'selectedMainTranscriptId': 'ENST00000450625'}, GCNV_VARIANT4],
@@ -2142,7 +2143,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
         del variant4['genotypes']
-        self.maxDiff = None
         self._assert_expected_search(
             [variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
