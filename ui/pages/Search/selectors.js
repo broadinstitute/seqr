@@ -15,6 +15,7 @@ import {
   getProjectDatasetTypes,
   getActiveDatasetsByFamily,
   getSortedIndividualsByFamily,
+  getVariantsById,
 } from 'redux/selectors'
 import { getVariantMainGeneId, getVariantSummary, FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
@@ -26,7 +27,7 @@ export const getSavedSearchesByGuid = state => state.savedSearchesByGuid
 export const getSavedSearchesIsLoading = state => state.savedSearchesLoading.isLoading
 export const getSavedSearchesLoadingError = state => state.savedSearchesLoading.errorMessage
 export const getFlattenCompoundHet = state => state.flattenCompoundHet
-export const getSearchedVariants = state => state.searchedVariants
+const getSearchedVariantIds = state => state.searchedVariantIds
 export const getSearchedVariantsIsLoading = state => state.searchedVariantsLoading.isLoading
 export const getSearchedVariantsErrorMessage = state => state.searchedVariantsLoading.errorMessage
 export const getSearchGeneBreakdown = state => state.searchGeneBreakdown
@@ -246,8 +247,12 @@ export const getAnalysisGroupOptions = createSelector(
 
 export const getDisplayVariants = createSelector(
   getFlattenCompoundHet,
-  getSearchedVariants,
-  (flattenCompoundHet, searchedVariants) => {
+  getSearchedVariantIds,
+  getVariantsById,
+  (flattenCompoundHet, searchedVariantIds, variantsById) => {
+    const searchedVariants = (searchedVariantIds || []).map(
+      variantId => (Array.isArray(variantId) ? variantId.map(vId => variantsById[vId]) : variantsById[variantId]),
+    )
     const shouldFlatten = Object.values(flattenCompoundHet || {}).some(val => val)
     if (!shouldFlatten) {
       return searchedVariants || []

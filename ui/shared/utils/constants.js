@@ -1691,8 +1691,8 @@ export const getVariantMainTranscript = ({ transcripts = {}, mainTranscriptId, s
 ).find(({ transcriptId }) => transcriptId === (selectedMainTranscriptId || mainTranscriptId)) || {}
 
 export const getVariantSummary = (variant, individualGuid) => {
-  const { alt, ref, chrom, pos, end, genomeVersion } = variant
-  const mainTranscript = getVariantMainTranscript(variant)
+  const { alt, ref, chrom, pos, end, genomeVersion, selectedMainTranscript } = variant
+  const mainTranscript = selectedMainTranscript || getVariantMainTranscript(variant)
   let consequence = `${(mainTranscript.majorConsequence || '').replace(/_variant/g, '').replace(/_/g, ' ')} variant`
   let variantDetail = [(mainTranscript.hgvsc || '').split(':').pop(), (mainTranscript.hgvsp || '').split(':').pop()].filter(val => val).join('/')
   const displayGenomeVersion = GENOME_VERSION_DISPLAY_LOOKUP[genomeVersion] || genomeVersion

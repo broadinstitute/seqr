@@ -12,15 +12,68 @@ export const USER = {
   username: 'test',
 }
 
-export const VARIANT = {
+const SAVED_VARIANT = {
   alt: "T",
-  mainTranscriptId: 'ENST00000456743',
   chrom: "1",
-  clinvar: { clinsig: "", variantId: null },
   familyGuids: ["F011652_1"],
   functionalDataGuids: ['VFD0000002_1248367227_r0390_100', 'VFD0000001_1248367227_r0390_100'],
-  genomeVersion: "37",
   geneIds: ['ENSG00000228198'],
+  genotypes: {
+    NA19675: [{
+      ab: 1,
+      ad: "0,74",
+      alleles: ["T", "T"],
+      dp: "74",
+      filter: "pass",
+      gq: 99,
+      numAlt: 2,
+      pl: "358,132,0",
+      sampleType: "WES",
+    }, {
+      ab: 1,
+      ad: "0,74",
+      alleles: ["T", "T"],
+      dp: "74",
+      filter: "pass",
+      gq: 99,
+      numAlt: 2,
+      pl: "358,132,0",
+      sampleType: "WGS",
+    }],
+    NA19678: {
+      ab: 0,
+      ad: "77,0",
+      alleles: ["TC", "TC"],
+      dp: "77",
+      filter: "pass",
+      gq: 99,
+      numAlt: 0,
+      pl: "0,232,3036",
+    },
+    NA19679: {
+      ab: 0,
+      ad: "71,0",
+      alleles: ["TC", "TC"],
+      dp: "71",
+      filter: "pass",
+      gq: 99,
+      numAlt: 0,
+      pl: "0,213,1918",
+    },
+  },
+  noteGuids: [],
+  pos: 248367227, // NOPMD
+  ref: "TC",
+  tagGuids: ['VT1708635_1248367227_r0390_100', 'VT1726942_1248367227_r0390_100'],
+  variantId: "1-248367227-TC-T",
+  variantGuid: "SV0000002_1248367227_r0390_100",
+  xpos: 1248367227, // NOPMD
+}
+export const VARIANT = {
+  ...SAVED_VARIANT,
+  mainTranscriptId: 'ENST00000456743',
+  clinvar: { clinsig: "", variantId: null },
+  genomeVersion: "37",
   genotypes: {
     NA19675: [{
       ab: 1,
@@ -68,10 +121,7 @@ export const VARIANT = {
   liftedOverChrom: "",
   liftedOverGenomeVersion: "38",
   liftedOverPos: "",
-  noteGuids: [],
   origAltAlleles: ["T"],
-  projectGuid: 'R0237_1000_genomes_demo',
-  pos: 248367227,
   populations: {
     callset: { af: 0.03, ac: 7, an: 1032 },
     g1k: { af: 0 },
@@ -81,8 +131,6 @@ export const VARIANT = {
     topmed: {},
   },
   predictions: { cadd: '27.2' },
-  ref: "TC",
-  tagGuids: ['VT1708635_1248367227_r0390_100', 'VT1726942_1248367227_r0390_100'],
   transcripts: {
     ENSG00000228198: [
       {
@@ -99,9 +147,6 @@ export const VARIANT = {
       }
     ],
   },
-  variantId: "SV0000002_1248367227_r0390_100",
-  variantGuid: "SV0000002_1248367227_r0390_100",
-  xpos: 1248367227,
 }
 
 export const SV_VARIANT = {
@@ -383,7 +428,8 @@ export const STATE1 = {
   },
   genesById: { 'ENSG00000228198': GENE },
   genesLoading: {},
-  savedVariantsByGuid: { SV0000002_1248367227_r0390_100: VARIANT },
+  savedVariantsByGuid: { SV0000002_1248367227_r0390_100: SAVED_VARIANT },
+  variantsById: { "1-248367227-TC-T": VARIANT },
   variantTagsByGuid: {
     VT1726942_1248367227_r0390_100: {
       category: "Collaboration", color: "#668FE3", dateSaved: "2018-05-25T21:00:51.260Z", name: "Review",
