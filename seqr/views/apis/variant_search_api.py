@@ -91,9 +91,10 @@ def _get_or_create_results_model(search_hash, search_context, user):
             raise Exception('Invalid search hash: {}'.format(search_hash))
 
         all_project_genome_version = _all_project_family_search_genome(search_context)
+        include_no_access_projects = search_context.get('includeNoAccessProjects')
         if all_project_genome_version:
             families = _all_genome_version_families(all_project_genome_version, user)
-            if not families:
+            if not (families or include_no_access_projects):
                 raise Exception(f'No data available for genome version "{GENOME_VERSION_LOOKUP[all_project_genome_version]}"')
         elif search_context.get('projectFamilies'):
             all_families = set()
@@ -115,7 +116,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
         search_dict = search_context.get('search', {})
         if search_context.get('previousSearchHash') and (search_dict.get('exclude') or {}).get('previousSearch'):
             search_dict['exclude']['previousSearchHash'] = search_context['previousSearchHash']
-        if search_context.get('includeNoAccessProjects'):
+        if include_no_access_projects:
             search_dict['no_access_project_genome_version'] = all_project_genome_version
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
             Q(created_by=user) | Q(name__isnull=False)).first()
