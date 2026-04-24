@@ -12,7 +12,7 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
-from reference_data.models import GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
     variant_lookup, export_variants
@@ -93,6 +93,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
         all_project_genome_version = _all_project_family_search_genome(search_context)
         if all_project_genome_version:
             families = _all_genome_version_families(all_project_genome_version, user)
+            if not families:
+                raise Exception(f'No data available for genome version "{GENOME_VERSION_LOOKUP[all_project_genome_version]}"')
         elif search_context.get('projectFamilies'):
             all_families = set()
             for project_family in search_context['projectFamilies']:
