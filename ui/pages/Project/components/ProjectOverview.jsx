@@ -363,7 +363,7 @@ const Dataset = React.memo(({ showLoadWorkspaceData, hasAnvil, samplesByType, rn
 
 Dataset.propTypes = {
   samplesByType: PropTypes.object.isRequired,
-  rnaSamplesByType: PropTypes.arrayOf(PropTypes.object).isRequired,
+  rnaSamplesByType: PropTypes.arrayOf(PropTypes.any).isRequired,
   hasAnvil: PropTypes.bool,
   showLoadWorkspaceData: PropTypes.bool,
   user: PropTypes.object.isRequired,

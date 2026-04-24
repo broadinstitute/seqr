@@ -182,7 +182,7 @@ export const getProjectAnalysisGroupSamplesByTypes = createSelector(
     if (!acc[key]) {
       acc[key] = []
     }
-    const individualGuids = [...activeIndividuals, ...inactiveIndividuals]
+    const individualGuids = [...(activeIndividuals || []), ...(inactiveIndividuals || [])]
     const count = !analysisGroupFamilyGuids ? individualGuids.length : individualGuids.filter(
       individualGuid => individualGuid in analysisGroupIndividuals,
     ).length

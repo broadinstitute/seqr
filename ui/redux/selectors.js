@@ -76,7 +76,7 @@ export const getProjectDatasetTypes = createSelector(
     )
     const sampleDatasetTypes = Object.values(datasetsByGuid).reduce(
       (acc, { projectGuid, datasetType, activeIndividuals }) => {
-        if (projectDatasetTypes[projectGuid] || !activeIndividuals) {
+        if (projectDatasetTypes[projectGuid] || !(activeIndividuals || []).length) {
           return acc
         }
         if (!acc[projectGuid]) {
@@ -96,13 +96,15 @@ export const getDatasetsByIndividual = createSelector(
     (a, b) => a.loadedDate.localeCompare(b.loadedDate),
   ).reduce((acc, { activeIndividuals, inactiveIndividuals, sampleType, datasetType, loadedDate }) => {
     const parsedLoadedDate = loadedDate.split('T')[0]
-    activeIndividuals.forEach((individualGuid) => {
+    const activeIndivs = activeIndividuals || []
+    activeIndivs.forEach((individualGuid) => {
       if (!acc[individualGuid]) {
         acc[individualGuid] = []
       }
       acc[individualGuid].push({ isActive: true, sampleType, datasetType, loadedDate: parsedLoadedDate })
     })
-    inactiveIndividuals.forEach((individualGuid) => {
+    const inactiveIndivs = inactiveIndividuals || []
+    inactiveIndivs.forEach((individualGuid) => {
       if (!acc[individualGuid]) {
         acc[individualGuid] = []
       }
