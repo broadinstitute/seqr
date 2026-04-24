@@ -1033,7 +1033,7 @@ def delete_clickhouse_project(project, dataset_type, sample_type=None):
     table_base = f'{GENOME_VERSION_LOOKUP[project.genome_version]}/{dataset_type}'
     partition_id = f"'{project.guid}'"
     partition_ids = [partition_id]
-    if project.genome_version == GENOME_VERSION_GRCh38 and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+    if project.genome_version == GENOME_VERSION_GRCh38 and dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS:
         partition_ids = [
             f'({partition_id}, {pid})' for pid in
             EntriesSnvIndel.objects.filter(project_guid=project.guid).values_list('partition_id', flat=True).distinct()
