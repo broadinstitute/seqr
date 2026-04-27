@@ -269,14 +269,14 @@ def export_variants_handler(request, search_hash):
             family_guid: saved_variant['variantGuid'] for family_guid in saved_variant['familyGuids']
         }
 
-    if any(len(variant['familyGuids']) > MAX_FAMILIES_PER_ROW for variant in variants):
+    if any(len(variant.get('familyGuids', [])) > MAX_FAMILIES_PER_ROW for variant in variants):
         split_variants = []
         for variant in variants:
-            if len(variant['familyGuids']) <= MAX_FAMILIES_PER_ROW:
+            if len(variant.get('familyGuids', [])) <= MAX_FAMILIES_PER_ROW:
                 split_variants.append(variant)
                 continue
 
-            num_split = ceil(len(variant['familyGuids']) / MAX_FAMILIES_PER_ROW)
+            num_split = ceil(len(variant.get('familyGuids', [])) / MAX_FAMILIES_PER_ROW)
             gens_per_row = ceil(len(variant['genotypes']) / num_split)
             gen_keys = sorted(variant['genotypes'].keys())
             for i in range(num_split):
@@ -288,15 +288,15 @@ def export_variants_handler(request, search_hash):
 
         variants = split_variants
 
-    max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
-    max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
+    max_families_per_variant = max([len(variant.get('familyGuids', [1])) for variant in variants])
+    max_samples_per_variant = max([len(variant.get('genotypes', {})) for variant in variants])
 
     rows = []
     for variant in variants:
         row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
 
         family_saved_variants = saved_variants_by_variant_family.get(variant['variantId'], {})
-        for family_guid in variant['familyGuids']:
+        for family_guid in variant.get('familyGuids', []):
             variant_guid = family_saved_variants.get(family_guid, '')
             family_tags = {
                 'family_id': family_ids_by_guid.get(family_guid),
@@ -304,9 +304,13 @@ def export_variants_handler(request, search_hash):
                 'notes': [note for note in json_saved_variants['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
             }
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
-        row += ['' for i in range(len(VARIANT_FAMILY_EXPORT_DATA) * (max_families_per_variant - len(variant['familyGuids'])))]
+        num_blank_cols = len(VARIANT_FAMILY_EXPORT_DATA) * (max_families_per_variant - len(variant.get('familyGuids', [])))
+        if 'familyGuids' not in variant:
+            row.append(f"{variant['numFamilies']} Families")
+            num_blank_cols -= 1
+        row += ['' for i in range(num_blank_cols)]
 
-        genotypes = [genotype for _, genotype in sorted(variant['genotypes'].items())]
+        genotypes = [genotype for _, genotype in sorted(variant.get('genotypes', {}).items())]
         for genotype in genotypes:
             row += [_get_field_value(genotype, config) for config in VARIANT_SAMPLE_DATA]
         row += ['' for i in range(len(VARIANT_SAMPLE_DATA) * (max_samples_per_variant - len(genotypes)))]

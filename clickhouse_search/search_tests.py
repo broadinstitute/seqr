@@ -222,7 +222,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         url = reverse(export_variants_handler, args=[search_hash])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], export_data)
+        self.assertListEqual([line.split('\t') for line in response.content.decode().strip('\n').split('\n')], export_data)
 
     def _assert_expected_search_error(self, error, **kwargs):
         response, search_hash, _ = self._execute_search(**kwargs)
@@ -2150,7 +2150,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search(
             [variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
-            annotations=annotations, freqs=freqs, locus=locus, project_families=[],
+            annotations=annotations, freqs=freqs, locus=locus, project_families=[], export_data=[
+                EXPORT_DATA[0][:27], EXPORT_DATA[4][:24] + ['3 Families', '', ''],
+            ],
         )
 
         freqs = {'callset': freqs['callset']}
