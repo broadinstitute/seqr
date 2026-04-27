@@ -148,15 +148,17 @@ export const getPairedSelectedSavedVariants = createSelector(
 
     const selectedVariantsByGuid = variants.reduce((acc, variant) => ({ ...acc, [variant.variantGuid]: variant }), {})
 
-    const pairedVariantsLookup = [
+    const groupedVariantGuids = [
       ...Object.values(tagsByGuid),
       ...Object.values(notesByGuid),
-    ].reduce((acc, { variantGuids }) => {
+    ].map(({ variantGuids }) => variantGuids)
+    const compHets = new Set(groupedVariantGuids.reduce((acc, variantGuids) => (
+      variantGuids.length > 1 ? [...acc, ...variantGuids] : acc
+    ), []))
+
+    const pairedVariantsLookup = groupedVariantGuids.reduce((acc, variantGuids) => {
       const key = variantGuids.sort().join('_')
-      if (!acc[key] && variantGuids.every(variantGuid => selectedVariantsByGuid[variantGuid])) {
-        variantGuids.forEach((variantGuid) => {
-          delete acc[variantGuid]
-        })
+      if (!acc[key] && !compHets.has(key) && variantGuids.every(variantGuid => selectedVariantsByGuid[variantGuid])) {
         const pairVariants = variantGuids.map(variantGuid => selectedVariantsByGuid[variantGuid])
         acc[key] = pairVariants.length === 1 ? pairVariants[0] : pairVariants.sort(sortCompHet)
       }
