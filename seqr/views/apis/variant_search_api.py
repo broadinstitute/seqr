@@ -2,6 +2,7 @@ import json
 import jmespath
 from collections import defaultdict
 from copy import deepcopy
+from datetime import timedelta
 from django.utils import timezone
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned, PermissionDenied
@@ -17,10 +18,11 @@ from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
 from seqr.utils.search.utils import query_variants, get_variant_query_gene_counts, \
-    variant_lookup, export_variants
+    export_variants
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from seqr.utils.xpos_utils import parse_variant_id
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
@@ -532,7 +534,7 @@ def variant_lookup_handler(request):
     variant_id = request.GET.get('variantId')
     genome_version = request.GET.get('genomeVersion') or GENOME_VERSION_GRCh38
     bool_kwargs = {_to_snake_case(field): bool(request.GET.get(field)) for field in ['affectedOnly', 'homOnly']}
-    variants = variant_lookup(request.user, variant_id, genome_version, sample_type=request.GET.get('sampleType'), **bool_kwargs)
+    variants = _cached_variant_lookup(request.user, variant_id, genome_version, sample_type=request.GET.get('sampleType'), **bool_kwargs)
 
     family_guids = set()
     for variant in variants:
@@ -558,6 +560,23 @@ def variant_lookup_handler(request):
         _update_lookup_variant(variant, response, individual_guid_map, request.user)
 
     return create_json_response(response)
+
+
+def _cached_variant_lookup(user, variant_id, genome_version, sample_type, affected_only, hom_only):
+    cache_fields = ['variant_lookup_results', variant_id, genome_version]
+    if affected_only:
+        cache_fields.append('affected')
+    if hom_only:
+        cache_fields.append('hom')
+    cache_key = '__'.join(cache_fields)
+    variants = safe_redis_get_json(cache_key)
+    if variants:
+        return variants
+
+    variants = clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, affected_only, hom_only)
+
+    safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
+    return variants
 
 
 def _update_lookup_variant(variant, response, individual_guid_map, user):

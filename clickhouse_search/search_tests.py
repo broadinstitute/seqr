@@ -981,7 +981,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         response = self.client.get(export_url)
         self.assertEqual(response.status_code, 403)
 
-    @mock.patch('seqr.utils.search.utils.LiftOver')
+    @mock.patch('clickhouse_search.search.LiftOver')
     def test_variant_lookup(self, mock_liftover):
         mock_convert_coordinate = mock_liftover.return_value.convert_coordinate
         mock_convert_coordinate.side_effect = lambda chrom, pos: [(chrom, pos + 10000)]

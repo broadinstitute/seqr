@@ -17,23 +17,6 @@ logger = SeqrLogger(__name__)
 MAX_EXPORT_VARIANTS = 1000
 
 
-def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_only=False, hom_only=False):
-    cache_fields = ['variant_lookup_results', variant_id, genome_version]
-    if affected_only:
-        cache_fields.append('affected')
-    if hom_only:
-        cache_fields.append('hom')
-    cache_key = '__'.join(cache_fields)
-    variants = safe_redis_get_json(cache_key)
-    if variants:
-        return variants
-
-    variants = clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, affected_only, hom_only)
-
-    safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
-    return variants
-
-
 def _get_search_cache_key(search_model, sort=None):
     return 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
 
