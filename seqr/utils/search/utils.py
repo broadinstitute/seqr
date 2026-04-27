@@ -2,11 +2,8 @@ from collections import defaultdict
 from copy import deepcopy
 from datetime import timedelta
 
-from pyliftover.liftover import LiftOver
-
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
     get_sorted_search_results, clickhouse_variant_lookup, InvalidSearchException
-from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Sample, VariantSearchResults
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
@@ -141,32 +138,3 @@ def get_variant_query_gene_counts(search_model, user):
             for family_guid in var['familyGuids']:
                 gene_aggs[gene_id]['families'][family_guid] += 1
     return gene_aggs
-
-
-LIFTOVERS = {
-    GENOME_VERSION_GRCh38: None,
-    GENOME_VERSION_GRCh37: None,
-}
-PYLIFTOVER_BUILD_LOOKUP = {
-    GENOME_VERSION_GRCh38: ('hg19', 'hg38'),
-    GENOME_VERSION_GRCh37: ('hg38', 'hg19'),
-}
-def _get_liftover(genome_version):
-    if not LIFTOVERS[genome_version]:
-        try:
-            LIFTOVERS[genome_version] = LiftOver(*PYLIFTOVER_BUILD_LOOKUP[genome_version])
-        except Exception as e:
-            logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
-    return LIFTOVERS[genome_version]
-
-
-def run_liftover(genome_version, chrom, pos):
-    liftover = _get_liftover(genome_version)
-    if not liftover:
-        return None
-    lifted_coord = liftover.convert_coordinate(
-        'chr{}'.format(chrom.lstrip('chr')), int(pos)
-    )
-    if lifted_coord and lifted_coord[0]:
-        return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1])
-    return None
