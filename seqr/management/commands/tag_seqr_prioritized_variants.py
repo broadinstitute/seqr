@@ -240,6 +240,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': {
                 'splice_ai': 0.5,
             },

@@ -12,7 +12,7 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
-from reference_data.models import GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
     variant_lookup, export_variants
@@ -91,8 +91,11 @@ def _get_or_create_results_model(search_hash, search_context, user):
             raise Exception('Invalid search hash: {}'.format(search_hash))
 
         all_project_genome_version = _all_project_family_search_genome(search_context)
+        include_no_access_projects = search_context.get('includeNoAccessProjects')
         if all_project_genome_version:
             families = _all_genome_version_families(all_project_genome_version, user)
+            if not (families or include_no_access_projects):
+                raise Exception(f'No data available for genome version "{GENOME_VERSION_LOOKUP[all_project_genome_version]}"')
         elif search_context.get('projectFamilies'):
             all_families = set()
             for project_family in search_context['projectFamilies']:
@@ -113,7 +116,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
         search_dict = search_context.get('search', {})
         if search_context.get('previousSearchHash') and (search_dict.get('exclude') or {}).get('previousSearch'):
             search_dict['exclude']['previousSearchHash'] = search_context['previousSearchHash']
-        if search_context.get('includeNoAccessProjects'):
+        if include_no_access_projects:
             search_dict['no_access_project_genome_version'] = all_project_genome_version
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
             Q(created_by=user) | Q(name__isnull=False)).first()
@@ -148,7 +151,7 @@ def query_single_variant_handler(request, variant_id):
 
 def _process_variants(variants, families, request, add_all_context=False, add_locus_list_detail=False, genome_version=None):
     if not variants:
-        return {'searchedVariants': variants}
+        return {'searchedVariantIds': [], 'variantsById': {}}
 
     flat_variants = _flatten_variants(variants)
     variants_by_id = {v['variantId']: v for v in flat_variants}
@@ -157,7 +160,9 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
     response_json = get_variants_response(
         request, saved_variants, response_variants=flat_variants, add_all_context=add_all_context,
         add_locus_list_detail=add_locus_list_detail, genome_version=genome_version or families[0].project.genome_version)
-    response_json['searchedVariants'] = variants
+    response_json['searchedVariantIds'] = [
+        [v['variantId'] for v in variant] if isinstance(variant, list) else variant['variantId'] for variant in variants
+    ]
 
     for saved_variant in response_json['savedVariantsByGuid'].values():
         family_guids = saved_variant['familyGuids']
@@ -264,14 +269,14 @@ def export_variants_handler(request, search_hash):
             family_guid: saved_variant['variantGuid'] for family_guid in saved_variant['familyGuids']
         }
 
-    if any(len(variant['familyGuids']) > MAX_FAMILIES_PER_ROW for variant in variants):
+    if any(len(variant.get('familyGuids', [])) > MAX_FAMILIES_PER_ROW for variant in variants):
         split_variants = []
         for variant in variants:
-            if len(variant['familyGuids']) <= MAX_FAMILIES_PER_ROW:
+            if len(variant.get('familyGuids', [])) <= MAX_FAMILIES_PER_ROW:
                 split_variants.append(variant)
                 continue
 
-            num_split = ceil(len(variant['familyGuids']) / MAX_FAMILIES_PER_ROW)
+            num_split = ceil(len(variant.get('familyGuids', [])) / MAX_FAMILIES_PER_ROW)
             gens_per_row = ceil(len(variant['genotypes']) / num_split)
             gen_keys = sorted(variant['genotypes'].keys())
             for i in range(num_split):
@@ -283,15 +288,15 @@ def export_variants_handler(request, search_hash):
 
         variants = split_variants
 
-    max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
-    max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
+    max_families_per_variant = max([len(variant.get('familyGuids', [1])) for variant in variants])
+    max_samples_per_variant = max([len(variant.get('genotypes', {})) for variant in variants])
 
     rows = []
     for variant in variants:
         row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
 
         family_saved_variants = saved_variants_by_variant_family.get(variant['variantId'], {})
-        for family_guid in variant['familyGuids']:
+        for family_guid in variant.get('familyGuids', []):
             variant_guid = family_saved_variants.get(family_guid, '')
             family_tags = {
                 'family_id': family_ids_by_guid.get(family_guid),
@@ -299,9 +304,13 @@ def export_variants_handler(request, search_hash):
                 'notes': [note for note in json_saved_variants['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
             }
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
-        row += ['' for i in range(len(VARIANT_FAMILY_EXPORT_DATA) * (max_families_per_variant - len(variant['familyGuids'])))]
+        num_blank_cols = len(VARIANT_FAMILY_EXPORT_DATA) * (max_families_per_variant - len(variant.get('familyGuids', [])))
+        if 'familyGuids' not in variant:
+            row.append(f"{variant['numFamilies']} Families")
+            num_blank_cols -= 1
+        row += ['' for i in range(num_blank_cols)]
 
-        genotypes = [genotype for _, genotype in sorted(variant['genotypes'].items())]
+        genotypes = [genotype for _, genotype in sorted(variant.get('genotypes', {}).items())]
         for genotype in genotypes:
             row += [_get_field_value(genotype, config) for config in VARIANT_SAMPLE_DATA]
         row += ['' for i in range(len(VARIANT_SAMPLE_DATA) * (max_samples_per_variant - len(genotypes)))]
@@ -537,7 +546,6 @@ def variant_lookup_handler(request):
         request, saved_variants=saved_variants, response_variants=variants,
         add_all_context=True, add_locus_list_detail=True, genome_version=genome_version,
     )
-    response['variants'] = variants
 
     individual_guid_map = {
         (i['familyGuid'], i['individualId']): i['individualGuid'] for i in response['individualsByGuid'].values()

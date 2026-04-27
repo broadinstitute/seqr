@@ -216,7 +216,7 @@ export const getTaggedVariantsByFamily = createSelector(
   ).reduce((acc, variant) => {
     const { familyGuids, ...variantDetail } = variant
     variantDetail.tags = variant.tagGuids.map(tagGuid => variantTagsByGuid[tagGuid])
-    variantDetail.genes = Object.keys(variant.transcripts || {}).map(geneId => genesById[geneId])
+    variantDetail.genes = (variant.geneIds || []).map(geneId => genesById[geneId])
     familyGuids.forEach((familyGuid) => {
       if (!acc[familyGuid]) {
         acc[familyGuid] = []

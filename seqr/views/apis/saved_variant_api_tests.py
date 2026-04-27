@@ -1,4 +1,3 @@
-from copy import deepcopy
 import json
 import mock
 
@@ -12,7 +11,7 @@ from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_DETAIL_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
     TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
-    FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, AnvilAuthenticationTestCase
+    FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_FIELDS, AnvilAuthenticationTestCase
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -27,7 +26,7 @@ COMPOUND_HET_2_GUID = 'SV0059957_11562437_f019313_1'
 GENE_GUID_2 = 'ENSG00000197530'
 
 VARIANT_TAG_RESPONSE_KEYS = {
-    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid',
+    'variantTagsByGuid', 'variantNotesByGuid', 'variantFunctionalDataByGuid', 'savedVariantsByGuid', 'variantsById',
 }
 SAVED_VARIANT_RESPONSE_KEYS = {
     *VARIANT_TAG_RESPONSE_KEYS, 'familiesByGuid', 'omimIntervals', 'totalSampleCounts',
@@ -158,12 +157,12 @@ class SavedVariantAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
 
-        variants = response_json['savedVariantsByGuid']
-        self.assertSetEqual(set(variants.keys()), {'SV0000002_1248367227_r0390_100', VARIANT_GUID})
+        saved_variants = response_json['savedVariantsByGuid']
+        self.assertSetEqual(set(saved_variants.keys()), {'SV0000002_1248367227_r0390_100', VARIANT_GUID})
 
-        variant = variants[VARIANT_GUID]
-        fields = {*SAVED_VARIANT_DETAIL_FIELDS, 'key', 'mainTranscriptId'}
-        self.assertSetEqual(set(variants['SV0000002_1248367227_r0390_100'].keys()), fields)
+        variant = saved_variants[VARIANT_GUID]
+        fields = {*SAVED_VARIANT_FIELDS, 'tagGuids', 'functionalDataGuids', 'noteGuids'}
+        self.assertSetEqual(set(saved_variants['SV0000002_1248367227_r0390_100'].keys()), fields)
         self.assertSetEqual(set(variant.keys()), {*fields, 'mmeSubmissions'})
         self.assertListEqual(variant['familyGuids'], ['F000001_1'])
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
@@ -174,6 +173,14 @@ class SavedVariantAPITest(object):
         self.assertListEqual(variant['mmeSubmissions'], [
             {'geneId': 'ENSG00000135953', 'submissionGuid': 'MS000001_na19675', 'variantGuid': VARIANT_GUID}
         ])
+
+        variants = response_json['variantsById']
+        self.assertSetEqual(set(variants.keys()), {'1-248367227-TC-T', '21-3343353-GAGA-G'})
+        variant = variants['21-3343353-GAGA-G']
+        variant_fields = {*SAVED_VARIANT_DETAIL_FIELDS, 'mainTranscriptId'}
+        self.assertSetEqual(set(variant.keys()), variant_fields)
+        self.assertListEqual(variant['familyGuids'], ['F000001_1'])
+        self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
 
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
         self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
@@ -317,11 +324,12 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
-        variants = response_json['savedVariantsByGuid']
         self.assertSetEqual(
-            set(variants.keys()),
+            set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000002_1248367227_r0390_100', VARIANT_GUID}
         )
+        variants = response_json['variantsById']
+        self.assertSetEqual(set(variants.keys()), {'1-248367227-TC-T', '21-3343353-GAGA-G'})
         discovery_tags = [{
             'savedVariant': {
                 'variantGuid': 'SV0000006_1248367227_r0003_tes',
@@ -337,8 +345,8 @@ class SavedVariantAPITest(object):
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,
         }]
-        self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], discovery_tags)
-        self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['familyGuids'], ['F000002_2'])
+        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], discovery_tags)
+        self.assertListEqual(variants['1-248367227-TC-T']['familyGuids'], ['F000002_2'])
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000012_12'})
         self.assertSetEqual(set(response_json['familiesByGuid']['F000012_12'].keys()), FAMILY_FIELDS)
         self.assertDictEqual(response_json['familiesByGuid']['F000001_1'], {'tpmGenes': ['ENSG00000135953']})
@@ -348,12 +356,10 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), family_context_response_keys)
-        self.assertSetEqual(
-            set(response_json['savedVariantsByGuid'].keys()),
-            {'SV0000002_1248367227_r0390_100', 'SV0000001_2103343353_r0390_100'}
-        )
-        self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['discoveryTags'], discovery_tags)
-        self.assertListEqual(variants['SV0000002_1248367227_r0390_100']['familyGuids'], ['F000002_2'])
+        variants = response_json['variantsById']
+        self.assertSetEqual(set(variants.keys()), {'1-248367227-TC-T', '21-3343353-GAGA-G'})
+        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], discovery_tags)
+        self.assertListEqual(variants['1-248367227-TC-T']['familyGuids'], ['F000002_2'])
         self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2', 'F000012_12'})
 
         # Test empty project
@@ -373,8 +379,9 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals'})
-        self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()), {
-            *fields, 'discoveryTags', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
+        self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()), fields)
+        self.assertSetEqual(set(response_json['variantsById']['1-248367227-TC-T'].keys()), {
+            *variant_fields, 'discoveryTags', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
         })
 
     def test_create_saved_variant(self):
@@ -402,15 +409,15 @@ class SavedVariantAPITest(object):
         )
 
         variant_json = {
-            **CREATE_VARIANT_JSON,
+            **{k: v for k, v in CREATE_VARIANT_JSON.items() if k in SAVED_VARIANT_FIELDS},
             'variantGuid': variant_guid,
             'familyGuids': ['F000001_1'],
             'acmgClassification': None,
             'selectedMainTranscriptId': None,
             'noteGuids': [],
             'functionalDataGuids': [],
-            'transcripts': mock.ANY,
-            'mainTranscriptId': mock.ANY,
+            'geneIds': ['ENSG00000277258', 'ENSG00000177000'],
+            'svType': None,
         }
         response_json = response.json()
         response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
@@ -481,7 +488,9 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {*VARIANT_TAG_RESPONSE_KEYS, 'genesById'})
+        response_keys = {*VARIANT_TAG_RESPONSE_KEYS, 'genesById'}
+        response_keys.remove('variantsById')
+        self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 1)
         variant_guid = next(iter(response_json['savedVariantsByGuid']))
 
@@ -489,7 +498,8 @@ class SavedVariantAPITest(object):
         self._assert_created_variant(saved_variant, variant_json, dataset_type='SV_WES', sv_type='DUP', gene_ids=['ENSG00000240361'])
         self.assertEqual(saved_variant.xpos_end, 2061414175)
 
-        variant_json.update({
+        expected_variant_json = {
+            **{k: v for k, v in variant_json.items() if k in SAVED_VARIANT_FIELDS},
             'variantGuid': variant_guid,
             'familyGuids': ['F000001_1'],
             'alt': None,
@@ -497,10 +507,11 @@ class SavedVariantAPITest(object):
             'selectedMainTranscriptId': None,
             'tagGuids': [],
             'functionalDataGuids': [],
-        })
+            'geneIds': ['ENSG00000240361'],
+        }
         response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
         notes = [response_json['variantNotesByGuid'][note_guid] for note_guid in response_variant_json.pop('noteGuids')]
-        self.assertDictEqual(variant_json, response_variant_json)
+        self.assertDictEqual(expected_variant_json, response_variant_json)
         self.assertListEqual(['A promising SV'], [note['note'] for note in notes])
         self.assertDictEqual(response_json['genesById'], {'ENSG00000240361': {'notes': [mock.ANY]}})
         self.assertEqual(response_json['genesById']['ENSG00000240361']['notes'][0]['note'], 'A promising SV')
@@ -537,17 +548,17 @@ class SavedVariantAPITest(object):
             'selectedMainTranscriptId': None,
             'noteGuids': [],
             'functionalDataGuids': [],
-            'predictions': mock.ANY,
-            'populations': mock.ANY,
+            'geneIds': [],
+            'svType': None,
         }
         expected_compound_het_3_json = {
             'variantGuid': new_compound_het_3_guid,
-            **COMPOUND_HET_3_JSON,
+            **{k: v for k, v in COMPOUND_HET_3_JSON.items() if k in SAVED_VARIANT_FIELDS},
             **expected_json,
         }
         expected_compound_het_4_json = {
             'variantGuid': new_compound_het_4_guid,
-            **COMPOUND_HET_4_JSON,
+            **{k: v for k, v in COMPOUND_HET_4_JSON.items() if k in SAVED_VARIANT_FIELDS},
             **expected_json,
         }
         response_json = response.json()
@@ -617,8 +628,9 @@ class SavedVariantAPITest(object):
             'key': None,
             'noteGuids': [],
             'functionalDataGuids': [],
+            'geneIds': mock.ANY,
+            'svType': None,
         }
-        variant_json.update(base_variant_json)
         response_json = response.json()
         response_variant_json = response_json['savedVariantsByGuid'][variant_guid]
         tag_guids = response_variant_json.pop('tagGuids')
@@ -626,7 +638,7 @@ class SavedVariantAPITest(object):
         tag = response_json['variantTagsByGuid'][tag_guids[0]]
         self.assertEqual('Review', tag['name'])
         self.assertListEqual([variant_guid], tag['variantGuids'])
-        self.assertDictEqual(variant_json, response_variant_json)
+        self.assertDictEqual({**{k: v for k, v in variant_json.items() if k in SAVED_VARIANT_FIELDS}, **base_variant_json}, response_variant_json)
 
         # Create manual SV
         manual_variant_request_body = {
@@ -661,13 +673,15 @@ class SavedVariantAPITest(object):
         }
         self._assert_created_variant(saved_sv_variant, sv_variant_json, gene_ids=['ENSG00000240361'], dataset_type='SV', sv_type='DEL', has_saved_variant_json=True)
 
-        sv_variant_json.update(base_variant_json)
-        sv_variant_json.update({
+        sv_variant_json = {
+            **{k: v for k, v in sv_variant_json.items() if k in SAVED_VARIANT_FIELDS},
+            **base_variant_json,
             'variantGuid': sv_variant_guid,
             'tagGuids': [mock.ANY],
             'ref': None,
             'alt': None,
-        })
+            'svType': 'DEL',
+        }
         response_json = response.json()
         response_variant_json = response_json['savedVariantsByGuid'][sv_variant_guid]
         self.assertDictEqual(sv_variant_json, response_variant_json)
@@ -787,13 +801,13 @@ class SavedVariantAPITest(object):
         self._assert_created_variant(saved_compound_het_5, COMPOUND_HET_4_JSON)
 
         expected_compound_het_5_json = {
-            **COMPOUND_HET_4_JSON,
+            **{k: v for k, v in COMPOUND_HET_4_JSON.items() if k in SAVED_VARIANT_FIELDS},
             'variantGuid': compound_het_5_guid,
             'selectedMainTranscriptId': None,
             'tagGuids': [],
             'functionalDataGuids': [],
-            'predictions': mock.ANY,
-            'populations': mock.ANY,
+            'geneIds': [],
+            'svType': None,
         }
         response_json = response.json()
         response_compound_het_5_json = response_json['savedVariantsByGuid'][compound_het_5_guid]
@@ -1103,7 +1117,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(len(saved_variants), 1)
         self.assertEqual(saved_variants.first().selected_main_transcript_id, transcript_id)
         self.assertDictEqual(saved_variants.first().main_transcript, transcript)
-        self.assertEqual(get_json_for_saved_variants(saved_variants, add_details=True)[0]['selectedMainTranscriptId'], transcript_id)
+        self.assertEqual(get_json_for_saved_variants(saved_variants)[0]['selectedMainTranscriptId'], transcript_id)
 
     def test_update_variant_acmg_classification(self):
         update_variant_acmg_classification_url = reverse(update_variant_acmg_classification_handler, args=[VARIANT_GUID])
