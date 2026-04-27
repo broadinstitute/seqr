@@ -367,8 +367,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_all_project_search(self):
-        self.login_collaborator()
         request_body = {'allGenomeProjectFamilies': '38'}
+        self._assert_expected_search_error(
+            'No data available for genome version "GRCh38"', request_body=request_body, check_login=self.check_require_login,
+        )
+
+        self.login_collaborator()
         project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': [
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13',
