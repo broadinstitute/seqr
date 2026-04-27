@@ -74,6 +74,15 @@ def query_variants_handler(request, search_hash):
     return create_json_response(response)
 
 
+def _get_variants_with_cache(get_cache_key, get_variants, *args, **kwargs):
+    cache_key = get_cache_key(*args, **kwargs)
+    variants = safe_redis_get_json(cache_key)
+    if not variants:
+        variants = get_variants(*args, **kwargs)
+        safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
+    return variants
+
+
 def _all_project_family_search_genome(search_context):
     return (search_context or {}).get('allGenomeProjectFamilies')
 
@@ -534,7 +543,10 @@ def variant_lookup_handler(request):
     variant_id = request.GET.get('variantId')
     genome_version = request.GET.get('genomeVersion') or GENOME_VERSION_GRCh38
     bool_kwargs = {_to_snake_case(field): bool(request.GET.get(field)) for field in ['affectedOnly', 'homOnly']}
-    variants = _cached_variant_lookup(request.user, variant_id, genome_version, sample_type=request.GET.get('sampleType'), **bool_kwargs)
+    variants = _get_variants_with_cache(
+        _get_lookup_cache_key, clickhouse_variant_lookup,
+        request.user, variant_id, sample_type=request.GET.get('sampleType'), genome_version=genome_version, **bool_kwargs,
+    )
 
     family_guids = set()
     for variant in variants:
@@ -562,21 +574,13 @@ def variant_lookup_handler(request):
     return create_json_response(response)
 
 
-def _cached_variant_lookup(user, variant_id, genome_version, sample_type, affected_only, hom_only):
+def _get_lookup_cache_key(user, variant_id, sample_type, genome_version, affected_only, hom_only):
     cache_fields = ['variant_lookup_results', variant_id, genome_version]
     if affected_only:
         cache_fields.append('affected')
     if hom_only:
         cache_fields.append('hom')
-    cache_key = '__'.join(cache_fields)
-    variants = safe_redis_get_json(cache_key)
-    if variants:
-        return variants
-
-    variants = clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, affected_only, hom_only)
-
-    safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
-    return variants
+    return '__'.join(cache_fields)
 
 
 def _update_lookup_variant(variant, response, individual_guid_map, user):
