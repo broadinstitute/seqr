@@ -17,13 +17,6 @@ logger = SeqrLogger(__name__)
 MAX_EXPORT_VARIANTS = 1000
 
 
-def get_single_variant(families, variant_id, user):
-    variants = get_clickhouse_variants(families, user, raw_variant_items=variant_id, variant_ids=[variant_id])
-    if not variants:
-        raise InvalidSearchException('Variant {} not found'.format(variant_id))
-    return format_clickhouse_results(variants)[0]
-
-
 def variant_lookup(user, variant_id, genome_version, sample_type=None, affected_only=False, hom_only=False):
     cache_fields = ['variant_lookup_results', variant_id, genome_version]
     if affected_only:
@@ -75,7 +68,7 @@ def query_variants(search_model, sort, page, num_results, user):
         sort = PATHOGENICTY_HGMD_SORT_KEY
     all_results = _query_variants(search_model, user, sort=sort or XPOS_SORT_KEY)
 
-    results_page = format_clickhouse_results(all_results[(page-1)*num_results:page*num_results])
+    results_page = all_results[(page-1)*num_results:page*num_results]
 
     return results_page, len(all_results)
 

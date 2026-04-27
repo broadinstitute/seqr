@@ -12,11 +12,12 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
+from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
+    get_sorted_search_results, clickhouse_variant_lookup, InvalidSearchException
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
-from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
+from seqr.utils.search.utils import query_variants, get_variant_query_gene_counts, \
     variant_lookup, export_variants
-from seqr.utils.search.utils import InvalidSearchException
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.utils.logging_utils import SeqrLogger
@@ -142,9 +143,11 @@ def query_single_variant_handler(request, variant_id):
     family = families.first()
     check_project_permissions(family.project, request.user)
 
-    variant = get_single_variant(families, variant_id, request.user)
+    variants = get_clickhouse_variants(families, request.user, raw_variant_items=variant_id, variant_ids=[variant_id])
+    if not variants:
+        raise InvalidSearchException('Variant {} not found'.format(variant_id))
 
-    response = _process_variants([variant], families, request, add_all_context=True, add_locus_list_detail=True)
+    response = _process_variants(variants, families, request, add_all_context=True, add_locus_list_detail=True)
 
     return create_json_response(response)
 
@@ -153,6 +156,7 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
     if not variants:
         return {'searchedVariantIds': [], 'variantsById': {}}
 
+    variants = format_clickhouse_results(variants)
     flat_variants = _flatten_variants(variants)
     variants_by_id = {v['variantId']: v for v in flat_variants}
     saved_variants = _get_saved_variant_models(flat_variants)
