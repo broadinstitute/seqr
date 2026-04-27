@@ -11,7 +11,7 @@ from seqr.models import Individual, Project, RnaSample, RnaSeqOutlier, RnaSeqTpm
 from seqr.utils.file_utils import file_iter, is_google_bucket_file_path, run_gsutil_with_wait
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.add_data_utils import basic_notify_search_data_loaded
+from seqr.utils.add_data_utils import basic_notify_search_data_loaded
 from seqr.utils.xpos_utils import format_chrom
 from seqr.views.utils.file_utils import parse_file, get_temp_file_path, persist_temp_file
 from seqr.views.utils.json_utils import _to_snake_case, _to_camel_case

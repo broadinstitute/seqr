@@ -7,7 +7,7 @@ from clickhouse_search.models.postgres_dicts import SexDict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Sample, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.add_data_utils import trigger_rebuild_gt_stats
+from seqr.utils.add_data_utils import trigger_rebuild_gt_stats
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json, \
     update_family_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
