@@ -222,7 +222,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         url = reverse(export_variants_handler, args=[search_hash])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertListEqual([line.split('\t') for line in response.content.decode().strip().split('\n')], export_data)
+        self.assertListEqual([line.split('\t') for line in response.content.decode().strip('\n').split('\n')], export_data)
 
     def _assert_expected_search_error(self, error, **kwargs):
         response, search_hash, _ = self._execute_search(**kwargs)
@@ -365,8 +365,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_all_project_search(self):
-        self.login_collaborator()
         request_body = {'allGenomeProjectFamilies': '38'}
+        self._assert_expected_search_error(
+            'No data available for genome version "GRCh38"', request_body=request_body, check_login=self.check_require_login,
+        )
+
+        self.login_collaborator()
         project_families = [{'projectGuid': 'R0001_1kg', 'familyGuids': [
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13',
@@ -1056,8 +1060,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             },
             'I2_F0_1-10439-AC-A': {
                 'affected': 'A', 'familyGuid': 'F0_1-10439-AC-A', 'individualGuid': 'I2_F0_1-10439-AC-A', 'sex': 'X0',
-                'features': [{'category': 'HP:0000707', 'label': '1 terms'},
-                             {'category': 'HP:0001626', 'label': '1 terms'}],
+                'features': [{'category': 'HP:0000707', 'label': 'Morphological abnormality of the central nervous system', 'id': 'HP:0002011'},
+                             {'category': 'HP:0001626', 'label': 'Arrhythmia', 'id': 'HP:0011675'}],
                 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
             },
         }
@@ -1130,8 +1134,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             },
             'I2_F0_suffix_140608_DUP': {
                 'affected': 'A', 'familyGuid': 'F0_suffix_140608_DUP', 'individualGuid': 'I2_F0_suffix_140608_DUP',
-                'features': [{'category': 'HP:0000707', 'label': '1 terms'},
-                             {'category': 'HP:0001626', 'label': '1 terms'}],
+                'features': [{'category': 'HP:0000707', 'label': 'Morphological abnormality of the central nervous system', 'id': 'HP:0002011'},
+                             {'category': 'HP:0001626', 'label': 'Arrhythmia', 'id': 'HP:0011675'}],
                 'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
             },
         }
@@ -2151,7 +2155,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search(
             [variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
-            annotations=annotations, freqs=freqs, locus=locus, project_families=[],
+            annotations=annotations, freqs=freqs, locus=locus, project_families=[], export_data=[
+                EXPORT_DATA[0][:27], EXPORT_DATA[4][:24] + ['3 Families', '', ''],
+            ],
         )
 
         freqs = {'callset': freqs['callset']}

@@ -944,10 +944,14 @@ def family_metadata(request, project_guid):
             for data_type, analysed in analysed_by_family_type[family_id].items()
         ]
         inheritance_models = f.pop('inheritance_models', [])
+        family_structure = _get_family_structure(
+            sum(1 for individual in individuals_by_id.values() if individual.get('date_data_generation')),
+            sum(1 for id in known_ids.values() if individuals_by_id.get(id, {}).get('date_data_generation')),
+        )
         f.update({
             'individual_count': len(individuals_by_id),
             'other_individual_ids':  '; '.join(sorted(individuals_ids)),
-            'family_structure': _get_family_structure(len(individuals_by_id), sum(1 for id in known_ids.values() if id)),
+            'family_structure': family_structure,
             'data_type': earliest_sample.get('data_type'),
             'date_data_generation': earliest_sample.get('date_data_generation'),
             'genes': '; '.join(sorted(f.get('genes', []))),

@@ -6,12 +6,11 @@ from django.db.models import Q
 from django.db.models.functions import JSONObject
 import json
 
-from clickhouse_search.search import get_clickhouse_variants, ENTRY_CLASS_MAP
+from clickhouse_search.search import get_clickhouse_variants, get_search_genes, ENTRY_CLASS_MAP
 from panelapp.models import PaLocusListGene
 from reference_data.models import GENOME_VERSION_GRCh38
 from seqr.models import Project, Family, Individual, Dataset, LocusList
 from seqr.utils.communication_utils import send_project_notification
-from seqr.utils.gene_utils import get_genes
 from clickhouse_search.constants import ANY_AFFECTED, HOMOZYGOUS_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED, DE_NOVO, COMPOUND_HET
 from seqr.views.utils.json_utils import DjangoJSONEncoderWithSets
 from seqr.views.utils.orm_to_json_utils import SEQR_TAG_TYPE
@@ -240,6 +239,7 @@ SEARCHES = {
             'family_filter': {
                 CONFIRMED_FAMILY_FILTER: True
             },
+            'inheritance': {'mode': COMPOUND_HET},
             'annotations': {
                 'splice_ai': 0.5,
             },
@@ -474,7 +474,7 @@ class Command(BaseCommand):
             family_guid_map[guid] = db_id
             family_name_map[db_id] = family_id
 
-        exclude_genes = get_genes(EXCLUDE_GENE_IDS, genome_version=GENOME_VERSION_GRCh38)
+        exclude_genes = get_search_genes(EXCLUDE_GENE_IDS, genome_version=GENOME_VERSION_GRCh38)
         gene_by_moi = defaultdict(dict)
         for gene_list in GENE_LISTS:
             self._get_gene_list_genes(gene_list['name'], gene_list['confidences'], gene_by_moi, exclude_genes.keys())
@@ -486,7 +486,7 @@ class Command(BaseCommand):
         for dataset_type, searches in SEARCHES.items():
             self._run_dataset_type_searches(
                 dataset_type, searches, sample_qs, updates, search_counts, samples_by_dataset_type, family_guid_map,
-                project, exclude_genes, gene_by_moi,
+                project, list(exclude_genes.values()), gene_by_moi,
             )
 
         self._run_multi_data_type_comp_het_search(
@@ -516,7 +516,7 @@ class Command(BaseCommand):
         )
 
     @classmethod
-    def _run_dataset_type_searches(cls, dataset_type, searches, sample_qs, updates, search_counts, samples_by_dataset_type, family_guid_map, project, exclude_genes, gene_by_moi):
+    def _run_dataset_type_searches(cls, dataset_type, searches, sample_qs, updates, search_counts, samples_by_dataset_type, family_guid_map, project, exclude_intervals, gene_by_moi):
         is_sv = dataset_type == Dataset.DATASET_TYPE_SV_CALLS
         sample_qs = sample_qs.filter(active_datasets__dataset_type=dataset_type)
         if is_sv:
@@ -544,14 +544,15 @@ class Command(BaseCommand):
         logger.info(f'Searching for prioritized {dataset_type} variants in {len(samples_by_family)} families in project {project.name}')
         for search_name, config_search in searches.items():
             logger.info(f'Searching for criteria: {search_name}')
-            exclude_locations = not config_search.get('gene_list_moi')
-            search_genes = exclude_genes if exclude_locations else gene_by_moi[config_search['gene_list_moi']]
+            search_genes = gene_by_moi[config_search['gene_list_moi']] if config_search.get('gene_list_moi') else None
+            if search_genes:
+                exclude_intervals = None
             sample_data = cls._get_valid_family_sample_data(
                 project, sample_type, samples_by_family, config_search.get('family_filter'),
             )
             num_results = cls._execute_search(
                 {dataset_type: sample_data}, search_name, family_variant_data, family_guid_map,
-                exclude_locations=exclude_locations, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
+                exclude_intervals=exclude_intervals, genes=search_genes, **config_search, **ALL_SEARCHES_CRITERIA,
             ) if sample_data['num_families'] else 0
             search_counts[search_name] = num_results
 
@@ -698,7 +699,7 @@ class Command(BaseCommand):
         ]).values('gene_id', 'is_dominant', 'is_recessive', 'is_mito')
 
         gene_id_mois = {g['gene_id']: g for g in moi_gene_ids}
-        genes_by_id = get_genes(gene_id_mois.keys(), genome_version=GENOME_VERSION_GRCh38, additional_model_fields=['id'])
+        genes_by_id = get_search_genes(gene_id_mois.keys(), genome_version=GENOME_VERSION_GRCh38)
         gene_by_moi[DOMINANT_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_recessive']})
         gene_by_moi[RECESSIVE_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if not gene_id_mois[gene_id]['is_dominant']})
         gene_by_moi[MITO_MOI].update({gene_id: gene for gene_id, gene in genes_by_id.items() if gene_id_mois[gene_id]['is_mito']})

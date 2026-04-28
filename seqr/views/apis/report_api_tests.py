@@ -1294,6 +1294,28 @@ class ReportAPITest(AirtableTest):
             'known_condition_name': '',
             'condition_inheritance': 'Unknown',
         })
+        test_no_data_row = next(r for r in response_json['rows'] if r['familyGuid'] == 'F000009_9')
+        self.assertDictEqual(test_no_data_row, {
+            'projectGuid': 'R0001_1kg',
+            'internal_project_id': '1kg project nåme with uniçøde',
+            'familyGuid': 'F000009_9',
+            'family_id': '9',
+            'displayName': '9',
+            'solve_status': 'Unsolved',
+            'actual_inheritance': '',
+            'date_data_generation': None,
+            'data_type': None,
+            'other_individual_ids': 'NA20878',
+            'individual_count': 1,
+            'family_structure': 'other',
+            'genes': '',
+            'pmid_id': None,
+            'phenotype_description': None,
+            'analysisStatus': 'Q',
+            'analysis_groups': '',
+            'analysed_by': '',
+            'consanguinity': 'Unknown',
+        })
 
         # Test empty project
         empty_project_url = reverse(family_metadata, args=['R0002_empty'])

@@ -12,7 +12,7 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
-from reference_data.models import GENOME_VERSION_GRCh38
+from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Dataset
 from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
     variant_lookup, export_variants
@@ -91,8 +91,11 @@ def _get_or_create_results_model(search_hash, search_context, user):
             raise Exception('Invalid search hash: {}'.format(search_hash))
 
         all_project_genome_version = _all_project_family_search_genome(search_context)
+        include_no_access_projects = search_context.get('includeNoAccessProjects')
         if all_project_genome_version:
             families = _all_genome_version_families(all_project_genome_version, user)
+            if not (families or include_no_access_projects):
+                raise Exception(f'No data available for genome version "{GENOME_VERSION_LOOKUP[all_project_genome_version]}"')
         elif search_context.get('projectFamilies'):
             all_families = set()
             for project_family in search_context['projectFamilies']:
@@ -113,7 +116,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
         search_dict = search_context.get('search', {})
         if search_context.get('previousSearchHash') and (search_dict.get('exclude') or {}).get('previousSearch'):
             search_dict['exclude']['previousSearchHash'] = search_context['previousSearchHash']
-        if search_context.get('includeNoAccessProjects'):
+        if include_no_access_projects:
             search_dict['no_access_project_genome_version'] = all_project_genome_version
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
             Q(created_by=user) | Q(name__isnull=False)).first()
@@ -266,14 +269,14 @@ def export_variants_handler(request, search_hash):
             family_guid: saved_variant['variantGuid'] for family_guid in saved_variant['familyGuids']
         }
 
-    if any(len(variant['familyGuids']) > MAX_FAMILIES_PER_ROW for variant in variants):
+    if any(len(variant.get('familyGuids', [])) > MAX_FAMILIES_PER_ROW for variant in variants):
         split_variants = []
         for variant in variants:
-            if len(variant['familyGuids']) <= MAX_FAMILIES_PER_ROW:
+            if len(variant.get('familyGuids', [])) <= MAX_FAMILIES_PER_ROW:
                 split_variants.append(variant)
                 continue
 
-            num_split = ceil(len(variant['familyGuids']) / MAX_FAMILIES_PER_ROW)
+            num_split = ceil(len(variant.get('familyGuids', [])) / MAX_FAMILIES_PER_ROW)
             gens_per_row = ceil(len(variant['genotypes']) / num_split)
             gen_keys = sorted(variant['genotypes'].keys())
             for i in range(num_split):
@@ -285,15 +288,15 @@ def export_variants_handler(request, search_hash):
 
         variants = split_variants
 
-    max_families_per_variant = max([len(variant['familyGuids']) for variant in variants])
-    max_samples_per_variant = max([len(variant['genotypes']) for variant in variants])
+    max_families_per_variant = max([len(variant.get('familyGuids', [1])) for variant in variants])
+    max_samples_per_variant = max([len(variant.get('genotypes', {})) for variant in variants])
 
     rows = []
     for variant in variants:
         row = [_get_field_value(variant, config) for config in VARIANT_EXPORT_DATA]
 
         family_saved_variants = saved_variants_by_variant_family.get(variant['variantId'], {})
-        for family_guid in variant['familyGuids']:
+        for family_guid in variant.get('familyGuids', []):
             variant_guid = family_saved_variants.get(family_guid, '')
             family_tags = {
                 'family_id': family_ids_by_guid.get(family_guid),
@@ -301,9 +304,13 @@ def export_variants_handler(request, search_hash):
                 'notes': [note for note in json_saved_variants['variantNotesByGuid'].values() if variant_guid in note['variantGuids']],
             }
             row += [_get_field_value(family_tags, config) for config in VARIANT_FAMILY_EXPORT_DATA]
-        row += ['' for i in range(len(VARIANT_FAMILY_EXPORT_DATA) * (max_families_per_variant - len(variant['familyGuids'])))]
+        num_blank_cols = len(VARIANT_FAMILY_EXPORT_DATA) * (max_families_per_variant - len(variant.get('familyGuids', [])))
+        if 'familyGuids' not in variant:
+            row.append(f"{variant['numFamilies']} Families")
+            num_blank_cols -= 1
+        row += ['' for i in range(num_blank_cols)]
 
-        genotypes = [genotype for _, genotype in sorted(variant['genotypes'].items())]
+        genotypes = [genotype for _, genotype in sorted(variant.get('genotypes', {}).items())]
         for genotype in genotypes:
             row += [_get_field_value(genotype, config) for config in VARIANT_SAMPLE_DATA]
         row += ['' for i in range(len(VARIANT_SAMPLE_DATA) * (max_samples_per_variant - len(genotypes)))]
@@ -556,6 +563,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
         for i in Individual.objects.filter(family__guid__in=no_access_families).values(
             'family__guid', 'individual_id', 'affected', 'sex', 'features', 'guid',
             vlmContactEmail=F('family__project__vlm_contact_email'),
+            restrict_sharing=F('family__project__restrict_sharing'),
         )
     }
     add_individual_hpo_details([i for _, i in individual_summary_map.values()])
@@ -591,17 +599,20 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
                 continue
             individual_guid = f'I{j}_{family_guid}'
             individual_guid_map[unmapped_individual_guid] = individual_guid
-            feature_category_count = defaultdict(int)
-            for feature in individual['features'] or []:
-                feature_category_count[feature.get('category', 'Other')] += 1
+            features = individual['features'] or []
+            if individual.pop('restrict_sharing'):
+                feature_category_count = defaultdict(int)
+                for feature in features:
+                    feature_category_count[feature.get('category', 'Other')] += 1
+                features = [
+                    {'category': category, 'label': f'{count} terms'}
+                    for category, count in feature_category_count.items()
+                ]
             response['individualsByGuid'][individual_guid] = {
                 **individual,
                 'familyGuid': family_guid,
                 'individualGuid': individual_guid,
-                'features': [
-                    {'category': category, 'label': f'{count} terms'}
-                    for category, count in feature_category_count.items()
-                ],
+                'features': features,
             }
             variant['genotypes'][individual_guid] = genotype
 

@@ -63,6 +63,7 @@
     "workspace_namespace": "my-seqr-billing",
 	"is_mme_enabled": true,
     "is_demo": true,
+    "restrict_sharing": true,
 	"mme_primary_data_owner": "",
     "mme_contact_url": "mailto:seqr-test@gmail.com,test@broadinstitute.org",
     "vlm_contact_email": "seqr-test@gmail.com,test@broadinstitute.org",
