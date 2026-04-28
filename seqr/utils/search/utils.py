@@ -14,16 +14,6 @@ from seqr.views.utils.permissions_utils import user_is_analyst
 logger = SeqrLogger(__name__)
 
 
-MAX_EXPORT_VARIANTS = 1000
-
-
-def export_variants(search_model, user):
-    search_results = _query_variants(search_model, user)
-    total_variants = len(search_results)
-    if total_variants > MAX_EXPORT_VARIANTS:
-        raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
-    return format_clickhouse_export_results(search_results)
-
 
 def _get_clickhouse_exclude_keys(search_hash, user):
     previous_search_model = VariantSearchResults.objects.get(search_hash=search_hash)
@@ -48,17 +38,3 @@ def variant_dataset_type(variant):
         return f'{Sample.DATASET_TYPE_SV_CALLS}_{sample_type}'
     return Sample.DATASET_TYPE_MITO_CALLS if 'mitomapPathogenic' in variant else Sample.DATASET_TYPE_VARIANT_CALLS
 
-
-def get_variant_query_gene_counts(search_model, user):
-    results = _query_variants(search_model, user)
-    flat_variants = [
-        v for variants in results for v in (variants if isinstance(variants, list) else [variants])
-    ]
-    gene_aggs = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
-    for var in flat_variants:
-        gene_ids = var['transcripts'].keys() if 'transcripts' in var else {t['geneId'] for t in var['sortedTranscriptConsequences']}
-        for gene_id in gene_ids:
-            gene_aggs[gene_id]['total'] += 1
-            for family_guid in var['familyGuids']:
-                gene_aggs[gene_id]['families'][family_guid] += 1
-    return gene_aggs

@@ -18,8 +18,6 @@ from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_
     get_sorted_search_results, clickhouse_variant_lookup, InvalidSearchException
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
-from seqr.utils.search.utils import get_variant_query_gene_counts, \
-    export_variants
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.utils.logging_utils import SeqrLogger
@@ -69,7 +67,7 @@ def query_variants_handler(request, search_hash):
     _check_results_permission(results_model, request.user)
 
     all_variants = _get_variants_with_cache(
-        _get_search_cache_key, _query_variants, results_model, request.user, sort,
+        _get_search_cache_key, _query_variants, results_model, request.user, sort=sort,
     )
     variants = all_variants[(page-1)*per_page:page*per_page]
 
@@ -90,11 +88,11 @@ def _get_variants_with_cache(get_cache_key, get_variants, *args, **kwargs):
     return variants
 
 
-def _get_search_cache_key(results_model, user, sort):
-    return 'search_results__{}__{}'.format(results_model.guid, sort or XPOS_SORT_KEY)
+def _get_search_cache_key(results_model, user, sort=XPOS_SORT_KEY):
+    return 'search_results__{}__{}'.format(results_model.guid, sort)
 
 
-def _query_variants(results_model, user, sort):
+def _query_variants(results_model, user, sort=XPOS_SORT_KEY):
     families = results_model.families.all()
     wildcard_cache_key = _get_search_cache_key(results_model, user, sort='*')
     unsorted_variants = safe_redis_get_wildcard_json(wildcard_cache_key)
@@ -276,6 +274,7 @@ VARIANT_SAMPLE_DATA = [
     {'header': 'ab'},
 ]
 
+MAX_EXPORT_VARIANTS = 1000
 MAX_FAMILIES_PER_ROW = 1000
 
 
@@ -284,7 +283,19 @@ def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
     projects = _check_results_permission(results_model, request.user)
 
-    gene_counts = get_variant_query_gene_counts(results_model, user=request.user)
+    results = _get_variants_with_cache(_get_search_cache_key, _query_variants, results_model, request.user)
+    flat_variants = [
+        v for variants in results for v in (variants if isinstance(variants, list) else [variants])
+    ]
+    gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+    for var in flat_variants:
+        gene_ids = var['transcripts'].keys() if 'transcripts' in var else {t['geneId'] for t in
+                                                                           var['sortedTranscriptConsequences']}
+        for gene_id in gene_ids:
+            gene_counts[gene_id]['total'] += 1
+            for family_guid in var['familyGuids']:
+                gene_counts[gene_id]['families'][family_guid] += 1
+
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
         'genesById': get_genes_for_variant_display(list(gene_counts.keys()), projects.first().genome_version),
@@ -301,7 +312,12 @@ def export_variants_handler(request, search_hash):
     families = results_model.families.all()
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
-    variants = export_variants(results_model, request.user)
+    variants = _get_variants_with_cache(_get_search_cache_key, _query_variants, results_model, request.user)
+    total_variants = len(variants)
+    if total_variants > MAX_EXPORT_VARIANTS:
+        raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
+
+    variants = format_clickhouse_export_results(variants)
 
     saved_variants = _get_saved_variant_models(variants)
     json_saved_variants = get_json_for_saved_variants_with_tags(saved_variants)
