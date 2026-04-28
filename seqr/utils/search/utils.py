@@ -17,64 +17,12 @@ logger = SeqrLogger(__name__)
 MAX_EXPORT_VARIANTS = 1000
 
 
-def _get_search_cache_key(search_model, sort=None):
-    return 'search_results__{}__{}'.format(search_model.guid, sort or XPOS_SORT_KEY)
-
-
 def export_variants(search_model, user):
     search_results = _query_variants(search_model, user)
     total_variants = len(search_results)
     if total_variants > MAX_EXPORT_VARIANTS:
         raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
     return format_clickhouse_export_results(search_results)
-
-
-def _get_previous_search_results(search_model, sort):
-    previous_search_results = None
-    if sort:
-        cache_key = _get_search_cache_key(search_model, sort=sort)
-        previous_search_results = safe_redis_get_json(cache_key) or []
-    if not previous_search_results:
-        wildcard_cache_key = _get_search_cache_key(search_model, sort='*')
-        previous_search_results = safe_redis_get_wildcard_json(wildcard_cache_key)
-        if previous_search_results and sort:
-            previous_search_results = get_sorted_search_results(
-                previous_search_results, sort, families=search_model.families.all(),
-            )
-            cache_key = _get_search_cache_key(search_model, sort=sort)
-            safe_redis_set_json(cache_key, previous_search_results, expire=timedelta(weeks=2))
-    return previous_search_results
-
-
-def query_variants(search_model, sort, page, num_results, user):
-    if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(user):
-        sort = PATHOGENICTY_HGMD_SORT_KEY
-    all_results = _query_variants(search_model, user, sort=sort or XPOS_SORT_KEY)
-
-    results_page = all_results[(page-1)*num_results:page*num_results]
-
-    return results_page, len(all_results)
-
-
-def _query_variants(search_model, user, sort=None):
-    previous_search_results = _get_previous_search_results(search_model, sort) or {}
-    if previous_search_results:
-        return previous_search_results
-
-    search = deepcopy(search_model.variant_search.search)
-    families = search_model.families.all()
-
-    exclude_search = {}
-    exclude_previous_hash = (search.get('exclude') or {}).pop('previousSearchHash', None)
-    if exclude_previous_hash:
-        exclude_search = _get_clickhouse_exclude_keys(exclude_previous_hash, user)
-
-    results = get_clickhouse_variants(families, user, sort=sort, **search, **exclude_search)
-
-    cache_key = _get_search_cache_key(search_model, sort=sort)
-    safe_redis_set_json(cache_key, results, expire=timedelta(weeks=2))
-
-    return results
 
 
 def _get_clickhouse_exclude_keys(search_hash, user):

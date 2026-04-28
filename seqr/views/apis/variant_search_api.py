@@ -13,11 +13,12 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
+from clickhouse_search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
     get_sorted_search_results, clickhouse_variant_lookup, InvalidSearchException
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
-from seqr.utils.search.utils import query_variants, get_variant_query_gene_counts, \
+from seqr.utils.search.utils import get_variant_query_gene_counts, \
     export_variants
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
@@ -30,7 +31,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches, add_individual_hpo_details, FAMILY_ADDITIONAL_VALUES
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
+    login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission, user_is_analyst
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variants_response
 from seqr.views.utils.vlm_utils import vlm_lookup
@@ -55,6 +56,9 @@ def query_variants_handler(request, search_hash):
     """
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
+    sort = request.GET.get('sort') or XPOS_SORT_KEY
+    if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(request.user):
+        sort = PATHOGENICTY_HGMD_SORT_KEY
 
     search_context = json.loads(request.body or '{}')
     try:
@@ -64,12 +68,15 @@ def query_variants_handler(request, search_hash):
 
     _check_results_permission(results_model, request.user)
 
-    variants, total_results = query_variants(results_model, sort=request.GET.get('sort'), page=page, num_results=per_page, user=request.user)
+    all_variants = _get_variants_with_cache(
+        _get_search_cache_key, _query_variants, results_model, request.user, sort,
+    )
+    variants = all_variants[(page-1)*per_page:page*per_page]
 
     response = _process_variants(variants or [], results_model.families.all(), request,
                                  genome_version=results_model.variant_search.search.get('no_access_project_genome_version'))
     response['search'] = _get_search_context(results_model)
-    response['search']['totalResults'] = total_results
+    response['search']['totalResults'] = len(all_variants)
 
     return create_json_response(response)
 
@@ -81,6 +88,27 @@ def _get_variants_with_cache(get_cache_key, get_variants, *args, **kwargs):
         variants = get_variants(*args, **kwargs)
         safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
     return variants
+
+
+def _get_search_cache_key(results_model, user, sort):
+    return 'search_results__{}__{}'.format(results_model.guid, sort or XPOS_SORT_KEY)
+
+
+def _query_variants(results_model, user, sort):
+    families = results_model.families.all()
+    wildcard_cache_key = _get_search_cache_key(results_model, user, sort='*')
+    unsorted_variants = safe_redis_get_wildcard_json(wildcard_cache_key)
+    if unsorted_variants:
+        return get_sorted_search_results(unsorted_variants, sort, families)
+
+    search = deepcopy(results_model.variant_search.search)
+
+    exclude_search = {}
+    exclude_previous_hash = (search.get('exclude') or {}).pop('previousSearchHash', None)
+    if exclude_previous_hash:
+        exclude_search = _get_clickhouse_exclude_keys(exclude_previous_hash, user)
+
+    return get_clickhouse_variants(families, user, sort=sort, **search, **exclude_search)
 
 
 def _all_project_family_search_genome(search_context):
