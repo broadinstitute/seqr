@@ -31,7 +31,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission, user_is_analyst
 from seqr.views.utils.project_context_utils import get_projects_child_entities
-from seqr.views.utils.variant_utils import get_variants_response
+from seqr.views.utils.variant_utils import get_variants_response, variant_dataset_type
 from seqr.views.utils.vlm_utils import vlm_lookup
 
 logger = SeqrLogger(__name__)
@@ -99,14 +99,7 @@ def _query_variants(results_model, user, sort=XPOS_SORT_KEY):
     if unsorted_variants:
         return get_sorted_search_results(unsorted_variants, sort, families)
 
-    search = deepcopy(results_model.variant_search.search)
-
-    exclude_search = {}
-    exclude_previous_hash = (search.get('exclude') or {}).pop('previousSearchHash', None)
-    if exclude_previous_hash:
-        exclude_search = _get_clickhouse_exclude_keys(exclude_previous_hash, user)
-
-    return get_clickhouse_variants(families, user, sort=sort, **search, **exclude_search)
+    return get_clickhouse_variants(families, user, sort=sort, **results_model.variant_search.search)
 
 
 def _all_project_family_search_genome(search_context):
@@ -153,7 +146,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         search_dict = search_context.get('search', {})
         if search_context.get('previousSearchHash') and (search_dict.get('exclude') or {}).get('previousSearch'):
-            search_dict['exclude']['previousSearchHash'] = search_context['previousSearchHash']
+            search_dict.update(_get_exclude_keys(search_context['previousSearchHash'], user))
         if include_no_access_projects:
             search_dict['no_access_project_genome_version'] = all_project_genome_version
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
@@ -170,6 +163,23 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         results_model.families.set(families)
     return results_model
+
+
+def _get_exclude_keys(search_hash, user):
+    previous_results_model = VariantSearchResults.objects.get(search_hash=search_hash)
+    results = _get_variants_with_cache(_get_search_cache_key, _query_variants, previous_results_model, user)
+    exclude_keys = defaultdict(list)
+    exclude_key_pairs = defaultdict(list)
+    for variant in results:
+        if isinstance(variant, list):
+            dt1= variant_dataset_type(variant[0])
+            dt2 = variant_dataset_type(variant[1])
+            dataset_type = dt1 if dt1 == dt2 else ','.join(sorted([dt1, dt2]))
+            exclude_key_pairs[dataset_type].append(sorted([variant[0]['key'], variant[1]['key']]))
+        else:
+            dataset_type = variant_dataset_type(variant)
+            exclude_keys[dataset_type].append(variant['key'])
+    return {'exclude_keys': dict(exclude_keys), 'exclude_key_pairs': dict(exclude_key_pairs)}
 
 
 @login_and_policies_required
@@ -289,8 +299,7 @@ def get_variant_gene_breakdown(request, search_hash):
     ]
     gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
     for var in flat_variants:
-        gene_ids = var['transcripts'].keys() if 'transcripts' in var else {t['geneId'] for t in
-                                                                           var['sortedTranscriptConsequences']}
+        gene_ids = var['transcripts'].keys() if 'transcripts' in var else {t['geneId'] for t in var['sortedTranscriptConsequences']}
         for gene_id in gene_ids:
             gene_counts[gene_id]['total'] += 1
             for family_guid in var['familyGuids']:

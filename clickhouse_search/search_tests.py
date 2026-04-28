@@ -678,7 +678,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         request_body = {'projectFamilies': DEFAULT_PROJECT_FAMILIES, 'previousSearchHash': 'abc1234'}
         exclude = {'previousSearch': True}
-        response_search = {'exclude': {**exclude, 'previousSearchHash': 'abc1234'}}
+        response_search = {
+            'exclude_keys': {'SNV_INDEL': [1, 2]},
+            'exclude_key_pairs': {'SNV_INDEL': [[2, 3]],'SV_WES': [[18, 19]]},
+        }
         self._assert_expected_search(
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3],
             inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
@@ -692,6 +695,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.set_cache(cache_key, [
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3,
         ])
+        response_search = {
+            'exclude_keys': {'MITO': [8], 'SV_WES': [18]},
+            'exclude_key_pairs': {'SNV_INDEL': [[3, 4]], 'SNV_INDEL,SV_WES': [[2, 19]]},
+        }
         self._assert_expected_search(
             [VARIANT2, [GCNV_VARIANT3, GCNV_VARIANT4]], exclude=exclude, **COMP_HET_ALL_PASS_FILTERS,
             request_body=request_body, response_search=response_search, inheritance_mode='recessive', cached_variant_fields=[
