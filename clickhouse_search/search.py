@@ -130,9 +130,11 @@ def _parse_locus_search(locus, genome_version, search):
     exclude_locations = bool(exclude.get('rawItems'))
     if locus and exclude_locations:
         raise InvalidSearchException('Cannot specify both Location and Excluded Genes/Intervals')
+    if not (locus or exclude_locations):
+        return
 
     genes, intervals, invalid_items = parse_locus_list_items(
-        locus or exclude, genome_version=genome_version, get_genes_func=_get_genes,
+        locus or exclude, genome_version=genome_version, get_genes_func=get_search_genes,
     )
     if invalid_items:
         raise InvalidSearchException('Invalid genes/intervals: {}'.format(', '.join(invalid_items)))
@@ -152,7 +154,7 @@ def _parse_locus_search(locus, genome_version, search):
     exclude.pop('rawItems', None)
 
 
-def _get_genes(gene_ids, genome_version):
+def get_search_genes(gene_ids, genome_version):
     genes = GeneInfo.objects.filter(**{'gene_id__in': gene_ids, f'start_grch{genome_version}__isnull': False}).values(
         'id', 'gene_id', **{field: F(f'{field}_grch{genome_version}') for field in ['chrom', 'start', 'end']},
     )

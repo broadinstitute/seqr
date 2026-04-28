@@ -590,6 +590,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
         for i in Individual.objects.filter(family__guid__in=no_access_families).values(
             'family__guid', 'individual_id', 'affected', 'sex', 'features', 'guid',
             vlmContactEmail=F('family__project__vlm_contact_email'),
+            restrict_sharing=F('family__project__restrict_sharing'),
         )
     }
     add_individual_hpo_details([i for _, i in individual_summary_map.values()])
@@ -625,17 +626,20 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
                 continue
             individual_guid = f'I{j}_{family_guid}'
             individual_guid_map[unmapped_individual_guid] = individual_guid
-            feature_category_count = defaultdict(int)
-            for feature in individual['features'] or []:
-                feature_category_count[feature.get('category', 'Other')] += 1
+            features = individual['features'] or []
+            if individual.pop('restrict_sharing'):
+                feature_category_count = defaultdict(int)
+                for feature in features:
+                    feature_category_count[feature.get('category', 'Other')] += 1
+                features = [
+                    {'category': category, 'label': f'{count} terms'}
+                    for category, count in feature_category_count.items()
+                ]
             response['individualsByGuid'][individual_guid] = {
                 **individual,
                 'familyGuid': family_guid,
                 'individualGuid': individual_guid,
-                'features': [
-                    {'category': category, 'label': f'{count} terms'}
-                    for category, count in feature_category_count.items()
-                ],
+                'features': features,
             }
             variant['genotypes'][individual_guid] = genotype
 
