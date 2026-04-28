@@ -1054,8 +1054,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             },
             'I2_F0_1-10439-AC-A': {
                 'affected': 'A', 'familyGuid': 'F0_1-10439-AC-A', 'individualGuid': 'I2_F0_1-10439-AC-A', 'sex': 'X0',
-                'features': [{'category': 'HP:0000707', 'label': '1 terms'},
-                             {'category': 'HP:0001626', 'label': '1 terms'}],
+                'features': [{'category': 'HP:0000707', 'label': 'Morphological abnormality of the central nervous system', 'id': 'HP:0002011'},
+                             {'category': 'HP:0001626', 'label': 'Arrhythmia', 'id': 'HP:0011675'}],
                 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
             },
         }
@@ -1128,8 +1128,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             },
             'I2_F0_suffix_140608_DUP': {
                 'affected': 'A', 'familyGuid': 'F0_suffix_140608_DUP', 'individualGuid': 'I2_F0_suffix_140608_DUP',
-                'features': [{'category': 'HP:0000707', 'label': '1 terms'},
-                             {'category': 'HP:0001626', 'label': '1 terms'}],
+                'features': [{'category': 'HP:0000707', 'label': 'Morphological abnormality of the central nervous system', 'id': 'HP:0002011'},
+                             {'category': 'HP:0001626', 'label': 'Arrhythmia', 'id': 'HP:0011675'}],
                 'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
             },
         }
