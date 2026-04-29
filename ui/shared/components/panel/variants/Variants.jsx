@@ -78,7 +78,7 @@ const tagFamily = tag => (
 const VariantLayout = (
   {
     variant, compoundHetToggle, mainGeneId, isCompoundHet, linkToSavedVariants, topContent,
-    bottomContent, children, ...rowProps
+    bottomContent, children, searchHash, ...rowProps
   },
 ) => {
   const coreVariant = Array.isArray(variant) ? variant[0] : variant
@@ -95,6 +95,7 @@ const VariantLayout = (
             variant={variant}
             isCompoundHet={isCompoundHet}
             linkToSavedVariants={linkToSavedVariants}
+            searchHash={searchHash}
           />
           <VerticalSpacer height={10} />
         </Grid.Column>
@@ -131,6 +132,7 @@ VariantLayout.propTypes = {
   topContent: PropTypes.node,
   bottomContent: PropTypes.node,
   children: PropTypes.node,
+  searchHash: PropTypes.string,
 }
 
 export const Variant = React.memo((
