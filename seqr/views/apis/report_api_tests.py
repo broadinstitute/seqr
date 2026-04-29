@@ -18,7 +18,7 @@ AIRTABLE_SAMPLE_RECORDS = {
       "id": "rec2B6OGmQpAkQW3s",
       "fields": {
         "SeqrCollaboratorSampleID": "VCGS_FAM203_621_D1",
-        "CollaboratorSampleID": "NA19675",
+        "CollaboratorSampleID": "NA19675_1",
         "Collaborator": ["recW24C2CJW5lT64K"],
         "dbgap_study_id": "dbgap_stady_id_1",
         "dbgap_subject_id": "dbgap_subject_id_1",
@@ -746,7 +746,7 @@ class ReportAPITest(AirtableTest):
             'entity:sample_id', '01-subject_id', '02-sample_id', '03-dbgap_sample_id', '04-sequencing_center',
             '05-sample_source', '06-tissue_affected_status',])
         self.assertIn(
-            ['NA19675_1', 'NA19675_1', 'NA19675', 'SM-A4GQ4', 'Broad', '-', '-'],
+            ['NA19675_1', 'NA19675_1', 'NA19675_1', 'SM-A4GQ4', 'Broad', '-', '-'],
             sample_file,
         )
 
@@ -767,7 +767,7 @@ class ReportAPITest(AirtableTest):
             '1_248367227_HG00731', 'HG00731', 'HG00731', 'RP11', 'Known', 'paternal',
             'Homozygous', 'GRCh37', '1', '248367227', 'TC', 'T', '-', '-', 'ENST00000371839', '-', '-', '-', '-'], discovery_file)
         self.assertIn([
-            '21_3343353_NA19675_1', 'NA19675_1', 'NA19675', 'RP11', 'Candidate', 'de novo',
+            '21_3343353_NA19675_1', 'NA19675_1', 'NA19675_1', 'RP11', 'Candidate', 'de novo',
             'Heterozygous', 'GRCh37', '21', '3343353', 'GAGA', 'G', 'c.375_377delTCT', 'p.Leu126del', 'ENST00000258436.5',
             '-', '-', '-', 'This individual is published in PMID34415322'], discovery_file)
         self.assertIn([

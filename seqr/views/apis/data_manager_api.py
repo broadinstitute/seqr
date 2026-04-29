@@ -23,7 +23,7 @@ from seqr.views.utils.pedigree_info_utils import get_validated_related_individua
 from seqr.views.utils.permissions_utils import data_manager_required, pm_or_data_manager_required, get_internal_projects
 from seqr.views.utils.terra_api_utils import anvil_enabled
 
-from seqr.models import Sample, RnaSample, Individual, Project, PhenotypePrioritization
+from seqr.models import Dataset, RnaSample, Individual, Project, PhenotypePrioritization
 
 from settings import LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_SERVICE_PORT
 
@@ -219,17 +219,17 @@ def get_loaded_projects(request, genome_version, sample_type, dataset_type):
         except ValueError as e:
             return create_json_response({'error': str(e)}, status=400)
         projects = projects.filter(guid__in=project_samples.keys())
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
-        exclude_sample_type = Sample.SAMPLE_TYPE_WES if sample_type == Sample.SAMPLE_TYPE_WGS else Sample.SAMPLE_TYPE_WGS
+    if dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS:
+        exclude_sample_type = Dataset.SAMPLE_TYPE_WES if sample_type == Dataset.SAMPLE_TYPE_WGS else Dataset.SAMPLE_TYPE_WGS
         # Include projects with either the matched sample type OR with no loaded data
-        projects = projects.exclude(family__individual__sample__sample_type=exclude_sample_type)
+        projects = projects.exclude(family__individual__active_datasets__sample_type=exclude_sample_type)
     else:
         # All other data types can only be loaded to projects which already have loaded data
-        projects = projects.filter(family__individual__sample__sample_type=sample_type)
+        projects = projects.filter(family__individual__active_datasets__sample_type=sample_type)
 
     projects = projects.distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
-        'family__individual__sample__loaded_date',
-        filter=Q(family__individual__sample__dataset_type=dataset_type) & Q(family__individual__sample__sample_type=sample_type),
+        'family__individual__active_datasets__loaded_date',
+        filter=Q(family__individual__active_datasets__dataset_type=dataset_type) & Q(family__individual__active_datasets__sample_type=sample_type),
     ))
 
     if project_samples:
@@ -240,10 +240,10 @@ def get_loaded_projects(request, genome_version, sample_type, dataset_type):
 
 
 AIRTABLE_CALLSET_FIELDS = {
-    (Sample.DATASET_TYPE_MITO_CALLS, Sample.SAMPLE_TYPE_WES): 'MITO_WES_CallsetPath',
-    (Sample.DATASET_TYPE_MITO_CALLS, Sample.SAMPLE_TYPE_WGS): 'MITO_WGS_CallsetPath',
-    (Sample.DATASET_TYPE_SV_CALLS, Sample.SAMPLE_TYPE_WES): 'gCNV_CallsetPath',
-    (Sample.DATASET_TYPE_SV_CALLS, Sample.SAMPLE_TYPE_WGS): 'SV_CallsetPath',
+    (Dataset.DATASET_TYPE_MITO_CALLS, Dataset.SAMPLE_TYPE_WES): 'MITO_WES_CallsetPath',
+    (Dataset.DATASET_TYPE_MITO_CALLS, Dataset.SAMPLE_TYPE_WGS): 'MITO_WGS_CallsetPath',
+    (Dataset.DATASET_TYPE_SV_CALLS, Dataset.SAMPLE_TYPE_WES): 'gCNV_CallsetPath',
+    (Dataset.DATASET_TYPE_SV_CALLS, Dataset.SAMPLE_TYPE_WGS): 'SV_CallsetPath',
 }
 
 
@@ -271,7 +271,7 @@ def load_data(request):
     request_json = json.loads(request.body)
     vcf_samples = request_json['vcfSamples']
     sample_type = request_json['sampleType']
-    dataset_type = request_json.get('datasetType', Sample.DATASET_TYPE_VARIANT_CALLS)
+    dataset_type = request_json.get('datasetType', Dataset.DATASET_TYPE_VARIANT_CALLS)
     projects = [json.loads(project) for project in request_json['projects']]
     project_samples = {p['projectGuid']: p.get('sampleIds') for p in projects}
 
@@ -400,12 +400,17 @@ def trigger_delete_project(request):
     project_guid = request_json.pop('project')
     dataset_type = request_json.get('datasetType')
     project = Project.objects.get(guid=project_guid)
-    samples = Sample.objects.filter(individual__family__project=project, dataset_type=dataset_type, is_active=True)
+    datasets = Dataset.objects.filter(active_individuals__family__project=project, dataset_type=dataset_type)
     sample_types = list(
-        samples.values_list('sample_type', flat=True).distinct()
-    ) if dataset_type == Sample.DATASET_TYPE_SV_CALLS else [None]
-    updated = Sample.bulk_update(user=request.user, update_json={'is_active': False}, queryset=samples)
-    info = [f'Deactivated search for {len(updated)} individuals']
+        datasets.values_list('sample_type', flat=True).distinct()
+    ) if dataset_type == Dataset.DATASET_TYPE_SV_CALLS else [None]
+    updated = 0
+    for dataset in datasets:
+        active_individuals = dataset.active_individuals.all()
+        updated += len(active_individuals)
+        dataset.inactive_individuals.add(*active_individuals)
+        dataset.active_individuals.clear()
+    info = [f'Deactivated search for {updated} individuals']
     for sample_type in sample_types:
         info.append(delete_clickhouse_project(project, dataset_type=dataset_type, sample_type=sample_type))
     return create_json_response({'info': info})
@@ -416,7 +421,6 @@ def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')
     project = Project.objects.get(family__guid=family_guid)
-    samples = Sample.objects.filter(individual__family__guid=family_guid)
     info = trigger_delete_families_search(project, [family_guid], request.user)
     return create_json_response({'info': info})
 

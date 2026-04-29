@@ -5,7 +5,7 @@ import json
 import requests
 
 from reference_data.models import GeneInfo, GENOME_VERSION_LOOKUP
-from seqr.models import Sample, Individual, Project
+from seqr.models import Dataset, Individual, Project
 from seqr.utils.communication_utils import send_project_notification, safe_post_to_slack
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.logging_utils import SeqrLogger
@@ -21,7 +21,7 @@ logger = SeqrLogger(__name__)
 
 
 def basic_notify_search_data_loaded(project, dataset_type, sample_type, new_samples, email_template=None, is_internal=True):
-    msg_dataset_type = '' if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
+    msg_dataset_type = '' if dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS else f' {dataset_type}'
     num_new_samples = len(new_samples)
     sample_summary = f'{num_new_samples} new {sample_type}{msg_dataset_type} samples'
 
@@ -64,12 +64,17 @@ def update_airtable_loading_tracking_status(project, status, additional_update=N
     )
 
 def trigger_delete_families_search(project, family_guids, user=None):
-    search_samples = Sample.objects.filter(is_active=True, individual__family__guid__in=family_guids)
+    num_updated = 0
+    updated_families = set()
+    for dataset in Dataset.objects.filter(active_individuals__family__guid__in=family_guids).distinct():
+        active_individuals = dataset.active_individuals.filter(family__guid__in=family_guids)
+        num_updated += len(active_individuals)
+        updated_families.update(active_individuals.values_list('family__family_id', flat=True).distinct())
+        dataset.inactive_individuals.add(*active_individuals)
+        dataset.active_individuals.remove(*active_individuals)
     info = []
-    if search_samples:
-        updated_families = search_samples.values_list("individual__family__family_id", flat=True).distinct()
+    if num_updated:
         family_summary = ", ".join(sorted(updated_families))
-        num_updated = search_samples.update(is_active=False)
         message = f'Disabled search for {num_updated} samples in the following {len(updated_families)} families: {family_summary}'
         info.append(message)
         logger.info(message, user)
@@ -142,7 +147,7 @@ def _enqueue_pipeline_request(name: str, variables: dict, user: User, raise_erro
 
 
 def _loading_dataset_type(sample_type: str, dataset_type: str):
-    return 'GCNV' if dataset_type == Sample.DATASET_TYPE_SV_CALLS and sample_type == Sample.SAMPLE_TYPE_WES \
+    return 'GCNV' if dataset_type == Dataset.DATASET_TYPE_SV_CALLS and sample_type == Dataset.SAMPLE_TYPE_WES \
         else dataset_type
 
 

@@ -1,7 +1,7 @@
 from django.core.management import call_command
 import mock
 
-from seqr.models import Project, Sample, SavedVariant
+from seqr.models import Project, Dataset, SavedVariant
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 
 MOCK_GCNV_DATA = [
@@ -18,7 +18,10 @@ class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
     @classmethod
     def setUpTestData(cls):
         Project.objects.filter(id=3).update(genome_version='38')
-        Sample.objects.filter(guid='S000154_na20889').update(dataset_type='SV', is_active=True)
+        dataset = Dataset.objects.get(guid='S000154_na20889')
+        dataset.dataset_type = 'SV'
+        dataset.save()
+        dataset.active_individuals.set({17})
         for sv in SavedVariant.objects.filter(key__isnull=False):
             sv.saved_variant_json = {
                 'genotypes': sv.genotypes, 'populations': {'gnomad': {'af': 0.01}},

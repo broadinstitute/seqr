@@ -17,7 +17,7 @@ from clickhouse_search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PA
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
     get_sorted_search_results, clickhouse_variant_lookup, InvalidSearchException
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Sample
+from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Dataset
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.utils.logging_utils import SeqrLogger
@@ -138,8 +138,8 @@ def _get_or_create_results_model(search_hash, search_context, user):
         if search_context.get('unsolvedFamiliesOnly'):
             families = families.exclude(analysis_status__in=Family.SOLVED_ANALYSIS_STATUSES)
         if search_context.get('trioFamiliesOnly'):
-            families = families.annotate(search_sample_count=Count('individual__sample__id', filter=Q(
-                individual__sample__is_active=True, individual__sample__dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS,
+            families = families.annotate(search_sample_count=Count('individual__id', filter=Q(
+                individual__active_datasets__dataset_type=Dataset.DATASET_TYPE_VARIANT_CALLS,
             ))).filter(
                 search_sample_count__gte=3, individual__mother__isnull=False, individual__father__isnull=False,
             ).distinct()
@@ -439,16 +439,16 @@ def search_context_handler(request):
         projectGuid=Value(project_guid) if project_guid else F('project__guid'),
         familyGuid=F('guid'),
         analysisStatus=F('analysis_status'),
+        sampleTypes=ArrayAgg(
+            JSONObject(sampleType='individual__active_datasets__sample_type', datasetType='individual__active_datasets__dataset_type', isActive=Value(True)),
+            distinct=True, filter=Q(individual__active_datasets__dataset_type__isnull=False),
+        ),
         **FAMILY_ADDITIONAL_VALUES,
     )}
 
-    family_sample_types = Sample.objects.filter(individual__family__project__in=projects, is_active=True).values('individual__family__guid').annotate(
-        samples=ArrayAgg(JSONObject(sampleType='sample_type', datasetType='dataset_type', isActive=Value(True)), distinct=True))
     project_dataset_types = defaultdict(set)
-    for agg in family_sample_types:
-        family = response['familiesByGuid'][agg['individual__family__guid']]
-        family['sampleTypes'] = agg['samples']
-        project_dataset_types[family['projectGuid']].update([s['datasetType'] for s in agg['samples']])
+    for family in response['familiesByGuid'].values():
+        project_dataset_types[family['projectGuid']].update([s['datasetType'] for s in family['sampleTypes']])
     for project_guid, dataset_types in project_dataset_types.items():
         response['projectsByGuid'][project_guid]['datasetTypes'] = list(dataset_types)
 

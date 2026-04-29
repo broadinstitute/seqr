@@ -703,9 +703,8 @@ NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS.update(CASE_REVIEW_INDIVIDUAL_FIELDS)
 INTERNAL_INDIVIDUAL_FIELDS = deepcopy(NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS)
 INTERNAL_INDIVIDUAL_FIELDS.update(CORE_INTERNAL_INDIVIDUAL_FIELDS)
 
-SAMPLE_FIELDS = {
-    'projectGuid', 'familyGuid', 'individualGuid', 'sampleGuid', 'createdDate', 'sampleType', 'sampleId', 'isActive',
-    'loadedDate', 'datasetType',
+DATASET_FIELDS = {
+    'projectGuid', 'datasetGuid', 'sampleType', 'loadedDate', 'datasetType', 'activeIndividuals', 'inactiveIndividuals',
 }
 
 IGV_SAMPLE_FIELDS = {

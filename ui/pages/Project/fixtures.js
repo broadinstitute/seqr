@@ -121,7 +121,7 @@ export const STATE1 = {
       sex: 'M',
     },
   },
-  samplesByGuid: {},
+  datasetsByGuid: {},
   mmeSubmissionsByGuid: {},
   project: {
     createdDate: '2016-05-16T05:37:08.634Z',
@@ -310,19 +310,14 @@ export const STATE_WITH_2_FAMILIES = {
       sex: 'M',
     },
   },
-  samplesByGuid: {
+  datasetsByGuid: {
     S2310656_wal_mc16200_mc16203: {
-      createdDate: "2018-03-30T11:50:40.079Z",
-      datasetFilePath: "gs://seqr-datasets/GRCh37/cmg_sankaran_wes/CMG_MYOSEQ.vcf.gz",
-      datasetName: null,
       datasetType: "SNV_INDEL",
-      familyGuid: 'F011652_2',
-      individualGuid: "I021476_na19678_2",
+      activeIndividuals: ["I021476_na19678_2"],
+      inactiveIndividuals: [],
       loadedDate: "2018-03-13T13:25:21.551Z",
       projectGuid: "R0237_1000_genomes_demo",
-      sampleGuid: "S2310656_wal_mc16200_mc16203",
-      sampleId: "WAL_MC16200_MC16203",
-      isActive: true,
+      datasetGuid: "S2310656_wal_mc16200_mc16203",
       sampleType: "WES",
     },
   },

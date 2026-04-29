@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 
-from seqr.models import Project, Family, VariantTag, VariantTagType
+from seqr.models import Project, Family, VariantTag, VariantTagType, Dataset
 from seqr.utils.add_data_utils import trigger_delete_families_search
 
 import logging
@@ -35,6 +36,19 @@ class Command(BaseCommand):
             logger.info(f'Skipping {num_found - len(families)} families with analysis groups in the project: {", ".join(group_families)}')
 
         trigger_delete_families_search(from_project, list(families.values_list('guid', flat=True)))
+
+        remaining_families = Family.objects.filter(project=from_project).exclude(id__in={f.id for f in families})
+        split_dataset = Dataset.objects.filter(inactive_individuals__family__in=families).filter(
+            Q(inactive_individuals__family__in=remaining_families) | Q(active_individuals__family__in=remaining_families)
+        ).distinct()
+        logger.info(f'Splitting {split_dataset.count()} datasets')
+        for dataset in split_dataset:
+            individuals = dataset.inactive_individuals.filter(family__in=families)
+            dataset.inactive_individuals.remove(*individuals)
+            new_dataset = dataset
+            new_dataset.pk = None
+            new_dataset.save()
+            new_dataset.inactive_individuals.set(individuals)
 
         for variant_tag_type in VariantTagType.objects.filter(project=from_project):
             variant_tags = VariantTag.objects.filter(saved_variants__family__in=families, variant_tag_type=variant_tag_type)

@@ -6,27 +6,20 @@ import json
 import mock
 import responses
 
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase, DifferentDbTransactionSupportMixin
-from seqr.models import Project, Family, Individual, Sample, SavedVariant
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase
+from seqr.models import Project, Family, Individual, Dataset, SavedVariant
 
 SEQR_URL = 'https://seqr.broadinstitute.org/'
 PROJECT_GUID = 'R0003_test'
 EXTERNAL_PROJECT_GUID = 'R0004_non_analyst_project'
 
-GUID_ID = 54321
-GCNV_GUID_ID = 12345
-NEW_SAMPLE_GUID_P3 = f'S00000{GUID_ID}_na20888'
-NEW_SAMPLE_GUID_P4 = f'S00000{GUID_ID}_na21234'
-REPLACED_SAMPLE_GUID = f'S00000{GUID_ID}_na20885'
-EXISTING_INACTIVE_SAMPLE_GUID = 'S000154_na20889'
-ACTIVE_SAMPLE_GUID = f'S00000{GUID_ID}_na20889'
-EXISTING_WGS_SAMPLE_GUID = 'S000144_na20888'
-EXISTING_SV_SAMPLE_GUID = 'S000147_na21234'
-SAMPLE_GUIDS = [ACTIVE_SAMPLE_GUID, REPLACED_SAMPLE_GUID, NEW_SAMPLE_GUID_P3, NEW_SAMPLE_GUID_P4]
-GCNV_SAMPLE_GUID = f'S00000{GCNV_GUID_ID}_na20889'
-EXISTING_GCNV_SAMPLE_GUIDS = ['S000145_hg00731', 'S000146_hg00732', 'S000148_hg00733']
-GCNV_SAMPLE_GUIDS = [f'S00000{GCNV_GUID_ID}_hg00731', f'S00000{GCNV_GUID_ID}_hg00732', f'S00000{GCNV_GUID_ID}_hg00733', GCNV_SAMPLE_GUID]
-OLD_DATA_SAMPLE_GUID = 'S000143_na20885'
+EXISTING_INACTIVE_DATASET_GUID = 'S000154_na20889'
+EXISTING_WGS_DATASET_GUID = 'S000144_na20888'
+EXISTING_SV_DATASET_GUID = 'S000147_na21234'
+EXISTING_GCNV_DATASET_GUID = 'S000145_hg00731'
+OLD_DATA_DATASET_GUID = 'S000143_na20885'
+NEW_DATASET_GUIDS = ['D0000155_snv_indel_wes_2025_09', 'D0000156_snv_indel_wes_2025_09']
+NEW_GCNV_DATASET_GUIDS = ['D0000157_sv_wes_2025_09_23_000', 'D0000158_sv_wes_2025_09_23_000']
 
 namespace_path = 'ext-data/anvil-non-analyst-project 1000 Genomes Demo'
 anvil_link = f'<a href=https://anvil.terra.bio/#workspaces/{namespace_path}>{namespace_path}</a>'
@@ -384,13 +377,13 @@ class CheckNewSamplesTest(object):
         self.mock_redis = patcher.start()
         self.mock_redis.return_value.keys.side_effect = lambda pattern: [pattern]
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.models.random.randint')
-        mock_rand_int = patcher.start()
-        mock_rand_int.side_effect = [GUID_ID, GUID_ID, GUID_ID, GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GCNV_GUID_ID, GUID_ID, GUID_ID, GUID_ID, GUID_ID]
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.PIPELINE_DATA_DIR')
         mock_data_dir = patcher.start()
         mock_data_dir.__str__.return_value = self.MOCK_DATA_DIR
+        self.addCleanup(patcher.stop)
+        patcher = mock.patch('seqr.management.commands.check_for_new_samples_from_pipeline.timezone.now')
+        mock_now = patcher.start()
+        mock_now.return_value = datetime(2025, 9, 23)
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
         mock_temp_dir = patcher.start()
@@ -421,7 +414,7 @@ class CheckNewSamplesTest(object):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-        Sample.objects.filter(guid=OLD_DATA_SAMPLE_GUID).update(sample_type='WES')
+        Dataset.objects.filter(guid=OLD_DATA_DATASET_GUID).update(sample_type='WES')
 
     def _test_call(self, error_logs=None, run_loading_logs=None, num_runs=6):
         self._set_loading_files()
@@ -463,16 +456,16 @@ class CheckNewSamplesTest(object):
         num_calls = self._assert_expected_airtable_calls(bool(run_loading_logs), single_call)
         self.assertEqual(len(responses.calls), num_calls)
 
-    def _test_success_call(self, anvil_email_calls):
+    def _test_success_call(self, anvil_email_calls, next_dataset_id=155):
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
 
+        self.maxDiff = None
         self._test_call(run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
-                ('create 4 Samples', {'dbUpdate': mock.ANY}),
-                ('update 4 Samples', {'dbUpdate': mock.ANY}),
-                ('update 1 Samples', {'dbUpdate': mock.ANY}),
+                (f'create Dataset D0000{next_dataset_id}_snv_indel_wes_2025_09', {'dbUpdate': mock.ANY}),
+                (f'create Dataset D0000{next_dataset_id+1}_snv_indel_wes_2025_09', {'dbUpdate': mock.ANY}),
             ] + self.AIRTABLE_LOGS + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + self.UPDATE_SAMPLE_LOGS,
@@ -482,9 +475,8 @@ class CheckNewSamplesTest(object):
             'GRCh38/SV': [
                 ('Loading 4 WES SV samples in 2 projects', None),
                 ('update 1 Familys', {'dbUpdate': mock.ANY}),
-                ('create 4 Samples', {'dbUpdate': mock.ANY}),
-                ('update 4 Samples', {'dbUpdate': mock.ANY}),
-                ('update 3 Samples', {'dbUpdate': mock.ANY}),
+                (f'create Dataset D0000{next_dataset_id+2}_sv_wes_2025_09_23_000', {'dbUpdate': mock.ANY}),
+                (f'create Dataset D0000{next_dataset_id+3}_sv_wes_2025_09_23_000', {'dbUpdate': mock.ANY}),
                 ('Reloading saved variants in 2 projects', None),
                 ('Updated 0 variants in 1 families for project 1kg project nåme with uniçøde', None),
                 ('Updated 0 variants in 1 families for project Test Reprocessed Project', None),
@@ -561,11 +553,15 @@ The following 1 families failed sex check:
         self.assertDictEqual(self.mock_email.return_value.merge_data, {})
 
         self.assertEqual(self.manager_user.notifications.count(), 5)
-        self.assertEqual(
-            str(self.manager_user.notifications.first()), 'Test Reprocessed Project Loaded 1 new WES SV samples 0 minutes ago')
+        manager_notification = self.manager_user.notifications.order_by('-id').first()
+        self.assertEqual(manager_notification.actor.name, 'Test Reprocessed Project')
+        self.assertEqual(manager_notification.verb, 'Loaded 1 new WES SV samples')
+        self.assertEqual(manager_notification.timestamp.isoformat(), '2025-09-23T00:00:00+00:00')
         self.assertEqual(self.collaborator_user.notifications.count(), 2)
-        self.assertEqual(
-            str(self.collaborator_user.notifications.first()), 'Non-Analyst Project Loaded 1 new WES samples 0 minutes ago')
+        collaborator_notification = self.collaborator_user.notifications.first()
+        self.assertEqual(collaborator_notification.actor.name, 'Non-Analyst Project')
+        self.assertEqual(collaborator_notification.verb, 'Loaded 1 new WES samples')
+        self.assertEqual(collaborator_notification.timestamp.isoformat(), '2025-09-23T00:00:00+00:00')
 
     def _additional_loading_logs(self, data_type, version):
         return []
@@ -596,7 +592,7 @@ The following 1 families failed sex check:
             'auto__2024-09-14': 'Data has genome version GRCh38 but the following projects have conflicting versions: R0001_1kg (GRCh37), R0003_test (GRCh37)',
         }
         self._test_call(error_logs=error_logs)
-        self.assertEqual(Sample.objects.filter(guid__in=SAMPLE_GUIDS + GCNV_SAMPLE_GUIDS).count(), 0)
+        self.assertEqual(Dataset.objects.filter(guid__in=NEW_DATASET_GUIDS + NEW_GCNV_DATASET_GUIDS).count(), 0)
 
         # Update fixture data to allow testing edge cases
         svs = SavedVariant.objects.filter(guid__in=['SV0000002_1248367227_r0390_100', 'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'])
@@ -610,55 +606,71 @@ The following 1 families failed sex check:
         self._test_success_call(self._anvil_email_calls())
 
         # Tests Sample models created/updated
-        snv_indel_samples = Sample.objects.filter(data_source='auto__2023-08-09')
-        gcnv_samples = Sample.objects.filter(data_source='auto__2024-09-14')
-        updated_sample_models = snv_indel_samples | gcnv_samples
-        self.assertSetEqual({'WES'}, set(updated_sample_models.values_list('sample_type', flat=True)))
-        self.assertSetEqual({True}, set(updated_sample_models.values_list('is_active', flat=True)))
+        snv_indel_datasets = Dataset.objects.filter(data_source='auto__2023-08-09')
+        gcnv_datasets = Dataset.objects.filter(data_source='auto__2024-09-14')
+        new_dataset_models = snv_indel_datasets | gcnv_datasets
+        self.assertSetEqual({'WES'}, set(new_dataset_models.values_list('sample_type', flat=True)))
         self.assertSetEqual(
-            {datetime.now().strftime('%Y-%m-%d')},
-            {date.strftime('%Y-%m-%d') for date in updated_sample_models.values_list('loaded_date', flat=True)}
+            {'2025-09-23'},
+            {date.strftime('%Y-%m-%d') for date in new_dataset_models.values_list('loaded_date', flat=True)}
         )
 
-        self.assertSetEqual(set(snv_indel_samples.values_list('guid', flat=True)), set(SAMPLE_GUIDS))
-        self.assertSetEqual({'SNV_INDEL'}, set(snv_indel_samples.values_list('dataset_type', flat=True)))
-        self.assertSetEqual({'1kg.vcf.gz;new_samples.vcf.gz'}, set(snv_indel_samples.values_list('elasticsearch_index', flat=True)))
+        self.assertSetEqual(set(snv_indel_datasets.values_list('guid', flat=True)), set(NEW_DATASET_GUIDS))
+        self.assertSetEqual({'SNV_INDEL'}, set(snv_indel_datasets.values_list('dataset_type', flat=True)))
 
-        self.assertSetEqual(set(gcnv_samples.values_list('guid', flat=True)), set(GCNV_SAMPLE_GUIDS))
-        self.assertSetEqual({'SV'}, set(gcnv_samples.values_list('dataset_type', flat=True)))
-        self.assertSetEqual({'gcnv.bed.gz'}, set(gcnv_samples.values_list('elasticsearch_index', flat=True)))
+        self.assertSetEqual(set(gcnv_datasets.values_list('guid', flat=True)), set(NEW_GCNV_DATASET_GUIDS))
+        self.assertSetEqual({'SV'}, set(gcnv_datasets.values_list('dataset_type', flat=True)))
 
-        self.assertFalse(Sample.objects.get(guid=OLD_DATA_SAMPLE_GUID).is_active)
+        old_dataset = Dataset.objects.get(guid=OLD_DATA_DATASET_GUID)
+        self.assertListEqual(list(old_dataset.active_individuals.values_list('id', flat=True)), [])
+        self.assertListEqual(list(old_dataset.inactive_individuals.values_list('id', flat=True)), [15])
 
-        previous_gcnv_samples = Sample.objects.filter(guid__in=EXISTING_GCNV_SAMPLE_GUIDS)
-        self.assertEqual(len(previous_gcnv_samples), len(EXISTING_GCNV_SAMPLE_GUIDS))
-        self.assertFalse(any(previous_gcnv_samples.values_list('is_active', flat=True)))
+        old_gcnv_dataset = Dataset.objects.get(guid=EXISTING_GCNV_DATASET_GUID)
+        self.assertListEqual(list(old_gcnv_dataset.active_individuals.values_list('id', flat=True)), [])
+        self.assertListEqual(list(old_gcnv_dataset.inactive_individuals.values_list('id', flat=True)), [4, 5, 6])
 
         # Previously loaded WGS data should be unchanged by loading WES data
         self.assertEqual(
-            Sample.objects.get(guid=EXISTING_WGS_SAMPLE_GUID).last_modified_date.strftime('%Y-%m-%d'), '2017-03-13')
+            Dataset.objects.get(guid=EXISTING_WGS_DATASET_GUID).last_modified_date.strftime('%Y-%m-%d'), '2017-03-13')
 
         # Previously loaded SV data should be unchanged by loading SNV_INDEL data
-        sv_sample = Sample.objects.get(guid=EXISTING_SV_SAMPLE_GUID)
-        self.assertEqual(sv_sample.last_modified_date.strftime('%Y-%m-%d'), '2018-03-13')
-        self.assertTrue(sv_sample.is_active)
+        sv_dataset= Dataset.objects.get(guid=EXISTING_SV_DATASET_GUID)
+        self.assertEqual(sv_dataset.last_modified_date.strftime('%Y-%m-%d'), '2018-03-13')
+        self.assertListEqual(list(sv_dataset.active_individuals.values_list('id', flat=True)), [18, 19, 21])
+        self.assertListEqual(list(sv_dataset.inactive_individuals.values_list('id', flat=True)), [])
 
         # Test Individual models properly associated with Samples
         self.assertSetEqual(
-            set(Individual.objects.get(guid='I000015_na20885').sample_set.values_list('guid', flat=True)),
-            {REPLACED_SAMPLE_GUID, OLD_DATA_SAMPLE_GUID}
+            set(Individual.objects.get(guid='I000015_na20885').active_datasets.values_list('guid', flat=True)),
+            {NEW_DATASET_GUIDS[0]}
         )
         self.assertSetEqual(
-            set(Individual.objects.get(guid='I000016_na20888').sample_set.values_list('guid', flat=True)),
-            {EXISTING_WGS_SAMPLE_GUID, NEW_SAMPLE_GUID_P3}
+            set(Individual.objects.get(guid='I000015_na20885').inactive_datasets.values_list('guid', flat=True)),
+            {OLD_DATA_DATASET_GUID}
         )
         self.assertSetEqual(
-            set(Individual.objects.get(guid='I000017_na20889').sample_set.values_list('guid', flat=True)),
-            {EXISTING_INACTIVE_SAMPLE_GUID, ACTIVE_SAMPLE_GUID, GCNV_SAMPLE_GUID}
+            set(Individual.objects.get(guid='I000016_na20888').active_datasets.values_list('guid', flat=True)),
+            {NEW_DATASET_GUIDS[0]}
         )
         self.assertSetEqual(
-            set(Individual.objects.get(guid='I000018_na21234').sample_set.values_list('guid', flat=True)),
-            {EXISTING_SV_SAMPLE_GUID, NEW_SAMPLE_GUID_P4}
+            set(Individual.objects.get(guid='I000016_na20888').inactive_datasets.values_list('guid', flat=True)),
+            {EXISTING_WGS_DATASET_GUID}
+        )
+        self.assertSetEqual(
+            set(Individual.objects.get(guid='I000017_na20889').active_datasets.values_list('guid', flat=True)),
+            {NEW_DATASET_GUIDS[0], NEW_GCNV_DATASET_GUIDS[1]}
+        )
+        self.assertSetEqual(
+            set(Individual.objects.get(guid='I000017_na20889').inactive_datasets.values_list('guid', flat=True)),
+            {EXISTING_INACTIVE_DATASET_GUID}
+        )
+        self.assertSetEqual(
+            set(Individual.objects.get(guid='I000018_na21234').active_datasets.values_list('guid', flat=True)),
+            {NEW_DATASET_GUIDS[1], EXISTING_SV_DATASET_GUID}
+        )
+        self.assertSetEqual(
+            set(Individual.objects.get(guid='I000018_na21234').inactive_datasets.values_list('guid', flat=True)),
+            set(),
         )
 
         # Test Individual model properly updated with sample qc results
@@ -707,26 +719,26 @@ The following 1 families failed sex check:
         self.mock_email.reset_mock()
         self.mock_send_slack.reset_mock()
         self.mock_redis.reset_mock()
-        sample_last_modified = Sample.objects.filter(
+        dataset_last_modified = Dataset.objects.filter(
             last_modified_date__isnull=False).values_list('last_modified_date', flat=True).order_by('-last_modified_date')[0]
 
         call_command('check_for_new_samples_from_pipeline')
         self.assert_json_logs(user=None, expected=self.LIST_FILE_LOGS[:1] + [('Data already loaded for all 2 runs', None)])
         self.mock_email.assert_not_called()
         self.mock_send_slack.assert_not_called()
-        self.assertFalse(Sample.objects.filter(last_modified_date__gt=sample_last_modified).exists())
+        self.assertFalse(Dataset.objects.filter(last_modified_date__gt=dataset_last_modified).exists())
         self.mock_redis.return_value.delete.assert_not_called()
 
         # Test reloading shared annotations is skipped if too many saved variants
-        snv_indel_samples.delete()
+        snv_indel_datasets.delete()
         airtable_logs = self.AIRTABLE_LOGS[:-1]
         if self.AIRTABLE_LOGS:
             airtable_logs.append(('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None))
         self._test_call(num_runs=2, run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
-                ('create 4 Samples', {'dbUpdate': mock.ANY}),
-                ('update 4 Samples', {'dbUpdate': mock.ANY}),
+                ('create Dataset D0000159_snv_indel_wes_2025_09', {'dbUpdate': mock.ANY}),
+                ('create Dataset D0000160_snv_indel_wes_2025_09', {'dbUpdate': mock.ANY}),
             ] + airtable_logs + self.UPDATE_SAMPLE_LOGS,
         })
 
@@ -1030,4 +1042,4 @@ The following users have been notified: test_user_manager@test.com""")
         self._test_success_call(self._anvil_email_calls(
             email_text=ANVIL_ERROR_TEXT_EMAIL_TEMPLATE.format(error='\n'+ANVIL_ERROR_DELAY),
             email_html=ANVIL_ERROR_HTML_EMAIL_TEMPLATE.format(error='<br />'+ANVIL_ERROR_DELAY),
-        ))
+        ), next_dataset_id=161)

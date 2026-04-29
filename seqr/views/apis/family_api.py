@@ -17,11 +17,11 @@ from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
-from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_for_family_note, get_json_for_samples, \
+from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_for_family_note, get_json_for_datasets, \
     get_json_for_matchmaker_submissions, get_json_for_analysis_groups, _get_json_for_families, get_json_for_queryset
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
-from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
+from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Dataset, VariantTag, AnalysisGroup, RnaSeqTpm, \
     PhenotypePrioritization, Project, RnaSample
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions, external_anvil_project_can_edit, \
@@ -45,12 +45,12 @@ def family_page_data(request, family_guid):
     is_analyst = user_is_analyst(request.user)
     has_case_review_perm = has_case_review_permissions(project, request.user)
 
-    sample_models = Sample.objects.filter(individual__family=family)
-    samples = get_json_for_samples(
-        sample_models, project_guid=project.guid, family_guid=family_guid, is_analyst=is_analyst
-    )
+    dataset_models = Dataset.objects.filter(
+        Q(active_individuals__family=family) | Q(inactive_individuals__family=family)
+    ).distinct()
+    datasets = get_json_for_datasets(dataset_models, project.guid)
     response = {
-        'samplesByGuid': {s['sampleGuid']: s for s in samples}
+        'datasetsByGuid': {d['datasetGuid']: d for d in datasets}
     }
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
@@ -63,7 +63,7 @@ def family_page_data(request, family_guid):
     gene_ids = {gene_id for variant in discovery_variants for gene_id in variant['gene_ids']}
     discovery_variant_intervals = [dict(zip(
         ['chrom', 'start', 'end_chrom', 'end', 'svType', 'hasSvType'],
-        [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['svType'], (v.get('dataset_type') or '').startswith(Sample.DATASET_TYPE_SV_CALLS)]
+        [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['svType'], (v.get('dataset_type') or '').startswith(Dataset.DATASET_TYPE_SV_CALLS)]
     )) for v in discovery_variants]
     omims = Omim.objects.filter(
         get_omim_intervals_query(discovery_variant_intervals) | Q(gene__gene_id__in=gene_ids)

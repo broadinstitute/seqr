@@ -12,7 +12,7 @@ from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
     project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
-    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications, \
+    project_notifications, mark_read_project_notifications, subscribe_project_notifications, \
     update_project_rna_seq, load_rna_seq_sample_data
 from seqr.views.apis.data_manager_api_tests import RNA_OUTLIER_SAMPLE_DATA, RNA_OUTLIER_MUSCLE_SAMPLE_GUID, RNA_TPM_SAMPLE_DATA, \
     RNA_TPM_MUSCLE_SAMPLE_GUID, RNA_SPLICE_SAMPLE_DATA, RNA_SPLICE_SAMPLE_GUID, PLACEHOLDER_GUID, \
@@ -20,7 +20,7 @@ from seqr.views.apis.data_manager_api_tests import RNA_OUTLIER_SAMPLE_DATA, RNA_
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
-    SAMPLE_FIELDS, SUMMARY_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
+    DATASET_FIELDS, SUMMARY_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
     EXT_WORKSPACE_NAMESPACE, TEST_EMPTY_PROJECT_WORKSPACE, DYNAMIC_ANALYSIS_GROUP_FIELDS
 
@@ -341,12 +341,12 @@ class ProjectAPITest(object):
 
         response_json = response.json()
         response_keys = {
-            'projectsByGuid', 'samplesByGuid', 'familyTagTypeCounts',
+            'projectsByGuid', 'datasetsByGuid', 'familyTagTypeCounts',
         }
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         project_fields = {
-            'variantTagTypes', 'variantFunctionalTagTypes', 'sampleCounts',
+            'variantTagTypes', 'variantFunctionalTagTypes', 'rnaSampleCounts',
             'projectGuid', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
         }
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
@@ -374,25 +374,16 @@ class ProjectAPITest(object):
             'order': 99,
             'numTags': 1,
         })
-        self.assertDictEqual(project_response['sampleCounts'], {
-            'WES__SNV_INDEL': [{
-                'familyCounts': {
-                    'F000001_1': 3, 'F000002_2': 3, 'F000003_3': 1, 'F000004_4': 1, 'F000005_5': 1, 'F000006_6': 1,
-                    'F000007_7': 1, 'F000008_8': 1, 'F000010_10': 1,
-                },
-                'loadedDate': '2017-02-05',
-            }],
-            'WES__SV': [{'familyCounts': {'F000002_2': 3}, 'loadedDate': '2018-02-05'}],
-            'WES__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
-            'RNA__S': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
-            'RNA__T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
-            'RNA__E': [{'familyCounts': {'F000001_1': 1}, 'loadedDate': '2017-02-05'}],
+        self.assertDictEqual(project_response['rnaSampleCounts'], {
+            'S': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
+            'T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
+            'E': [{'familyCounts': {'F000001_1': 1}, 'loadedDate': '2017-02-05'}],
         })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
-        self.assertEqual(len(response_json['samplesByGuid']), 16)
-        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+        self.assertEqual(len(response_json['datasetsByGuid']), 5)
+        self.assertSetEqual(set(next(iter(response_json['datasetsByGuid'].values())).keys()), DATASET_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
             'F000002_2': {'AIP': 1, 'Excluded': 1, 'Known gene for phenotype': 1},
@@ -542,24 +533,6 @@ class ProjectAPITest(object):
             set(next(iter(response.json()['individualsByGuid'].values())).keys()),
             NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS,
         )
-
-    def test_project_samples(self):
-        url = reverse(project_samples, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-        response_json = response.json()
-        response_keys = {'samplesByGuid'}
-        self.assertSetEqual(set(response_json.keys()), response_keys)
-
-        self.assertEqual(len(response_json['samplesByGuid']), 17)
-        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
-
-        # Test empty project
-        empty_url = reverse(project_samples, args=[EMPTY_PROJECT_GUID])
-        self._check_empty_project(empty_url, response_keys)
 
     def test_project_analysis_groups(self):
         url = reverse(project_analysis_groups, args=[PROJECT_GUID])

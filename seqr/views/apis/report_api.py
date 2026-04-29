@@ -24,7 +24,7 @@ from seqr.views.utils.permissions_utils import user_is_analyst, get_project_and_
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
 
-from seqr.models import Project, Family, FamilyAnalysedBy, Sample, RnaSample, Individual
+from seqr.models import Project, Family, FamilyAnalysedBy, Dataset, RnaSample, Individual
 from settings import GREGOR_DATA_MODEL_URL
 
 
@@ -60,10 +60,13 @@ def seqr_stats(request):
 
     grouped_sample_counts = defaultdict(dict)
     for project_key, projects in project_models.items():
-        samples_counts = _get_sample_counts(Sample.objects.filter(individual__family__project__in=projects))
+        samples_counts = _get_sample_counts(
+            Dataset.objects.filter(active_individuals__family__project__in=projects),
+            count=Count('active_individuals'),
+        )
         samples_counts.update(_get_sample_counts(
-            RnaSample.objects.filter(individual__family__project__in=projects).annotate(sample_type=Value('RNA')),
-            data_type_key='data_type')
+            RnaSample.objects.filter(individual__family__project__in=projects, is_active=True).annotate(sample_type=Value('RNA')),
+            data_type_key='data_type', count=Count('*'))
         )
         for k, v in samples_counts.items():
             grouped_sample_counts[k][project_key] = v
@@ -80,8 +83,8 @@ def seqr_stats(request):
     })
 
 
-def _get_sample_counts(sample_q, data_type_key='dataset_type'):
-    samples_agg = sample_q.filter(is_active=True).values('sample_type', data_type_key).annotate(count=Count('*'))
+def _get_sample_counts(sample_q, count=None, data_type_key='dataset_type'):
+    samples_agg = sample_q.values('sample_type', data_type_key).annotate(count=count)
     return {
         f'{sample_agg["sample_type"]}__{sample_agg[data_type_key]}': sample_agg['count'] for sample_agg in samples_agg
     }
@@ -176,8 +179,8 @@ def anvil_export(request, project_guid):
             'congenital_status': Individual.ONSET_AGE_LOOKUP[individual.onset_age] if individual.onset_age else 'Unknown',
             **anvil_export_airtable_fields(airtable_metadata, has_dbgap_submission),
         },
-        get_additional_sample_fields=lambda sample, *args: {
-            'entity:sample_id': sample.individual.individual_id,
+        get_additional_sample_fields=lambda individual, *args: {
+            'entity:sample_id': individual.individual_id,
             'sequencing_center': 'Broad',
         },
         family_fields={'phenotype_group': {
@@ -379,11 +382,11 @@ def gregor_export(request):
     grouped_data_type_individuals = _get_individual_data_types(projects)
 
     # If multiple individual records, prefer WGS
-    individual_lookup = {
+    individual_lookup = [
         next(data_type_individuals[data_type.upper()] for data_type in GREGOR_DATA_TYPES
-             if data_type_individuals.get(data_type.upper())): None
+             if data_type_individuals.get(data_type.upper()))
         for data_type_individuals in grouped_data_type_individuals.values()
-    }
+    ]
 
     participant_rows = []
     family_map = {}
@@ -402,7 +405,7 @@ def gregor_export(request):
     parse_anvil_metadata(
         projects,
         user=request.user,
-        individual_samples=individual_lookup,
+        individuals=individual_lookup,
         individual_data_types=grouped_data_type_individuals,
         add_row=_add_row,
         format_id=_format_gregor_id,
@@ -513,20 +516,18 @@ def _process_participant_row(participant, phenotype_rows, missing_participant_id
 
 
 def _get_individual_data_types(projects):
-    sample_types = Sample.objects.filter(individual__family__project__in=projects).values_list('individual_id', 'sample_type')
-    individual_data_types = defaultdict(set)
-    for individual_db_id, sample_type in sample_types:
-        individual_data_types[individual_db_id].add(sample_type)
-    for individual_db_id in RnaSample.objects.filter(individual__family__project__in=projects).values_list('individual_id', flat=True):
-        individual_data_types[individual_db_id].add('RNA')
-    individuals = Individual.objects.filter(id__in=individual_data_types).prefetch_related(
-        'family__project', 'mother', 'father')
+    rna_individuals = set(RnaSample.objects.filter(individual__family__project__in=projects).values_list('individual_id', flat=True))
+    individuals = Individual.objects.filter(family__project__in=projects).annotate(
+        active_sample_types=ArrayAgg('active_datasets__sample_type', distinct=True, filter=Q(active_datasets__isnull=False)),
+        inactive_sample_types=ArrayAgg('inactive_datasets__sample_type', distinct=True, filter=Q(inactive_datasets__isnull=False)),
+    ).prefetch_related('family__project', 'mother', 'father')
 
     grouped_data_type_individuals = defaultdict(dict)
     for i in individuals:
         participant_id = _format_gregor_id(i.individual_id)
-        grouped_data_type_individuals[participant_id].update(
-            {data_type: i for data_type in individual_data_types[i.id]})
+        data_types = {*i.active_sample_types, *i.inactive_sample_types} | ({'RNA'} if i.id in rna_individuals else set())
+        if data_types:
+            grouped_data_type_individuals[participant_id].update({data_type: i for data_type in data_types})
     return grouped_data_type_individuals
 
 
@@ -995,7 +996,8 @@ def variant_metadata(request, project_guid):
     individuals = Individual.objects.filter(
         family__project__in=projects, family__savedvariant__varianttag__variant_tag_type__category=DISCOVERY_CATEGORY,
     ).distinct().annotate(
-        data_types=ArrayAgg('sample__sample_type', distinct=True, filter=Q(sample__isnull=False))
+        active_data_types=ArrayAgg('active_datasets__sample_type', distinct=True),
+        inactive_data_types=ArrayAgg('inactive_datasets__sample_type', distinct=True),
     )
 
     families_by_id = {}
@@ -1021,8 +1023,8 @@ def variant_metadata(request, project_guid):
     parse_anvil_metadata(
         projects,
         user=request.user,
-        individual_samples={i: None for i in individuals},
-        individual_data_types={i.individual_id: i.data_types for i in individuals},
+        individuals=individuals,
+        individual_data_types={i.individual_id: {*i.active_data_types, *i.inactive_data_types} for i in individuals},
         add_row=_add_row,
         mme_value=ArrayAgg('matchmakersubmissiongenes__saved_variant__variant_id'),
         include_family_name_display=True,
@@ -1069,6 +1071,6 @@ def _get_clickhouse_metadata(dataset_type, genome_version, keys, include_clinvar
     if include_clinvar:
         fields.append('clinvar')
         qs = qs.join_clinvar()
-    if dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+    if dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS:
         fields.append('caid')
     return {(dataset_type, genome_version, v.pop('key')): v for v in qs.values(*fields)}

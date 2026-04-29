@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+
 import mock
 from copy import deepcopy
 from datetime import datetime
@@ -14,9 +15,9 @@ from seqr.views.apis.family_api import update_family_pedigree_image, update_fami
     family_variant_tag_summary, update_family_analysis_groups, get_family_rna_seq_data, get_family_phenotype_gene_scores
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     FAMILY_NOTE_FIELDS, FAMILY_FIELDS, IGV_SAMPLE_FIELDS, \
-    SAMPLE_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
+    DATASET_FIELDS, INDIVIDUAL_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INTERNAL_FAMILY_FIELDS, CASE_REVIEW_FAMILY_FIELDS, \
     MATCHMAKER_SUBMISSION_FIELDS, TAG_TYPE_FIELDS, CASE_REVIEW_INDIVIDUAL_FIELDS
-from seqr.models import FamilyAnalysedBy, AnalysisGroup, Sample
+from seqr.models import FamilyAnalysedBy, AnalysisGroup, Individual
 
 FAMILY_GUID = 'F000001_1'
 FAMILY_GUID2 = 'F000002_2'
@@ -48,7 +49,7 @@ class FamilyAPITest(object):
 
         response_json = response.json()
         response_keys = {
-            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'samplesByGuid', 'igvSamplesByGuid',
+            'familiesByGuid', 'individualsByGuid', 'familyNotesByGuid', 'datasetsByGuid', 'igvSamplesByGuid',
             'mmeSubmissionsByGuid',
         }
         self.assertSetEqual(set(response_json.keys()), response_keys)
@@ -73,7 +74,7 @@ class FamilyAPITest(object):
 
         self.assertEqual(len(response_json['individualsByGuid']), 3)
         individual = response_json['individualsByGuid'][INDIVIDUAL_GUID]
-        individual_fields = {'sampleGuids', 'igvSampleGuids', 'mmeSubmissionGuid', 'phenotypePrioritizationTools', 'rnaSample'}
+        individual_fields = {'igvSampleGuids', 'mmeSubmissionGuid', 'phenotypePrioritizationTools', 'rnaSample'}
         individual_fields.update(INDIVIDUAL_FIELDS)
         self.assertSetEqual(set(individual.keys()), individual_fields)
         self.assertListEqual([
@@ -95,12 +96,15 @@ class FamilyAPITest(object):
         self.assertSetEqual({PROJECT_GUID}, {i['projectGuid'] for i in response_json['individualsByGuid'].values()})
         self.assertSetEqual({FAMILY_GUID}, {i['familyGuid'] for i in response_json['individualsByGuid'].values()})
 
-        self.assertEqual(len(response_json['samplesByGuid']), 3)
-        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
-        self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['samplesByGuid'].values()})
-        self.assertSetEqual({FAMILY_GUID}, {s['familyGuid'] for s in response_json['samplesByGuid'].values()})
-        self.assertEqual(len(individual['sampleGuids']), 1)
-        self.assertTrue(set(individual['sampleGuids']).issubset(set(response_json['samplesByGuid'].keys())))
+        self.assertEqual(len(response_json['datasetsByGuid']), 2)
+        dataset = response_json['datasetsByGuid']['S000129_na19675']
+        self.assertSetEqual(set(dataset.keys()), DATASET_FIELDS)
+        self.assertSetEqual({PROJECT_GUID}, {s['projectGuid'] for s in response_json['datasetsByGuid'].values()})
+        self.assertListEqual(
+            dataset['activeIndividuals'],
+            ['I000001_na19675', 'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000007_na20870', 'I000009_na20874'],
+        )
+        self.assertListEqual(dataset['inactiveIndividuals'], ['I000003_na19679'])
 
         self.assertEqual(len(response_json['igvSamplesByGuid']), 1)
         self.assertSetEqual(set(next(iter(response_json['igvSamplesByGuid'].values())).keys()), IGV_SAMPLE_FIELDS)
@@ -209,7 +213,7 @@ class FamilyAPITest(object):
         self.assertEqual(family['projectGuid'], PROJECT_GUID)
         self.assertSetEqual(set(family['individualGuids']), set(response_json['individualsByGuid'].keys()))
         self.assertEqual(len(response_json['individualsByGuid']), 3)
-        self.assertEqual(len(response_json['samplesByGuid']), 7)
+        self.assertEqual(len(response_json['datasetsByGuid']), 3)
         self.assertEqual(len(response_json['igvSamplesByGuid']), 0)
         self.assertEqual(len(response_json['mmeSubmissionsByGuid']), 0)
         self.assertEqual(len(response_json['familyNotesByGuid']), 0)
@@ -324,7 +328,7 @@ class FamilyAPITest(object):
 
         # Test success
         MatchmakerSubmission.objects.update(deleted_date=datetime.now())
-        Sample.objects.update(is_active=False)
+        Individual.active_datasets.through.objects.all().delete()
 
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 200)

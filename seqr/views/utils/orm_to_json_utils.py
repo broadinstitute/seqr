@@ -221,7 +221,7 @@ FAMILY_ADDITIONAL_VALUES = {
         createdBy=_user_expr('familyanalysedby__created_by'),
         dataType='familyanalysedby__data_type',
         lastModifiedDate='familyanalysedby__last_modified_date',
-    ), filter=Q(familyanalysedby__isnull=False)),
+    ), filter=Q(familyanalysedby__isnull=False), distinct=True),
     'assignedAnalyst': Case(
         When(assigned_analyst__isnull=False, then=JSONObject(
             fullName=_full_name_expr('assigned_analyst'), email=F('assigned_analyst__email'),
@@ -265,7 +265,7 @@ def get_json_for_family_note(note):
 INDIVIDUAL_DISPLAY_NAME_EXPR = Coalesce(NullIf('display_name', Value('')), 'individual_id', output_field=CharField())
 
 
-def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sample_guids_field=False,
+def _get_json_for_individuals(individuals, user=None, project_guid=None,
                               add_hpo_details=False, is_analyst=None, has_case_review_perm=False):
     additional_model_fields = _get_case_review_fields(individuals.model, has_case_review_perm)
     nested_fields = [
@@ -284,11 +284,6 @@ def _get_json_for_individuals(individuals, user=None, project_guid=None, add_sam
         'paternalId': F('father__individual_id'),
         'displayName': INDIVIDUAL_DISPLAY_NAME_EXPR,
     }
-    if add_sample_guids_field:
-        additional_values.update({
-            f'{field}Guids': ArrayAgg(f'{field.lower()}__guid', filter=Q(**{f'{field.lower()}__isnull': False}))
-            for field in ['sample', 'igvSample']
-        })
 
     parsed_individuals = get_json_for_queryset(
         individuals, user=user, is_analyst=is_analyst, additional_values=additional_values,
@@ -337,6 +332,14 @@ def get_json_for_samples(samples, **kwargs):
     """
 
     return get_json_for_queryset(samples, **_get_sample_json_kwargs(**kwargs))
+
+
+def get_json_for_datasets(datasets, project_guid):
+    return get_json_for_queryset(datasets, additional_values={
+        'projectGuid': Value(project_guid),
+        'activeIndividuals': ArrayAgg('active_individuals__guid', distinct=True, filter=Q(active_individuals__isnull=False)),
+        'inactiveIndividuals': ArrayAgg('inactive_individuals__guid', distinct=True, filter=Q(inactive_individuals__isnull=False)),
+    })
 
 
 def get_json_for_sample(sample, **kwargs):

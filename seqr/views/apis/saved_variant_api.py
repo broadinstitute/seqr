@@ -4,7 +4,7 @@ import json
 from django.db.models import Q
 
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    Family, GeneNote, Project, Sample
+    Family, GeneNote, Project, Dataset
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
@@ -83,7 +83,7 @@ def create_manual_saved_variant_handler(request, family_guid):
     variant_json['saved_variant_json'] = {**variant_json}
     variant_json.update({
         'key': None,
-        'dataset_type': Sample.DATASET_TYPE_SV_CALLS if variant_json.get('svName') else Sample.DATASET_TYPE_VARIANT_CALLS,
+        'dataset_type': Dataset.DATASET_TYPE_SV_CALLS if variant_json.get('svName') else Dataset.DATASET_TYPE_VARIANT_CALLS,
     })
 
     model_json = parse_saved_variant_json(variant_json, family.id)
