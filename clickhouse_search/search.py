@@ -151,7 +151,6 @@ def _parse_locus_search(locus, genome_version, search):
     search.update({
         'genes': genes, 'intervals': intervals, 'exclude_intervals': exclude_intervals, 'raw_variant_items': locus.get('rawVariantItems'),
     })
-    exclude.pop('rawItems', None)
 
 
 def get_search_genes(gene_ids, genome_version):
