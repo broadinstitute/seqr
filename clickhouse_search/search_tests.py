@@ -678,7 +678,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         request_body = {'projectFamilies': DEFAULT_PROJECT_FAMILIES, 'previousSearchHash': 'abc1234'}
         exclude = {'previousSearch': True}
-        response_search = {'exclude': {**exclude, 'previousSearchHash': 'abc1234'}}
+        response_search = {
+            'exclude_keys': {'SNV_INDEL': [1, 2]},
+            'exclude_key_pairs': {'SNV_INDEL': [[2, 3]],'SV_WES': [[18, 19]]},
+        }
         self._assert_expected_search(
             [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3],
             inheritance_mode='recessive', **COMP_HET_ALL_PASS_FILTERS,
@@ -692,6 +695,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.set_cache(cache_key, [
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], [VARIANT3, VARIANT4], GCNV_VARIANT3, MITO_VARIANT3,
         ])
+        response_search = {
+            'exclude_keys': {'MITO': [8], 'SV_WES': [18]},
+            'exclude_key_pairs': {'SNV_INDEL': [[3, 4]], 'SNV_INDEL,SV_WES': [[2, 19]]},
+        }
         self._assert_expected_search(
             [VARIANT2, [GCNV_VARIANT3, GCNV_VARIANT4]], exclude=exclude, **COMP_HET_ALL_PASS_FILTERS,
             request_body=request_body, response_search=response_search, inheritance_mode='recessive', cached_variant_fields=[
@@ -858,7 +865,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [],locus={'rawVariantItems': VARIANT_IDS[1]},
         )
 
-    @mock.patch('seqr.utils.search.utils.MAX_EXPORT_VARIANTS', 2)
+    @mock.patch('seqr.views.apis.variant_search_api.MAX_EXPORT_VARIANTS', 2)
     @mock.patch('clickhouse_search.search.MAX_GENES_FOR_FILTER', 2)
     @mock.patch('clickhouse_search.search.MAX_NO_LOCATION_COMP_HET_FAMILIES', 1)
     @mock.patch('clickhouse_search.search.MAX_VARIANTS', 3)
@@ -981,7 +988,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         response = self.client.get(export_url)
         self.assertEqual(response.status_code, 403)
 
-    @mock.patch('seqr.utils.search.utils.LiftOver')
+    @mock.patch('clickhouse_search.search.LiftOver')
     def test_variant_lookup(self, mock_liftover):
         mock_convert_coordinate = mock_liftover.return_value.convert_coordinate
         mock_convert_coordinate.side_effect = lambda chrom, pos: [(chrom, pos + 10000)]
