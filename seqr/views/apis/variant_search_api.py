@@ -82,7 +82,7 @@ def query_variants_handler(request, search_hash):
 def _get_variants_with_cache(get_cache_key, get_variants, *args, **kwargs):
     cache_key = get_cache_key(*args, **kwargs)
     variants = safe_redis_get_json(cache_key)
-    if not variants:
+    if variants is None:
         variants = get_variants(*args, **kwargs)
         safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
     return variants
