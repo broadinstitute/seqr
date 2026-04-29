@@ -11,7 +11,7 @@ from requests.exceptions import ConnectionError as RequestConnectionError
 
 from clickhouse_search.search import delete_clickhouse_project
 from seqr.utils.communication_utils import send_project_notification
-from seqr.utils.search.add_data_utils import trigger_data_loading, get_missing_family_samples, get_loaded_individual_ids, trigger_delete_families_search
+from seqr.utils.add_data_utils import trigger_data_loading, get_missing_family_samples, get_loaded_individual_ids, trigger_delete_families_search
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list

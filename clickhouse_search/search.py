@@ -7,6 +7,7 @@ from django.db.models import Count, F, Min, Q
 from django.db.models.functions import JSONObject
 from django.db.utils import OperationalError
 import json
+from pyliftover.liftover import LiftOver
 
 from clickhouse_search.backend.fields import NamedTupleField
 from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayIntersect, ArraySort, GroupArrayArray, If, Tuple, \
@@ -16,7 +17,7 @@ from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, EntriesSnvIndel,  \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
-from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38
+from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Dataset, PhenotypePrioritization, Family, Individual
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.logging_utils import SeqrLogger
@@ -150,7 +151,6 @@ def _parse_locus_search(locus, genome_version, search):
     search.update({
         'genes': genes, 'intervals': intervals, 'exclude_intervals': exclude_intervals, 'raw_variant_items': locus.get('rawVariantItems'),
     })
-    exclude.pop('rawItems', None)
 
 
 def get_search_genes(gene_ids, genome_version):
@@ -928,9 +928,8 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
         lifted_genome_version = next(gv for gv in ENTRY_CLASS_MAP.keys() if gv != genome_version)
         lifted_entry_cls = ENTRY_CLASS_MAP[lifted_genome_version].get(data_type)
         if lifted_entry_cls:
-            from seqr.utils.search.utils import run_liftover
             chrom, pos, base_id = variant_id.split('-', 2)
-            liftover_results = run_liftover(lifted_genome_version, chrom, int(pos))
+            liftover_results = _run_liftover(lifted_genome_version, chrom, int(pos))
             if liftover_results:
                 lifted_id = f'{liftover_results[0]}-{liftover_results[1]}-{base_id}'
                 entry_qs = lifted_entry_cls.objects.filter_locus(raw_variant_items=lifted_id)
@@ -1052,3 +1051,32 @@ def delete_clickhouse_project(project, dataset_type, sample_type=None):
             PROJECT_GT_STATS_VIEW_CLASS_MAP[project.genome_version][dataset_type].refresh()
             ENTRY_CLASS_MAP[project.genome_version][dataset_type].gt_stats.rel.related_model.reload()
     return f'Deleted all {dataset_type} search data for project {project.name}'
+
+
+LIFTOVERS = {
+    GENOME_VERSION_GRCh38: None,
+    GENOME_VERSION_GRCh37: None,
+}
+PYLIFTOVER_BUILD_LOOKUP = {
+    GENOME_VERSION_GRCh38: ('hg19', 'hg38'),
+    GENOME_VERSION_GRCh37: ('hg38', 'hg19'),
+}
+def _get_liftover(genome_version):
+    if not LIFTOVERS[genome_version]:
+        try:
+            LIFTOVERS[genome_version] = LiftOver(*PYLIFTOVER_BUILD_LOOKUP[genome_version])
+        except Exception as e:
+            logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
+    return LIFTOVERS[genome_version]
+
+
+def _run_liftover(genome_version, chrom, pos):
+    liftover = _get_liftover(genome_version)
+    if not liftover:
+        return None
+    lifted_coord = liftover.convert_coordinate(
+        'chr{}'.format(chrom.lstrip('chr')), int(pos)
+    )
+    if lifted_coord and lifted_coord[0]:
+        return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1])
+    return None

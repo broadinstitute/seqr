@@ -13,7 +13,7 @@ from reference_data.models import GENOME_VERSION_LOOKUP
 from seqr.models import Family, Dataset, Project, Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
-from seqr.utils.search.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
+from seqr.utils.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.export_utils import write_multiple_files
 from seqr.views.utils.json_to_orm_utils import create_model_from_json

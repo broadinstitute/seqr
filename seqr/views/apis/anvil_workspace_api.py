@@ -21,7 +21,7 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
 from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.file_utils import list_files
-from seqr.utils.search.add_data_utils import get_missing_family_samples, get_loaded_individual_ids, trigger_data_loading
+from seqr.utils.add_data_utils import get_missing_family_samples, get_loaded_individual_ids, trigger_data_loading
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException

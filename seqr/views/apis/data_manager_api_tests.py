@@ -533,7 +533,7 @@ class DataManagerAPITest(AirtableTest):
 
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
-    @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
+    @mock.patch('seqr.utils.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
     @mock.patch('seqr.views.utils.dataset_utils.os.path.isfile', lambda *args: True)
     @mock.patch('seqr.utils.communication_utils.send_html_email')
@@ -1328,7 +1328,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_subprocess = patcher.start()
         self.mock_subprocess.side_effect = [self.mock_file_iter]
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.search.add_data_utils.LOADING_DATASETS_DIR', self.TRIGGER_CALLSET_DIR)
+        patcher = mock.patch('seqr.utils.add_data_utils.LOADING_DATASETS_DIR', self.TRIGGER_CALLSET_DIR)
         patcher.start()
         self.addCleanup(patcher.stop)
         super().setUp()
@@ -1448,10 +1448,10 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter.wait.return_value = 0
         self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
+        patcher = mock.patch('seqr.utils.add_data_utils.safe_post_to_slack')
         self.mock_slack = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.search.add_data_utils.LOADING_DATASETS_DIR', 'gs://seqr-loading-temp/v3.1')
+        patcher = mock.patch('seqr.utils.add_data_utils.LOADING_DATASETS_DIR', 'gs://seqr-loading-temp/v3.1')
         patcher.start()
         self.addCleanup(patcher.stop)
         super().setUp()

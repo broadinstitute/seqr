@@ -2,6 +2,7 @@ import json
 import jmespath
 from collections import defaultdict
 from copy import deepcopy
+from datetime import timedelta
 from django.utils import timezone
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned, PermissionDenied
@@ -12,14 +13,15 @@ from django.shortcuts import redirect
 from math import ceil
 import re
 
+from clickhouse_search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
+from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
+    get_sorted_search_results, clickhouse_variant_lookup, InvalidSearchException
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
 from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Dataset
-from seqr.utils.search.utils import query_variants, get_single_variant, get_variant_query_gene_counts, \
-    variant_lookup, export_variants
-from seqr.utils.search.utils import InvalidSearchException
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_get_wildcard_json, safe_redis_set_json
 from seqr.utils.xpos_utils import parse_variant_id
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
@@ -27,9 +29,9 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches, add_individual_hpo_details, FAMILY_ADDITIONAL_VALUES
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission
+    login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission, user_is_analyst
 from seqr.views.utils.project_context_utils import get_projects_child_entities
-from seqr.views.utils.variant_utils import get_variants_response
+from seqr.views.utils.variant_utils import get_variants_response, variant_dataset_type
 from seqr.views.utils.vlm_utils import vlm_lookup
 
 logger = SeqrLogger(__name__)
@@ -52,6 +54,9 @@ def query_variants_handler(request, search_hash):
     """
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
+    sort = request.GET.get('sort') or XPOS_SORT_KEY
+    if sort == PATHOGENICTY_SORT_KEY and user_is_analyst(request.user):
+        sort = PATHOGENICTY_HGMD_SORT_KEY
 
     search_context = json.loads(request.body or '{}')
     try:
@@ -61,14 +66,40 @@ def query_variants_handler(request, search_hash):
 
     _check_results_permission(results_model, request.user)
 
-    variants, total_results = query_variants(results_model, sort=request.GET.get('sort'), page=page, num_results=per_page, user=request.user)
+    all_variants = _get_variants_with_cache(
+        _get_search_cache_key, _query_variants, results_model, request.user, sort=sort,
+    )
+    variants = all_variants[(page-1)*per_page:page*per_page]
 
     response = _process_variants(variants or [], results_model.families.all(), request,
                                  genome_version=results_model.variant_search.search.get('no_access_project_genome_version'))
     response['search'] = _get_search_context(results_model)
-    response['search']['totalResults'] = total_results
+    response['search']['totalResults'] = len(all_variants)
 
     return create_json_response(response)
+
+
+def _get_variants_with_cache(get_cache_key, get_variants, *args, **kwargs):
+    cache_key = get_cache_key(*args, **kwargs)
+    variants = safe_redis_get_json(cache_key)
+    if variants is None:
+        variants = get_variants(*args, **kwargs)
+        safe_redis_set_json(cache_key, variants, expire=timedelta(weeks=2))
+    return variants
+
+
+def _get_search_cache_key(results_model, user, sort=XPOS_SORT_KEY):
+    return 'search_results__{}__{}'.format(results_model.guid, sort)
+
+
+def _query_variants(results_model, user, sort=XPOS_SORT_KEY):
+    families = results_model.families.all()
+    wildcard_cache_key = _get_search_cache_key(results_model, user, sort='*')
+    unsorted_variants = safe_redis_get_wildcard_json(wildcard_cache_key)
+    if unsorted_variants:
+        return get_sorted_search_results(unsorted_variants, sort, families)
+
+    return get_clickhouse_variants(families, user, sort=sort, **results_model.variant_search.search)
 
 
 def _all_project_family_search_genome(search_context):
@@ -115,7 +146,7 @@ def _get_or_create_results_model(search_hash, search_context, user):
 
         search_dict = search_context.get('search', {})
         if search_context.get('previousSearchHash') and (search_dict.get('exclude') or {}).get('previousSearch'):
-            search_dict['exclude']['previousSearchHash'] = search_context['previousSearchHash']
+            search_dict.update(_get_exclude_keys(search_context['previousSearchHash'], user))
         if include_no_access_projects:
             search_dict['no_access_project_genome_version'] = all_project_genome_version
         search_model = VariantSearch.objects.filter(search=search_dict).filter(
@@ -134,6 +165,23 @@ def _get_or_create_results_model(search_hash, search_context, user):
     return results_model
 
 
+def _get_exclude_keys(search_hash, user):
+    previous_results_model = VariantSearchResults.objects.get(search_hash=search_hash)
+    results = _get_variants_with_cache(_get_search_cache_key, _query_variants, previous_results_model, user)
+    exclude_keys = defaultdict(list)
+    exclude_key_pairs = defaultdict(list)
+    for variant in results:
+        if isinstance(variant, list):
+            dt1= variant_dataset_type(variant[0])
+            dt2 = variant_dataset_type(variant[1])
+            dataset_type = dt1 if dt1 == dt2 else ','.join(sorted([dt1, dt2]))
+            exclude_key_pairs[dataset_type].append(sorted([variant[0]['key'], variant[1]['key']]))
+        else:
+            dataset_type = variant_dataset_type(variant)
+            exclude_keys[dataset_type].append(variant['key'])
+    return {'exclude_keys': dict(exclude_keys), 'exclude_key_pairs': dict(exclude_key_pairs)}
+
+
 @login_and_policies_required
 def query_single_variant_handler(request, variant_id):
     """Search variants.
@@ -142,9 +190,11 @@ def query_single_variant_handler(request, variant_id):
     family = families.first()
     check_project_permissions(family.project, request.user)
 
-    variant = get_single_variant(families, variant_id, request.user)
+    variants = get_clickhouse_variants(families, request.user, raw_variant_items=variant_id, variant_ids=[variant_id])
+    if not variants:
+        raise InvalidSearchException('Variant {} not found'.format(variant_id))
 
-    response = _process_variants([variant], families, request, add_all_context=True, add_locus_list_detail=True)
+    response = _process_variants(variants, families, request, add_all_context=True, add_locus_list_detail=True)
 
     return create_json_response(response)
 
@@ -153,6 +203,7 @@ def _process_variants(variants, families, request, add_all_context=False, add_lo
     if not variants:
         return {'searchedVariantIds': [], 'variantsById': {}}
 
+    variants = format_clickhouse_results(variants)
     flat_variants = _flatten_variants(variants)
     variants_by_id = {v['variantId']: v for v in flat_variants}
     saved_variants = _get_saved_variant_models(flat_variants)
@@ -233,6 +284,7 @@ VARIANT_SAMPLE_DATA = [
     {'header': 'ab'},
 ]
 
+MAX_EXPORT_VARIANTS = 1000
 MAX_FAMILIES_PER_ROW = 1000
 
 
@@ -241,7 +293,18 @@ def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
     projects = _check_results_permission(results_model, request.user)
 
-    gene_counts = get_variant_query_gene_counts(results_model, user=request.user)
+    results = _get_variants_with_cache(_get_search_cache_key, _query_variants, results_model, request.user)
+    flat_variants = [
+        v for variants in results for v in (variants if isinstance(variants, list) else [variants])
+    ]
+    gene_counts = defaultdict(lambda: {'total': 0, 'families': defaultdict(int)})
+    for var in flat_variants:
+        gene_ids = var['transcripts'].keys() if 'transcripts' in var else {t['geneId'] for t in var['sortedTranscriptConsequences']}
+        for gene_id in gene_ids:
+            gene_counts[gene_id]['total'] += 1
+            for family_guid in var['familyGuids']:
+                gene_counts[gene_id]['families'][family_guid] += 1
+
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
         'genesById': get_genes_for_variant_display(list(gene_counts.keys()), projects.first().genome_version),
@@ -258,7 +321,12 @@ def export_variants_handler(request, search_hash):
     families = results_model.families.all()
     family_ids_by_guid = {family.guid: family.family_id for family in families}
 
-    variants = export_variants(results_model, request.user)
+    variants = _get_variants_with_cache(_get_search_cache_key, _query_variants, results_model, request.user)
+    total_variants = len(variants)
+    if total_variants > MAX_EXPORT_VARIANTS:
+        raise InvalidSearchException(f'Unable to export more than {MAX_EXPORT_VARIANTS} variants ({total_variants} requested)')
+
+    variants = format_clickhouse_export_results(variants)
 
     saved_variants = _get_saved_variant_models(variants)
     json_saved_variants = get_json_for_saved_variants_with_tags(saved_variants)
@@ -528,7 +596,10 @@ def variant_lookup_handler(request):
     variant_id = request.GET.get('variantId')
     genome_version = request.GET.get('genomeVersion') or GENOME_VERSION_GRCh38
     bool_kwargs = {_to_snake_case(field): bool(request.GET.get(field)) for field in ['affectedOnly', 'homOnly']}
-    variants = variant_lookup(request.user, variant_id, genome_version, sample_type=request.GET.get('sampleType'), **bool_kwargs)
+    variants = _get_variants_with_cache(
+        _get_lookup_cache_key, clickhouse_variant_lookup,
+        request.user, variant_id, sample_type=request.GET.get('sampleType'), genome_version=genome_version, **bool_kwargs,
+    )
 
     family_guids = set()
     for variant in variants:
@@ -554,6 +625,15 @@ def variant_lookup_handler(request):
         _update_lookup_variant(variant, response, individual_guid_map, request.user)
 
     return create_json_response(response)
+
+
+def _get_lookup_cache_key(user, variant_id, sample_type, genome_version, affected_only, hom_only):
+    cache_fields = ['variant_lookup_results', variant_id, genome_version]
+    if affected_only:
+        cache_fields.append('affected')
+    if hom_only:
+        cache_fields.append('hom')
+    return '__'.join(cache_fields)
 
 
 def _update_lookup_variant(variant, response, individual_guid_map, user):

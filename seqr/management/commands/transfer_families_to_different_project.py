@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 
 from seqr.models import Project, Family, VariantTag, VariantTagType, Dataset
-from seqr.utils.search.add_data_utils import trigger_delete_families_search
+from seqr.utils.add_data_utils import trigger_delete_families_search
 
 import logging
 logger = logging.getLogger(__name__)
