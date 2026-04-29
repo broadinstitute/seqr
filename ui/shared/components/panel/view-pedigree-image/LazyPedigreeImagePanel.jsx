@@ -201,26 +201,24 @@ class BasePedigreeImage extends React.PureComponent {
     dataset.filter(
       ({ mother, father }) => mother || father,
     ).forEach((indiv) => {
-      if (indiv.mother && indiv.father) {
-        // pedigree js incorrectly considers people whose parents are different generations consanguineous
-        const mother = nameMap[indiv.mother]
-        const father = nameMap[indiv.father]
-        let missingGenParent = null
-        if (mother.top_level && !father.top_level) {
-          missingGenParent = mother
-        } else if (father.top_level && !mother.top_level) {
-          missingGenParent = father
-        }
-        if (missingGenParent) {
-          missingGenParent.top_level = false
-          this.addParent(`${missingGenParent.name}-father-placeholder`, missingGenParent, newParents, true)
-          this.addParent(`${missingGenParent.name}-mother-placeholder`, missingGenParent, newParents, false)
-        }
-        return
+      if (!indiv.mother || !indiv.father) {
+        const placeholderId = `${indiv.mother || indiv.father}-spouse-placeholder`
+        this.addParent(placeholderId, indiv, newParents, !indiv.father)
       }
-
-      const placeholderId = `${indiv.mother || indiv.father}-spouse-placeholder`
-      this.addParent(placeholderId, indiv, newParents, !indiv.father)
+      // pedigree js incorrectly considers people whose parents are different generations consanguineous
+      const mother = nameMap[indiv.mother] || newParents[indiv.mother]
+      const father = nameMap[indiv.father] || newParents[indiv.father]
+      let missingGenParent = null
+      if (mother.top_level && !father.top_level) {
+        missingGenParent = mother
+      } else if (father.top_level && !mother.top_level) {
+        missingGenParent = father
+      }
+      if (missingGenParent) {
+        missingGenParent.top_level = false
+        this.addParent(`${missingGenParent.name}-father-placeholder`, missingGenParent, newParents, true)
+        this.addParent(`${missingGenParent.name}-mother-placeholder`, missingGenParent, newParents, false)
+      }
     })
 
     return this.yobToAge([...dataset, ...Object.values(newParents)])
