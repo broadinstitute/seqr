@@ -788,6 +788,7 @@ def get_json_for_rna_seq_outliers(filters, significant_only=True, individual_gui
             models,
             nested_fields=[
                 {'fields': ('sample', 'tissue_type'), 'key': 'tissueType'},
+                {'fields': ('sample', 'sequencing_type'), 'key': 'sequencingType'},
                 {'fields': ('sample', 'individual', 'guid'), 'key': 'individualGuid', 'value': individual_guid},
             ],
             additional_values={'isSignificant': Value(True)} if significant_only else {

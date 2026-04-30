@@ -852,6 +852,7 @@ export const getIndividualPhenotypeGeneScores = createSelector(
 export const getTissueOptionsByIndividualGuid = createSelector(
   getRnaSeqDataByIndividual,
   (rnaSeqDataByIndividualGuid) => {
+    // TODO
     const tissueTypesByIndividualGuid = Object.entries(rnaSeqDataByIndividualGuid || {}).map(
       ([individualGuid, rnaSeqData]) => ([
         individualGuid,

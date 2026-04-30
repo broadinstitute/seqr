@@ -15,6 +15,7 @@ const RNA_SEQ_SPLICE_NUM_FIELDS = ['pValue', 'pAdjust', 'deltaIntronJaccardIndex
 const RNA_SEQ_SPLICE_DETAIL_FIELDS = ['type']
 
 const openReads = (updateReads, row) => () => {
+  // TODO
   const { chrom, start, end, tissueType, familyGuid } = row
   updateReads(familyGuid, getLocus(chrom, start, RNASEQ_JUNCTION_PADDING, end - start),
     [JUNCTION_TYPE, COVERAGE_TYPE], tissueType)

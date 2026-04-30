@@ -50,6 +50,7 @@ class BaseRnaSeqResultPage extends React.PureComponent {
   }
 
   onTissueChange = (e, data) => {
+    // TODO
     this.setState({ tissueType: data.value })
   }
 

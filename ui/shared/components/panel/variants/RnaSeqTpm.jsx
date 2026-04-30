@@ -189,6 +189,7 @@ const renderGtex = (gtexExpressionData, familyExpressionData, containerElement) 
   const gtexByTissue = ((gtexExpressionData || {}).data || []).reduce((acc, { data, tissueSiteDetailId }) => ({
     ...acc, [GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]: data,
   }), {})
+  // TODO
   const boxplotData = Object.entries(familyExpressionData).reduce((
     acc, [tissue, { rdgData, myData, individualData }],
   ) => ([

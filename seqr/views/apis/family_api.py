@@ -488,24 +488,25 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
     family = Family.objects.get(guid=family_guid)
     check_project_permissions(family.project, request.user)
 
-    response = defaultdict(lambda: {'individualData': {}})
+    response = defaultdict(lambda:  defaultdict(lambda: {'individualData': {}}))
     tpm_data = RnaSeqTpm.objects.filter(
         gene_id=gene_id, sample__individual__family=family).prefetch_related('sample', 'sample__individual')
     for tpm in tpm_data:
         indiv = tpm.sample.individual
-        response[tpm.sample.tissue_type]['individualData'][indiv.display_name or indiv.individual_id] = tpm.tpm
+        response[tpm.sample.tissue_type][tpm.sample.sequencing_type]['individualData'][indiv.display_name or indiv.individual_id] = tpm.tpm
 
     project_guids = get_project_guids_user_can_view(request.user)
     internal_projects = get_internal_projects() if anvil_enabled() else None
     for tissue in response.keys():
-        tpms = RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene_id)
-        response[tissue]['myData'] = list(tpms.filter(
-            sample__individual__family__project__guid__in=project_guids,
-        ).order_by('tpm').values_list('tpm', flat=True))
-        if internal_projects is not None:
-            response[tissue]['rdgData'] = list(tpms.filter(
-                sample__individual__family__project__in=internal_projects,
+        for sequencing_type in response[tissue].keys():
+            tpms = RnaSeqTpm.objects.filter(sample__tissue_type=tissue, sequencing_type=sequencing_type, gene_id=gene_id)
+            response[tissue][sequencing_type]['myData'] = list(tpms.filter(
+                sample__individual__family__project__guid__in=project_guids,
             ).order_by('tpm').values_list('tpm', flat=True))
+            if internal_projects is not None:
+                response[tissue][sequencing_type]['rdgData'] = list(tpms.filter(
+                    sample__individual__family__project__in=internal_projects,
+                ).order_by('tpm').values_list('tpm', flat=True))
 
     return create_json_response(response)
 
