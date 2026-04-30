@@ -30,6 +30,7 @@ from settings import LOADING_DATASETS_DIR, LUIGI_UI_SERVICE_HOSTNAME, LUIGI_UI_S
 logger = SeqrLogger(__name__)
 
 RNA = 'RNA'
+SEQUENCING_FIELD = 'RNASequencingProduct'
 TISSUE_FIELD = 'TissueOfOrigin'
 AIRTABLE_TISSUE_TYPE_MAP = {
     'whole_blood': 'Blood',
@@ -53,7 +54,7 @@ def update_rna_seq(request):
     airtable_samples = _get_dataset_type_samples_for_matched_pdos(
         ['RNA ready to load'], request.user, RNA, None, allow_invalid_pdos=True, sample_fields=[
             TISSUE_FIELD, 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping',
-        ],
+        ], pdo_fields=[SEQUENCING_FIELD],
     )
     sample_metadata_mapping = {}
     misconfigured_samples = defaultdict(list)
@@ -77,12 +78,20 @@ def update_rna_seq(request):
         elif not pdos or pdos[0]['project_guid'] is None:
             error_messages.append('no project specified')
 
+        airtable_sequencing_type = pdos[0].get(SEQUENCING_FIELD)
+        if not airtable_sequencing_type:
+            error_messages.append('no sequencing product specified')
+        sequencing_type = next((st for st, label in RnaSample.SEQUENCING_CHOICES if airtable_sequencing_type.startswith(st)), None)
+        if not sequencing_type:
+            error_messages.append('invalid sequencing product specified')
+
         if error_messages:
             for sample_id in sample_ids:
                 misconfigured_samples[sample_id].extend(error_messages)
         else:
             metadata = {
                 'tissue': TISSUE_TYPE_MAP[sample[TISSUE_FIELD][0]],
+                'sequencing_type': sequencing_type,
                 'project_guid': sample['pdos'][0]['project_guid'],
                 'sample_id': sample.get('CollaboratorSampleID') or sample['sample_id'],
             }

@@ -317,6 +317,7 @@ def load_rna_seq(request_json, user, **kwargs):
     data_type = request_json['dataType']
     file_path = request_json['file']
 
+    # TODO sequencing_type
     try:
         sample_guids, file_name_prefix, info, warnings = _load_rna_seq(
             data_type, file_path, user, **kwargs,
