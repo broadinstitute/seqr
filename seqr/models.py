@@ -754,10 +754,17 @@ class RnaSample(ModelWithGUID):
         ('S', 'skin'),
     )
 
+    SEQUENCING_CHOICES = (
+        ('K', 'Kinnex'),
+        ('T', 'Tru-Seq'),
+        ('W', 'Watchmaker'),
+    )
+
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
     data_type = models.CharField(max_length=1, choices=DATA_TYPE_CHOICES)
     tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES)
+    sequencing_type = models.CharField(max_length=1, choices=SEQUENCING_CHOICES)
     data_source = models.TextField()
     is_active = models.BooleanField(default=False)
 
