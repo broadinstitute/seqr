@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.file_utils import file_iter, does_file_exist, list_files
-from seqr.models import Sample
+from seqr.models import Dataset
 
 BLOCK_SIZE = 65536
 
@@ -20,12 +20,12 @@ ALL_EXPECTED_FORMAT_FIELDS ={
 }
 
 DATA_TYPE_FORMAT_FIELDS = {
-    Sample.DATASET_TYPE_SV_CALLS: BASE_EXPECTED_FORMAT_FIELDS,
+    Dataset.DATASET_TYPE_SV_CALLS: BASE_EXPECTED_FORMAT_FIELDS,
 }
 
 DATA_TYPE_FILE_EXTS = {
-    Sample.DATASET_TYPE_MITO_CALLS: ('.mt',),
-    Sample.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
+    Dataset.DATASET_TYPE_MITO_CALLS: ('.mt',),
+    Dataset.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
 REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']

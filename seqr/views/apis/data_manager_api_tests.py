@@ -11,7 +11,7 @@ from seqr.views.apis.data_manager_api import update_rna_seq, load_phenotype_prio
     get_loaded_projects, load_data, trigger_delete_family
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
-from seqr.models import Individual, Sample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
+from seqr.models import Dataset, Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 PROJECT_GUID = 'R0001_1kg'
@@ -1279,8 +1279,7 @@ class DataManagerAPITest(AirtableTest):
             ],
         })
 
-        family_samples = Sample.objects.filter(individual__family_id=2, is_active=True)
-        self.assertEqual(family_samples.count(), 0)
+        self.assertEqual(Dataset.objects.filter(active_individuals__family_id=2).count(), 0)
 
         self.assertEqual(len(responses.calls), 1)
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
@@ -1299,7 +1298,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     PROJECT_OPTION = PROJECT_OPTION
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION]
     WES_PROJECT_OPTIONS = [
-        {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
+        {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:13:55.397Z'},
         EMPTY_PROJECT_OPTION,
     ]
     PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]

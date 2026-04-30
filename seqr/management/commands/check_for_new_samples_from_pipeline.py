@@ -10,12 +10,13 @@ import re
 
 from clickhouse_search.search import get_clickhouse_genotypes
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Family, Sample, Project, Individual, SavedVariant
+from seqr.models import Family, Dataset, Project, Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack, send_project_email
 from seqr.utils.file_utils import file_iter, list_files, is_google_bucket_file_path
 from seqr.utils.add_data_utils import notify_search_data_loaded, update_airtable_loading_tracking_status
 from seqr.views.utils.airtable_utils import AirtableSession, LOADABLE_PDO_STATUSES, AVAILABLE_PDO_STATUS
 from seqr.views.utils.export_utils import write_multiple_files
+from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.permissions_utils import is_internal_anvil_project, project_has_anvil
 from seqr.views.utils.variant_utils import reset_cached_search_results
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, PIPELINE_DATA_DIR, ANVIL_UI_URL, IS_ANVIL_LOADING_DELAY, \
@@ -30,10 +31,10 @@ VALIDATION_ERRORS_FILE_NAME = 'validation_errors.json'
 ERRORS_REPORTED_FILE_NAME = '_ERRORS_REPORTED'
 RUN_PATH_FIELDS = ['genome_version', 'dataset_type', 'run_version', 'file_name']
 
-DATASET_TYPE_MAP = {'GCNV': Sample.DATASET_TYPE_SV_CALLS}
+DATASET_TYPE_MAP = {'GCNV': Dataset.DATASET_TYPE_SV_CALLS}
 CLICKHOUSE_DATASET_TYPE_MAP = {
-    'GCNV': f'{Sample.DATASET_TYPE_SV_CALLS}_WES',
-    Sample.DATASET_TYPE_SV_CALLS: f'{Sample.DATASET_TYPE_SV_CALLS}_WGS',
+    'GCNV': f'{Dataset.DATASET_TYPE_SV_CALLS}_WES',
+    Dataset.DATASET_TYPE_SV_CALLS: f'{Dataset.DATASET_TYPE_SV_CALLS}_WGS',
 }
 RELATEDNESS_CHECK_NAME = 'relatedness_check'
 
@@ -76,7 +77,7 @@ class Command(BaseCommand):
 
 
     def _load_success_runs(self, runs, success_run_dirs):
-        loaded_runs = set(Sample.objects.filter(data_source__isnull=False).values_list('data_source', flat=True))
+        loaded_runs = {source for sources in Dataset.objects.values_list('data_source', flat=True) for source in sources.split(',')}
         new_runs = {
             run_dir: run_details for run_dir, run_details in runs.items()
             if run_dir in success_run_dirs and run_details['run_version'] not in loaded_runs
@@ -206,18 +207,29 @@ class Command(BaseCommand):
         family_project_map = {f.guid: f.project for f in families.select_related('project')}
         families_by_project = defaultdict(list)
         samples_by_project = defaultdict(list)
+        num_samples = 0
         for family_guid, sample_ids in metadata['family_samples'].items():
             project = family_project_map[family_guid]
             families_by_project[project].append(family_guid)
             samples_by_project[project] += sample_ids
+            num_samples += len(sample_ids)
 
-        sample_project_tuples = []
+        individuals_by_project = {}
+        missing_samples = set()
+        all_individual_ids = set()
         invalid_genome_version_projects = []
         for project, sample_ids in samples_by_project.items():
-            sample_project_tuples += [(sample_id, project.id) for sample_id in sample_ids]
             project_genome_version = GENOME_VERSION_LOOKUP.get(project.genome_version, project.genome_version)
             if project_genome_version != genome_version:
                 invalid_genome_version_projects.append((project.guid, project_genome_version))
+                continue
+
+            matched_individuals = dict(
+                Individual.objects.filter(family__project=project, individual_id__in=sample_ids).values_list('id', 'individual_id')
+            )
+            missing_samples.update(set(sample_ids) - set(matched_individuals.values()))
+            individuals_by_project[project] = matched_individuals
+            all_individual_ids.update(matched_individuals.keys())
 
         if invalid_genome_version_projects:
             raise CommandError(
@@ -226,14 +238,18 @@ class Command(BaseCommand):
             )
 
         sample_type = metadata['sample_type']
-        logger.info(f'Loading {len(sample_project_tuples)} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
-        new_samples = cls._match_and_update_search_samples(
-            sample_project_tuples, sample_type, dataset_type, data_source=run_version, elasticsearch_index=';'.join(metadata['callsets']),
-        )
+        logger.info(f'Loading {num_samples} {sample_type} {dataset_type} samples in {len(samples_by_project)} projects')
+        if missing_samples:
+            sample_ids = ', '.join(sorted(missing_samples))
+            raise ValueError(f'Matches not found for sample ids: {sample_ids}')
 
-        new_samples_by_project = dict(new_samples.values('individual__family__project').annotate(
-            samples=ArrayAgg('sample_id', distinct=True),
-        ).values_list('individual__family__project', 'samples'))
+        cls._update_matched_families(all_individual_ids, dataset_type, sample_type)
+
+        new_samples_by_project = {}
+        for project, individuals in individuals_by_project.items():
+            new_samples_by_project[project.id] = cls._match_and_update_search_datasets(
+                individuals, sample_type, dataset_type, data_source=run_version,
+            )
 
         split_project_pdos = cls._report_loading_success(
             dataset_type, sample_type, run_version, samples_by_project, new_samples_by_project,
@@ -271,7 +287,7 @@ class Command(BaseCommand):
                     project, is_internal, dataset_type, sample_type, new_samples_by_project.get(project.id, []),
                     num_samples=len(sample_ids),
                 )
-                if session and is_internal and dataset_type == Sample.DATASET_TYPE_VARIANT_CALLS:
+                if session and is_internal and dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS:
                     split_project_pdos[project.name] = cls._update_pdos(session, project.guid, sample_ids)
             except Exception as e:
                 logger.error(f'Error reporting loading success for project {project.name} in {run_version}: {e}')
@@ -412,72 +428,38 @@ class Command(BaseCommand):
         return updates
 
     @classmethod
-    def _match_and_update_search_samples(cls, sample_project_tuples, sample_type, dataset_type, **sample_data):
-        individual_ids_by_keys = cls._get_matched_individuals(sample_project_tuples)
-        individual_ids = individual_ids_by_keys.values()
-        matched_samples = Sample.objects.filter(is_active=True, dataset_type=dataset_type, sample_type=sample_type)
-        cls._update_matched_families(individual_ids, matched_samples)
-
-        sample_guids_by_individual = dict(Sample.objects.filter(
-            individual_id__in=individual_ids, sample_type=sample_type, dataset_type=dataset_type, **sample_data,
-        ).values_list('individual_id', 'guid'))
-        remaining_key_individuals = {
-            key: individual_id for key, individual_id in individual_ids_by_keys.items()
-            if individual_id not in sample_guids_by_individual
-        }
+    def _match_and_update_search_datasets(cls, individuals, sample_type, dataset_type, data_source):
         loaded_date = timezone.now()
-        created_sample_guids = cls._create_samples(
-            remaining_key_individuals, loaded_date=loaded_date, sample_type=sample_type, dataset_type=dataset_type,
-            **sample_data,
-        ) if remaining_key_individuals else []
+        dataset = create_model_from_json(Dataset, {
+            'dataset_type': dataset_type, 'sample_type': sample_type, 'data_source': data_source, 'loaded_date': loaded_date,
+        }, user=None)
+        dataset.active_individuals.set(individuals.keys())
 
-        sample_guids = list(sample_guids_by_individual.values()) + created_sample_guids
+        inactivate_datasets = Dataset.objects.filter(
+            dataset_type=dataset_type, sample_type=sample_type, active_individuals__id__in=individuals.keys(),
+        ).exclude(id=dataset.id)
+        loaded_individuals = set()
+        for dataset in inactivate_datasets:
+            inactivate_individuals = dataset.active_individuals.filter(id__in=individuals.keys())
+            loaded_individuals.update(inactivate_individuals.values_list('id', flat=True))
+            dataset.inactive_individuals.add(*inactivate_individuals)
+            dataset.active_individuals.remove(*inactivate_individuals)
 
-        activated_sample_guids = Sample.bulk_update(user=None, update_json={
-            'is_active': True,
-            'loaded_date': loaded_date,
-            **sample_data,
-        }, guid__in=sample_guids, is_active=False)
-
-        inactivate_samples = matched_samples.filter(individual_id__in=individual_ids).exclude(guid__in=sample_guids)
-        inactivated_sample_guids = Sample.bulk_update(
-            user=None, update_json={'is_active': False}, queryset=inactivate_samples,
-        )
-
-        previous_loaded_individuals = set(Sample.objects.filter(guid__in=inactivated_sample_guids).values_list('individual_id', flat=True))
-        return Sample.objects.filter(guid__in=activated_sample_guids).exclude(individual_id__in=previous_loaded_individuals)
+        return [sample_id for individual_id, sample_id in individuals.items() if individual_id not in loaded_individuals]
 
     @staticmethod
-    def _get_matched_individuals(sample_project_tuples):
-        individual_ids_by_keys = {
-            (individual_id, project_id): individual_db_id
-            for individual_db_id, individual_id, project_id in Individual.objects.filter(
-                family__project_id__in={project_id for _, project_id in sample_project_tuples},
-                individual_id__in={sample_id for sample_id, _ in sample_project_tuples},
-            ).values_list('id', 'individual_id', 'family__project_id')
-            if (individual_id, project_id) in sample_project_tuples
-        }
-
-        missing_keys = set(sample_project_tuples) - set(individual_ids_by_keys.keys())
-        if missing_keys:
-            sample_ids = ', '.join(sorted([sample_id for sample_id, _ in missing_keys]))
-            raise ValueError(f'Matches not found for sample ids: {sample_ids}')
-
-        return individual_ids_by_keys
-
-    @staticmethod
-    def _update_matched_families(individual_ids, matched_samples):
+    def _update_matched_families(individual_ids, dataset_type, sample_type):
         included_families = dict(
             Family.objects.filter(individual__id__in=individual_ids).values_list('id', 'analysis_status')
         )
-        missing_individuals = matched_samples.filter(
-            individual__family_id__in=included_families,
-        ).exclude(individual_id__in=individual_ids).values(
-            'individual__family__family_id',
-        ).annotate(individual_ids=ArrayAgg('individual__individual_id', ordering='individual__individual_id'))
+        missing_individuals = Individual.objects.filter(
+            family_id__in=included_families, active_datasets__dataset_type=dataset_type, active_datasets__sample_type=sample_type,
+        ).exclude(id__in=individual_ids).values(
+            'family__family_id',
+        ).annotate(individual_ids=ArrayAgg('individual_id', ordering='individual_id'))
         if missing_individuals:
             missing_summary = ', '.join(sorted([
-                f"{agg['individual__family__family_id']} ({', '.join(agg['individual_ids'])})" for agg in missing_individuals
+                f"{agg['family__family_id']} ({', '.join(agg['individual_ids'])})" for agg in missing_individuals
             ]))
             raise ValueError(
                 f'The following families are included in the callset but are missing some family members: {missing_summary}'
@@ -490,17 +472,6 @@ class Command(BaseCommand):
         Family.bulk_update(
             user=None, update_json={'analysis_status': Family.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS}, id__in=family_ids_to_update,
         )
-
-    @staticmethod
-    def _create_samples(remaining_key_individuals, **sample_params):
-        new_samples = [
-            Sample(
-                individual_id=individual_id,
-                sample_id=sample_key[0],
-                **sample_params,
-            ) for sample_key, individual_id in remaining_key_individuals.items()]
-        new_sample_models = Sample.bulk_create(user=None, new_models=new_samples)
-        return [s.guid for s in new_sample_models]
 
 
 update_individuals_sample_qc = Command._update_individuals_sample_qc

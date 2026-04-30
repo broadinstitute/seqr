@@ -374,7 +374,7 @@ export const STATE1 = {
     },
   },
   analysisGroupsByGuid: {},
-  samplesByGuid: {},
+  datasetsByGuid: {},
   igvSamplesByGuid: {
     S2310656_wal_mc16200_mc16203: {
       projectGuid: 'R0237_1000_genomes_demo',

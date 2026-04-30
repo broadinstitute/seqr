@@ -11,7 +11,7 @@ from matchmaker.matchmaker_utils import get_mme_gene_phenotype_ids_for_submissio
     get_mme_metrics, get_hpo_terms_by_id
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Project, Family, Individual, Sample, VariantTagType, SavedVariant, FamilyAnalysedBy
+from seqr.models import Project, Family, Individual, Dataset, VariantTagType, SavedVariant, FamilyAnalysedBy
 from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.file_utils import load_uploaded_file
 from seqr.utils.communication_utils import safe_post_to_slack
@@ -275,7 +275,7 @@ def _get_clickhouse_variants(families_by_id: dict[int, dict], family_variant_ids
         families_by_project[family['project__guid']].append(family['guid'])
     for project_guid, family_guids in families_by_project.items():
         genotype_keys = get_clickhouse_genotypes(
-            project_guid, family_guids, genome_version, Sample.DATASET_TYPE_VARIANT_CALLS, variants_by_key.keys(),
+            project_guid, family_guids, genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, variants_by_key.keys(),
             additional_fields=['xpos']
         )
         for key, entry_data in genotype_keys.items():

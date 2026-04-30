@@ -11,7 +11,7 @@ export const getFamiliesByGuid = state => state.familiesByGuid
 export const getFamilyNotesByGuid = state => state.familyNotesByGuid
 export const getFamilyDetailsLoading = state => state.familyDetailsLoading
 export const getIndividualsByGuid = state => state.individualsByGuid
-const getSamplesByGuid = state => state.samplesByGuid
+const getDatasetsByGuid = state => state.datasetsByGuid
 export const getIgvSamplesByGuid = state => state.igvSamplesByGuid
 export const getAnalysisGroupsByGuid = state => state.analysisGroupsByGuid
 export const getAnalysisGroupIsLoading = state => state.analysisGroupsLoading.isLoading
@@ -58,6 +58,7 @@ const groupEntitiesByProjectGuid = entities => Object.entries(entities).reduce((
 }, {})
 export const getFamiliesGroupedByProjectGuid = createSelector(getFamiliesByGuid, groupEntitiesByProjectGuid)
 export const getAnalysisGroupsGroupedByProjectGuid = createSelector(getAnalysisGroupsByGuid, groupEntitiesByProjectGuid)
+export const getDatasetsGroupedByProjectGuid = createSelector(getDatasetsByGuid, groupEntitiesByProjectGuid)
 
 const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
   if (!acc[o.familyGuid]) {
@@ -69,14 +70,14 @@ const groupByFamilyGuid = objs => objs.reduce((acc, o) => {
 
 export const getProjectDatasetTypes = createSelector(
   getProjectsByGuid,
-  getSamplesByGuid,
-  (projectsByGuid, samplesByGuid) => {
+  getDatasetsByGuid,
+  (projectsByGuid, datasetsByGuid) => {
     const projectDatasetTypes = Object.values(projectsByGuid).reduce(
       (acc, { projectGuid, datasetTypes }) => ({ ...acc, [projectGuid]: datasetTypes }), {},
     )
-    const sampleDatasetTypes = Object.values(samplesByGuid).reduce(
-      (acc, { projectGuid, datasetType, isActive }) => {
-        if (projectDatasetTypes[projectGuid] || !isActive) {
+    const sampleDatasetTypes = Object.values(datasetsByGuid).reduce(
+      (acc, { projectGuid, datasetType, activeIndividuals }) => {
+        if (projectDatasetTypes[projectGuid] || !(activeIndividuals || []).length) {
           return acc
         }
         if (!acc[projectGuid]) {
@@ -91,15 +92,25 @@ export const getProjectDatasetTypes = createSelector(
 )
 
 export const getDatasetsByIndividual = createSelector(
-  getSamplesByGuid,
-  samplesByGuid => Object.values(samplesByGuid).sort(
+  getDatasetsByGuid,
+  datasetsByGuid => Object.values(datasetsByGuid).sort(
     (a, b) => a.loadedDate.localeCompare(b.loadedDate),
-  ).reduce((acc, sample) => {
-    const { individualGuid, isActive, sampleType, datasetType, loadedDate } = sample
-    if (!acc[individualGuid]) {
-      acc[individualGuid] = []
-    }
-    acc[individualGuid].push({ isActive, sampleType, datasetType, loadedDate: loadedDate.split('T')[0] })
+  ).reduce((acc, { activeIndividuals, inactiveIndividuals, sampleType, datasetType, loadedDate }) => {
+    const parsedLoadedDate = loadedDate.split('T')[0]
+    const activeIndivs = activeIndividuals || []
+    activeIndivs.forEach((individualGuid) => {
+      if (!acc[individualGuid]) {
+        acc[individualGuid] = []
+      }
+      acc[individualGuid].push({ isActive: true, sampleType, datasetType, loadedDate: parsedLoadedDate })
+    })
+    const inactiveIndivs = inactiveIndividuals || []
+    inactiveIndivs.forEach((individualGuid) => {
+      if (!acc[individualGuid]) {
+        acc[individualGuid] = []
+      }
+      acc[individualGuid].push({ isActive: false, sampleType, datasetType, loadedDate: parsedLoadedDate })
+    })
     return acc
   }, {}),
 )

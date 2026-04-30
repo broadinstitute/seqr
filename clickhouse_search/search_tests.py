@@ -38,7 +38,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
     format_cached_variant
 from reference_data.models import Omim
-from seqr.models import Project, Family, Sample, VariantSearch, VariantSearchResults, SavedVariant, Individual
+from seqr.models import Project, Family, Dataset, VariantSearch, VariantSearchResults, SavedVariant, Individual
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
     SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
@@ -139,7 +139,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.mock_redis.expire.reset_mock()
 
     def _execute_search(self, sort='xpos', inheritance_mode=None, inheritance_filter=None, quality_filter=None, project_families=None, request_body=None, check_login=None, query_params=None, search_hash=None, **search_kwargs):
-        search_hash = search_hash or random.randint(1000, 10000)  # nosec
+        search_hash = search_hash or random.randint(1000, 9000000)  # nosec
         self.mock_results_guid.return_value = f'VRS{search_hash:07d}'
         url = reverse(query_variants_handler, args=[search_hash])
 
@@ -250,8 +250,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     def _set_grch37_search(self):
         Project.objects.filter(id=1).update(genome_version='37')
-        Sample.objects.filter(sample_id='HG00732').update(is_active=False)
-        Sample.objects.exclude(dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS).update(is_active=False)
 
     def test_single_family_search(self):
         variant_gene_counts = {
@@ -326,7 +324,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             gene_counts={**variant_gene_counts, **GCNV_GENE_COUNTS, 'ENSG00000277258': {'total': 2, 'families': {'F000002_2': 2}}}
         )
 
-        self._add_sample_type_samples('WES', dataset_type='SV', guid__in=['S000135_na20870'])
+        self._add_sample_type_samples('WES', dataset_type='SV', guid__in=['S000129_na19675'])
         self._assert_expected_search(
             [GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4], gene_counts={
                 'ENSG00000129562': {'total': 1, 'families': {'F000002_2': 1, 'F000003_3': 1}},
@@ -410,17 +408,21 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_both_sample_types_search(self):
-        Sample.objects.filter(dataset_type='MITO').update(is_active=False)
+        Dataset.objects.get(guid='S000149_hg00733').active_individuals.clear()
 
         # One family (F000011_11) in a multi-project search has identical exome and genome data.
-        self._add_sample_type_samples('WES', individual__family__guid='F000011_11')
+        self._add_sample_type_samples('WES', active_individuals__family__guid='F000011_11')
 
         self._assert_expected_search(
             MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, gene_counts=GENE_COUNTS, locus={'rawItems': 'chr1:1-100000000'},
             project_families=MULTI_PROJECT_PROJECT_FAMILIES, check_login=self.check_collaborator_login,
         )
 
-        self._add_sample_type_samples('WGS', guid__in=['S000132_hg00731'])
+        dataset = Dataset.objects.get(guid='S000129_na19675')
+        dataset.pk = None
+        dataset.sample_type = 'WGS'
+        dataset.save()
+        dataset.active_individuals.add(4)
 
         # Variant 1 is de novo in exome but inherited and homozygous in genome.
         # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome, so it fails de-novo inheritance when parental data is missing in genome.
@@ -437,12 +439,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_mode='any_affected', quality_filter={'min_gq': 40, 'min_qs': 20}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
+        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1],
             inheritance_mode='de_novo', quality_filter=None, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
-        self._add_sample_type_samples('WGS', guid__in=['S000133_hg00732', 'S000134_hg00733'])
+        dataset.active_individuals.add(5, 6)
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES,
              VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4],
@@ -459,7 +462,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_mode='de_novo', quality_filter={'min_gq': 40}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
-        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES,
              [{**VARIANT2_BOTH_SAMPLE_TYPES, 'selectedMainTranscriptId': 'ENST00000450625'}, GCNV_VARIANT4],
@@ -474,12 +476,14 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     @staticmethod
     def _add_sample_type_samples(sample_type, dataset_type=None, **sample_filter):
-        for sample in Sample.objects.filter(**sample_filter):
-            sample.pk = None
-            sample.sample_type = sample_type
+        for dataset in Dataset.objects.filter(**sample_filter):
+            individuals = dataset.active_individuals.all()
+            dataset.pk = None
+            dataset.sample_type = sample_type
             if dataset_type:
-                sample.dataset_type = dataset_type
-            sample.save()
+                dataset.dataset_type = dataset_type
+            dataset.save()
+            dataset.active_individuals.set(individuals)
 
     def test_inheritance_filter(self):
         inheritance_mode = 'any_affected'
@@ -647,10 +651,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         # Test deletion in trans with hom alt snp/indel
-        for sample in Sample.objects.filter(individual__family_id=14):
-            sample.pk = None
-            sample.dataset_type = 'SNV_INDEL'
-            sample.save()
+        dataset = Dataset.objects.get(guid='S000147_na21234')
+        dataset_individuals = dataset.active_individuals.all()
+        dataset.pk = None
+        dataset.dataset_type = 'SNV_INDEL'
+        dataset.save()
+        dataset.active_individuals.set(dataset_individuals)
         self._assert_expected_search(
             [[SV_VARIANT1, SV_VARIANT2], [SV_VARIANT1, PROJECT_4_COMP_HET_VARIANT], PROJECT_4_COMP_HET_VARIANT, SV_VARIANT4],
             inheritance_mode=inheritance_mode, inheritance_filter=sv_affected, **COMP_HET_ALL_PASS_FILTERS,
@@ -845,7 +851,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ],
         )
 
-        self._add_sample_type_samples('WES', individual__family__guid='F000014_14')
+        self._add_sample_type_samples('WES', active_individuals__family__guid='F000014_14')
         self._assert_expected_search(
             [SV_VARIANT1, SV_VARIANT2, MULTI_PROJECT_GCNV_VARIANT3, GCNV_VARIANT4], locus=sv_locus,
             project_families=[*SINGLE_FAMILY_PROJECT_FAMILIES, *SV_PROJECT_FAMILIES],
@@ -968,7 +974,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search_error('Location must be specified to search across multiple projects', project_families=MULTI_PROJECT_PROJECT_FAMILIES)
 
-        Sample.objects.filter(guid='S000143_na20885').update(sample_id='HG00732')
+        Individual.objects.filter(guid='I000015_na20885').update(individual_id='HG00732')
         self._assert_expected_search_error(
             'The following samples are incorrectly configured and have different affected statuses in different projects: '
             'HG00732 (1kg project nåme with uniçøde/ Test Reprocessed Project)',
@@ -1852,7 +1858,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ],
         )
 
-        self._add_sample_type_samples('WES', individual__family__guid='F000014_14')
+        self._add_sample_type_samples('WES', active_individuals__family__guid='F000014_14')
         self._assert_expected_search(
             [MULTI_DATA_TYPE_COMP_HET_VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], MULTI_PROJECT_GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4]],
             inheritance_mode='recessive',
@@ -1876,7 +1882,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'familyGuids': ['F000002_2_x'],
             'genotypes': {k: {**v, 'familyGuid': 'F000002_2_x'} for k, v in MULTI_DATA_TYPE_COMP_HET_VARIANT2['genotypes'].items()}
         }
-        Sample.objects.filter(guid='S000146_hg00732').update(is_active=False)
         Family.objects.filter(guid='F000002_2').update(guid='F000002_2_x')
         self._assert_expected_search(
             [[missing_gt_comp_het_variant, missing_gt_gcnv_variant]],
@@ -2467,9 +2472,10 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
             23: {'ac_wes': 0, 'ac_wgs': 0, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 0, 'hom_affected': 0},
         })
 
-        project_samples = Sample.objects.filter(individual__family__project__guid='R0001_1kg', is_active=True)
-        self.assertEqual(project_samples.filter(dataset_type='SNV_INDEL').count(), 0)
-        self.assertEqual(project_samples.count(), 4)
+        project_datasets = Dataset.objects.filter(active_individuals__family__project__guid='R0001_1kg')
+        self.assertEqual(project_datasets.filter(dataset_type='SNV_INDEL').count(), 0)
+        self.assertEqual(project_datasets.count(), 4)
+        self.assertEqual(Dataset.objects.get(guid='S000129_na19675').inactive_individuals.count(), 7)
 
         body['datasetType'] = 'SV'
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -2480,7 +2486,7 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
                 'Deleted all GCNV search data for project 1kg project n\xe5me with uni\xe7\xf8de',
             ],
         })
-        self.assertEqual(project_samples.filter(dataset_type='SV').count(), 0)
-        self.assertEqual(project_samples.count(), 1)
+        self.assertEqual(project_datasets.filter(dataset_type='SV').count(), 0)
+        self.assertEqual(project_datasets.count(), 1)
 
 

@@ -1,7 +1,7 @@
 from django.core.management import call_command
 import responses
 
-from seqr.models import Family, VariantTagType, VariantTag, Sample
+from seqr.models import Family, VariantTagType, VariantTag, Dataset
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 
 
@@ -26,6 +26,7 @@ class TransferFamiliesClickhouseTest(AnvilAuthenticationTestCase):
             ('Found 3 out of 4 families. No match for: 12.', None),
             ('Skipping 1 families with analysis groups in the project: 5 (Test Group 1)', None),
             *self.LOGS,
+            ('Splitting 2 datasets', None),
             ('Updating "Excluded" tags', None),
             ('Updating families', None),
             ('Done.', None),
@@ -45,9 +46,21 @@ class TransferFamiliesClickhouseTest(AnvilAuthenticationTestCase):
         self.assertEqual(len(new_tags), 1)
         self.assertEqual(new_tags[0].saved_variants.first().family, family)
 
-        samples = Sample.objects.filter(individual__family=family)
-        self.assertEqual(samples.count(), 7)
-        self.assertEqual(samples.filter(is_active=True).count(), 0)
+        existing_dataset = Dataset.objects.get(guid='S000129_na19675')
+        self.assertListEqual(list(existing_dataset.active_individuals.order_by('id').values_list('id', flat=True)),[1, 7, 9])
+        self.assertListEqual(list(existing_dataset.inactive_individuals.order_by('id').values_list('id', flat=True)), [3])
+        self.assertEqual(Dataset.objects.filter(active_individuals__family=family).count(), 0)
+        datasets = {d.guid: d for d in Dataset.objects.filter(inactive_individuals__family=family).distinct()}
+        self.assertEqual(len(datasets), 3)
+        previous_guids = {'S000145_hg00731', 'S000149_hg00733'}
+        self.assertTrue(previous_guids.issubset(set(datasets.keys())))
+        split_dataset = next(d for guid, d in datasets.items() if guid not in previous_guids)
+        self.assertListEqual(list(split_dataset.inactive_individuals.order_by('id').values_list('id', flat=True)),  [4, 5, 6])
+        self.assertEqual(split_dataset.active_individuals.count(), 0)
+        self.assertEqual(split_dataset.sample_type, 'WES')
+        self.assertEqual(split_dataset.dataset_type, 'SNV_INDEL')
+        self.assertEqual(split_dataset.data_source, 'test_index')
+        self.assertEqual(split_dataset.loaded_date.isoformat(), '2017-02-05T06:12:55.397000+00:00')
 
         family = Family.objects.get(family_id='4')
         self.assertEqual(family.project.guid, 'R0003_test')
