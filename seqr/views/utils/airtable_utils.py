@@ -207,7 +207,7 @@ Desired update:
             project_guids = [match and match.group(1) for match in project_matches]
             pdos = [{
                 'project_guid': project_guids[i] if len(project_guids) > 1 else project_guids[0],
-                **{field: sample[field][i] for field in pdo_fields}
+                **{field: sample[field][i] if len(sample[field]) == len(sample['PDOStatus']) else None for field in pdo_fields}
             } for i, status in enumerate(sample['PDOStatus']) if status in pdo_statuses]
             if project_guid:
                 pdos = [pdo for pdo in pdos if pdo['project_guid'] == project_guid]

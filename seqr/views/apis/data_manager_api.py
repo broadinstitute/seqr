@@ -73,17 +73,17 @@ def update_rna_seq(request):
             error_messages.append('invalid tissue specified')
 
         pdos = sample.get('pdos', [])
+        sequencing_type = None
         if len(pdos) > 1:
             error_messages.append('multiple conflicting PDOs')
         elif not pdos or pdos[0]['project_guid'] is None:
             error_messages.append('no project specified')
-
-        airtable_sequencing_type = pdos[0].get(SEQUENCING_FIELD)
-        if not airtable_sequencing_type:
+        elif not pdos[0][SEQUENCING_FIELD]:
             error_messages.append('no sequencing product specified')
-        sequencing_type = next((st for st, label in RnaSample.SEQUENCING_CHOICES if airtable_sequencing_type.startswith(st)), None)
-        if not sequencing_type:
-            error_messages.append('invalid sequencing product specified')
+        else:
+            sequencing_type = next((st for st, label in RnaSample.SEQUENCING_CHOICES if pdos[0][SEQUENCING_FIELD].startswith(st)), None)
+            if not sequencing_type:
+                error_messages.append('invalid sequencing product specified')
 
         if error_messages:
             for sample_id in sample_ids:
