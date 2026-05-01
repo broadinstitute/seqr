@@ -4,17 +4,17 @@ import { extent, max, median, min, quantile } from 'd3-array'
 import { scaleBand, scaleLinear } from 'd3-scale'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { TISSUE_DISPLAY } from 'shared/utils/constants'
+import { TISSUE_DISPLAY, PRODUCT_DISPLAY } from 'shared/utils/constants'
 import { initializeD3, Tooltip } from 'shared/components/graph/d3Utils'
 import GtexLauncher from 'shared/components/graph/GtexLauncher'
 
 const BOX_WIDTH = 100
-const PLOT_WIDTH = 550
+const PLOT_WIDTH = 500
 const PLOT_HEIGHT = 350
 const MARGINS = {
   left: 40,
   top: 0,
-  bottom: 100,
+  bottom: 130,
 }
 
 // Code adapted from https://github.com/broadinstitute/gtex-viz/blob/8d65862fbe7e5ab9b4d5be419568754e0d17bb07/src/modules/Boxplot.js
@@ -56,7 +56,7 @@ const renderBoxplot = (allData, containerElement) => {
   const svg = initializeD3(
     containerElement,
     { width: PLOT_WIDTH, height: PLOT_HEIGHT },
-    { ...MARGINS, right: bandwidth / 2 + 10 },
+    { ...MARGINS, right: bandwidth / 2 + 60 },
     scales,
     { x: { offset: bandwidth / 2 }, y: { text: 'TPM' } },
   )
@@ -189,18 +189,16 @@ const renderGtex = (gtexExpressionData, familyExpressionData, containerElement) 
   const gtexByTissue = ((gtexExpressionData || {}).data || []).reduce((acc, { data, tissueSiteDetailId }) => ({
     ...acc, [GTEX_TISSUE_LOOKUP[tissueSiteDetailId]]: data,
   }), {})
-  // TODO
-  const boxplotData = Object.entries(familyExpressionData).reduce((
-    acc, [tissue, { rdgData, myData, individualData }],
-  ) => ([
-    ...acc,
-    ...[
-      { data: gtexByTissue[tissue], label: 'GTEx' },
-      { data: rdgData, label: 'Broad RDG' },
-      { data: myData, label: 'My Data' },
-      ...Object.entries(individualData).map(([individual, tpm]) => ({ data: [tpm], label: individual, medianColor: '#000080' })),
-    ].filter(({ data }) => data).map(({ label, ...d }) => ({ label: `${label} - ${TISSUE_DISPLAY[tissue]}`, ...d })),
-  ]), [])
+  const boxplotData = Object.entries(familyExpressionData).reduce((acc, [tissue, tissueData]) => ([
+    ...acc, ...[
+      { data: gtexByTissue[tissue], label: `GTEx - ${TISSUE_DISPLAY[tissue]}` },
+      ...Object.entries(tissueData).reduce((tAcc, [sequencingProduct, { rdgData, myData, individualData }]) => ([
+        ...tAcc,
+        { data: rdgData, label: 'Broad RDG' },
+        { data: myData, label: 'My Data' },
+        ...Object.entries(individualData).map(([individual, tpm]) => ({ data: [tpm], label: individual, medianColor: '#000080' })),
+      ].filter(({ data }) => data).map(({ label, ...d }) => ({ label: `${label} - ${TISSUE_DISPLAY[tissue]} - ${PRODUCT_DISPLAY[sequencingProduct]}`, ...d }))), []),
+    ]]), [])
   renderBoxplot(boxplotData, containerElement)
 }
 
