@@ -10,7 +10,7 @@ from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvVaria
 from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi, \
     ScreenDict
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Sample
+from seqr.models import Dataset
 from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
@@ -414,7 +414,7 @@ class EntriesMito(BaseEntries):
         )
 
 class EntriesSv(BaseEntries):
-    SAMPLE_TYPE = Sample.SAMPLE_TYPE_WGS
+    SAMPLE_TYPE = Dataset.SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -436,7 +436,7 @@ class EntriesSv(BaseEntries):
         db_table = 'GRCh38/SV/entries'
 
 class EntriesGcnv(BaseEntries):
-    SAMPLE_TYPE = Sample.SAMPLE_TYPE_WES
+    SAMPLE_TYPE = Dataset.SAMPLE_TYPE_WES
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -621,21 +621,21 @@ class ProjectPartitionsDict(Dictionary):
 
 
 ENTRY_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
+    GENOME_VERSION_GRCh37: {Dataset.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
     GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: EntriesMito,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': EntriesSv,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': EntriesGcnv,
+        Dataset.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
+        Dataset.DATASET_TYPE_MITO_CALLS: EntriesMito,
+        f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WGS}': EntriesSv,
+        f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WES}': EntriesGcnv,
     },
 }
 VARIANTS_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: VariantsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh37: {Dataset.DATASET_TYPE_VARIANT_CALLS: VariantsGRCh37SnvIndel},
     GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: VariantsSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: VariantsMito,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}': VariantsSv,
-        f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}': VariantsGcnv,
+        Dataset.DATASET_TYPE_VARIANT_CALLS: VariantsSnvIndel,
+        Dataset.DATASET_TYPE_MITO_CALLS: VariantsMito,
+        f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WGS}': VariantsSv,
+        f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WES}': VariantsGcnv,
     },
 }
 VARIANT_DETAILS_CLASS_MAP = {

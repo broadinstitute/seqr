@@ -12,9 +12,9 @@ from clickhouse_search.search import get_variants_queryset, get_clickhouse_varia
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
-    RnaSeqTpm, PhenotypePrioritization, Project, Sample, RnaSample, VariantTag, VariantTagType
-from seqr.utils.search.utils import variant_dataset_type
+    RnaSeqTpm, PhenotypePrioritization, Project, Dataset, RnaSample, VariantTag, VariantTagType
 from seqr.utils.gene_utils import get_genes_for_variants
+from seqr.utils.xpos_utils import parse_variant_id
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
@@ -61,6 +61,13 @@ def parse_saved_variant_json(variant_json, family_id):
         'main_transcript': main_transcript,
         'saved_variant_json': variant_json.get('saved_variant_json', {}),
     }
+
+
+def variant_dataset_type(variant):
+    if not parse_variant_id(variant['variantId']):
+        sample_type = Dataset.SAMPLE_TYPE_WGS if 'endChrom' in variant else Dataset.SAMPLE_TYPE_WES
+        return f'{Dataset.DATASET_TYPE_SV_CALLS}_{sample_type}'
+    return Dataset.DATASET_TYPE_MITO_CALLS if 'mitomapPathogenic' in variant else Dataset.DATASET_TYPE_VARIANT_CALLS
 
 
 def _transcript_sort(gene_id, saved_variant_json, main_transcript_id):
@@ -171,7 +178,7 @@ def _set_updated_tags(key: tuple[int, str], metadata: dict[str, dict], comp_het_
 
 
 def get_saved_variant_annotations(variant_keys: abc.Iterable[tuple[int, str]], genome_version: str, primary_id_field: str = 'variant_id', group_by_field=None, dataset_type: str = None) -> dict[str, dict]:
-    dataset_type = dataset_type or Sample.DATASET_TYPE_VARIANT_CALLS
+    dataset_type = dataset_type or Dataset.DATASET_TYPE_VARIANT_CALLS
     variant_ids = {variant_id for _, variant_id in variant_keys}
     keys = None
     if primary_id_field == 'key':
@@ -490,9 +497,9 @@ def _set_response_gene_scores(response, family_genes, gene_ids):
 
 
 def _add_sample_count_stats(response, genome_versions):
-    sample_counts = Sample.objects.filter(
-        is_active=True, individual__family__project__is_demo=False, individual__family__project__genome_version__in=genome_versions,
-    ).values('sample_type', 'dataset_type').annotate(count=Count('*'))
+    sample_counts = Dataset.objects.filter(
+        active_individuals__family__project__is_demo=False, active_individuals__family__project__genome_version__in=genome_versions,
+    ).values('sample_type', 'dataset_type').annotate(count=Count('active_individuals', distinct=True))
     counts_by_dataset_type = defaultdict(dict)
     for sample_type, dataset_type, count in sample_counts.values_list('sample_type', 'dataset_type', 'count'):
         counts_by_dataset_type[dataset_type][sample_type] = count

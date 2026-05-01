@@ -5,7 +5,7 @@ from clickhouse_search.backend.fields import UInt32FieldDeltaCodecField, DictKey
 from clickhouse_search.backend.table_models import RefreshableMaterializedView, RefreshableMaterializedViewMeta, \
     IncrementalMaterializedView, Dictionary
 from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Sample
+from seqr.models import Dataset
 
 
 class BaseProjectGtStats(models.ClickhouseModel):
@@ -308,10 +308,10 @@ class GtStatsDictSv(Dictionary):
         layout = 'FLAT(MAX_ARRAY_SIZE 5000000)'
 
 PROJECT_GT_STATS_VIEW_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh37: {Dataset.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsGRCh37SnvIndel},
     GENOME_VERSION_GRCh38: {
-        Sample.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
-        Sample.DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
-        Sample.DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
+        Dataset.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
+        Dataset.DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
+        Dataset.DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
     },
 }

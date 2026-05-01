@@ -10,7 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 
 from reference_data.models import GENOME_VERSION_LOOKUP
-from seqr.models import Project, Family, CAN_EDIT, Sample, IgvSample
+from seqr.models import Project, Family, CAN_EDIT, Dataset, IgvSample
 from seqr.views.react_app import render_app_html
 from seqr.views.utils.airtable_utils import AirtableSession, ANVIL_REQUEST_TRACKING_TABLE
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
@@ -21,7 +21,7 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
 from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
 from seqr.utils.file_utils import list_files
-from seqr.utils.search.add_data_utils import get_missing_family_samples, get_loaded_individual_ids, trigger_data_loading
+from seqr.utils.add_data_utils import get_missing_family_samples, get_loaded_individual_ids, trigger_data_loading
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
@@ -222,7 +222,7 @@ def add_workspace_data(request, project_guid):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    pedigree_records, loaded_individual_ids, sample_type = _parse_uploaded_pedigree(request_json, project=project, search_dataset_type=Sample.DATASET_TYPE_VARIANT_CALLS)
+    pedigree_records, loaded_individual_ids, sample_type = _parse_uploaded_pedigree(request_json, project=project, search_dataset_type=Dataset.DATASET_TYPE_VARIANT_CALLS)
 
     loading_families = {record[JsonConstants.FAMILY_ID_COLUMN] for record in pedigree_records}
     pending_families = Family.objects.filter(
@@ -302,7 +302,7 @@ def _trigger_add_workspace_data(project, pedigree_records, user, data_path, samp
         f"{data_path} to seqr project <{_get_seqr_project_url(project)}|*{project.name}*> (guid: {project.guid})"
     )
     trigger_success = trigger_data_loading(
-        [project], individual_ids, sample_type, Sample.DATASET_TYPE_VARIANT_CALLS, project.genome_version, data_path, user=user, success_message=success_message,
+        [project], individual_ids, sample_type, Dataset.DATASET_TYPE_VARIANT_CALLS, project.genome_version, data_path, user=user, success_message=success_message,
         success_slack_channel=SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, error_message=f'ERROR triggering AnVIL loading for project {project.guid}',
     )
     AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_create_records(

@@ -616,7 +616,6 @@ class Individual(ModelWithGUID):
     sex = models.CharField(max_length=3, choices=SEX_CHOICES, default='U')
     affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default=AFFECTED_STATUS_UNKNOWN)
 
-    # TODO once sample and individual ids are fully decoupled no reason to maintain this field
     display_name = models.TextField(default="", blank=True)
 
     notes = models.TextField(blank=True, null=True)
@@ -695,14 +694,7 @@ class Individual(ModelWithGUID):
         audit_fields = {'case_review_status'}
 
 
-class Sample(ModelWithGUID):
-    """This model represents a single data type (eg. Variant Calls, or SV Calls) that's generated from a single
-    biological sample (eg. WES, WGS).
-
-    It stores metadata on both the dataset (fields: dataset_type, loaded_date, etc.) and the underlying sample
-    (fields: sample_type, sample_id etc.)
-    """
-
+class Dataset(ModelWithGUID):
     SAMPLE_TYPE_WES = 'WES'
     SAMPLE_TYPE_WGS = 'WGS'
     SAMPLE_TYPE_CHOICES = (
@@ -721,31 +713,22 @@ class Sample(ModelWithGUID):
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
-    individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
+    active_individuals = models.ManyToManyField('Individual', related_name='active_datasets')
+    inactive_individuals = models.ManyToManyField('Individual', related_name='inactive_datasets')
 
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
     dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES)
 
-    # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
-    sample_id = models.TextField(db_index=True)
-
-    elasticsearch_index = models.TextField(db_index=True, null=True)
-    data_source = models.TextField(null=True)
-
-    # sample status
-    is_active = models.BooleanField(default=False)
+    data_source = models.TextField()
     loaded_date = models.DateTimeField()
 
     def __unicode__(self):
-        return self.sample_id.strip()
+        return f'{self.dataset_type}_{self.sample_type}_{self.loaded_date}'
 
-    GUID_PREFIX = 'S'
-    GUID_PRECISION = 10
+    GUID_PREFIX = 'D'
 
     class Meta:
-       json_fields = [
-           'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
-       ]
+       json_fields = ['guid', 'sample_type', 'dataset_type', 'loaded_date']
 
 
 class RnaSample(ModelWithGUID):
@@ -828,10 +811,10 @@ class IgvSample(ModelWithGUID):
 
 class SavedVariant(ModelWithGUID):
     DATASET_TYPE_CHOICES = (
-        (Sample.DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
-        (Sample.DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
-        (f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}', 'SV WGS Calls'),
-        (f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}', 'gCNV Calls'),
+        (Dataset.DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (Dataset.DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
+        (f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WGS}', 'SV WGS Calls'),
+        (f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WES}', 'gCNV Calls'),
     )
 
     family = models.ForeignKey('Family', on_delete=models.CASCADE)
