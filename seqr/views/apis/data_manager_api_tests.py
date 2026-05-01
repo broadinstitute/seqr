@@ -252,6 +252,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'CollaboratorSampleID': 'NA19675_D2',
             'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
             'PDOStatus': ['RNA ready to load'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M'],
         }
     },
     {
@@ -264,6 +265,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             ],
             'PDOStatus': ['RNA ready to load', 'Available in seqr'],
             'TissueOfOrigin': ['Muscle'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M', 'Kinnex long read total RNA'],
         }
     },
     {
@@ -273,6 +275,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'SeqrProject': ['https://seqr.broadinstitute.org/project/R0003_test/project_page'],
             'PDOStatus': ['RNA ready to load'],
             'TissueOfOrigin': ['Muscle'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M'],
         }
     },
     {
@@ -285,6 +288,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             ],
             'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
             'TissueOfOrigin': ['Muscle', 'Brain'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M', 'Watchmaker total RNA 200M'],
         }
     },
     {
@@ -295,6 +299,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
                 'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
             ],
             'PDOStatus': ['RNA ready to load'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M', 'Watchmaker total RNA 200M'],
         }
     },
     {
@@ -303,10 +308,10 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'CollaboratorSampleID': 'NA12347',
             'SeqrProject': [
                 'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
-                'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
             ],
-            'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
+            'PDOStatus': ['RNA ready to load'],
             'TissueOfOrigin': ['Muscle'],
+            'RNASequencingProduct': ['Custom RNA Product'],
         }
     },
     {
@@ -316,6 +321,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'SeqrProject': ['R0003_test'],
             'PDOStatus': ['RNA ready to load'],
             'TissueOfOrigin': ['Custom Tissue'],
+            'RNASequencingProduct': ['Custom RNA Product'],
         }
     },
     {
@@ -325,6 +331,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'SeqrProject': ['https://seqr.broadinstitute.org/project/R0003_test/project_page'],
             'PDOStatus': ['RNA ready to load'],
             'TissueOfOrigin': ['Muscle'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M'],
         }
     },
     *INVALID_AIRTABLE_SAMPLE_RECORDS['records'],
@@ -488,6 +495,7 @@ class DataManagerAPITest(AirtableTest):
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'Fibroblast',
+            'sample_sequencing_type': 'Watchmaker total RNA 200M',
             'num_parsed_samples': 4,
             'initial_model_count': 7,
             'deleted_count': 4,
@@ -511,10 +519,11 @@ class DataManagerAPITest(AirtableTest):
 
         self.assert_json_logs(user, expected_logs)
 
-    def _check_rna_sample_model(self, individual_id, data_source, data_type, tissue_type, is_active_sample=True):
+    def _check_rna_sample_model(self, individual_id, data_source, data_type, tissue_type, sequencing_type='T', is_active_sample=True):
         tissue_type = tissue_type[0]
+        sequencing_type = sequencing_type[0]
         rna_samples = RnaSample.objects.filter(
-            individual_id=individual_id, tissue_type=tissue_type, data_source=data_source, data_type=data_type,
+            individual_id=individual_id, tissue_type=tissue_type, sequencing_type=sequencing_type, data_source=data_source, data_type=data_type,
         )
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
@@ -601,12 +610,14 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': [f'Unable to load the following samples with no match: {loaded_data_row[0]}'], 'warnings': None})
 
+        sequencing_type = params.get('sample_sequencing_type', AIRTABLE_RNA_SAMPLE_RECORDS[0]['fields']['RNASequencingProduct'][0])
         airtable_sample_records = [
             {
                 **AIRTABLE_RNA_SAMPLE_RECORDS[0],
                 'fields': {
                     **AIRTABLE_RNA_SAMPLE_RECORDS[0]['fields'],
                     'TissueOfOrigin': [params['sample_tissue_type']],
+                    'RNASequencingProduct': [sequencing_type],
                 }
             },
             *AIRTABLE_RNA_SAMPLE_RECORDS[1:],
@@ -633,10 +644,12 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to load the following samples from Airtable with no corresponding seqr ID: NA11111',
+            'Unable to load the following samples that are improperly configured in Airtable with invalid sequencing product specified: NA12347',
             'Unable to load the following samples that are improperly configured in Airtable with invalid tissue specified: NA12348',
-            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12345, NA12347',
+            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12345',
             'Unable to load the following samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
             'Unable to load the following samples that are improperly configured in Airtable with no project specified: NA12348',
+            'Unable to load the following samples that are improperly configured in Airtable with no sequencing product specified: NA12346',
             'Unable to load the following samples that are improperly configured in Airtable with no tissue specified: NA12346',
         ])
 
@@ -700,7 +713,7 @@ class DataManagerAPITest(AirtableTest):
             self.assert_expected_airtable_call(
                 call_index=0,
                 filter_formula="AND(LEN({PassingCollaboratorSampleIDs})>0,OR(SEARCH('RNA ready to load',ARRAYJOIN(PDOStatus,';'))))",
-                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'TissueOfOrigin', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping'],
+                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'RNASequencingProduct', 'TissueOfOrigin', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping'],
             )
 
             return response_json, new_sample_guid
@@ -752,7 +765,7 @@ class DataManagerAPITest(AirtableTest):
         # test database models are correct
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
         sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz', data_type=data_type,
-                                                   tissue_type=params.get('sample_tissue_type'), is_active_sample=False)
+                                                   tissue_type=params.get('sample_tissue_type'), sequencing_type=sequencing_type, is_active_sample=False)
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
