@@ -951,6 +951,7 @@
         "individual": 19,
         "is_active": true,
         "tissue_type": "F",
+        "sequencing_type": "W",
         "data_source": "fibs_samples.tsv.gz",
         "data_type": "S"
     }
@@ -1056,6 +1057,7 @@
         "individual": 1,
         "is_active": true,
         "tissue_type": "F",
+        "sequencing_type": "W",
         "data_source": "muscle_samples.tsv.gz",
         "data_type": "S"
     }
@@ -1071,6 +1073,7 @@
         "individual": 1,
         "is_active": true,
         "tissue_type": "M",
+        "sequencing_type": "T",
         "data_source": "muscle_samples.tsv.gz",
         "data_type": "S"
     }
@@ -1101,6 +1104,7 @@
         "individual": 1,
         "is_active": true,
         "tissue_type": "F",
+        "sequencing_type": "T",
         "data_source": "muscle_samples.tsv.gz",
         "data_type": "T"
     }
@@ -1116,6 +1120,7 @@
         "individual": 1,
         "is_active": true,
         "tissue_type": "M",
+        "sequencing_type": "T",
         "data_source": "muscle_samples.tsv.gz",
         "data_type": "T"
     }
@@ -1131,6 +1136,7 @@
         "individual": 1,
         "is_active": true,
         "tissue_type": "M",
+        "sequencing_type": "T",
         "data_source": "muscle_samples.tsv.gz",
         "data_type": "E"
     }
