@@ -108,7 +108,14 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
             ) : <i>{tag.metadata}</i>}
           </div>
         )}
-        {tag.searchHash && <div><NavLink to={`/variant_search/results/${tag.searchHash}`}>Re-run search</NavLink></div>}
+        {tag.searchHash && (
+          <div>
+            <NavLink to={`/variant_search/results/${tag.searchHash}`}>
+              Re-run &nbsp;
+              {tag.searchName ? `search: "${tag.searchName}"` : 'custom search'}
+            </NavLink>
+          </div>
+        )}
       </div>
     }
   />
