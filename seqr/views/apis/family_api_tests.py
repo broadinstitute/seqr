@@ -649,17 +649,17 @@ class FamilyAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         expected_response = {
-            'F': {'individualData': {'NA19675_1': 1.01}, 'myData': [1.01]},
-            'M': {'individualData': {'NA19675_1': 8.38}, 'myData': [8.38]}
+            'F': {'W': {'individualData': {'NA19675_1': 1.01}, 'myData': [1.01]}},
+            'M': {'T': {'individualData': {'NA19675_1': 8.38}, 'myData': [8.38]}}
         }
         if self.INCLUDE_RDG_TPMS:
-            expected_response = {k: {**v, 'rdgData': [*v['myData']]} for k, v in expected_response.items()}
+            expected_response = {tissue: {k: {**v, 'rdgData': [*v['myData']]} for k, v in data.items()} for tissue, data in expected_response.items()}
         self.assertDictEqual(response.json(), expected_response)
 
         self.login_manager()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        expected_response['F']['myData'].append(2.36)
+        expected_response['F']['W']['myData'].append(2.36)
         self.assertDictEqual(response.json(), expected_response)
 
     def test_get_family_phenotype_gene_scores(self):

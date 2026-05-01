@@ -1104,7 +1104,7 @@
         "individual": 1,
         "is_active": true,
         "tissue_type": "F",
-        "sequencing_type": "T",
+        "sequencing_type": "W",
         "data_source": "muscle_samples.tsv.gz",
         "data_type": "T"
     }

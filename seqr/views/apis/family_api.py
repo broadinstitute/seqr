@@ -499,7 +499,7 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
     internal_projects = get_internal_projects() if anvil_enabled() else None
     for tissue in response.keys():
         for sequencing_type in response[tissue].keys():
-            tpms = RnaSeqTpm.objects.filter(sample__tissue_type=tissue, sequencing_type=sequencing_type, gene_id=gene_id)
+            tpms = RnaSeqTpm.objects.filter(sample__tissue_type=tissue, sample__sequencing_type=sequencing_type, gene_id=gene_id)
             response[tissue][sequencing_type]['myData'] = list(tpms.filter(
                 sample__individual__family__project__guid__in=project_guids,
             ).order_by('tpm').values_list('tpm', flat=True))
