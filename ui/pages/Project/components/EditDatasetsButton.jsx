@@ -11,7 +11,7 @@ import { UPLOAD_PROJECT_IGV_FIELD } from 'shared/components/form/IGVUploadField'
 import FileUploadField from 'shared/components/form/XHRUploaderField'
 import { Select } from 'shared/components/form/Inputs'
 import AddWorkspaceDataForm from 'shared/components/panel/LoadWorkspaceDataForm'
-import { LOAD_RNA_FIELDS, TISSUE_DISPLAY } from 'shared/utils/constants'
+import { LOAD_RNA_FIELDS, TISSUE_DISPLAY, PRODUCT_DISPLAY } from 'shared/utils/constants'
 
 import { addIGVDataset, uploadRnaSeq } from '../reducers'
 import { getCurrentProject, getProjectGuid, getRnaSeqUploadStats } from '../selectors'
@@ -76,11 +76,7 @@ const PROJECT_LOAD_RNA_FIELDS = [
     name: 'sequencingType',
     label: 'Sequencing Type',
     component: Select,
-    options: [
-      { value: 'K', name: 'Kinnex' },
-      { value: 'T', name: 'TruSeq' },
-      { value: 'W', name: 'Watchmaker' },
-    ],
+    options: Object.entries(PRODUCT_DISPLAY).map(([value, name]) => ({ value, name })),
     validate: validators.required,
   },
   ...LOAD_RNA_FIELDS.slice(-2),

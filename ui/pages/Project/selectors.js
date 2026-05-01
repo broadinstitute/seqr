@@ -12,6 +12,7 @@ import {
   INDIVIDUAL_HAS_DATA_FIELD,
   MME_TAG_NAME,
   TISSUE_DISPLAY,
+  PRODUCT_DISPLAY,
   SIMPLIFIED_SEX_LOOKUP,
 } from 'shared/utils/constants'
 import { toCamelcase, toSnakecase, snakecaseToTitlecase } from 'shared/utils/stringUtils'
@@ -852,21 +853,22 @@ export const getIndividualPhenotypeGeneScores = createSelector(
 export const getTissueOptionsByIndividualGuid = createSelector(
   getRnaSeqDataByIndividual,
   (rnaSeqDataByIndividualGuid) => {
-    // TODO
     const tissueTypesByIndividualGuid = Object.entries(rnaSeqDataByIndividualGuid || {}).map(
       ([individualGuid, rnaSeqData]) => ([
         individualGuid,
-        [...new Set(Object.values(rnaSeqData || {}).map(Object.values).flat(2).map(({ tissueType }) => tissueType))],
+        [...new Set(Object.values(rnaSeqData || {}).map(Object.values).flat(2).map(
+          ({ tissueType, sequencingType }) => `${tissueType}-${sequencingType}`,
+        ))],
       ]),
     )
-    return tissueTypesByIndividualGuid.reduce((acc, [individualGuid, tissueTypes]) => (
-      tissueTypes.length > 0 ? {
-        ...acc,
-        [individualGuid]: tissueTypes.map(tissueType => (
-          { key: tissueType, text: TISSUE_DISPLAY[tissueType] || 'Unknown Tissue', value: tissueType }
-        )),
-      } : acc
-    ), {})
+    return tissueTypesByIndividualGuid.reduce((acc, [individualGuid, dataTypes]) => ({
+      ...acc,
+      [individualGuid]: dataTypes.map(dataType => ({
+        key: dataType,
+        value: dataType,
+        text: `Tissue type: ${TISSUE_DISPLAY[dataType.split('-')[0]] || 'Unknown Tissue'}, Sequencing Product: ${PRODUCT_DISPLAY[dataType.split('-')[1]] || 'Unknown Product'}`,
+      })),
+    }), {})
   },
 )
 

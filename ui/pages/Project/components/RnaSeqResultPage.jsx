@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { Loader, Grid, Dropdown } from 'semantic-ui-react'
 
 import { getGenesById, getIndividualsByGuid, getRnaSeqSignificantJunctionData } from 'redux/selectors'
-import { RNASEQ_JUNCTION_PADDING, TISSUE_DISPLAY } from 'shared/utils/constants'
+import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import DataLoader from 'shared/components/DataLoader'
 import FamilyReads from 'shared/components/panel/family/FamilyReads'
 import RnaSeqJunctionOutliersTable from 'shared/components/table/RnaSeqJunctionOutliersTable'
@@ -46,45 +46,44 @@ class BaseRnaSeqResultPage extends React.PureComponent {
   }
 
   state = {
-    tissueType: '',
+    selectedDataType: null,
   }
 
   onTissueChange = (e, data) => {
-    // TODO
-    this.setState({ tissueType: data.value })
+    this.setState({ selectedDataType: data.value })
   }
 
   render() {
     const { familyGuid, rnaSeqData, significantJunctionOutliers, genesById, tissueOptions } = this.props
-    const { tissueType } = this.state
-    const defaultTissue = tissueOptions?.length > 0 ? tissueOptions[0].value : null
-    const showTissueType = tissueType === '' ? defaultTissue : tissueType
-    const tissueDisplay = TISSUE_DISPLAY[showTissueType]
+    const { selectedDataType } = this.state
+    const showDataType = selectedDataType || tissueOptions[0].value
+    const [showTissueType, showSequencingType] = showDataType.split('-')
 
     const outlierPlotConfigs = OUTLIER_VOLCANO_PLOT_CONFIGS.map((config) => {
-      const data = rnaSeqData[config.key]
-      return ({ data: data.filter(outlier => outlier.tissueType === showTissueType), ...config })
+      const data = rnaSeqData[config.key].filter(
+        outlier => outlier.tissueType === showTissueType && outlier.sequencingType === showSequencingType,
+      )
+      return ({ data, ...config })
     }).filter(({ data }) => data.length)
 
     const tableData = significantJunctionOutliers.reduce(
-      (acc, outlier) => (outlier.tissueType === showTissueType ? [...acc, outlier] : acc), [],
+      (acc, outlier) => (
+        (outlier.tissueType === showTissueType && outlier.sequencingType === showSequencingType) ?
+          [...acc, outlier] : acc
+      ), [],
     )
 
     return (
       <div>
-        {(showTissueType || tissueOptions?.length > 1) && (
-          <TissueContainer>
-            Tissue type: &nbsp;
-            {tissueOptions?.length > 1 ? (
-              <Dropdown
-                text={tissueDisplay || 'Unknown Tissue'}
-                value={showTissueType}
-                options={tissueOptions}
-                onChange={this.onTissueChange}
-              />
-            ) : tissueDisplay}
-          </TissueContainer>
-        )}
+        <TissueContainer>
+          {tissueOptions?.length > 1 ? (
+            <Dropdown
+              value={showDataType}
+              options={tissueOptions}
+              onChange={this.onTissueChange}
+            />
+          ) : tissueOptions[0].text}
+        </TissueContainer>
         { outlierPlotConfigs.length > 0 && (
           <React.Suspense fallback={<Loader />}>
             <Grid>
