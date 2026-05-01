@@ -1374,16 +1374,16 @@ class IndividualAPITest(object):
                 'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
-                    'tissueType': 'M',
+                    'tissueType': 'M', 'sequencingType': 'T',
                 }],
                 'ENSG00000240361': [{
                     'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
-                    'tissueType': 'M',
+                    'tissueType': 'M', 'sequencingType': 'T',
                 }],
                 'ENSG00000268903': [{
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
-                    'tissueType': 'M',
+                    'tissueType': 'M', 'sequencingType': 'T',
                 }],
             },
             'spliceOutliers': {
@@ -1398,7 +1398,7 @@ class IndividualAPITest(object):
                 'meanCounts': 0.85,  'meanTotalCounts': 0.85, 'pAdjust': 3.08e-56,
                 'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1,
                 'totalCounts': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34,
-                'tissueType': 'F',
+                'tissueType': 'F', 'sequencingType': 'W',
             },
             outliers_by_pos[132885746]
         )
