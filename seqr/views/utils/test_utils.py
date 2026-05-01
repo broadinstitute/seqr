@@ -721,7 +721,7 @@ SAVED_VARIANT_DETAIL_FIELDS = {
 SAVED_VARIANT_DETAIL_FIELDS.update(SAVED_VARIANT_FIELDS)
 
 TAG_FIELDS = {
-    'tagGuid', 'name', 'category', 'color', 'searchHash', 'metadata', 'lastModifiedDate', 'createdBy', 'variantGuids',
+    'tagGuid', 'name', 'category', 'color', 'searchHash', 'searchName', 'metadata', 'lastModifiedDate', 'createdBy', 'variantGuids',
 }
 
 VARIANT_NOTE_FIELDS = {'noteGuid', 'note', 'report', 'lastModifiedDate', 'createdBy', 'variantGuids'}

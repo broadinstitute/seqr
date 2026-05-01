@@ -2404,6 +2404,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'category': 'CMG Discovery Tags',
             'color': '#03441E',
             'searchHash': None,
+            'searchName': None,
             'metadata': None,
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,
