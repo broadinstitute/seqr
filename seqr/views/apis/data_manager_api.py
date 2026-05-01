@@ -81,7 +81,7 @@ def update_rna_seq(request):
         elif not pdos[0][SEQUENCING_FIELD]:
             error_messages.append('no sequencing product specified')
         else:
-            sequencing_type = next((st for st, label in RnaSample.SEQUENCING_CHOICES if pdos[0][SEQUENCING_FIELD].startswith(st)), None)
+            sequencing_type = next((st for st, label in RnaSample.SEQUENCING_CHOICES if pdos[0][SEQUENCING_FIELD].startswith(label)), None)
             if not sequencing_type:
                 error_messages.append('invalid sequencing product specified')
 
