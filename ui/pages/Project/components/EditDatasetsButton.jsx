@@ -72,6 +72,17 @@ const PROJECT_LOAD_RNA_FIELDS = [
     options: Object.entries(TISSUE_DISPLAY).map(([value, name]) => ({ value, name })),
     validate: validators.required,
   },
+  {
+    name: 'sequencingType',
+    label: 'Sequencing Type',
+    component: Select,
+    options: [
+      { value: 'K', name: 'Kinnex' },
+      { value: 'T', name: 'TruSeq' },
+      { value: 'W', name: 'Watchmaker' },
+    ],
+    validate: validators.required,
+  },
   ...LOAD_RNA_FIELDS.slice(-2),
 ]
 
