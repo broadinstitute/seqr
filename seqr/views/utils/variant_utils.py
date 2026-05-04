@@ -14,7 +14,7 @@ from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Dataset, RnaSample, VariantTag, VariantTagType
 from seqr.utils.gene_utils import get_genes_for_variants
-from seqr.utils.xpos_utils import parse_variant_id
+from seqr.utils.xpos_utils import parse_variant_id, get_chrom_pos
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
@@ -382,7 +382,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
                           add_locus_list_detail=False, include_individual_gene_scores=True, include_project_name=False, genome_version=None):
     additional_model_fields = []
     if response_variants is None:
-        additional_model_fields = ['dataset_type', 'saved_variant_json']
+        additional_model_fields = ['dataset_type', 'main_transcript']
         if not genome_version:
             additional_model_fields.append('family__project__genome_version')
     response = get_json_for_saved_variants_with_tags(saved_variants, additional_model_fields=additional_model_fields) \
@@ -454,9 +454,7 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
     for variant in variants:
         dataset_type = variant.pop('datasetType')
         gv = genome_version or variant.pop('familyProjectGenomeVersion')
-        variant_json = variant.pop('savedVariantJson')
         variants_by_id[variant['variantId']] = {
-            **variant_json,
             **variants_by_id[variant['variantId']],
             **variant,
             'familyGuids': variant['familyGuids'] + variants_by_id[variant['variantId']].get('familyGuids', []),
@@ -464,6 +462,15 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
         }
         if variant['key']:
             variant_keys_by_genome_version_dataset_type[gv][dataset_type].add(variant['key'])
+        else:
+            chrom, pos = get_chrom_pos(variant['xpos'])
+            transcripts = {gene_id: [{'geneId': gene_id}] for gene_id in variant['geneIds']}
+            if variant['mainTranscript'] and (variant['mainTranscript'].get('geneId') or len(variant['geneIds']) == 1):
+                main_gene_id = variant['mainTranscript'].get('geneId') or variant['geneIds'][0]
+                transcripts[main_gene_id] = [variant['mainTranscript']]
+            variants_by_id[variant['variantId']].update({
+                'chrom': chrom, 'pos': pos, 'genomeVersion': gv, 'transcripts': transcripts,
+            })
 
     for gv, gv_keys in variant_keys_by_genome_version_dataset_type.items():
         for dataset_type, keys in gv_keys.items():
