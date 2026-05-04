@@ -465,7 +465,7 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
         else:
             chrom, pos = get_chrom_pos(variant['xpos'])
             transcripts = {gene_id: [{'geneId': gene_id}] for gene_id in variant['geneIds']}
-            if variant['mainTranscript'] and (variant['mainTranscript'].get('geneId') or len(variant['geneIds']) == 1):
+            if variant['mainTranscript']:
                 main_gene_id = variant['mainTranscript'].get('geneId') or variant['geneIds'][0]
                 transcripts[main_gene_id] = [variant['mainTranscript']]
             variants_by_id[variant['variantId']].update({
