@@ -893,9 +893,7 @@ def _parse_new_aip_saved_variants(new_variant_keys, family_variant_data):
         if variant_id in variants_by_id:
             variant.update(variants_by_id[variant_id])
         else:
-            variant.update({'key': None, 'saved_variant_json': {k: v for k, v in variant.items() if k in {
-                'chrom', 'pos', 'ref', 'alt', 'variantId', 'xpos', 'genomeVersion', 'genotypes', 'transcripts', 'mainTranscriptId',
-            }}})
+            variant.update({'key': None})
         new_variant_data[key] = variant
     return new_variant_data
 

@@ -59,7 +59,6 @@ def parse_saved_variant_json(variant_json, family_id):
         'dataset_type': variant_json.get('dataset_type') or variant_dataset_type(variant_json),
         'gene_ids': gene_ids,
         'main_transcript': main_transcript,
-        'saved_variant_json': variant_json.get('saved_variant_json', {}),
     }
 
 
