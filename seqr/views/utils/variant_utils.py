@@ -453,6 +453,7 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
     for variant in variants:
         dataset_type = variant.pop('datasetType')
         gv = genome_version or variant.pop('familyProjectGenomeVersion')
+        main_transcript = variant.pop('mainTranscript')
         variants_by_id[variant['variantId']] = {
             **variants_by_id[variant['variantId']],
             **variant,
@@ -464,11 +465,15 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
         else:
             chrom, pos = get_chrom_pos(variant['xpos'])
             transcripts = {gene_id: [{'geneId': gene_id}] for gene_id in variant['geneIds']}
-            if variant['mainTranscript']:
-                main_gene_id = variant['mainTranscript'].get('geneId') or variant['geneIds'][0]
-                transcripts[main_gene_id] = [variant['mainTranscript']]
+            if main_transcript:
+                main_gene_id = main_transcript.get('geneId') or variant['geneIds'][0]
+                transcripts[main_gene_id] = [main_transcript]
             variants_by_id[variant['variantId']].update({
-                'chrom': chrom, 'pos': pos, 'genomeVersion': gv, 'transcripts': transcripts,
+                'chrom': chrom,
+                'pos': pos,
+                'genomeVersion': gv,
+                'transcripts': transcripts,
+                'mainTranscriptId': main_transcript.get('transcriptId'),
             })
 
     for gv, gv_keys in variant_keys_by_genome_version_dataset_type.items():
