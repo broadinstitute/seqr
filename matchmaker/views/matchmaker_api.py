@@ -59,7 +59,7 @@ def get_individual_mme_matches(request, submission_guid):
 
     variants = get_json_for_saved_variants(
         SavedVariant.objects.filter(guid__in=variant_guids), additional_values={
-            'genomeVersion': Coalesce('saved_variant_json__genomeVersion', Value(project.genome_version), output_field=CharField()),
+            'genomeVersion': Value(project.genome_version),
             'selectedMainTranscript': F('main_transcript'),
             'xposEnd': F('xpos_end'),
         },
