@@ -4,7 +4,7 @@ import mock
 import responses
 from settings import AIRTABLE_URL
 
-from seqr.models import Project, SavedVariant, RnaSample
+from seqr.models import Project, RnaSample
 from seqr.views.apis.report_api import seqr_stats, anvil_export, gregor_export, family_metadata, variant_metadata
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 
@@ -962,11 +962,6 @@ class ReportAPITest(AirtableTest):
         project = Project.objects.get(id=3)
         project.consent_code = 'H'
         project.save()
-
-        # For SV variant, test reports in gene associated with OMIM condition even if not annotated
-        variant = SavedVariant.objects.get(id=7)
-        variant.saved_variant_json['transcripts'] = {'ENSG00000135953': []}
-        variant.save()
 
         responses.calls.reset()
         responses.add(responses.GET, 'https://monarchinitiative.org/v3/api/entity/MONDO:0008788', status=200, json={
