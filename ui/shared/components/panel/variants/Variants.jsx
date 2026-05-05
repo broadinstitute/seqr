@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Grid, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
-import { GENOME_VERSION_37, clinvarSignificance, clinvarColor, getVariantMainGeneId } from 'shared/utils/constants'
+import { GENOME_VERSION_37, clinvarColor, getVariantMainGeneId } from 'shared/utils/constants'
 import { VerticalSpacer } from '../../Spacers'
 import { TagFieldDisplay } from '../view-fields/TagFieldView'
 import FamilyReads from '../family/FamilyReads'
@@ -16,16 +16,16 @@ import VariantGenes, { VariantGene } from './VariantGene'
 import VariantIndividuals from './VariantIndividuals'
 import { compHetGene, has37Coords } from './VariantUtils'
 
-export const StyledVariantRow = styled(({ isSV, severity, ...props }) => <Grid.Row {...props} />)`  
+export const StyledVariantRow = styled(({ isSV, severityColor, ...props }) => <Grid.Row {...props} />)`  
   .column {
     margin-top: 0em !important;
     margin-bottom: 0em !important;
   }
   
   color: #999;
-  background-color: ${({ severity, isSV }) => {
-    if (severity !== undefined) {
-      return clinvarColor(severity, '#eaa8a857', '#f5d55c57', '#21a92624') || 'inherit'
+  background-color: ${({ severityColor, isSV }) => {
+    if (severityColor) {
+      return severityColor
     }
     if (isSV) {
       return '#f3f8fa'
@@ -137,10 +137,9 @@ export const Variant = React.memo((
   { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, updateReads, ...props },
 ) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
-  const { severity } = clinvarSignificance(variant.clinvar)
   return (
     <VariantLayout
-      severity={severity}
+      severityColor={clinvarColor(variant.clinvar, '#eaa8a857', '#f5d55c57', '#21a92624')}
       isSV={!!variant.svType}
       variant={variant}
       mainGeneId={variantMainGeneId}

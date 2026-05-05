@@ -3,10 +3,10 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Label, Icon, Popup, List, ListItem } from 'semantic-ui-react'
-import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import { getUser, getFamiliesByGuid, getProjectsByGuid } from 'redux/selectors'
-import { clinvarSignificance, clinvarColor, getPermissionedHgmdClass } from '../../../utils/constants'
+import { clinvarColor, getPermissionedHgmdClass } from '../../../utils/constants'
 import { snakecaseToTitlecase } from '../../../utils/stringUtils'
 
 const StarsContainer = styled.span`
@@ -21,7 +21,7 @@ const StarIcon = styled(Icon).attrs({ name: 'star' })`
 const HGMD_CLASS_NAMES = {
   DM: 'Disease Causing (DM)',
   'DM?': 'Disease Causing? (DM?)',
-  FPV: 'Frameshift or truncating variant (FTV)',
+  R: 'Removed',
   FP: 'In vitro/laboratory or in vivo functional polymorphism (FP)',
   DFP: 'Disease-associated polymorphism with additional supporting functional evidence (DFP)',
   DP: 'Disease-associated polymorphism (DP)',
@@ -69,12 +69,6 @@ PathogenicityLink.propTypes = {
   popup: PropTypes.object,
 }
 
-const clinvarUrl = (clinvar) => {
-  const baseUrl = 'http://www.ncbi.nlm.nih.gov/clinvar'
-  const variantPath = clinvar.alleleId ? `?term=${clinvar.alleleId}[alleleid]` : `/variation/${clinvar.variationId}`
-  return baseUrl + variantPath
-}
-
 const clinvarLabel = (pathogenicity, assertions, conflictingPathogenicities) => {
   let label = snakecaseToTitlecase(pathogenicity)
   if (conflictingPathogenicities && conflictingPathogenicities.length) {
@@ -89,11 +83,8 @@ const clinvarLabel = (pathogenicity, assertions, conflictingPathogenicities) => 
   return label
 }
 
-const clinvarPopup = (clinvar) => {
-  const lastUpdated = (
-    <div>{clinvar.version && `Last Updated: ${new Date(clinvar.version).toLocaleDateString()}`}</div>
-  )
-  const conditions = clinvar.conditions && (
+const clinvarPopup = (clinvar) => (
+  clinvar.conditions ? (
     <div>
       Conditions:
       <List bulleted>
@@ -102,29 +93,17 @@ const clinvarPopup = (clinvar) => {
         ))}
       </List>
     </div>
-  )
-  return (
-    <div>
-      {lastUpdated}
-      {conditions && (
-      <div>
-        <VerticalSpacer height={10} />
-        {conditions}
-      </div>
-      )}
-    </div>
-  )
-}
+  ) : null
+)
 
 const Pathogenicity = React.memo(({ variant, showHgmd }) => {
   const clinvar = variant.clinvar || {}
   const pathogenicity = []
-  if ((clinvar.clinicalSignificance || clinvar.pathogenicity) && (clinvar.variationId || clinvar.alleleId)) {
-    const { pathogenicity: clinvarPathogenicity, assertions, severity } = clinvarSignificance(clinvar)
+  if (clinvar.pathogenicity && clinvar.alleleId) {
     pathogenicity.push(['ClinVar', {
-      label: clinvarLabel(clinvarPathogenicity, assertions, clinvar.conflictingPathogenicities),
-      color: clinvarColor(severity, 'red', 'orange', 'green'),
-      href: clinvarUrl(clinvar),
+      label: clinvarLabel(clinvar.pathogenicity, clinvar.assertions, clinvar.conflictingPathogenicities),
+      color: clinvarColor(clinvar, 'red', 'orange', 'green'),
+      href: `http://www.ncbi.nlm.nih.gov/clinvar?term=${clinvar.alleleId}[alleleid]`,
       goldStars: clinvar.goldStars,
       popup: clinvarPopup(clinvar),
       submitters: clinvar.submitters,

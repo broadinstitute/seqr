@@ -750,27 +750,27 @@ export const INDIVIDUAL_FIELD_LOOKUP = {
 
 // CLINVAR
 
-const CLINVAR_DEFAULT_PATHOGENICITY = 'no_pathogenic_assertion'
-const CLINVAR_MAX_RISK_PATHOGENICITY = 'established_risk_allele'
-const CLINVAR_MIN_RISK_PATHOGENICITY = 'likely_risk_allele'
+const CLINVAR_DEFAULT_PATHOGENICITY = 'No_pathogenic_assertion'
+const CLINVAR_MAX_RISK_PATHOGENICITY = 'Established_risk_allele'
+const CLINVAR_MIN_RISK_PATHOGENICITY = 'Likely_risk_allele'
 const CLINVAR_PATHOGENICITIES = [
-  'pathogenic',
-  'pathogenic/likely_pathogenic',
-  'pathogenic/likely_pathogenic/established_risk_allele',
-  'pathogenic/likely_pathogenic/likely_risk_allele',
-  'pathogenic/likely_risk_allele',
-  'likely_pathogenic',
-  'likely_pathogenic/likely_risk_allele',
+  'Pathogenic',
+  'Pathogenic/Likely_pathogenic',
+  'Pathogenic/Likely_pathogenic/Established_risk_allele',
+  'Pathogenic/Likely_pathogenic/Likely_risk_allele',
+  'Pathogenic/Likely_risk_allele',
+  'Likely_pathogenic',
+  'Likely_pathogenic/Likely_risk_allele',
   CLINVAR_MAX_RISK_PATHOGENICITY,
   CLINVAR_MIN_RISK_PATHOGENICITY,
-  'conflicting_interpretations_of_pathogenicity',
-  'uncertain_risk_allele',
-  'uncertain_significance/uncertain_risk_allele',
-  'uncertain_significance',
+  'Conflicting_classifications_of_pathogenicity',
+  'Uncertain_risk_allele',
+  'Uncertain_significance/Uncertain_risk_allele',
+  'Uncertain_significance',
   CLINVAR_DEFAULT_PATHOGENICITY,
-  'likely_benign',
-  'benign/likely_benign',
-  'benign',
+  'Likely_benign',
+  'Benign/Likely_benign',
+  'Benign',
 ].reverse().reduce((acc, path, i) => ({ ...acc, [path]: i }), {})
 
 const HGMD_SEVERITY = {
@@ -1298,27 +1298,8 @@ export const getPermissionedHgmdClass = (variant, user, familiesByGuid, projectB
     familyGuid => projectByGuid[familiesByGuid[familyGuid].projectGuid].enableHgmd,
   )) && variant.hgmd && variant.hgmd.class
 
-export const clinvarSignificance = (clinvar) => {
-  let { pathogenicity, assertions } = clinvar || {}
-  const { clinicalSignificance } = clinvar || {}
-  if (clinicalSignificance && !pathogenicity) {
-    [pathogenicity, ...assertions] = clinicalSignificance.split(/[,|]/)
-    if (pathogenicity === 'Pathogenic/Likely_pathogenic/Pathogenic') {
-      pathogenicity = 'Pathogenic/Likely_pathogenic'
-    } else if (pathogenicity === 'Pathogenic/Pathogenic') {
-      pathogenicity = 'Pathogenic'
-    }
-    if (!(pathogenicity.replace(' ', '_').toLowerCase() in CLINVAR_PATHOGENICITIES)) {
-      assertions = [pathogenicity, ...assertions]
-      pathogenicity = CLINVAR_DEFAULT_PATHOGENICITY
-    }
-    assertions = assertions.map(a => a.replace(/^_/, ''))
-  }
-
-  return { pathogenicity, assertions, severity: CLINVAR_PATHOGENICITIES[pathogenicity?.replace(' ', '_').toLowerCase()] }
-}
-
-export const clinvarColor = (severity, pathColor, riskColor, benignColor) => {
+export const clinvarColor = (clinvar, pathColor, riskColor, benignColor) => {
+  const severity = CLINVAR_PATHOGENICITIES[clinvar?.pathogenicity]
   if (severity > CLINVAR_PATHOGENICITIES[CLINVAR_MAX_RISK_PATHOGENICITY]) {
     return pathColor
   }
@@ -1332,10 +1313,10 @@ export const clinvarColor = (severity, pathColor, riskColor, benignColor) => {
 }
 
 const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
-  const { pathogenicity, severity } = clinvarSignificance(variant.clinvar)
+  const { pathogenicity } = variant.clinvar || {}
   const hgmdSignificance = getPermissionedHgmdClass(variant, user, familiesByGuid, projectByGuid)
   if (!pathogenicity && !hgmdSignificance) return -10
-  const clinvarSeverity = pathogenicity ? severity + 1 : 0.1
+  const clinvarSeverity = pathogenicity ? CLINVAR_PATHOGENICITIES[pathogenicity] + 1 : 0.1
   const hgmdSeverity = HGMD_SEVERITY[hgmdSignificance] || 0
   return clinvarSeverity + hgmdSeverity
 }
