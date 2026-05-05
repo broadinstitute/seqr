@@ -381,7 +381,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
                           add_locus_list_detail=False, include_individual_gene_scores=True, include_project_name=False, genome_version=None):
     additional_model_fields = []
     if response_variants is None:
-        additional_model_fields = ['dataset_type', 'main_transcript']
+        additional_model_fields = ['dataset_type', 'main_transcript', 'xpos_end']
         if not genome_version:
             additional_model_fields.append('family__project__genome_version')
     response = get_json_for_saved_variants_with_tags(saved_variants, additional_model_fields=additional_model_fields) \
@@ -454,6 +454,7 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
         dataset_type = variant.pop('datasetType')
         gv = genome_version or variant.pop('familyProjectGenomeVersion')
         main_transcript = variant.pop('mainTranscript')
+        xpos_end = variant.pop('xposEnd')
         variants_by_id[variant['variantId']] = {
             **variants_by_id[variant['variantId']],
             **variant,
@@ -475,6 +476,11 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
                 'transcripts': transcripts,
                 'mainTranscriptId': main_transcript.get('transcriptId'),
             })
+            if xpos_end:
+                end_chrom, end = get_chrom_pos(xpos_end)
+                variants_by_id[variant['variantId']]['end'] = end
+                if end_chrom != chrom:
+                    variants_by_id[variant['variantId']]['endChrom'] = end_chrom
 
     for gv, gv_keys in variant_keys_by_genome_version_dataset_type.items():
         for dataset_type, keys in gv_keys.items():
