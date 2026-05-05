@@ -1563,7 +1563,6 @@ export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'mut_pred', thresholds: [0.0101, 0.392, 0.737, 0.829, 0.932], fieldTitle: 'MutPred', citation: CLINGEN_CITATION },
   { field: 'primate_ai', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.484, 0.79, 0.867, undefined], fieldTitle: 'PrimateAI', citation: CLINGEN_CITATION },
   { field: 'eigen', group: CODING_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1, 2, undefined], max: 99 },
-  { field: 'dann', displayOnly: true, thresholds: [undefined, undefined, 0.93, 0.96, undefined] },
   { field: 'strvctvre', group: SV_IN_SILICO_GROUP, thresholds: [undefined, undefined, 0.5, 0.75, undefined] },
   { field: 'polyphen', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, 0.114, 0.978, 0.999, undefined], fieldTitle: 'PolyPhen', citation: CLINGEN_CITATION },
   { field: 'sift', reverseThresholds: true, thresholds: [undefined, 0, 0.002, 0.081, undefined], group: MISSENSE_IN_SILICO_GROUP, fieldTitle: 'SIFT', citation: CLINGEN_CITATION },
@@ -1577,7 +1576,7 @@ export const ORDERED_PREDICTOR_FIELDS = [
     thresholds: [undefined, undefined, 2.18, 4, undefined],
     citation: CLINGEN_CITATION,
   },
-  { field: 'haplogroup_defining', indicatorMap: { Y: { color: 'green', value: '' }, true: { color: 'green', value: '' } } },
+  { field: 'haplogroup_defining', indicatorMap: { true: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP, fieldTitle: 'MitoTIP' },
   { field: 'hmtvar', thresholds: [undefined, undefined, 0.35, 0.35, undefined], fieldTitle: 'HmtVar' },
   { field: 'mlc', thresholds: [undefined, 0.5, 0.5, 0.75, undefined], fieldTitle: 'MLC' },
@@ -1609,7 +1608,7 @@ export const predictionFieldValue = (
     )
   }
 
-  return indicatorMap && (indicatorMap[value[0]] || indicatorMap[value])
+  return indicatorMap && indicatorMap[value]
 }
 export const predictorColorRanges = (thresholds, { citation, reverseThresholds, thresholdMap, absValue }) => (
   <div>
