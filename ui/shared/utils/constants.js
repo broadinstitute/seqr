@@ -1281,7 +1281,7 @@ const SORT_BY_PRIORITIZED_GENE = 'PRIORITIZED_GENE'
 const SORT_BY_PROTEIN_CONSQ = 'PROTEIN_CONSEQUENCE'
 const SORT_BY_GNOMAD_GENOMES = 'GNOMAD'
 const SORT_BY_GNOMAD_EXOMES = 'GNOMAD_EXOMES'
-const SORT_BY_CALLSET_AF = 'CALLSET_AF'
+const SORT_BY_SEQR_AC = 'SEQR_AC'
 const SORT_BY_CONSTRAINT = 'CONSTRAINT'
 const SORT_BY_CADD = 'CADD'
 const SORT_BY_REVEL = 'REVEL'
@@ -1390,7 +1390,7 @@ const VARIANT_SORT_OPTONS = [
   },
   { value: SORT_BY_GNOMAD_GENOMES, text: 'gnomAD Genomes Frequency', comparator: populationComparator('gnomad_genomes') },
   { value: SORT_BY_GNOMAD_EXOMES, text: 'gnomAD Exomes Frequency', comparator: populationComparator('gnomad_exomes') },
-  { value: SORT_BY_CALLSET_AF, text: 'Callset AF', comparator: populationComparator('callset') },
+  { value: SORT_BY_SEQR_AC, text: 'seqr AC', comparator: (a, b) => a.populations?.seqr?.ac - b.populations?.seqr?.ac },
   { value: SORT_BY_CADD, text: 'CADD', comparator: predictionComparator('cadd') },
   { value: SORT_BY_REVEL, text: 'REVEL', comparator: predictionComparator('revel') },
   { value: SORT_BY_EIGEN, text: 'Eigen', comparator: predictionComparator('eigen') },
@@ -1707,7 +1707,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'alt' },
   { header: 'gene', getVal: getVariantGene },
   { header: 'worst_consequence', getVal: variant => getVariantMainTranscript(variant).majorConsequence },
-  { header: 'callset_freq', getVal: variant => getPopAf('callset')(variant) || getPopAf('seqr')(variant) },
+  { header: 'callset_freq', getVal: variant => getPopAf('seqr')(variant) },
   { header: 'exac_freq', getVal: getPopAf('exac') },
   { header: 'gnomad_genomes_freq', getVal: getPopAf('gnomad_genomes') },
   { header: 'gnomad_exomes_freq', getVal: getPopAf('gnomad_exomes') },
@@ -1723,7 +1723,7 @@ export const VARIANT_EXPORT_DATA = [
   { header: 'rsid', getVal: variant => variant.rsid },
   { header: 'hgvsc', getVal: variant => getVariantMainTranscript(variant).hgvsc },
   { header: 'hgvsp', getVal: variant => getVariantMainTranscript(variant).hgvsp },
-  { header: 'clinvar_clinical_significance', getVal: variant => (variant.clinvar || {}).clinicalSignificance || (variant.clinvar || {}).pathogenicity },
+  { header: 'clinvar_clinical_significance', getVal: variant => (variant.clinvar || {}).pathogenicity },
   { header: 'clinvar_gold_stars', getVal: variant => (variant.clinvar || {}).goldStars },
   { header: 'project' },
   { header: 'family' },
