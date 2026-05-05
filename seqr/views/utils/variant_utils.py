@@ -476,7 +476,7 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
                 'transcripts': transcripts,
                 'mainTranscriptId': main_transcript.get('transcriptId'),
             })
-            if xpos_end:
+            if variant['svType']:
                 end_chrom, end = get_chrom_pos(xpos_end)
                 variants_by_id[variant['variantId']]['end'] = end
                 if end_chrom != chrom:
