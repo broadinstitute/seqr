@@ -1,4 +1,3 @@
-"""APIs for management of projects related to AnVIL workspaces."""
 import json
 import time
 from datetime import datetime
@@ -58,15 +57,6 @@ def anvil_workspace_access_required(wrapped_func=None, meta_fields=None):
 
 @anvil_auth_and_policies_required(policy_url=POLICY_REQUIRED_URL)
 def anvil_workspace_page(request, namespace, name):
-    """
-    This view will be requested from AnVIL, it validates the workspace and project before loading data.
-
-    :param request: Django request object.
-    :param namespace: The namespace (or the billing account) of the workspace.
-    :param name: The name of the workspace. It also be used as the project name.
-    :return Redirect to a page depending on if the workspace permissions or project exists.
-
-    """
     project = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if project:
         return redirect('/project/{}/project_page'.format(project.first().guid))
@@ -159,15 +149,6 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
 
 @anvil_workspace_access_required
 def create_project_from_workspace(request, namespace, name):
-    """
-    Create a project when a cooperator requests to load data from an AnVIL workspace.
-
-    :param request: Django request object
-    :param namespace: The namespace (or the billing account) of the workspace
-    :param name: The name of the workspace. It also be used as the project name
-    :return the projectsByGuid with the new project json
-
-    """
     projects = Project.objects.filter(workspace_namespace=namespace, workspace_name=name)
     if projects:
         error = 'Project "{}" for workspace "{}/{}" exists.'.format(projects.first().name, namespace, name)
@@ -204,14 +185,6 @@ def create_project_from_workspace(request, namespace, name):
 
 @anvil_auth_and_policies_required
 def add_workspace_data(request, project_guid):
-    """
-    Add data from an AnVIL workspace.
-
-    :param request: Django request object
-    :param project_guid: Django request object
-    :return a data json with fields of individualGuid, familyGuid and optional familyNotesByGuid if no exceptions
-
-    """
     project = Project.objects.get(guid=project_guid)
     check_workspace_perm(request.user, CAN_EDIT, project.workspace_namespace, project.workspace_name, can_share=True)
 

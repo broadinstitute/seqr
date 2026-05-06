@@ -85,16 +85,12 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         return self.guid
 
     def __str__(self):
-        """Magix function for str() and %s."""
         return self.__unicode__()
 
     def json(self):
-        """Utility method that returns a json {field-name: value-as-string} mapping for all fields."""
         return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
 
     def save(self, *args, **kwargs):
-        """Create a GUID at object creation time."""
-
         being_created = not self.pk
         current_time = timezone.now()
 
@@ -113,11 +109,11 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
             self.created_date = kwargs.pop('created_date', current_time)
             super(ModelWithGUID, self).save(*args, **kwargs)
 
+            # Create a GUID at object creation time
             self.guid = self._compute_guid()
             super(ModelWithGUID, self).save()
 
     def delete_model(self, user, user_can_delete=False):
-        """Helper delete method that logs the deletion"""
         if not (user_can_delete or self.created_by == user):
             raise PermissionDenied('User does not have permission to delete this {}'.format(type(self).__name__))
         self.delete()
@@ -125,7 +121,6 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
 
     @classmethod
     def bulk_create(cls, user, new_models, **kwargs):
-        """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
             model.created_date = timezone.now()
@@ -136,7 +131,6 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
 
     @classmethod
     def bulk_update(cls, user, update_json, queryset=None, **filter_kwargs):
-        """Helper bulk update method that logs the update"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs).exclude(**update_json)
 
@@ -149,13 +143,11 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
 
     @classmethod
     def bulk_update_models(cls, user, models, fields):
-        """Helper bulk update method that logs the update and allows different update data for each model"""
         log_model_bulk_update(logger, models, user, 'update', update_fields=fields)
         cls.objects.bulk_update(models, fields)
 
     @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
-        """Helper bulk delete method that logs the deletion"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
         log_model_bulk_update(logger, queryset, user, 'delete')
@@ -219,10 +211,6 @@ class Project(ModelWithGUID):
     GUID_PRECISION = 4
 
     def save(self, *args, **kwargs):
-        """Override the save method and create user permissions groups + add the created_by user.
-
-        This could be done with signals, but seems cleaner to do it this way.
-        """
         being_created = not self.pk
         anvil_disabled = not anvil_enabled()
 
@@ -249,8 +237,6 @@ class Project(ModelWithGUID):
             user.groups.add(*[getattr(self, group) for group in groups])
 
     def delete(self, *args, **kwargs):
-        """Override the delete method to also delete the project-specific user groups"""
-
         super(Project, self).delete(*args, **kwargs)
 
         if self.can_edit_group:
@@ -778,9 +764,6 @@ class RnaSample(ModelWithGUID):
 
 
 class IgvSample(ModelWithGUID):
-    """This model represents a single data type that can be displayed in IGV (eg. Read Alignments) that's generated from
-    a single biological sample (eg. WES, WGS, RNA, Array).
-    """
     SAMPLE_TYPE_ALIGNMENT = 'alignment'
     SAMPLE_TYPE_COVERAGE = 'wig'
     SAMPLE_TYPE_JUNCTION = 'spliceJunctions'
@@ -857,20 +840,6 @@ class SavedVariant(ModelWithGUID):
 
 
 class VariantTagType(ModelWithGUID):
-    """
-    Previous color choices:
-        '#1f78b4',
-        '#a6cee3',
-        '#b2df8a',
-        '#33a02c',
-        '#fdbf6f',
-        '#ff7f00',
-        '#ff0000',
-        '#cab2d6',
-        '#6a3d9a',
-        '#8F754F',
-        '#383838',
-    """
     project = models.ForeignKey('Project', null=True, blank=True, on_delete=models.CASCADE)
 
     name = models.TextField()
@@ -1045,8 +1014,6 @@ class GeneNote(ModelWithGUID):
 
 
 class LocusList(ModelWithGUID):
-    """List of gene ids or regions"""
-
     name = models.TextField(db_index=True)
     description = models.TextField(null=True, blank=True)
 
@@ -1176,7 +1143,6 @@ class BulkOperationBase(models.Model):
 
     @classmethod
     def bulk_create(cls, user, new_models, **kwargs):
-        """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
         models = cls.objects.bulk_create(new_models, **kwargs)
@@ -1185,7 +1151,6 @@ class BulkOperationBase(models.Model):
 
     @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
-        """Helper bulk delete method that logs the deletion"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
         cls.log_model_no_guid_bulk_update(queryset, user, 'delete')

@@ -56,12 +56,6 @@ def format_chrom(chrom):
 
 
 def get_xpos(chrom, pos):
-    """Compute single number representing this chromosome and position.
-
-    Args:
-        chrom (string): examples '1', 'Y', 'M'
-        pos (integer): genomic position on chromosome
-    """
     chrom = format_chrom(chrom)
 
     if pos < MIN_POS or pos > MAX_POS:
@@ -71,7 +65,6 @@ def get_xpos(chrom, pos):
 
 
 def get_chrom_pos(xpos):
-    """Converts xpos position to a (chr, pos) tuple"""
     chrom_idx = int(xpos/1e9) - 1
     if chrom_idx < 0 or chrom_idx >= len(CHROMOSOMES):
         raise ValueError("Invalid xpos: %s" % (xpos,))

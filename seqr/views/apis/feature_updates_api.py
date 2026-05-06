@@ -19,10 +19,10 @@ def fetch_feature_updates():
 
 
 def get_feature_updates(request):
-    """
-    Fetches the feature-updates GitHub Discussion Atom feed, converts feed entries into markdown, and returns
+    """Fetches the feature-updates GitHub Discussion Atom feed, converts feed entries into markdown, and returns
     markdown and information for each feed entry.
     """
+
     entries = []
     for entry in fetch_feature_updates():
         # Atom feeds can have multiple content elements per feed entry

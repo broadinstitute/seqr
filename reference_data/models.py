@@ -31,32 +31,22 @@ GENOME_VERSION_LOOKUP = {k: v for (k, v) in GENOME_VERSION_CHOICES}
 
 
 class ReferenceDataRouter(object):
-    """
-    A router to control all database operations on reference data models
-    """
+    """A router to control all database operations on reference data models."""
+
     @classmethod
     def db_for_read(cls, model, **hints):
-        """
-        Attempts to read reference_data models go to reference_data_db.
-        """
         if model._meta.app_label == 'reference_data':
             return 'reference_data'
         return None
 
     @classmethod
     def db_for_write(cls, model, **hints):
-        """
-        Attempts to write reference_data models go to reference_data_db.
-        """
         if model._meta.app_label == 'reference_data':
             return 'reference_data'
         return None
 
     @classmethod
     def allow_relation(cls, obj1, obj2, **hints):
-        """
-        Allow relations if a model in the reference_data app is involved.
-        """
         if obj1._meta.app_label == 'reference_data' or \
            obj2._meta.app_label == 'reference_data':
            return True
@@ -64,10 +54,6 @@ class ReferenceDataRouter(object):
 
     @classmethod
     def allow_migrate(cls, db, app_label, model_name=None, **hints):
-        """
-        Make sure the reference_data app only appears in the 'reference_data_db'
-        database.
-        """
         if app_label == 'reference_data':
             return db == 'reference_data'
         elif db == 'reference_data':
@@ -241,10 +227,6 @@ class HumanPhenotypeOntology(LoadableModel):
         return hpo_id
 
 class GeneInfo(LoadableModel):
-    """Human gene models from https://www.gencodegenes.org/releases/
-    http://www.gencodegenes.org/gencodeformat.html
-    """
-
     ALL_GENCODE_VERSIONS = ['39', '31', '29', '28', '27', '19']
     CURRENT_VERSION = ALL_GENCODE_VERSIONS[0]
 

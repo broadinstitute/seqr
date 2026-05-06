@@ -1,6 +1,3 @@
-"""
-APIs for retrieving, updating, creating, and deleting Individual records
-"""
 from collections import defaultdict
 
 from clickhouse_search.models.postgres_dicts import SexDict
@@ -24,19 +21,6 @@ def _get_record_individual_id(record):
 
 
 def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_db_ids=False, get_created_counts=False, allow_features_update=False, skip_gt_stats_rebuild=False):
-    """
-    Add or update individual and family records in the given project.
-
-    Args:
-        project (object): Django ORM model for the project to add families to
-        individual_records (list): A list of JSON records representing individuals. See
-            the return value of pedigree_info_utils#convert_fam_file_rows_to_json(..)
-        user (object): current user model
-
-    Return:
-        3-tuple: updated Individual models, updated Family models, and updated FamilyNote models
-
-    """
     updated_family_ids = set()
     updated_individuals = set()
     updated_affected = set()
@@ -180,15 +164,6 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
 
 
 def delete_individuals(project, individual_guids, user):
-    """Delete one or more individuals
-
-    Args:
-        project (object): Django ORM model for project
-        individual_guids (list): GUIDs of individuals to delete
-
-    Returns:
-        list: Family objects for families with deleted individuals
-    """
     errors, individuals_to_delete = check_project_individuals_deletable(project, individual_guids=individual_guids)
     if errors:
         raise ErrorsWarningsException(errors)

@@ -112,14 +112,6 @@ def get_internal_projects():
 
 
 def get_project_and_check_permissions(project_guid, user, **kwargs):
-    """Retrieves Project with the given guid after checking that the given user has permission to
-     retrieve the given project.
-
-     Args:
-         project_guid (string): GUID of project to retrieve
-         user (User): Django User object
-         can_edit (bool): If user need edit permission
-     """
     return _get_project_and_check_permissions(project_guid, user, check_project_permissions, **kwargs)
 
 def get_project_and_check_pm_permissions(project_guid, user, override_permission_func=None):
