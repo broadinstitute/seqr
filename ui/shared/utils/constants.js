@@ -2119,6 +2119,12 @@ export const TISSUE_DISPLAY = {
   B: 'Brain',
 }
 
+export const PRODUCT_DISPLAY = {
+  K: 'Kinnex',
+  T: 'TruSeq',
+  W: 'Watchmaker',
+}
+
 export const RNASEQ_JUNCTION_PADDING = 200
 
 export const FAQ_PATH = '/faq'

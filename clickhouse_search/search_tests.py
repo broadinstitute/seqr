@@ -2296,22 +2296,22 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertDictEqual(
             response_json['rnaSeqData']['I000001_na19675']['outliers']['ENSG00000268903'][0],
             {'geneId': 'ENSG00000268903', 'isSignificant': True, 'pAdjust': 1.39e-09, 'pValue': 5.88e-10,
-             'tissueType': 'M', 'zScore': 7.08}
+             'tissueType': 'M', 'sequencingType': 'T', 'zScore': 7.08}
         )
         self.assertListEqual(
             sorted(response_json['rnaSeqData']['I000001_na19675']['spliceOutliers']['ENSG00000268903'], key=lambda d: d['start']),
             [{'chrom': '7', 'counts': 1297, 'end': 4000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
               'meanCounts': 0.85,  'meanTotalCounts': 0.85, 'pAdjust': 0.0003,
               'pValue': 0.0001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
-              'start': 3000, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'deltaIntronJaccardIndex': -12.34},
+              'start': 3000, 'strand': '*', 'tissueType': 'F', 'sequencingType': 'W', 'type': 'psi5', 'deltaIntronJaccardIndex': -12.34},
              {'chrom': '7', 'counts': 1297, 'end': 8000, 'geneId': 'ENSG00000268903', 'isSignificant': True,
               'meanCounts': 0.85, 'meanTotalCounts': 0.85, 'pAdjust': 0.003,
               'pValue': 0.001, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
-              'start': 7000, 'strand': '*', 'tissueType': 'M', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34},
+              'start': 7000, 'strand': '*', 'tissueType': 'M', 'sequencingType': 'T', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34},
              {'chrom': '7', 'counts': 1297, 'end': 132886973, 'geneId': 'ENSG00000268903', 'isSignificant': True,
               'meanCounts': 0.85, 'meanTotalCounts': 0.85, 'pAdjust': 3.08e-56,
               'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1, 'totalCounts': 1297,
-              'start': 132885746, 'strand': '*', 'tissueType': 'F', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34}]
+              'start': 132885746, 'strand': '*', 'tissueType': 'F', 'sequencingType': 'W', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34}]
         )
         self.assertDictEqual(response_json['savedVariantsByGuid'], {'SV0000001_2103343353_r0390_100': {
             **{k: mock.ANY for k in [

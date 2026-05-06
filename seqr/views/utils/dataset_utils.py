@@ -23,8 +23,8 @@ logger = SeqrLogger(__name__)
 
 def _create_rna_samples(sample_data, sample_guid_ids_to_load, user, **kwargs):
     new_samples = [
-        RnaSample(individual_id=individual_id, tissue_type=tissue_type, **kwargs)
-        for individual_id, tissue_type in sample_data.items()
+        RnaSample(individual_id=individual_id, tissue_type=tissue_type, sequencing_type=sequencing_type, **kwargs)
+        for individual_id, (tissue_type, sequencing_type) in sample_data.items()
     ]
     new_sample_models = RnaSample.bulk_create(user, new_samples)
     new_sample_ids = [s.id for s in new_sample_models]
@@ -34,7 +34,7 @@ def _create_rna_samples(sample_data, sample_guid_ids_to_load, user, **kwargs):
 
 
 def _get_rna_sample_data_by_key(values=None, **kwargs):
-    key_fields = ['individual_id', 'tissue_type']
+    key_fields = ['individual_id', 'tissue_type', 'sequencing_type']
     return {
         tuple(s.pop(k) for k in key_fields): s
         for s in RnaSample.objects.filter(**kwargs).values('guid', *key_fields, **(values or {}))
@@ -191,7 +191,7 @@ def _load_rna_seq_file(
     )
     inactivate_samples = {
         sample['guid']: key[0] for key, sample in potential_inactivate_samples_by_key.items()
-        if key in set(samples_to_create.items()) and sample['guid'] not in loaded_samples
+        if key in {tuple([k, *v]) for k, v in samples_to_create.items()} and sample['guid'] not in loaded_samples
     }
 
     errors, warnings = _process_rna_errors(
@@ -223,7 +223,8 @@ def _parse_rna_row(sample_id, row_dict, potential_samples, loaded_samples, gene_
         return
 
     tissue_type = individual['tissue']
-    potential_sample = potential_samples.get((individual['id'], tissue_type))
+    sequencing_type = individual['sequencing_type']
+    potential_sample = potential_samples.get((individual['id'], tissue_type, sequencing_type))
     if (potential_sample or {}).get('active'):
         loaded_samples.add(potential_sample['guid'])
         return
@@ -231,7 +232,7 @@ def _parse_rna_row(sample_id, row_dict, potential_samples, loaded_samples, gene_
     if potential_sample:
         sample_guid_ids_to_load[potential_sample['guid']] = sample_id
     else:
-        samples_to_create[individual['id']] = tissue_type
+        samples_to_create[individual['id']] = (tissue_type, sequencing_type)
 
     if has_errors:
         # If there are definite errors, do not process/save data, just continue to check for additional errors
@@ -319,7 +320,7 @@ def load_rna_seq(request_json, user, **kwargs):
 
     try:
         sample_guids, file_name_prefix, info, warnings = _load_rna_seq(
-            data_type, file_path, user, **kwargs,
+            data_type, file_path, user, **kwargs, sequencing_type=request_json.get('sequencingType'),
             tissue=request_json.get('tissue'), ignore_extra_samples=request_json.get('ignoreExtraSamples'),
             skip_new_sample_validation=request_json.get('skipNewSampleValidation'),
         )
@@ -336,7 +337,7 @@ def load_rna_seq(request_json, user, **kwargs):
     }, 200
 
 
-def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, project_guid=None, tissue=None, **kwargs):
+def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, project_guid=None, sequencing_type=None, tissue=None, **kwargs):
     config = RNA_DATA_TYPE_CONFIGS[data_type]
     model_cls = config['model_class']
     file_name = file_path.split('/')[-1]
@@ -349,7 +350,7 @@ def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, proj
 
     individuals = Individual.objects.filter(family__project__in=projects)
     individual_data_by_id = _get_individual_metadata_mapping(sample_metadata_mapping, individuals) if sample_metadata_mapping else {
-        i['individual_id']: {**i, 'tissue': tissue} for i in individuals.values('id', 'individual_id')
+        i['individual_id']: {**i, 'tissue': tissue, 'sequencing_type': sequencing_type} for i in individuals.values('id', 'individual_id')
     }
     potential_samples = _get_rna_sample_data_by_key(
         individual_id__in={i['id'] for i in individual_data_by_id.values()},
@@ -415,7 +416,7 @@ def _get_individual_metadata_mapping(sample_metadata_mapping, individuals):
         individual_id = indiv['individual_id']
         sample_metadata = sample_metadata_mapping[individual_id]
         if indiv.pop('family__project__guid') == sample_metadata['project_guid']:
-            individual_data = {**indiv, 'tissue': sample_metadata['tissue']}
+            individual_data = {**indiv, 'tissue': sample_metadata['tissue'], 'sequencing_type': sample_metadata['sequencing_type']}
             individual_data_by_id[individual_id] = individual_data
             # Support when data is provided using either the raw sample ID or the already mapped seqr ID
             if individual_id != sample_metadata['sample_id']:

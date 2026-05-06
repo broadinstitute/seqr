@@ -704,7 +704,7 @@ class ProjectAPITest(object):
         self._test_update_project_rna('T', **RNA_DATA_TYPE_PARAMS['T'], single_sample_file=True)
 
     def test_update_project_rna_splice_outlier(self):
-        self._test_update_project_rna('S', **RNA_DATA_TYPE_PARAMS['S'], tissue='F', allow_missing_gene=True)
+        self._test_update_project_rna('S', **RNA_DATA_TYPE_PARAMS['S'], tissue='F', sequencing_type='W', allow_missing_gene=True)
 
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -719,7 +719,7 @@ class ProjectAPITest(object):
     def _test_update_project_rna(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_os,
                                  mock_send_slack, mock_send_email, mock_datetime, sample_guid=None, model_cls=None,
                                  rows=None, parsed_file_data=None, required_columns=None,  allow_missing_gene=False,
-                                 tissue='M', message_data_type=None, single_sample_file=False, **kwargs):
+                                 tissue='M', sequencing_type='T', message_data_type=None, single_sample_file=False, **kwargs):
         mock_datetime.now.return_value = datetime(2025, 4, 15)
         mock_os.path.join.side_effect = lambda *args: '/'.join(args)
         initial_model_count = model_cls.objects.count()
@@ -731,7 +731,7 @@ class ProjectAPITest(object):
 
         # Test errors
         file = f'{self.TEMP_DIR}/new_samples.tsv.gz'
-        body = {'dataType': data_type, 'file': file, 'tissue': tissue}
+        body = {'dataType': data_type, 'file': file, 'tissue': tissue, 'sequencingType': sequencing_type}
         self._set_file_not_found(file, mock_subprocess, mock_does_file_exist, mock_open)
         self.reset_logs()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -786,7 +786,7 @@ class ProjectAPITest(object):
         # test database models are correct
         self.assertEqual(model_cls.objects.count(), initial_model_count - initial_sample_model_count)
         rna_samples = RnaSample.objects.filter(
-            tissue_type=tissue, data_type=data_type, data_source='new_samples.tsv.gz', is_active=False,
+            tissue_type=tissue, data_type=data_type, data_source='new_samples.tsv.gz', is_active=False, sequencing_type=sequencing_type,
         )
         self.assertEqual(rna_samples.count(), 1 if single_sample_file else 2)
         guid_map = {'NA19675_1': rna_samples.get(individual_id=1).guid}
