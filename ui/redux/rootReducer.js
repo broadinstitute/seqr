@@ -204,12 +204,12 @@ const navigateSavedHashedSearchHelper = (resultsPath, hashKey) => (search, navig
 export const navigateSavedHashedSearch = navigateSavedHashedSearchHelper('results', 'searchesByHash')
 export const navigateFamiliesSearch = navigateSavedHashedSearchHelper('families', 'searchFamiliesByHash')
 
-const updateSavedVariant = (values, action = 'create') => (dispatch, getState) => new HttpRequestHelper(
+const updateSavedVariant = (values, action = 'create') => dispatch => new HttpRequestHelper(
   `/api/saved_variant/${action}`,
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-).post({ searchHash: getState().currentSearchHash, ...values })
+).post(values)
 
 export const updateVariantNote = (values) => {
   if (values.variantGuids) {

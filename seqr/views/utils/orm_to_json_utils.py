@@ -4,7 +4,7 @@ Utility functions for converting Django ORM object to JSON
 
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When
+from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When, OuterRef, Subquery
 from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
@@ -13,7 +13,7 @@ import json
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
-    get_audit_field_names, RnaSeqOutlier, RnaSeqSpliceOutlier
+    get_audit_field_names, RnaSeqOutlier, RnaSeqSpliceOutlier, VariantSearchResults
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, \
@@ -452,14 +452,18 @@ def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, ta
 
     guid_key = 'tagGuid'
     nested_fields = None
+    additional_model_fields = ['id']
     if tag_cls == VariantTag:
         nested_fields = [
             {'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
+        related_searches = VariantSearchResults.objects.filter(search_hash=OuterRef('search_hash')).values('variant_search__name')
+        tag_models = tag_models.annotate(search_name=Subquery(related_searches[:1]))
+        additional_model_fields.append('search_name')
     elif tag_cls == VariantNote:
         guid_key = 'noteGuid'
 
     tags = get_json_for_queryset(
-        tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=['id'])
+        tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=additional_model_fields)
     if tag_cls == VariantFunctionalData:
         _format_functional_tags(tags)
     elif tag_cls == VariantTag:
