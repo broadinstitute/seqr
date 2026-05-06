@@ -190,14 +190,14 @@ gnomadLink.propTypes = {
   fieldTitle: PropTypes.string,
 }
 
-const gnomadAnWarning = ({ ac, an }, { fieldTitle, maxAN }) => {
-  return (ac && an < (maxAN / 2)) ? (
+const gnomadAnWarning = ({ ac, an }, { fieldTitle, maxAN }) => (
+  (ac && an < (maxAN / 2)) ? (
     <Popup
       trigger={<Label color="orange" content="low cov." size="mini" horizontal />}
       content={`This variant is covered in fewer than 50% of individuals in ${fieldTitle}. This may indicate a low-quality site.`}
     />
   ) : null
-}
+)
 
 const GNOMAD_URL_INFO = {
   urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org', [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },

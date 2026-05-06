@@ -83,12 +83,12 @@ const clinvarLabel = (pathogenicity, assertions, conflictingPathogenicities) => 
   return label
 }
 
-const clinvarPopup = (clinvar) => (
-  clinvar.conditions ? (
+const clinvarPopup = ({ conditions }) => (
+  conditions ? (
     <div>
       Conditions:
       <List bulleted>
-        {[...new Set(clinvar.conditions)].map(condition => (
+        {[...new Set(conditions)].map(condition => (
           <ListItem key={condition}>{condition}</ListItem>
         ))}
       </List>
