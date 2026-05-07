@@ -157,8 +157,8 @@ MISMATCHED_GENE_NEW_MATCH_JSON['patient']['id'] = '987'
 MOCK_SLACK_TOKEN = 'xoxp-123'  # nosec
 
 MOCK_NODES_BY_NAME = {
-    'Node A': {'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'},
-    'Node B': {'name': 'Node B', 'token': 'xyz', 'url': 'http://node_b.mme.org/api'},
+    'Node A': {'name': 'Node A', 'token': 'abc', 'url': 'http://node_a.com/match'},  # nosec
+    'Node B': {'name': 'Node B', 'token': 'xyz', 'url': 'http://node_b.mme.org/api'},  # nosec
 }
 
 class EmailException(Exception):
