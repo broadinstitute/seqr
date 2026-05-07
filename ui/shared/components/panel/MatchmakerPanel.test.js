@@ -12,7 +12,7 @@ test('shallow-render SubmissionGeneVariants without crashing', () => {
   const store = configureStore()(STATE1)
 
   shallow(<SubmissionGeneVariants store={store} geneVariants={[
-    { alt: "C", chrom: "22", geneId: "ENSG00000228198", genomeVersion: "38", pos: 46436281, ref: "G" },
+    { geneId: "ENSG00000228198", variantGuid: "SV0000002_1248367227_r0390_100" },
   ]} />)
 })
 
