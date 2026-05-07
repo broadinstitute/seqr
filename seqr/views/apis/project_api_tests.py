@@ -3,7 +3,6 @@ import mock
 from copy import deepcopy
 from datetime import datetime
 from django.contrib.auth.models import Group
-from django.db import connections
 from django.urls.base import reverse
 import responses
 
