@@ -640,7 +640,7 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         annotations_field_filters = self._annotations_field_filters()
         for field, value in annotations.items():
             if field in annotations_field_filters:
-                filter_q = annotations_field_filters[field]
+                filter_q = annotations_field_filters[field](value)
                 if filter_q:
                     filter_qs.append(filter_q)
             elif field == UTR_ANNOTATOR_KEY:
