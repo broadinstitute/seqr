@@ -253,7 +253,7 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str, 
             **props,
         )
 
-def parse_clinvar_file(gzipped_file, model_to_batch):
+def parse_clinvar_file(gzipped_file, model_to_batch, unenumerated_value_alerts):
     for event, elem in ET.iterparse(gzipped_file, events=('start', 'end')):
         # Handle parsing the current date.
         if event == 'start' and elem.tag == 'ClinVarVariationRelease':
@@ -303,7 +303,7 @@ class Command(BaseCommand):
                 r.raise_for_status()
                 shutil.copyfileobj(r.raw, tmpfile)
             with gzip.open(tmpfile.name, 'rb') as gzipped_file:
-                parse_clinvar_file(gzipped_file, model_to_batch)
+                parse_clinvar_file(gzipped_file, model_to_batch, unenumerated_value_alerts)
 
         for model, batch in model_to_batch.items():
             if batch:
