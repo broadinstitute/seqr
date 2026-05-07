@@ -933,7 +933,7 @@ class VariantDetailsQuerySet(VariantsQuerySet):
     def result_values(self, *args, skip_entry_fields=True, **kwargs):
         return super().result_values(*args, skip_entry_fields=skip_entry_fields, **kwargs)
 
-    def join_annotations(self):
+    def join_annotations(self, *args, **kwargs):
         results = super().join_annotations(annotate_xpos=bool(self.entry_model.RANGE_PREDICTIONS))
         results = results.annotate(
             hgmd_join=self._pathogenicity_tuple(self.variant_model.hgmd_join, 'key__hgmd_join', rename_fields={'classification': 'class'}),
@@ -1050,7 +1050,7 @@ class BaseEntriesManager(SearchQuerySet):
     def _join_annotations(self, entries):
         return self._annotate_seqr_pop_expression(entries)
 
-    def result_values(self, sample_data=None):
+    def result_values(self, *args, sample_data=None, **kwargs):
         entries = self._join_annotations(self)
         return self._search_call_data(entries, sample_data)
 
