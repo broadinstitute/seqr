@@ -1,4 +1,3 @@
-"""APIs for setting Project categories"""
 import json
 
 from seqr.models import Project, ProjectCategory
@@ -10,31 +9,6 @@ from seqr.views.utils.permissions_utils import check_project_permissions, login_
 
 @login_and_policies_required
 def update_project_categories_handler(request, project_guid):
-    """Update ProjectCategories for the given project.
-
-    Args:
-        project_guid (string): GUID of the project that should be updated
-
-    HTTP POST
-        Request body - should contain the following json structure:
-        {
-            'form' : {
-                'categories': a list of category GUIDs for the categories assigned to the given project
-            }
-        }
-
-        Response body - will contain the following structure, representing the updated project,
-            as well all categories in seqr:
-            {
-                'projectsByGuid':  {
-                    <projectGuid1> : { ... <project key-value pairs> ... }
-                }
-                'projectCategoriesByGuid':  {
-                    <projectCategoryGuid1> : { ... <category key-value pairs> ... }
-                    <projectCategoryGuid2> : { ... <category key-value pairs> ... }
-                }
-            }
-    """
     project = Project.objects.get(guid=project_guid)
 
     # check permissions
@@ -58,14 +32,6 @@ def update_project_categories_handler(request, project_guid):
 
 
 def _update_project_categories(project, user, category_guids):
-    """Updates the stored categories for the given project.
-
-    Args:
-        project (project): Django Project model
-        user (User): Django User model
-        category_guids (set): set of category GUIDs to apply to the given project
-    """
-
     category_guids = set(category_guids)
 
     project_categories_by_guid = {}  # keep track of new and removed categories so client can be updated.

@@ -1,6 +1,3 @@
-"""
-APIs used by the main seqr dashboard page
-"""
 from django.db import models
 from django.db.models.functions import Coalesce
 
@@ -13,15 +10,6 @@ from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, 
 
 @login_and_policies_required
 def dashboard_page_data(request):
-    """Returns a JSON object containing information used by the dashboard page:
-    ::
-
-      json_response = {
-         'user': {..},
-         'familiesByGuid': {..},
-         'individualsByGuid': {..},
-       }
-    """
     projects_by_guid = _get_projects_json(request.user)
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid.keys())
 
@@ -81,17 +69,6 @@ def _get_projects_json(user):
 
 
 def _retrieve_project_categories_by_guid(project_guids):
-    """Retrieves project categories from the database, and returns a 'project_categories_by_guid' dictionary,
-    while also adding a 'projectCategoryGuids' attribute to each project dict in 'projects_by_guid'.
-
-    Args:
-        projects_by_guid: Dictionary that maps each project's GUID to a dictionary of key-value
-            pairs representing attributes of that project.
-
-    Returns:
-        Dictionary that maps each category's GUID to a dictionary of key-value pairs representing
-        attributes of that category.
-    """
     if len(project_guids) == 0:
         return {}
 

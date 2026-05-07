@@ -13,9 +13,7 @@ options.DEFAULT_NAMES = (
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
 class ClickHouseRouter:
-    """
-    Adapted from https://github.com/jayvynl/django-clickhouse-backend/blob/v1.3.2/README.md#configuration
-    """
+    # Adapted from https://github.com/jayvynl/django-clickhouse-backend/blob/v1.3.2/README.md#configuration
 
     def __init__(self):
         self.route_model_names = set()

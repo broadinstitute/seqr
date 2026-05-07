@@ -50,8 +50,6 @@ UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
 @login_and_policies_required
 def query_variants_handler(request, search_hash):
-    """Search variants.
-    """
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
@@ -184,8 +182,6 @@ def _get_exclude_keys(search_hash, user):
 
 @login_and_policies_required
 def query_single_variant_handler(request, variant_id):
-    """Search variants.
-    """
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
     family = families.first()
     check_project_permissions(family.project, request.user)
@@ -404,8 +400,6 @@ def _get_field_value(value, config):
 
 @login_and_policies_required
 def search_context_handler(request):
-    """Search variants.
-    """
     response = _get_saved_searches(request.user)
     context = json.loads(request.body)
 

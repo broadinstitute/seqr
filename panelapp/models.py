@@ -14,8 +14,6 @@ logger = logging.getLogger(__name__)
 
 class PaLocusList(models.Model):
 
-    """PanelApp extension of seqr.models.LocusList."""
-
     seqr_locus_list = models.OneToOneField(
         SeqrLocusList,
         on_delete=models.CASCADE,
@@ -38,8 +36,6 @@ class PaLocusList(models.Model):
 
 class PaLocusListGene(models.Model):
 
-    """PanelApp extension of seqr.models.LocusListGene."""
-
     CONFIDENCE_LEVEL_CHOICES = [
         ('1', 'RED'),
         ('2', 'AMBER'),
@@ -60,8 +56,6 @@ class PaLocusListGene(models.Model):
     mode_of_inheritance = models.TextField(null=True, blank=True)
 
     class Meta:
-        """Fields included in JSON in API calls."""
-
         json_fields = ['confidence_level', 'mode_of_inheritance']
 
 

@@ -83,7 +83,6 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs
 
 
 def _google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=None, **kwargs):
-    """Iterate over lines in the given file"""
     range_arg = ' -r {}-{}'.format(byte_range[0], byte_range[1]) if byte_range else ''
     process = _run_gsutil_command(
         'cat{}'.format(range_arg), gs_path, gunzip=gs_path.endswith("gz") and not raw_content, user=user, **kwargs)

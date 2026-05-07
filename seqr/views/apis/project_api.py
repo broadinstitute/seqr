@@ -1,7 +1,3 @@
-"""
-APIs for updating project metadata, as well as creating or deleting projects
-"""
-
 import json
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
@@ -39,19 +35,6 @@ logger = SeqrLogger(__name__)
 
 @pm_required
 def create_project_handler(request):
-    """Create a new project.
-
-    HTTP POST
-        Request body - should contain json params:
-            name: Project name
-            description: Project description
-
-        Response body - will be json with the following structure, representing the ,created project:
-            {
-                'projectsByGuid':  { <projectGuid1> : { ... <project key-value pairs> ... } }
-            }
-
-    """
     request_json = json.loads(request.body)
 
     required_fields = ['name', 'genomeVersion']
@@ -92,29 +75,6 @@ def _is_valid_anvil_workspace(request_json, user):
 
 @login_and_policies_required
 def update_project_handler(request, project_guid):
-    """Update project metadata - including one or more of these fields: name, description
-
-    Args:
-        project_guid (string): GUID of the project that should be updated
-
-    HTTP POST
-        Request body - should contain the following json structure:
-        {
-            'form' : {
-                'name':  <project name>,
-                'description': <project description>,
-            }
-        }
-
-        Response body - will contain the following structure, representing the updated project:
-            {
-                'projectsByGuid':  {
-                    <projectGuid1> : { ... <project key-value pairs> ... }
-                }
-            }
-
-    """
-
     project = Project.objects.get(guid=project_guid)
 
     check_project_permissions(project, request.user, can_edit=True)
@@ -156,12 +116,6 @@ def update_project_workspace(request, project_guid):
 
 @login_and_policies_required
 def delete_project_handler(request, project_guid):
-    """Delete project - request handler.
-
-    Args:
-        project_guid (string): GUID of the project to delete
-    """
-
     _delete_project(project_guid, request.user)
 
     return create_json_response({
@@ -173,12 +127,6 @@ def delete_project_handler(request, project_guid):
 
 @login_and_policies_required
 def project_page_data(request, project_guid):
-    """
-    Returns a JSON object containing basic project information
-
-    Args:
-        project_guid (string): GUID of the Project to retrieve data for.
-    """
     project = get_project_and_check_permissions(project_guid, request.user)
     update_project_from_json(project, {'last_accessed_date': timezone.now()}, request.user)
     return create_json_response({
@@ -421,12 +369,6 @@ def subscribe_project_notifications(request, project_guid):
 
 
 def _delete_project(project_guid, user):
-    """Delete project.
-
-    Args:
-        project_guid (string): GUID of the project to delete
-        user (object): Django ORM model for the user
-    """
     project = Project.objects.get(guid=project_guid)
     check_user_created_object_permissions(project, user)
 

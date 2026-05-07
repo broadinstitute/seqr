@@ -1,8 +1,3 @@
-"""seqr URL Configuration
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/1.9/topics/http/urls/
-"""
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.status import status_view
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG, \

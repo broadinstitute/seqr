@@ -1,6 +1,3 @@
-"""
-Utility functions related to authentication.
-"""
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -59,23 +56,14 @@ def logout_view(request):
 
 
 def app_login_required_error(request, exception=None):
-    """Redirect to login for unhandled 401 error on non-API request"""
     return redirect(f'{LOGIN_URL}?next={request.path}')
 
 
 def login_required_error(request):
-    """Returns an HttpResponse with a 401 UNAUTHORIZED error message.
-
-    This is used to redirect AJAX HTTP handlers to the login page.
-    """
     return _unauthorized_error(LOGIN_URL)
 
 
 def policies_required_error(request):
-    """Returns an HttpResponse with a 401 UNAUTHORIZED error message.
-
-    This is used to redirect AJAX HTTP handlers to the accept policies page.
-    """
     return _unauthorized_error(POLICY_REQUIRED_URL)
 
 
