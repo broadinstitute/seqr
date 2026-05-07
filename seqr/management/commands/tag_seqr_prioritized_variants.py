@@ -501,7 +501,7 @@ class Command(BaseCommand):
             return
 
         family_new_counts = defaultdict(int)
-        for family_id, variant_id in new_tag_keys:
+        for family_id, _ in new_tag_keys:
             family_new_counts[family_id] += 1
 
         send_project_notification(
