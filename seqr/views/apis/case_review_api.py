@@ -1,6 +1,3 @@
-"""
-APIs used by the case review page
-"""
 import json
 
 from django.core.exceptions import PermissionDenied

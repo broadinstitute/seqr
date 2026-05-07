@@ -1,4 +1,4 @@
-"""API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
+"""API that generates auto-complete suggestions for the search bar in the header of seqr pages."""
 from django.db.models import F, Q, Case, When, Value, ExpressionWrapper, BooleanField, CharField
 from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, NullIf, Replace
 from django.views.decorators.http import require_GET
@@ -119,14 +119,6 @@ def _get_matching_project_groups(query, project_guids):
 
 
 def _get_matching_genes(query, *args):
-    """Returns genes that match the given query string, and that the user can view.
-
-    Args:
-       user: Django user
-       query: String typed into the awesomebar
-    Returns:
-       Sorted list of matches where each match is a dictionary of strings
-    """
     result = []
     for g in get_queried_genes(query, MAX_RESULTS_PER_CATEGORY):
         if query.lower() in g['gene_id'].lower():
@@ -147,7 +139,6 @@ def _get_matching_genes(query, *args):
 
 
 def _get_matching_omim(query, *args):
-    """Returns OMIM records that match the given query string"""
     records = Omim.objects.filter(
         Q(phenotype_mim_number__icontains=query) | Q(phenotype_description__icontains=query)
     ).filter(phenotype_mim_number__isnull=False).annotate(
@@ -167,7 +158,6 @@ def _get_matching_omim(query, *args):
 
 
 def _get_matching_hpo_terms(query, *args):
-    """Returns OMIM records that match the given query string"""
     records = HumanPhenotypeOntology.objects.filter(
         Q(hpo_id__icontains=query) | Q(name__icontains=query)
     ).annotate(
@@ -206,8 +196,6 @@ DEFAULT_CATEGORIES = ['projects', 'families', 'analysis_groups', 'individuals', 
 @login_and_policies_required
 @require_GET
 def awesomebar_autocomplete_handler(request):
-    """Accepts HTTP GET request with q=.. url arg, and returns suggestions"""
-
     query = request.GET.get('q').strip()
     if not query:
         return create_json_response({'matches': {}})
