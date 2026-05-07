@@ -253,12 +253,11 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str, 
             **props,
         )
 
-def parse_clinvar_file(gzipped_file, model_to_batch, unenumerated_value_alerts):
+def parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenumerated_value_alerts):
     for event, elem in ET.iterparse(gzipped_file, events=('start', 'end')):
         # Handle parsing the current date.
         if event == 'start' and elem.tag == 'ClinVarVariationRelease':
             new_version = elem.attrib['ReleaseDate']
-            existing_version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
             if existing_version_obj:
                 if existing_version_obj.version == new_version:
                     logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
@@ -297,13 +296,14 @@ class Command(BaseCommand):
         }
         unenumerated_value_alerts = []
         new_version = None
+        existing_version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
         with tempfile.TemporaryDirectory() as tmpdir:
             with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r, \
                  tempfile.NamedTemporaryFile(dir=tmpdir, delete=False) as tmpfile:
                 r.raise_for_status()
                 shutil.copyfileobj(r.raw, tmpfile)
             with gzip.open(tmpfile.name, 'rb') as gzipped_file:
-                parse_clinvar_file(gzipped_file, model_to_batch, unenumerated_value_alerts)
+                parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenumerated_value_alerts)
 
         for model, batch in model_to_batch.items():
             if batch:
