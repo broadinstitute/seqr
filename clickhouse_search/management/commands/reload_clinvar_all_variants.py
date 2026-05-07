@@ -261,7 +261,7 @@ def parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenu
             if existing_version_obj:
                 if existing_version_obj.version == new_version:
                     logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
-                    return
+                    return new_version
             logger.info( f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj and existing_version_obj.version}.')
             # Drop any currently existing variants in the table that may exist due to a
             # previously failed partial run.  Note that we validate that the Postgresql existing version
@@ -285,6 +285,8 @@ def parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenu
                             batch.clear()
             elem.clear()
 
+    return new_version
+
 class Command(BaseCommand):
     help = 'Reload all clinvar variants from weekly NCBI xml release'
 
@@ -295,7 +297,6 @@ class Command(BaseCommand):
             ClinvarAllVariantsMito: [],
         }
         unenumerated_value_alerts = []
-        new_version = None
         existing_version_obj = DataVersions.objects.filter(data_model_name='Clinvar').first()
         with tempfile.TemporaryDirectory() as tmpdir:
             with requests.get(WEEKLY_XML_RELEASE, stream=True, timeout=10) as r, \
@@ -303,7 +304,7 @@ class Command(BaseCommand):
                 r.raise_for_status()
                 shutil.copyfileobj(r.raw, tmpfile)
             with gzip.open(tmpfile.name, 'rb') as gzipped_file:
-                parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenumerated_value_alerts)
+                new_version = parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenumerated_value_alerts)
 
         for model, batch in model_to_batch.items():
             if batch:
