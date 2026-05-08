@@ -323,7 +323,7 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
             exclude_key_pairs=exclude_key_pairs.get(f'{Dataset.DATASET_TYPE_VARIANT_CALLS},{sv_dataset_type}'),
         )
         dataset_results = _evaluate_results(result_q, is_comp_het=True)
-        if not sv_sample_data['samples']:
+        if not (sv_sample_data['samples'] and type_snv_indel_sample_data['samples']):
             _add_individual_guids(dataset_results)
         results += dataset_results
         searched_dataset_types.add(sv_dataset_type)
