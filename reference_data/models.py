@@ -336,6 +336,8 @@ class GeneInfo(LoadableModel):
 
 class GeneMetadataModel(LoadableModel):
 
+    RECORD_FIELDS = {}
+
     gene = models.ForeignKey(GeneInfo, on_delete=models.CASCADE)
 
     class Meta:
@@ -358,9 +360,12 @@ class GeneMetadataModel(LoadableModel):
                 record = None
         yield record
 
-    @staticmethod
-    def parse_gene_record(record):
-        return record
+    @classmethod
+    def parse_gene_record(cls, record):
+        return {
+            field: format(record[record_field]) if format else record[record_field]
+            for field, (record_field, format) in cls.RECORD_FIELDS.items()
+        }
 
     @classmethod
     def update_records(cls, **kwargs):
@@ -436,6 +441,13 @@ class GeneConstraint(GeneMetadataModel):
 
     CURRENT_VERSION = 'gnomad.v2.1.1.lof_metrics.by_gene'
     URL = f'http://storage.googleapis.com/seqr-reference-data/gene_constraint/{CURRENT_VERSION}.txt'
+    RECORD_FIELDS = {
+        'gene_id': ('gene_id', lambda gene_id: gene_id.split(".")[0]),
+        'gene_symbol': ('gene', None),
+        'mis_z': ('mis_z', lambda value: float(value) if value != 'NaN' else -100),
+        'pLI': ('pLI', lambda value: float(value) if value != 'NA' else 0),
+        'louef': ('oe_lof_upper', lambda value: float(value) if value != 'NA' else 100),
+    }
 
     mis_z = models.FloatField()
     mis_z_rank = models.IntegerField()
@@ -446,16 +458,6 @@ class GeneConstraint(GeneMetadataModel):
 
     class Meta:
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
-
-    @staticmethod
-    def parse_gene_record(record):
-        return {
-            'gene_id': record['gene_id'].split(".")[0],
-            'gene_symbol': record['gene'],
-            'mis_z': float(record['mis_z']) if record['mis_z'] != 'NaN' else -100,
-            'pLI': float(record['pLI']) if record['pLI'] != 'NA' else 0,
-            'louef': float(record['oe_lof_upper']) if record['oe_lof'] != 'NA' else 100,
-        }
 
     @classmethod
     def get_record_models(cls, records, **kwargs):
@@ -470,6 +472,11 @@ class GeneCopyNumberSensitivity(GeneMetadataModel):
 
     CURRENT_VERSION = 'Collins_rCNV_2022'
     URL = f'https://zenodo.org/record/6347673/files/{CURRENT_VERSION}.dosage_sensitivity_scores.tsv.gz'
+    RECORD_FIELDS = {
+        'gene_symbol': ('#gene', None),
+        'pHI': ('pHaplo', float),
+        'pTS': ('pTriplo', float),
+    }
 
     pHI = models.FloatField()
     pTS = models.FloatField()
@@ -477,31 +484,20 @@ class GeneCopyNumberSensitivity(GeneMetadataModel):
     class Meta:
         json_fields = ['pHI', 'pTS']
 
-    @staticmethod
-    def parse_gene_record(record):
-        return {
-            'gene_symbol': record['#gene'],
-            'pHI': float(record['pHaplo']),
-            'pTS': float(record['pTriplo']),
-        }
-
 
 class GeneShet(GeneMetadataModel):
 
     CURRENT_VERSION = '7939768'
     URL = f'https://zenodo.org/record/{CURRENT_VERSION}/files/s_het_estimates.genebayes.tsv'
+    RECORD_FIELDS = {
+        'gene_id': ('ensg', None),
+        'post_mean': ('post_mean', float),
+    }
 
     post_mean = models.FloatField()
 
     class Meta:
         json_fields = ['post_mean']
-
-    @staticmethod
-    def parse_gene_record(record):
-        return {
-            'gene_id': record['ensg'],
-            'post_mean': float(record['post_mean']),
-        }
 
 
 class Omim(LoadableModel):
@@ -682,8 +678,8 @@ class dbNSFPGene(GeneMetadataModel):
     class Meta:
         json_fields = ['function_desc', 'disease_desc', 'gene_names']
 
-    @staticmethod
-    def parse_gene_record(record):
+    @classmethod
+    def parse_gene_record(cls, record):
         parsed_record = {DBNSFP_FIELD_MAP.get(k, k.split('(')[0].lower()): (v if v != '.' else '')
                          for k, v in record.items() if not k.startswith(DBNSFP_EXCLUDE_FIELDS)}
         parsed_record["function_desc"] = parsed_record["function_desc"].replace("FUNCTION: ", "")
@@ -703,6 +699,11 @@ class PrimateAI(GeneMetadataModel):
 
     CURRENT_VERSION = 'cleaned_v0.2'
     URL = f'http://storage.googleapis.com/seqr-reference-data/primate_ai/Gene_metrics_clinvar_pcnt.{CURRENT_VERSION}.txt'
+    RECORD_FIELDS = {
+        'gene_symbol': ('genesymbol', None),
+        'percentile_25': ('pcnt25', float),
+        'percentile_75': ('pcnt75', float),
+    }
 
     percentile_25 = models.FloatField()
     percentile_75 = models.FloatField()
@@ -710,19 +711,12 @@ class PrimateAI(GeneMetadataModel):
     class Meta:
         json_fields = ['percentile_25', 'percentile_75']
 
-    @staticmethod
-    def parse_gene_record(record):
-        return {
-            'gene_symbol': record['genesymbol'],
-            'percentile_25': float(record['pcnt25']),
-            'percentile_75': float(record['pcnt75']),
-        }
-
 
 class MGI(GeneMetadataModel):
 
     CURRENT_VERSION = 'HMD_HumanPhenotype'
     URL = f'https://storage.googleapis.com/seqr-reference-data/mgi/{CURRENT_VERSION}.rpt.txt'
+    RECORD_FIELDS = {k: (k, lambda v: v.strip()) for k in ['gene_symbol', 'marker_id', 'entrez_gene_id']}
 
     marker_id = models.CharField(max_length=15)
 
@@ -733,10 +727,6 @@ class MGI(GeneMetadataModel):
     @staticmethod
     def get_file_header(f):
         return ['gene_symbol', 'entrez_gene_id', 'mouse_gene_symbol', 'marker_id', 'phenotype_ids']
-
-    @staticmethod
-    def parse_gene_record(record):
-        return {k: v.strip() for k, v in record.items() if k in ['gene_symbol', 'marker_id', 'entrez_gene_id']}
 
     @classmethod
     def update_records(cls, **kwargs):
@@ -783,12 +773,12 @@ class GenCC(GeneMetadataModel):
     def get_file_iterator(cls, f):
         return super().get_file_iterator(csv.reader(f))
 
-    @staticmethod
-    def parse_gene_record(record):
+    @classmethod
+    def parse_gene_record(cls, record):
         return {
             'gene_symbol': record['gene_symbol'],
             'hgnc_id': record['gene_curie'],
-            'classifications': [{title: record[field] for field, title in GenCC.CLASSIFICATION_FIELDS.items()}]
+            'classifications': [{title: record[field] for field, title in cls.CLASSIFICATION_FIELDS.items()}]
         }
 
     @classmethod
@@ -807,6 +797,12 @@ class GenCC(GeneMetadataModel):
 class ClinGen(GeneMetadataModel):
 
     URL = 'https://search.clinicalgenome.org/kb/gene-dosage/download'
+    RECORD_FIELDS = {
+        'gene_symbol': ('gene_symbol', None),
+        'haploinsufficiency': ('haploinsufficiency', lambda value: value.replace(' for Haploinsufficiency', '')),
+        'triplosensitivity': ('triplosensitivity', lambda value: value.replace(' for Triplosensitivity', '')),
+        'href': ('online_report', None),
+    }
 
     haploinsufficiency = models.TextField()
     triplosensitivity = models.TextField()
@@ -836,14 +832,6 @@ class ClinGen(GeneMetadataModel):
     def get_file_iterator(cls, f):
         return super().get_file_iterator(csv.reader(f))
 
-    @staticmethod
-    def parse_gene_record(record):
-        return {
-            'gene_symbol': record['gene_symbol'],
-            'haploinsufficiency': record['haploinsufficiency'].replace(' for Haploinsufficiency', ''),
-            'triplosensitivity': record['triplosensitivity'].replace(' for Triplosensitivity', ''),
-            'href': record['online_report'],
-        }
 
 class DataVersions(models.Model):
     data_model_name = models.CharField(max_length=30, primary_key=True)
