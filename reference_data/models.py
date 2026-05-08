@@ -215,16 +215,14 @@ class HumanPhenotypeOntology(LoadableModel):
             return None
 
         if hpo_id not in parent_id_map:
-            return None
+            raise ValueError('Strange id: %s' % hpo_id)
 
-        while hpo_id and parent_id_map.get(hpo_id) != 'HP:0000118':
-            if hpo_id not in parent_id_map:
-                raise ValueError('Strange id: %s' % hpo_id)
-            hpo_id = parent_id_map[hpo_id]
-            if hpo_id == 'HP:0000001':
-                return None
+        parent_hpo_id = parent_id_map[hpo_id]
+        if parent_hpo_id == 'HP:0000118':
+            return hpo_id
 
-        return hpo_id
+        return _get_category_id(parent_id_map, parent_hpo_id)
+
 
 class GeneInfo(LoadableModel):
     ALL_GENCODE_VERSIONS = ['39', '31', '29', '28', '27', '19']
