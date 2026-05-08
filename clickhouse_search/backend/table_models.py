@@ -1,8 +1,12 @@
 from clickhouse_backend import models
 from django.db import connections
 from django.db.models import Func
+import logging
 
 from clickhouse_search.backend.fields import NamedTupleField
+
+logger = logging.getLogger(__name__)
+
 
 MATERIALIZED_VIEW_META_FIELDS = [
     'to_table', 'source_table', 'source_sql', 'source_url', 'source_url_template', 'column_selects', 'refreshable', 'create_empty',
@@ -41,6 +45,7 @@ class RefreshableMaterializedView(IncrementalMaterializedView):
 
     @classmethod
     def refresh(cls):
+        logger.info(f'Refreshing materialized view {cls._meta.db_table}')
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(f'SYSTEM START VIEW "{cls._meta.db_table}"')
             cursor.execute(f'SYSTEM REFRESH VIEW "{cls._meta.db_table}"')
@@ -89,6 +94,7 @@ class Dictionary(models.ClickhouseModel):
 
     @classmethod
     def reload(cls):
+        logger.info(f'Reloading dictionary {cls._meta.db_table}')
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(f'SYSTEM RELOAD DICTIONARY "{cls._meta.db_table}"')
 

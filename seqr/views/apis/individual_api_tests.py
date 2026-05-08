@@ -347,6 +347,7 @@ class IndividualAPITest(object):
                 'updateFields': ['mother'],
                 'updateType': 'update',
             }}),
+            ('Reloading dictionary seqrdb_affected_status_dict', None),
             ('Triggering rebuild_gt_stats for R0004_non_analyst_project', None),
             (f'Error Triggering Rebuild Gt Stats: 400 Client Error: Bad Request for url: {TRIGGER_RELOAD_URL}', {
                 'severity': 'ERROR',
