@@ -520,7 +520,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         inheritance_mode = 'x_linked_recessive'
         self._assert_expected_search([], inheritance_mode=inheritance_mode)
-        # self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA_WITH_SEX)
+        self._assert_expected_search([], inheritance_mode=inheritance_mode, inheritance_filter={'allowNoCall': True})
 
         inheritance_mode = 'homozygous_recessive'
         self._assert_expected_search(
@@ -1906,7 +1906,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT], in_silico={'gnomad_noncoding': 0.5, 'requireScore': True},
+            [VARIANT2, MULTI_FAMILY_VARIANT], in_silico={'gnomad_noncoding': 0.5, 'vest': None, 'requireScore': True},
         )
 
         self._assert_expected_search(
@@ -1923,6 +1923,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.login_manager()
         self._assert_expected_search(
             [SV_VARIANT4], in_silico=sv_in_silico, project_families=SV_PROJECT_FAMILIES,
+        )
+        self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3], in_silico={'strvctvre': 0.2}, project_families=SV_PROJECT_FAMILIES,
         )
 
         self._set_grch37_search()
