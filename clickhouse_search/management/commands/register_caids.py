@@ -108,8 +108,8 @@ class AlleleRegistryError:
     def from_api_response(cls, response: dict):
         return cls(
             error_type=response["errorType"],
-            description=response["description"],
-            message=response["message"],
+            description=response.get("description"),
+            message=response.get("message"),
             input_line=response.get("inputLine"),
         )
 
