@@ -154,8 +154,10 @@ def handle_api_response(
     genome_version: Literal[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38],
     response: requests.Response,
 ) -> dict[str, str]:
+    if not response.ok:
+        raise HTTPError(f"Unexpected AR response code: {response.status_code}")
     response_json = response.json()
-    if not response.ok or "errorType" in response_json:
+    if "errorType" in response_json:
         error = AlleleRegistryError.from_api_response(response_json)
         logger.error(error)
         raise HTTPError(error.message)
