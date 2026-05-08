@@ -521,9 +521,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         inheritance_mode = 'x_linked_recessive'
         self._assert_expected_search([], inheritance_mode=inheritance_mode, export_data=[EXPORT_DATA[0][:24]])
         self._assert_expected_search([], inheritance_mode=inheritance_mode, inheritance_filter={'allowNoCall': True})
-        self._assert_expected_search(
-            [], inheritance_mode=inheritance_mode, project_families=MULTI_PROJECT_PROJECT_FAMILIES, locus={'rawItems': 'chrX:1-100000000'},
-        )
 
         inheritance_mode = 'homozygous_recessive'
         self._assert_expected_search(
@@ -590,6 +587,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_filter=sv_affected, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
             ], project_families=SV_PROJECT_FAMILIES,
+        )
+
+        self._assert_expected_search(
+            [], inheritance_mode=inheritance_mode, project_families=MULTI_PROJECT_PROJECT_FAMILIES, locus={'rawItems': 'chrX:1-100000000'},
         )
 
         inheritance_mode = 'recessive'
