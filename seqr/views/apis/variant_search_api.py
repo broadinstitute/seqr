@@ -352,8 +352,8 @@ def export_variants_handler(request, search_hash):
 
         variants = split_variants
 
-    max_families_per_variant = max([len(variant.get('familyGuids', [1])) for variant in variants])
-    max_samples_per_variant = max([len(variant.get('genotypes', {})) for variant in variants])
+    max_families_per_variant = max([len(variant.get('familyGuids', [1])) for variant in variants] or [0])
+    max_samples_per_variant = max([len(variant.get('genotypes', {})) for variant in variants] or [0])
 
     rows = []
     for variant in variants:

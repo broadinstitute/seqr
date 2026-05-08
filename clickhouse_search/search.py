@@ -482,20 +482,12 @@ def get_sorted_search_results(results, sort, families):
 
 
 def format_clickhouse_export_results(results):
+    details_by_key = _get_details_by_key(results, lambda detail_qs: detail_qs.values(
+        'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
+        **detail_qs.split_variant_id_annotations(),
+    ))
+
     formatted_results = [variant for result in results for variant in (result if isinstance(result, list) else [result])]
-    if not formatted_results:
-        return []
-
-    genome_version = formatted_results[0]['genomeVersion']
-    keys_with_no_details = {result['key'] for result in formatted_results if not 'transcripts' in result}
-    detail_qs = get_variant_details_queryset(genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details)
-    details_by_key = {
-        detail['key']: detail for detail in detail_qs.values(
-            'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
-            **detail_qs.split_variant_id_annotations(),
-        )
-    }
-
     gene_ids = set()
     for result in formatted_results:
         if 'transcripts' in result:
@@ -513,15 +505,23 @@ def format_clickhouse_export_results(results):
     return formatted_results
 
 
-def format_clickhouse_results(results):
+def _get_details_by_key(results, format_details):
+    if not results:
+        return {}
+
     genome_version = (results[0] if isinstance(results[0], list) else results)[0]['genomeVersion']
     keys_with_no_details = {
-        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
+        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if
+        not 'transcripts' in variant
     }
-    details_by_key = {
+    return {
         detail['key']: detail for detail in
-        get_variant_details_queryset(genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details).result_values()
+        format_details(get_variant_details_queryset(genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details))
     }
+
+
+def format_clickhouse_results(results):
+    details_by_key = _get_details_by_key(results, lambda detail_qs: detail_qs.result_values())
 
     formatted_results = []
     for variant in results:
