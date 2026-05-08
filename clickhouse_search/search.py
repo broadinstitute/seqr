@@ -514,9 +514,6 @@ def format_clickhouse_export_results(results):
 
 
 def format_clickhouse_results(results):
-    if not results:
-        return []
-
     genome_version = (results[0] if isinstance(results[0], list) else results)[0]['genomeVersion']
     keys_with_no_details = {
         variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
@@ -1020,14 +1017,6 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
     return lookup
 
 
-def _main_transcript(selected_transcript_id, sorted_transcripts):
-    if not sorted_transcripts:
-        return {}
-    if selected_transcript_id:
-        return next((t for t in sorted_transcripts if t['transcriptId'] == selected_transcript_id), {})
-    return sorted_transcripts[0]
-
-
 def delete_clickhouse_project(project, dataset_type, sample_type=None):
     if dataset_type == Dataset.DATASET_TYPE_SV_CALLS and sample_type == Dataset.SAMPLE_TYPE_WES:
         dataset_type = 'GCNV'
@@ -1061,22 +1050,16 @@ PYLIFTOVER_BUILD_LOOKUP = {
     GENOME_VERSION_GRCh38: ('hg19', 'hg38'),
     GENOME_VERSION_GRCh37: ('hg38', 'hg19'),
 }
-def _get_liftover(genome_version):
+
+def _run_liftover(genome_version, chrom, pos):
     if not LIFTOVERS[genome_version]:
         try:
             LIFTOVERS[genome_version] = LiftOver(*PYLIFTOVER_BUILD_LOOKUP[genome_version])
         except Exception as e:
             logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
-    return LIFTOVERS[genome_version]
+            return None
 
-
-def _run_liftover(genome_version, chrom, pos):
-    liftover = _get_liftover(genome_version)
-    if not liftover:
-        return None
-    lifted_coord = liftover.convert_coordinate(
+    lifted_coord = LIFTOVERS[genome_version].convert_coordinate(
         'chr{}'.format(chrom.lstrip('chr')), int(pos)
     )
-    if lifted_coord and lifted_coord[0]:
-        return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1])
-    return None
+    return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1]) if lifted_coord and lifted_coord[0] else None
