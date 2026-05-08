@@ -712,7 +712,7 @@ def _affected_male_families(sample_data, affected_male_family_guids):
     if len(affected_male_family_guids) == sample_data['num_families']:
         return sample_data
     sample_type_families = {
-        sample_type: families.intersection(affected_male_family_guids)
+        sample_type: set(families).intersection(affected_male_family_guids)
         for sample_type, families in sample_data['sample_type_families'].items()
     }
     return {
