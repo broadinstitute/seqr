@@ -2442,6 +2442,7 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
 
     @responses.activate
     def test_trigger_delete_project(self):
+        AffectedDict.reload()
         url = reverse(trigger_delete_project)
         self.check_data_manager_login(url)
 
@@ -2462,7 +2463,6 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
 
         annotations_qs = VariantsSnvIndel.objects.all().join_populations()
         updated_seqr_pops_by_key = dict(annotations_qs.values_list('key', 'seqrPop'))
-        self.maxDiff = None
         self.assertDictEqual(updated_seqr_pops_by_key, {
             1: {'ac_wes': 2, 'ac_wgs': 2, 'hom_wes': 1, 'hom_wgs': 1, 'ac_affected': 4, 'hom_affected': 2},
             2: {'ac_wes': 1, 'ac_wgs': 1, 'hom_wes': 0, 'hom_wgs': 0, 'ac_affected': 2, 'hom_affected': 0},
