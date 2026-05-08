@@ -1810,16 +1810,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}], {}],
         )
 
-        # TODO debug
-        self._assert_expected_search_error('?', inheritance_mode='recessive', project_families=MULTI_PROJECT_PROJECT_FAMILIES, pathogenicity=pathogenicity,
-            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1, cached_variant_fields=[{}, {}, [
-                {'selectedGeneId': 'ENSG00000277258'},
-                {'selectedGeneId': 'ENSG00000277258'},
-            ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}], {}])
-
         self._assert_expected_search(
             [PROJECT_2_VARIANT1, VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4], MITO_VARIANT3],
             inheritance_mode='recessive', project_families=MULTI_PROJECT_PROJECT_FAMILIES, pathogenicity=pathogenicity,
+            locus={'rawItems': 'chr1:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, M:1-100000000'},
             annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1, cached_variant_fields=[{}, {}, [
                 {'selectedGeneId': 'ENSG00000277258'},
                 {'selectedGeneId': 'ENSG00000277258'},
