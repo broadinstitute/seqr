@@ -211,7 +211,7 @@ class HumanPhenotypeOntology(LoadableModel):
 
     @classmethod
     def _get_category_id(cls, parent_id_map, hpo_id):
-        if hpo_id == 'HP:0000001':
+        if hpo_id == 'HP:0000001' or hpo_id is None:
             return None
 
         if hpo_id not in parent_id_map:
