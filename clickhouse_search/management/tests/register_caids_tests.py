@@ -114,7 +114,7 @@ class RegisterCaidsEmptyDatabaseTest(DifferentDbTransactionSupportMixin, TestCas
 
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
 @mock.patch("clickhouse_search.management.commands.register_caids.safe_post_to_slack")
-class RegisterCaidsTest(TestCase):
+class RegisterCaidsTest(DifferentDbTransactionSupportMixin, TestCase):
     databases = "__all__"
     fixtures = ["variant_details_for_update"]
 
