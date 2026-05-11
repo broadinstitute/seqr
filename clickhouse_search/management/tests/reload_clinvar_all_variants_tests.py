@@ -85,7 +85,7 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
 @mock.patch('clickhouse_search.management.commands.reload_clinvar_all_variants.logger.info')
 class ReloadClinvarAllVariantsTest(DifferentDbTransactionSupportMixin, TestCase):
     databases = '__all__'
-    fixtures = ['clinvar_all_variants']
+    fixtures = ['test_conflicting_data_from_submitters']
 
     @responses.activate
     def test_update_with_no_previous_version(self, mock_logger, mock_safe_post_to_slack):
@@ -379,6 +379,7 @@ class ReloadClinvarAllVariantsTest(DifferentDbTransactionSupportMixin, TestCase)
             body=gzip.compress(missing_conflicting_pathogenicities.encode()),
             stream=True,
         )
+        ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
         with self.assertRaisesMessage(CommandError, 'Failed to find the conflicting pathogenicities node'):
             call_command('reload_clinvar_all_variants')
 
