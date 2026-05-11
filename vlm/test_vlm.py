@@ -32,7 +32,7 @@ class VlmTestCase(AioHTTPTestCase):
     async def test_match(self, mocked_responses):
 
         mocked_responses.post(
-            'https://vlm-auth.us.auth0.com/oauth/token', payload={'access_token': 'test_token'}, repeat=True,
+            'https://vlm-auth.us.auth0.com/oauth/token', payload={'access_token': 'test_token'}, repeat=True,  # nosec
         )
         mocked_responses.get(
             f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}',
@@ -106,7 +106,7 @@ class VlmTestCase(AioHTTPTestCase):
         mocked_responses.assert_called_with(
             'https://vlm-auth.us.auth0.com/oauth/token',
             method='POST',
-            json={'client_id': 'unknown_client_id', 'client_secret': 'unknown_client_secret', 'audience': 'https://vlm-auth.us.auth0.com/api/v2/', 'grant_type': 'client_credentials'},
+            json={'client_id': 'unknown_client_id', 'client_secret': 'unknown_client_secret', 'audience': 'https://vlm-auth.us.auth0.com/api/v2/', 'grant_type': 'client_credentials'},  # nosec
         )
         mocked_responses.assert_called_with(
             f'https://vlm-auth.us.auth0.com/api/v2/clients/{REQUESTER_CLIENT_ID}',
@@ -292,7 +292,7 @@ class VlmTestCase(AioHTTPTestCase):
             self.assertEqual(resp.reason, 'Credential Check Error')
         self.assertEqual(self._caplog.messages[-3], "Credential Check Error: 400 - {'error': 'invalid_request'}")
 
-        mocked_responses.post('https://vlm-auth.us.auth0.com/oauth/token', payload={'access_token': 'test_token'}, repeat=True)
+        mocked_responses.post('https://vlm-auth.us.auth0.com/oauth/token', payload={'access_token': 'test_token'}, repeat=True)  # nosec
         async with self.client.request('GET', '/vlm/match', headers=headers) as resp:
             self.assertEqual(resp.status, 403)
             self.assertEqual(resp.reason, 'Invalid Client ID abc123')

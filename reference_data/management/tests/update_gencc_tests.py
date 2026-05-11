@@ -1,5 +1,3 @@
-import mock
-
 from reference_data.models import GenCC
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 

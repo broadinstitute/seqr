@@ -5,7 +5,6 @@ import mock
 from copy import deepcopy
 from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connections
 from django.urls.base import reverse
 
 from matchmaker.models import MatchmakerSubmission
