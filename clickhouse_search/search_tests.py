@@ -2461,7 +2461,7 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         self.assertEqual(EntriesSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
         self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
 
-        self.assert_json_logs(self.data_manager_user, [
+        self.assert_json_logs(None, [
             ('Refreshing materialized view GRCh38/SNV_INDEL/project_gt_stats_to_gt_stats_mv', None),
             ('', None)
         ])
