@@ -589,10 +589,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], project_families=SV_PROJECT_FAMILIES,
         )
 
-        # TODO
-        self._assert_expected_search_error('', inheritance_mode=inheritance_mode, project_families=MULTI_PROJECT_PROJECT_FAMILIES, locus={'rawItems': 'chrX:1-100000000'},)
         self._assert_expected_search(
-            [], inheritance_mode=inheritance_mode, project_families=MULTI_PROJECT_PROJECT_FAMILIES, locus={'rawItems': 'chrX:1-100000000'},
+            [], inheritance_mode=inheritance_mode, project_families=MULTI_PROJECT_PROJECT_FAMILIES,
+            **COMP_HET_ALL_PASS_FILTERS, locus={'rawItems': 'chrX:1-100000000'},
         )
 
         inheritance_mode = 'recessive'
@@ -1813,8 +1812,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}], {}],
         )
 
-        # TODO debug
-        self.maxDiff = None
         self._assert_expected_search(
             [PROJECT_2_VARIANT1, VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4], MITO_VARIANT3],
             inheritance_mode='recessive', project_families=MULTI_PROJECT_PROJECT_FAMILIES, pathogenicity=pathogenicity,
