@@ -2442,7 +2442,6 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
 
     @responses.activate
     def test_trigger_delete_project(self):
-        AffectedDict.reload()
         url = reverse(trigger_delete_project)
         self.check_data_manager_login(url)
 
