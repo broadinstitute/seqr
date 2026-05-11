@@ -209,8 +209,8 @@ class HumanPhenotypeOntology(LoadableModel):
             model.category_id = cls._get_category_id(parent_id_map, model.hpo_id)
         return models
 
-    @staticmethod
-    def _get_category_id(parent_id_map, hpo_id):
+    @classmethod
+    def _get_category_id(cls, parent_id_map, hpo_id):
         if hpo_id == 'HP:0000001':
             return None
 
@@ -221,7 +221,7 @@ class HumanPhenotypeOntology(LoadableModel):
         if parent_hpo_id == 'HP:0000118':
             return hpo_id
 
-        return _get_category_id(parent_id_map, parent_hpo_id)
+        return cls._get_category_id(parent_id_map, parent_hpo_id)
 
 
 class GeneInfo(LoadableModel):
