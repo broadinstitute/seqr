@@ -589,6 +589,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], project_families=SV_PROJECT_FAMILIES,
         )
 
+        # TODO
+        self._assert_expected_search_error('', inheritance_mode=inheritance_mode, project_families=MULTI_PROJECT_PROJECT_FAMILIES, locus={'rawItems': 'chrX:1-100000000'},)
         self._assert_expected_search(
             [], inheritance_mode=inheritance_mode, project_families=MULTI_PROJECT_PROJECT_FAMILIES, locus={'rawItems': 'chrX:1-100000000'},
         )
