@@ -1,5 +1,5 @@
 from clickhouse_backend import models
-from django.db.models import ForeignKey, OneToOneField, CASCADE, PROTECT
+from django.db.models import ForeignKey, PROTECT
 import requests
 
 from clickhouse_search.backend.engines import Join

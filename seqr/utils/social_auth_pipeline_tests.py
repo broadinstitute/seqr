@@ -15,7 +15,7 @@ class SocialAuthPipelineTest(TestCase):
     def test_validate_anvil_registration(self, mock_logger):
         url = TEST_TERRA_API_ROOT_URL + 'register'
         responses.add(responses.GET, url, status=404)
-        r = validate_anvil_registration(GoogleOAuth2(), {'access_token': '', 'email': 'test@seqr.org'})
+        r = validate_anvil_registration(GoogleOAuth2(), {'access_token': '', 'email': 'test@seqr.org'})  # nosec
         mock_logger.warning.assert_called_with(
             'User test@seqr.org is trying to login without registration on AnVIL. None called Terra API: GET /register got status 404 with reason: Not Found',
             extra={'user_email': 'test@seqr.org'}
@@ -25,7 +25,7 @@ class SocialAuthPipelineTest(TestCase):
 
         backend = GoogleOAuth2()
         backend.strategy.session_set('next', '/foo/bar')
-        r = validate_anvil_registration(backend, {'access_token': '', 'email': 'test@seqr.org'})
+        r = validate_anvil_registration(backend, {'access_token': '', 'email': 'test@seqr.org'})  # nosec
         self.assertEqual(r.url, '/login/error/anvil_registration?next=%2Ffoo%2Fbar')
 
         mock_logger.reset_mock()

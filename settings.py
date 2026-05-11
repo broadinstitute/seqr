@@ -4,8 +4,6 @@ import random
 import string
 import subprocess  # nosec
 
-from ssl import create_default_context
-
 import google.auth
 import google.auth.transport.requests
 
