@@ -2463,6 +2463,7 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
 
         self.assert_json_logs(None, [
             ('Refreshing materialized view GRCh38/SNV_INDEL/project_gt_stats_to_gt_stats_mv', None),
+            ('Reloading dictionary GRCh38/SNV_INDEL/gt_stats_dict', None),
             ('', None)
         ])
 
