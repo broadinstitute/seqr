@@ -11,7 +11,6 @@ from clickhouse_search.models.search_models import (
     VariantDetailsSnvIndel,
 )
 from reference_data.models import DataVersions
-from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
 
 MOCK_RESPONSE = [
     {
@@ -50,6 +49,26 @@ MOCK_RESPONSE = [
                 'referenceGenome': 'GRCh38',
             },
         ],
+    },
+    {
+        '@id': 'http://reg.genome.network/allele/CA16716504',
+        'genomicAlleles': [
+            {
+                'chromosome': '1',
+                'coordinates': [
+                    {
+                        'allele': 'C',
+                        'end': 10131,
+                        'referenceAllele': '',  # ref allele is ''
+                        'start': 10131,
+                    },
+                ],
+                'referenceGenome': 'GRCh38',
+            },
+        ],
+        'externalRecords': {
+            'gnomAD_4': [{'id': '1-91511686-91511734'}], # has invalid gnomad ID
+        },
     },
     {
         '@id': 'http://reg.genome.network/allele/CA997563845',
@@ -95,7 +114,7 @@ MOCK_RESPONSE = [
 
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
 @mock.patch("clickhouse_search.management.commands.register_caids.safe_post_to_slack")
-class RegisterCaidsEmptyDatabaseTest(DifferentDbTransactionSupportMixin, TestCase):
+class RegisterCaidsEmptyDatabaseTest(TestCase):
     databases = "__all__"
     fixtures = []
 
@@ -114,7 +133,7 @@ class RegisterCaidsEmptyDatabaseTest(DifferentDbTransactionSupportMixin, TestCas
 
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
 @mock.patch("clickhouse_search.management.commands.register_caids.safe_post_to_slack")
-class RegisterCaidsTest(DifferentDbTransactionSupportMixin, TestCase):
+class RegisterCaidsTest(TestCase):
     databases = "__all__"
     fixtures = ["variant_details_for_update"]
 
@@ -131,6 +150,21 @@ class RegisterCaidsTest(DifferentDbTransactionSupportMixin, TestCase):
             ],
             status=200,
             json={'errorType': 'InternalServerError'}
+        )
+        with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
+            call_command("register_caids", batch_size=5)
+        mock_safe_post_to_slack.assert_not_called()
+
+        responses.add(
+            responses.PUT,
+            "https://reg.genome.network/alleles",
+            match=[
+                responses.matchers.query_param_matcher({
+                    "file": "vcf",
+                    "fields": "none @id genomicAlleles externalRecords.gnomAD_4.id",
+                }, strict_match=False),
+            ],
+            status=400,
         )
         with self.assertRaisesMessage(CommandError, 'Failed in 38/ClingenAlleleRegistry curr_key: 3'):
             call_command("register_caids", batch_size=5)
@@ -225,7 +259,7 @@ class RegisterCaidsTest(DifferentDbTransactionSupportMixin, TestCase):
         dv_38 = DataVersions.objects.get(data_model_name='38/ClingenAlleleRegistry')
         self.assertEqual(dv_38.version, '10')
         mock_logger.info.assert_called_with(
-            "2 registered variant(s) cannot be mapped back to ours. \n"
+            "3 registered variant(s) cannot be mapped back to ours. \n"
             "First unmappable variant:\n{'@id': 'http://reg.genome.network/allele/CA16716503', 'genomicAlleles': [{'chromosome': '1', 'coordinates': [{'allele': 'C', 'end': 10131, 'referenceAllele': '', 'start': 10131}], 'referenceGenome': 'GRCh38'}]}"
         )
         mock_logger.warning.assert_called_with(

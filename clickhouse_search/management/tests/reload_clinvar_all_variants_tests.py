@@ -14,7 +14,6 @@ from clickhouse_search.models.reference_data_models import (
     ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsMito,
 )
 from reference_data.models import DataVersions
-from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
 
 WEEKLY_XML_RELEASE_HEADER = '''<?xml version="1.0" encoding="UTF-8" standalone="yes"?><ClinVarVariationRelease xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ftp.ncbi.nlm.nih.gov/pub/clinvar/xsd_public/ClinVar_VCV_2.4.xsd" ReleaseDate="2025-06-30">'''
 WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
@@ -83,7 +82,7 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
 
 @mock.patch('clickhouse_search.management.commands.reload_clinvar_all_variants.safe_post_to_slack')
 @mock.patch('clickhouse_search.management.commands.reload_clinvar_all_variants.logger.info')
-class ReloadClinvarAllVariantsTest(DifferentDbTransactionSupportMixin, TestCase):
+class ReloadClinvarAllVariantsTest(TestCase):
     databases = '__all__'
     fixtures = ['clinvar_all_variants']
 
@@ -379,7 +378,6 @@ class ReloadClinvarAllVariantsTest(DifferentDbTransactionSupportMixin, TestCase)
             body=gzip.compress(missing_conflicting_pathogenicities.encode()),
             stream=True,
         )
-        ClinvarAllVariantsSnvIndel.objects.using('clickhouse_write').all().delete()
         with self.assertRaisesMessage(CommandError, 'Failed to find the conflicting pathogenicities node'):
             call_command('reload_clinvar_all_variants')
 
