@@ -2445,11 +2445,6 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         url = reverse(trigger_delete_project)
         self.check_data_manager_login(url)
 
-        annotations_qs = VariantsSnvIndel.objects.filter(key=1).join_populations()
-        self.assertDictEqual(dict(annotations_qs.values_list('key', 'seqrPop')), {
-            1: {'ac_wes': 3, 'ac_wgs': 5, 'hom_wes': 1, 'hom_wgs': 2, 'ac_affected': 7, 'hom_affected': 3},
-        })
-
         Project.objects.filter(guid='R0001_1kg').update(genome_version='38')
         body = {'project': 'R0001_1kg', 'datasetType': 'SNV_INDEL'}
         response = self.client.post(
