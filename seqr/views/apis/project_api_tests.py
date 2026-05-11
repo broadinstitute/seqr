@@ -60,7 +60,7 @@ RNA_DATA_TYPE_PARAMS = {
         'rows': [
             'sampleID,geneID,FDR set,pValue,padjust,zScore',
             'NA19675_1,ENSG00000240361,detail1,0.01,0.13,-3.1',
-            'NA19675_1,ENSG00000240361,detail2,0.01,0.13,3.1',
+            'NA19675_1,ENSG00000240361,detail2,0.01,0.13,-3.1',
             'NA19675_1,ENSG00000233750,detail1,0.064,0.0000057,7.8',
             'NA21234,ENSG00000233750,detail1,0.064,0.0000057,7.8',
             'HG00731,ENSG00000240361,,0.04,0.112,1.9',
