@@ -85,7 +85,7 @@ WEEKLY_XML_RELEASE_DATA = WEEKLY_XML_RELEASE_HEADER + '''
 @mock.patch('clickhouse_search.management.commands.reload_clinvar_all_variants.logger.info')
 class ReloadClinvarAllVariantsTest(DifferentDbTransactionSupportMixin, TestCase):
     databases = '__all__'
-    fixtures = ['test_conflicting_data_from_submitters']
+    fixtures = ['clinvar_all_variants']
 
     @responses.activate
     def test_update_with_no_previous_version(self, mock_logger, mock_safe_post_to_slack):
