@@ -11,6 +11,7 @@ from clickhouse_search.models.search_models import (
     VariantDetailsSnvIndel,
 )
 from reference_data.models import DataVersions
+from seqr.views.utils.test_utils import DifferentDbTransactionSupportMixin
 
 MOCK_RESPONSE = [
     {
@@ -94,7 +95,7 @@ MOCK_RESPONSE = [
 
 @mock.patch('clickhouse_search.management.commands.register_caids.logger')
 @mock.patch("clickhouse_search.management.commands.register_caids.safe_post_to_slack")
-class RegisterCaidsEmptyDatabaseTest(TestCase):
+class RegisterCaidsEmptyDatabaseTest(DifferentDbTransactionSupportMixin, TestCase):
     databases = "__all__"
     fixtures = []
 
