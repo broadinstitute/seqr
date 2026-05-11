@@ -696,7 +696,7 @@ def _add_missing_multi_type_samples(individuals, data):
 
 def _no_affected_male_families(sample_data, user):
     sample_type_families = {
-        sample_type: families - set(sample_data['affected_male_family_guids'])
+        sample_type: set(families) - set(sample_data['affected_male_family_guids'])
         for sample_type, families in sample_data['sample_type_families'].items()
     }
     num_families = len(set().union(*sample_type_families.values()))
