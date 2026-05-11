@@ -166,6 +166,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, skip_cache_check=False, response_search=None, project_families=None, additional_response=None, export_data=None, cache_sort=None, **kwargs):
         response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
+        # TODO
+        if response.status_code == 500:
+            self.assertDictEqual({}, response.json())
         self.assertEqual(response.status_code, 200)
         expected_response = {
             'searchedVariantIds': [],
