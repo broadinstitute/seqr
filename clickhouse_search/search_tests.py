@@ -2461,7 +2461,10 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         self.assertEqual(EntriesSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
         self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
 
-        self.assert_json_logs(self.data_manager_user, [('Done', None)])
+        self.assert_json_logs(self.data_manager_user, [
+            ('Refreshing materialized view GRCh38/SNV_INDEL/project_gt_stats_to_gt_stats_mv', None),
+            ('', None)
+        ])
 
         annotations_qs = VariantsSnvIndel.objects.all().join_populations()
         updated_seqr_pops_by_key = dict(annotations_qs.values_list('key', 'seqrPop'))
