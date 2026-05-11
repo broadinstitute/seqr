@@ -2444,6 +2444,7 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
     def test_trigger_delete_project(self):
         url = reverse(trigger_delete_project)
         self.check_data_manager_login(url)
+        self.reset_logs()
 
         Project.objects.filter(guid='R0001_1kg').update(genome_version='38')
         body = {'project': 'R0001_1kg', 'datasetType': 'SNV_INDEL'}
@@ -2459,6 +2460,8 @@ class ClickhouseDeleteDataTests(ClickhouseSearchTestCase):
         })
         self.assertEqual(EntriesSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
         self.assertEqual(ProjectGtStatsSnvIndel.objects.filter(project_guid='R0001_1kg').count(), 0)
+
+        self.assert_json_logs(self.data_manager_user, [('Done', None)])
 
         annotations_qs = VariantsSnvIndel.objects.all().join_populations()
         updated_seqr_pops_by_key = dict(annotations_qs.values_list('key', 'seqrPop'))
