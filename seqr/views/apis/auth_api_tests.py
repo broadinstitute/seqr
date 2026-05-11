@@ -28,7 +28,7 @@ class AuthAPITest(TestCase):
 
         # send login request without an email
         req_values = {
-            'password': 'not_a_password'
+            'password': 'not_a_password'  # nosec
         }
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps(req_values))
@@ -55,7 +55,7 @@ class AuthAPITest(TestCase):
         # send login request with unicode character
         req_values = {
             'email': 'test_new_user@instıtute.com',
-            'password': 'password123'
+            'password': 'password123'  # nosec
         }
         response = self.client.post(url, content_type='application/json', data=json.dumps(req_values))
         self.assertEqual(response.status_code, 401)
@@ -74,7 +74,7 @@ class AuthAPITest(TestCase):
         # send login request with a privileged account (data manage or superuser) while Google auth is not enabled
         req_values = {
             'email': 'test_data_manager@test.com',
-            'password': 'not-a-password'
+            'password': 'not-a-password'  # nosec
         }
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps(req_values))

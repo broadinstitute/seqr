@@ -608,12 +608,30 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
         return results
 
+    def _annotations_field_filters(self):
+        return {
+            MOTIF_FEATURES_KEY: lambda value: Q(**{
+                f'sorted_{MOTIF_FEATURES_KEY}_consequences__array_exists': {'consequenceTerms': (value, 'hasAny({value}, {field})')},
+            }) if hasattr(self.model, f'sorted_{MOTIF_FEATURES_KEY}_consequences') else None,
+            REGULATORY_FEATURES_KEY: lambda value: Q(**{
+                f'sorted_{REGULATORY_FEATURES_KEY}_consequences__array_exists': {'consequenceTerms': (value, 'hasAny({value}, {field})')},
+            }) if hasattr(self.model, f'sorted_{REGULATORY_FEATURES_KEY}_consequences') else None,
+            SCREEN_KEY: lambda value: Q(screen__in=value) if self.model.SCREEN_DICT else None,
+            SPLICE_AI_FIELD: lambda value: Q(preds__0__gte=float(value)) if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS else None,
+            'mitomap_pathogenic': lambda value: Q(mitomapPathogenic=value) if self.has_annotation('mitomapPathogenic') else None,
+        }
+
     def _parse_annotation_filters(self, annotations, pathogenicity):
         filter_qs = []
         allowed_consequences = []
         transcript_field_filters = {}
+        annotations_field_filters = self._annotations_field_filters()
         for field, value in annotations.items():
-            if field == UTR_ANNOTATOR_KEY:
+            if field in annotations_field_filters:
+                filter_q = annotations_field_filters[field](value)
+                if filter_q:
+                    filter_qs.append(filter_q)
+            elif field == UTR_ANNOTATOR_KEY:
                 if value:
                     transcript_field_filters['fiveutrConsequence'] = (value,  'hasAny({value}, [{field}])')
             elif field == EXTENDED_SPLICE_KEY:
@@ -622,21 +640,6 @@ class VariantsQuerySet(BaseVariantsQuerySet):
                 value = [c for c in value if c != EXTENDED_SPLICE_REGION_CONSEQUENCE]
                 if value:
                     allowed_consequences += value
-            elif field in [MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY]:
-                filter_field = f'sorted_{field}_consequences'
-                if hasattr(self.model, filter_field):
-                    filter_qs.append(Q(**{
-                        f'{filter_field}__array_exists': {'consequenceTerms': (value, 'hasAny({value}, {field})')},
-                    }))
-            elif field == SCREEN_KEY:
-                if self.model.SCREEN_DICT:
-                    filter_qs.append(Q(screen__in=value))
-            elif field == 'mitomap_pathogenic':
-                if self.has_annotation('mitomapPathogenic'):
-                    filter_qs.append(Q(mitomapPathogenic=value))  # TODO should be covered?
-            elif field == SPLICE_AI_FIELD:
-                if value and SPLICE_AI_FIELD in self.entry_model.PREDICTIONS:
-                    filter_qs.append(Q(preds__0__gte=float(value)))
             elif field not in SV_ANNOTATION_TYPES:
                 allowed_consequences += value
 
@@ -918,7 +921,7 @@ class VariantDetailsQuerySet(VariantsQuerySet):
     def result_values(self, *args, skip_entry_fields=True, **kwargs):
         return super().result_values(*args, skip_entry_fields=skip_entry_fields, **kwargs)
 
-    def join_annotations(self):
+    def join_annotations(self, *args, **kwargs):
         results = super().join_annotations(annotate_xpos=bool(self.entry_model.RANGE_PREDICTIONS))
         results = results.annotate(
             hgmd_join=self._pathogenicity_tuple(self.variant_model.hgmd_join, 'key__hgmd_join', rename_fields={'classification': 'class'}),
@@ -1031,7 +1034,7 @@ class BaseEntriesManager(SearchQuerySet):
     def _join_annotations(self, entries):
         return self._annotate_seqr_pop_expression(entries)
 
-    def result_values(self, sample_data=None):
+    def result_values(self, *args, sample_data=None, **kwargs):
         entries = self._join_annotations(self)
         return self._search_call_data(entries, sample_data)
 
