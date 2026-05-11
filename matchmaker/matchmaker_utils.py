@@ -126,7 +126,7 @@ def _parse_mme_gene_variants(result, gene_symbols_to_ids):
 
 
 def get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids):
-    gene_id = gene_feature.get('gene', {}).get('id')
+    gene_id = gene_feature['gene']['id']
     if not gene_id:
         return []
     if not gene_id.startswith('ENSG'):
