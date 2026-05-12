@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from clickhouse_search.models.postgres_dicts import SexDict
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Dataset, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
@@ -70,10 +70,12 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
 
     updated_family_models = Family.objects.filter(id__in=updated_family_ids)
     _remove_pedigree_images(updated_family_models, user)
-    if updated_affected and not skip_gt_stats_rebuild:
-        trigger_rebuild_gt_stats(project, user)
+    if updated_affected:
+        AffectedDict.reload(user)
+        if not skip_gt_stats_rebuild:
+            trigger_rebuild_gt_stats(project, user)
     if updated_sex:
-        SexDict.reload()
+        SexDict.reload(user)
 
     pedigree_json = None
     if get_update_json:
