@@ -85,16 +85,12 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
         return self.guid
 
     def __str__(self):
-        """Magix function for str() and %s."""
         return self.__unicode__()
 
     def json(self):
-        """Utility method that returns a json {field-name: value-as-string} mapping for all fields."""
         return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
 
     def save(self, *args, **kwargs):
-        """Create a GUID at object creation time."""
-
         being_created = not self.pk
         current_time = timezone.now()
 
@@ -113,11 +109,11 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
             self.created_date = kwargs.pop('created_date', current_time)
             super(ModelWithGUID, self).save(*args, **kwargs)
 
+            # Create a GUID at object creation time
             self.guid = self._compute_guid()
             super(ModelWithGUID, self).save()
 
     def delete_model(self, user, user_can_delete=False):
-        """Helper delete method that logs the deletion"""
         if not (user_can_delete or self.created_by == user):
             raise PermissionDenied('User does not have permission to delete this {}'.format(type(self).__name__))
         self.delete()
@@ -125,7 +121,6 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
 
     @classmethod
     def bulk_create(cls, user, new_models, **kwargs):
-        """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
             model.created_date = timezone.now()
@@ -136,7 +131,6 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
 
     @classmethod
     def bulk_update(cls, user, update_json, queryset=None, **filter_kwargs):
-        """Helper bulk update method that logs the update"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs).exclude(**update_json)
 
@@ -149,13 +143,11 @@ class ModelWithGUID(models.Model, metaclass=CustomModelBase):
 
     @classmethod
     def bulk_update_models(cls, user, models, fields):
-        """Helper bulk update method that logs the update and allows different update data for each model"""
         log_model_bulk_update(logger, models, user, 'update', update_fields=fields)
         cls.objects.bulk_update(models, fields)
 
     @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
-        """Helper bulk delete method that logs the deletion"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
         log_model_bulk_update(logger, queryset, user, 'delete')
@@ -219,10 +211,6 @@ class Project(ModelWithGUID):
     GUID_PRECISION = 4
 
     def save(self, *args, **kwargs):
-        """Override the save method and create user permissions groups + add the created_by user.
-
-        This could be done with signals, but seems cleaner to do it this way.
-        """
         being_created = not self.pk
         anvil_disabled = not anvil_enabled()
 
@@ -249,8 +237,6 @@ class Project(ModelWithGUID):
             user.groups.add(*[getattr(self, group) for group in groups])
 
     def delete(self, *args, **kwargs):
-        """Override the delete method to also delete the project-specific user groups"""
-
         super(Project, self).delete(*args, **kwargs)
 
         if self.can_edit_group:
@@ -616,7 +602,6 @@ class Individual(ModelWithGUID):
     sex = models.CharField(max_length=3, choices=SEX_CHOICES, default='U')
     affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default=AFFECTED_STATUS_UNKNOWN)
 
-    # TODO once sample and individual ids are fully decoupled no reason to maintain this field
     display_name = models.TextField(default="", blank=True)
 
     notes = models.TextField(blank=True, null=True)
@@ -695,14 +680,7 @@ class Individual(ModelWithGUID):
         audit_fields = {'case_review_status'}
 
 
-class Sample(ModelWithGUID):
-    """This model represents a single data type (eg. Variant Calls, or SV Calls) that's generated from a single
-    biological sample (eg. WES, WGS).
-
-    It stores metadata on both the dataset (fields: dataset_type, loaded_date, etc.) and the underlying sample
-    (fields: sample_type, sample_id etc.)
-    """
-
+class Dataset(ModelWithGUID):
     SAMPLE_TYPE_WES = 'WES'
     SAMPLE_TYPE_WGS = 'WGS'
     SAMPLE_TYPE_CHOICES = (
@@ -721,31 +699,22 @@ class Sample(ModelWithGUID):
     )
     DATASET_TYPE_LOOKUP = dict(DATASET_TYPE_CHOICES)
 
-    individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
+    active_individuals = models.ManyToManyField('Individual', related_name='active_datasets')
+    inactive_individuals = models.ManyToManyField('Individual', related_name='inactive_datasets')
 
     sample_type = models.CharField(max_length=10, choices=SAMPLE_TYPE_CHOICES)
     dataset_type = models.CharField(max_length=13, choices=DATASET_TYPE_CHOICES)
 
-    # The sample's id in the underlying dataset (eg. the VCF Id for variant callsets).
-    sample_id = models.TextField(db_index=True)
-
-    elasticsearch_index = models.TextField(db_index=True, null=True)
-    data_source = models.TextField(null=True)
-
-    # sample status
-    is_active = models.BooleanField(default=False)
+    data_source = models.TextField()
     loaded_date = models.DateTimeField()
 
     def __unicode__(self):
-        return self.sample_id.strip()
+        return f'{self.dataset_type}_{self.sample_type}_{self.loaded_date}'
 
-    GUID_PREFIX = 'S'
-    GUID_PRECISION = 10
+    GUID_PREFIX = 'D'
 
     class Meta:
-       json_fields = [
-           'guid', 'created_date', 'sample_type', 'dataset_type', 'sample_id', 'is_active', 'loaded_date',
-       ]
+       json_fields = ['guid', 'sample_type', 'dataset_type', 'loaded_date']
 
 
 class RnaSample(ModelWithGUID):
@@ -771,10 +740,17 @@ class RnaSample(ModelWithGUID):
         ('S', 'skin'),
     )
 
+    SEQUENCING_CHOICES = (
+        ('K', 'Kinnex'),
+        ('T', 'Tru-Seq'),
+        ('W', 'Watchmaker'),
+    )
+
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT)
 
     data_type = models.CharField(max_length=1, choices=DATA_TYPE_CHOICES)
     tissue_type = models.CharField(max_length=2, choices=TISSUE_TYPE_CHOICES)
+    sequencing_type = models.CharField(max_length=1, choices=SEQUENCING_CHOICES)
     data_source = models.TextField()
     is_active = models.BooleanField(default=False)
 
@@ -788,9 +764,6 @@ class RnaSample(ModelWithGUID):
 
 
 class IgvSample(ModelWithGUID):
-    """This model represents a single data type that can be displayed in IGV (eg. Read Alignments) that's generated from
-    a single biological sample (eg. WES, WGS, RNA, Array).
-    """
     SAMPLE_TYPE_ALIGNMENT = 'alignment'
     SAMPLE_TYPE_COVERAGE = 'wig'
     SAMPLE_TYPE_JUNCTION = 'spliceJunctions'
@@ -828,10 +801,10 @@ class IgvSample(ModelWithGUID):
 
 class SavedVariant(ModelWithGUID):
     DATASET_TYPE_CHOICES = (
-        (Sample.DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
-        (Sample.DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
-        (f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WGS}', 'SV WGS Calls'),
-        (f'{Sample.DATASET_TYPE_SV_CALLS}_{Sample.SAMPLE_TYPE_WES}', 'gCNV Calls'),
+        (Dataset.DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (Dataset.DATASET_TYPE_MITO_CALLS, 'Mitochondria calls'),
+        (f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WGS}', 'SV WGS Calls'),
+        (f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WES}', 'gCNV Calls'),
     )
 
     family = models.ForeignKey('Family', on_delete=models.CASCADE)
@@ -867,20 +840,6 @@ class SavedVariant(ModelWithGUID):
 
 
 class VariantTagType(ModelWithGUID):
-    """
-    Previous color choices:
-        '#1f78b4',
-        '#a6cee3',
-        '#b2df8a',
-        '#33a02c',
-        '#fdbf6f',
-        '#ff7f00',
-        '#ff0000',
-        '#cab2d6',
-        '#6a3d9a',
-        '#8F754F',
-        '#383838',
-    """
     project = models.ForeignKey('Project', null=True, blank=True, on_delete=models.CASCADE)
 
     name = models.TextField()
@@ -1055,8 +1014,6 @@ class GeneNote(ModelWithGUID):
 
 
 class LocusList(ModelWithGUID):
-    """List of gene ids or regions"""
-
     name = models.TextField(db_index=True)
     description = models.TextField(null=True, blank=True)
 
@@ -1186,7 +1143,6 @@ class BulkOperationBase(models.Model):
 
     @classmethod
     def bulk_create(cls, user, new_models, **kwargs):
-        """Helper bulk create method that logs the creation"""
         for model in new_models:
             model.created_by = user
         models = cls.objects.bulk_create(new_models, **kwargs)
@@ -1195,7 +1151,6 @@ class BulkOperationBase(models.Model):
 
     @classmethod
     def bulk_delete(cls, user, queryset=None, **filter_kwargs):
-        """Helper bulk delete method that logs the deletion"""
         if queryset is None:
             queryset = cls.objects.filter(**filter_kwargs)
         cls.log_model_no_guid_bulk_update(queryset, user, 'delete')

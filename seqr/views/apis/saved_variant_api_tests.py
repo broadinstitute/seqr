@@ -184,6 +184,18 @@ class SavedVariantAPITest(object):
 
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
         self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
+        self.assertDictEqual(tag, {
+            'category': 'Collaboration',
+            'color': '#668FE3',
+            'createdBy': None,
+            'lastModifiedDate': '2018-02-23T17:32:30.373Z',
+            'metadata': None,
+            'name': 'Review',
+            'searchHash': '125897d6',
+            'searchName': 'Incomplete Penetrance De-novo',
+            'tagGuid': 'VT1708633_2103343353_r0390_100',
+            'variantGuids': [VARIANT_GUID],
+        })
 
         submissions = response_json['mmeSubmissionsByGuid']
         self.assertSetEqual(set(submissions.keys()), {'MS000001_na19675'})
@@ -207,7 +219,7 @@ class SavedVariantAPITest(object):
             'outliers': {
                 'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
-                    'tissueType': 'M', 'isSignificant': True,
+                    'tissueType': 'M', 'sequencingType': 'T', 'isSignificant': True,
                 }]
             },
             'spliceOutliers': {},
@@ -341,6 +353,7 @@ class SavedVariantAPITest(object):
             'category': 'CMG Discovery Tags',
             'color': '#03441E',
             'searchHash': None,
+            'searchName': None,
             'metadata': None,
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,

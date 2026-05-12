@@ -11,7 +11,7 @@ from seqr.views.apis.data_manager_api import update_rna_seq, load_phenotype_prio
     get_loaded_projects, load_data, trigger_delete_family
 from seqr.views.utils.orm_to_json_utils import _get_json_for_models
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
-from seqr.models import Individual, Sample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
+from seqr.models import Dataset, Individual, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier, RnaSample, Project, PhenotypePrioritization
 from settings import SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL
 
 PROJECT_GUID = 'R0001_1kg'
@@ -252,6 +252,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'CollaboratorSampleID': 'NA19675_D2',
             'SeqrProject': ['https://seqr.broadinstitute.org/project/R0001_1kg/project_page'],
             'PDOStatus': ['RNA ready to load'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M'],
         }
     },
     {
@@ -264,6 +265,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             ],
             'PDOStatus': ['RNA ready to load', 'Available in seqr'],
             'TissueOfOrigin': ['Muscle'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M', 'Kinnex long read total RNA'],
         }
     },
     {
@@ -273,6 +275,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'SeqrProject': ['https://seqr.broadinstitute.org/project/R0003_test/project_page'],
             'PDOStatus': ['RNA ready to load'],
             'TissueOfOrigin': ['Muscle'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M'],
         }
     },
     {
@@ -285,6 +288,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             ],
             'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
             'TissueOfOrigin': ['Muscle', 'Brain'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M', 'Watchmaker total RNA 200M'],
         }
     },
     {
@@ -295,6 +299,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
                 'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
             ],
             'PDOStatus': ['RNA ready to load'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M', 'Watchmaker total RNA 200M'],
         }
     },
     {
@@ -303,10 +308,10 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'CollaboratorSampleID': 'NA12347',
             'SeqrProject': [
                 'https://seqr.broadinstitute.org/project/R0002_empty/project_page',
-                'https://seqr.broadinstitute.org/project/R0004_non_analyst_project/project_page',
             ],
-            'PDOStatus': ['RNA ready to load', 'RNA ready to load'],
+            'PDOStatus': ['RNA ready to load'],
             'TissueOfOrigin': ['Muscle'],
+            'RNASequencingProduct': ['Custom RNA Product'],
         }
     },
     {
@@ -316,6 +321,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'SeqrProject': ['R0003_test'],
             'PDOStatus': ['RNA ready to load'],
             'TissueOfOrigin': ['Custom Tissue'],
+            'RNASequencingProduct': ['Custom RNA Product'],
         }
     },
     {
@@ -325,6 +331,7 @@ AIRTABLE_RNA_SAMPLE_RECORDS = [
             'SeqrProject': ['https://seqr.broadinstitute.org/project/R0003_test/project_page'],
             'PDOStatus': ['RNA ready to load'],
             'TissueOfOrigin': ['Muscle'],
+            'RNASequencingProduct': ['Tru-Seq polyA 75M'],
         }
     },
     *INVALID_AIRTABLE_SAMPLE_RECORDS['records'],
@@ -488,6 +495,7 @@ class DataManagerAPITest(AirtableTest):
             ],
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'Fibroblast',
+            'sample_sequencing_type': 'Watchmaker total RNA 200M',
             'num_parsed_samples': 4,
             'initial_model_count': 7,
             'deleted_count': 4,
@@ -511,10 +519,11 @@ class DataManagerAPITest(AirtableTest):
 
         self.assert_json_logs(user, expected_logs)
 
-    def _check_rna_sample_model(self, individual_id, data_source, data_type, tissue_type, is_active_sample=True):
+    def _check_rna_sample_model(self, individual_id, data_source, data_type, tissue_type, sequencing_type='T', is_active_sample=True):
         tissue_type = tissue_type[0]
+        sequencing_type = sequencing_type[0]
         rna_samples = RnaSample.objects.filter(
-            individual_id=individual_id, tissue_type=tissue_type, data_source=data_source, data_type=data_type,
+            individual_id=individual_id, tissue_type=tissue_type, sequencing_type=sequencing_type, data_source=data_source, data_type=data_type,
         )
         self.assertEqual(len(rna_samples), 1)
         sample = rna_samples.first()
@@ -533,7 +542,7 @@ class DataManagerAPITest(AirtableTest):
 
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
-    @mock.patch('seqr.utils.search.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
+    @mock.patch('seqr.utils.add_data_utils.SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL', 'seqr-data-loading')
     @mock.patch('seqr.views.utils.file_utils.tempfile.gettempdir', lambda: 'tmp/')
     @mock.patch('seqr.views.utils.dataset_utils.os.path.isfile', lambda *args: True)
     @mock.patch('seqr.utils.communication_utils.send_html_email')
@@ -601,12 +610,14 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': [f'Unable to load the following samples with no match: {loaded_data_row[0]}'], 'warnings': None})
 
+        sequencing_type = params.get('sample_sequencing_type', AIRTABLE_RNA_SAMPLE_RECORDS[0]['fields']['RNASequencingProduct'][0])
         airtable_sample_records = [
             {
                 **AIRTABLE_RNA_SAMPLE_RECORDS[0],
                 'fields': {
                     **AIRTABLE_RNA_SAMPLE_RECORDS[0]['fields'],
                     'TissueOfOrigin': [params['sample_tissue_type']],
+                    'RNASequencingProduct': [sequencing_type],
                 }
             },
             *AIRTABLE_RNA_SAMPLE_RECORDS[1:],
@@ -633,10 +644,12 @@ class DataManagerAPITest(AirtableTest):
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
             'Unable to load the following samples from Airtable with no corresponding seqr ID: NA11111',
+            'Unable to load the following samples that are improperly configured in Airtable with invalid sequencing product specified: NA12347',
             'Unable to load the following samples that are improperly configured in Airtable with invalid tissue specified: NA12348',
-            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12345, NA12347',
+            'Unable to load the following samples that are improperly configured in Airtable with multiple conflicting PDOs: NA12345',
             'Unable to load the following samples that are improperly configured in Airtable with multiple tissues specified: NA12345',
             'Unable to load the following samples that are improperly configured in Airtable with no project specified: NA12348',
+            'Unable to load the following samples that are improperly configured in Airtable with no sequencing product specified: NA12346',
             'Unable to load the following samples that are improperly configured in Airtable with no tissue specified: NA12346',
         ])
 
@@ -700,7 +713,7 @@ class DataManagerAPITest(AirtableTest):
             self.assert_expected_airtable_call(
                 call_index=0,
                 filter_formula="AND(LEN({PassingCollaboratorSampleIDs})>0,OR(SEARCH('RNA ready to load',ARRAYJOIN(PDOStatus,';'))))",
-                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'TissueOfOrigin', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping'],
+                fields=['CollaboratorSampleID', 'SeqrCollaboratorSampleID', 'PDOStatus', 'SeqrProject', 'RNASequencingProduct', 'TissueOfOrigin', 'WESSampleID_RNAMapping', 'WGSSampleID_RNAMapping'],
             )
 
             return response_json, new_sample_guid
@@ -752,7 +765,7 @@ class DataManagerAPITest(AirtableTest):
         # test database models are correct
         self.assertEqual(model_cls.objects.count(), params['initial_model_count'] - deleted_count)
         sample_guid = self._check_rna_sample_model(individual_id=1, data_source='new_muscle_samples.tsv.gz', data_type=data_type,
-                                                   tissue_type=params.get('sample_tissue_type'), is_active_sample=False)
+                                                   tissue_type=params.get('sample_tissue_type'), sequencing_type=sequencing_type, is_active_sample=False)
         self.assertSetEqual(set(response_json['sampleGuids']), {sample_guid, new_sample_guid})
 
         # test correct file interactions
@@ -1279,8 +1292,7 @@ class DataManagerAPITest(AirtableTest):
             ],
         })
 
-        family_samples = Sample.objects.filter(individual__family_id=2, is_active=True)
-        self.assertEqual(family_samples.count(), 0)
+        self.assertEqual(Dataset.objects.filter(active_individuals__family_id=2).count(), 0)
 
         self.assertEqual(len(responses.calls), 1)
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
@@ -1299,7 +1311,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     PROJECT_OPTION = PROJECT_OPTION
     WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION]
     WES_PROJECT_OPTIONS = [
-        {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:25:55.397Z'},
+        {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:13:55.397Z'},
         EMPTY_PROJECT_OPTION,
     ]
     PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
@@ -1329,7 +1341,7 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.mock_subprocess = patcher.start()
         self.mock_subprocess.side_effect = [self.mock_file_iter]
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.search.add_data_utils.LOADING_DATASETS_DIR', self.TRIGGER_CALLSET_DIR)
+        patcher = mock.patch('seqr.utils.add_data_utils.LOADING_DATASETS_DIR', self.TRIGGER_CALLSET_DIR)
         patcher.start()
         self.addCleanup(patcher.stop)
         super().setUp()
@@ -1449,10 +1461,10 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         self.mock_file_iter.wait.return_value = 0
         self.mock_subprocess.side_effect = [self.mock_does_file_exist, self.mock_file_iter]
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
+        patcher = mock.patch('seqr.utils.add_data_utils.safe_post_to_slack')
         self.mock_slack = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.search.add_data_utils.LOADING_DATASETS_DIR', 'gs://seqr-loading-temp/v3.1')
+        patcher = mock.patch('seqr.utils.add_data_utils.LOADING_DATASETS_DIR', 'gs://seqr-loading-temp/v3.1')
         patcher.start()
         self.addCleanup(patcher.stop)
         super().setUp()

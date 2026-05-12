@@ -1,6 +1,3 @@
-"""
-APIs used to retrieve and modify Individual fields
-"""
 import json
 from collections import defaultdict
 from django.contrib.auth.models import User
@@ -17,11 +14,11 @@ from seqr.views.utils.individual_utils import delete_individuals
 from seqr.views.utils.json_to_orm_utils import update_family_from_json, update_model_from_json, create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
-from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_for_family_note, get_json_for_samples, \
+from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_for_family_note, get_json_for_datasets, \
     get_json_for_matchmaker_submissions, get_json_for_analysis_groups, _get_json_for_families, get_json_for_queryset
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
-from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Sample, VariantTag, AnalysisGroup, RnaSeqTpm, \
+from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Dataset, VariantTag, AnalysisGroup, RnaSeqTpm, \
     PhenotypePrioritization, Project, RnaSample
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions, external_anvil_project_can_edit, \
@@ -45,12 +42,12 @@ def family_page_data(request, family_guid):
     is_analyst = user_is_analyst(request.user)
     has_case_review_perm = has_case_review_permissions(project, request.user)
 
-    sample_models = Sample.objects.filter(individual__family=family)
-    samples = get_json_for_samples(
-        sample_models, project_guid=project.guid, family_guid=family_guid, is_analyst=is_analyst
-    )
+    dataset_models = Dataset.objects.filter(
+        Q(active_individuals__family=family) | Q(inactive_individuals__family=family)
+    ).distinct()
+    datasets = get_json_for_datasets(dataset_models, project.guid)
     response = {
-        'samplesByGuid': {s['sampleGuid']: s for s in samples}
+        'datasetsByGuid': {d['datasetGuid']: d for d in datasets}
     }
 
     add_families_context(response, families, project.guid, request.user, is_analyst, has_case_review_perm)
@@ -63,7 +60,7 @@ def family_page_data(request, family_guid):
     gene_ids = {gene_id for variant in discovery_variants for gene_id in variant['gene_ids']}
     discovery_variant_intervals = [dict(zip(
         ['chrom', 'start', 'end_chrom', 'end', 'svType', 'hasSvType'],
-        [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['svType'], (v.get('dataset_type') or '').startswith(Sample.DATASET_TYPE_SV_CALLS)]
+        [*get_chrom_pos(v['xpos']), *get_chrom_pos(v['xpos_end']), v['svType'], (v.get('dataset_type') or '').startswith(Dataset.DATASET_TYPE_SV_CALLS)]
     )) for v in discovery_variants]
     omims = Omim.objects.filter(
         get_omim_intervals_query(discovery_variant_intervals) | Q(gene__gene_id__in=gene_ids)
@@ -145,12 +142,6 @@ def family_variant_tag_summary(request, family_guid):
 
 @login_and_policies_required
 def edit_families_handler(request, project_guid):
-    """Edit or one or more Family records.
-
-    Args:
-        project_guid (string): GUID of project that contains these individuals.
-    """
-
     project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     request_json = json.loads(request.body)
@@ -201,12 +192,6 @@ def edit_families_handler(request, project_guid):
 
 @login_and_policies_required
 def delete_families_handler(request, project_guid):
-    """Edit or delete one or more Individual records.
-
-    Args:
-        project_guid (string): GUID of project that contains these individuals.
-    """
-
     project = get_project_and_check_pm_permissions(project_guid, request.user, override_permission_func=external_anvil_project_can_edit)
 
     request_json = json.loads(request.body)
@@ -238,12 +223,6 @@ def delete_families_handler(request, project_guid):
 
 @login_and_policies_required
 def update_family_fields_handler(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-    """
-
     family = Family.objects.get(guid=family_guid)
 
     # check permission - can be edited by anyone with access to the project
@@ -266,11 +245,6 @@ def _set_display_name(family_json, family_model):
 
 @login_and_policies_required
 def update_family_assigned_analyst(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-    """
     family = Family.objects.get(guid=family_guid)
     # assigned_analyst can be edited by anyone with access to the project
     check_project_permissions(family.project, request.user, can_edit=False)
@@ -298,13 +272,6 @@ def update_family_assigned_analyst(request, family_guid):
 
 @login_and_policies_required
 def update_family_analysed_by(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-        field_name (string): Family model field name to update
-    """
-
     family = Family.objects.get(guid=family_guid)
     # analysed_by can be edited by anyone with access to the project
     check_project_permissions(family.project, request.user, can_edit=False)
@@ -319,12 +286,6 @@ def update_family_analysed_by(request, family_guid):
 
 @login_and_policies_required
 def update_family_pedigree_image(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-    """
-
     family = Family.objects.get(guid=family_guid)
 
     # check permission
@@ -388,6 +349,7 @@ def receive_families_table_handler(request, project_guid):
     Args:
         request (object): Django request object
         project_guid (string): project GUID
+
     """
 
     project = get_project_and_check_pm_permissions(project_guid, request.user)
@@ -488,24 +450,25 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
     family = Family.objects.get(guid=family_guid)
     check_project_permissions(family.project, request.user)
 
-    response = defaultdict(lambda: {'individualData': {}})
+    response = defaultdict(lambda:  defaultdict(lambda: {'individualData': {}}))
     tpm_data = RnaSeqTpm.objects.filter(
         gene_id=gene_id, sample__individual__family=family).prefetch_related('sample', 'sample__individual')
     for tpm in tpm_data:
         indiv = tpm.sample.individual
-        response[tpm.sample.tissue_type]['individualData'][indiv.display_name or indiv.individual_id] = tpm.tpm
+        response[tpm.sample.tissue_type][tpm.sample.sequencing_type]['individualData'][indiv.display_name or indiv.individual_id] = tpm.tpm
 
     project_guids = get_project_guids_user_can_view(request.user)
     internal_projects = get_internal_projects() if anvil_enabled() else None
     for tissue in response.keys():
-        tpms = RnaSeqTpm.objects.filter(sample__tissue_type=tissue, gene_id=gene_id)
-        response[tissue]['myData'] = list(tpms.filter(
-            sample__individual__family__project__guid__in=project_guids,
-        ).order_by('tpm').values_list('tpm', flat=True))
-        if internal_projects is not None:
-            response[tissue]['rdgData'] = list(tpms.filter(
-                sample__individual__family__project__in=internal_projects,
+        for sequencing_type in response[tissue].keys():
+            tpms = RnaSeqTpm.objects.filter(sample__tissue_type=tissue, sample__sequencing_type=sequencing_type, gene_id=gene_id)
+            response[tissue][sequencing_type]['myData'] = list(tpms.filter(
+                sample__individual__family__project__guid__in=project_guids,
             ).order_by('tpm').values_list('tpm', flat=True))
+            if internal_projects is not None:
+                response[tissue][sequencing_type]['rdgData'] = list(tpms.filter(
+                    sample__individual__family__project__in=internal_projects,
+                ).order_by('tpm').values_list('tpm', flat=True))
 
     return create_json_response(response)
 

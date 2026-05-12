@@ -204,12 +204,12 @@ const navigateSavedHashedSearchHelper = (resultsPath, hashKey) => (search, navig
 export const navigateSavedHashedSearch = navigateSavedHashedSearchHelper('results', 'searchesByHash')
 export const navigateFamiliesSearch = navigateSavedHashedSearchHelper('families', 'searchFamiliesByHash')
 
-const updateSavedVariant = (values, action = 'create') => (dispatch, getState) => new HttpRequestHelper(
+const updateSavedVariant = (values, action = 'create') => dispatch => new HttpRequestHelper(
   `/api/saved_variant/${action}`,
   (responseJson) => {
     dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
   },
-).post({ searchHash: getState().currentSearchHash, ...values })
+).post(values)
 
 export const updateVariantNote = (values) => {
   if (values.variantGuids) {
@@ -262,7 +262,7 @@ const rootReducer = combineReducers({
   familyNotesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familyNotesByGuid'),
   familyDetailsLoading: createSingleObjectReducer(REQUEST_FAMILY_DETAILS),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
-  samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
+  datasetsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'datasetsByGuid'),
   igvSamplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'igvSamplesByGuid'),
   analysisGroupsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'analysisGroupsByGuid'),
   analysisGroupsLoading: loadingReducer(REQUEST_ANALYSIS_GROUPS, RECEIVE_ANALYSIS_GROUPS),

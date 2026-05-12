@@ -1,5 +1,3 @@
-"""Provide python bindings for the AnVIL Terra API."""
-
 from datetime import datetime
 import google.auth.transport.requests
 import json
@@ -28,33 +26,17 @@ logger = SeqrLogger(__name__)
 
 class TerraAPIException(Exception):
     def __init__(self, message, status_code):
-        """
-        Custom Exception to capture Terra API call failures
-
-        :param message: error message
-        :param status_code: the status code associated with the failed request
-        """
         super(TerraAPIException, self).__init__(message)
         self.status_code = status_code
 
 
 class TerraNotFoundException(TerraAPIException):
     def __init__(self, message):
-        """
-        Custom Exception to capture Terra API calls that fail with 404 Not Found
-
-        :param message: error message
-        """
         super(TerraNotFoundException, self).__init__(message, 404)
 
 
 class TerraRefreshTokenFailedException(TerraAPIException):
     def __init__(self, message):
-        """
-        Custom Exception to capture refresh token failures. Maps to 401 error to redirect user to login
-
-        :param message: error message
-        """
         super(TerraRefreshTokenFailedException, self).__init__(message, 401)
 
 
@@ -178,15 +160,6 @@ def _user_anvil_call(method, path, user, **kwargs):
 
 
 def list_anvil_workspaces(user):
-    """Get all the workspaces accessible by the logged-in user.
-
-    :param
-    user (User model): who's credentials will be used to access AnVIL
-    :return
-    A list of workspaces that the user has access (OWNER, WRITER, or READER). Each of the workspace has
-    its name and namespace.
-
-    """
     return _user_anvil_call(
         'get', 'api/workspaces?fields=public,workspace.name,workspace.namespace',
         user, cache_time=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS,

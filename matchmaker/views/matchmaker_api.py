@@ -35,14 +35,6 @@ MAX_SUBMISSION_VARIANTS = 5
 
 @login_and_policies_required
 def get_individual_mme_matches(request, submission_guid):
-    """
-    Looks for matches for the given submission. Expects a single patient (MME spec) in the POST
-    data field under key "patient_data"
-    Args:
-        project_id,indiv_id and POST all data in POST under key "patient_data"
-    Returns:
-        Status code and results
-    """
     submission = MatchmakerSubmission.objects.get(guid=submission_guid)
     project = check_mme_permissions(submission, request.user)
 
@@ -257,9 +249,6 @@ def _report_external_mme_error(node_name, error, detail, user, raise_exception=F
 
 @login_and_policies_required
 def update_mme_submission(request, submission_guid=None):
-    """
-    Create or update the submission for the given individual.
-    """
     submission_json = json.loads(request.body)
     phenotypes = submission_json.pop('phenotypes', [])
     gene_variants = submission_json.pop('geneVariants', [])
@@ -332,9 +321,6 @@ def _get_submission_detail_response(submission, phenotypes):
 
 @login_and_policies_required
 def delete_mme_submission(request, submission_guid):
-    """
-    Create or update the submission for the given individual.
-    """
     submission = MatchmakerSubmission.objects.get(guid=submission_guid)
     check_mme_permissions(submission, request.user)
 
@@ -358,14 +344,6 @@ def delete_mme_submission(request, submission_guid):
 
 @login_and_policies_required
 def update_mme_result_status(request, matchmaker_result_guid):
-    """
-    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
-    data field under key "patient_data"
-    Args:
-        project_id,indiv_id and POST all data in POST under key "patient_data"
-    Returns:
-        Status code and results
-    """
     result = MatchmakerResult.objects.get(guid=matchmaker_result_guid)
     check_mme_permissions(result.submission, request.user)
 
@@ -380,13 +358,6 @@ def update_mme_result_status(request, matchmaker_result_guid):
 
 @login_and_policies_required
 def send_mme_contact_email(request, matchmaker_result_guid):
-    """
-    Sends the given email and updates the contacted status for the match
-    Args:
-        matchmaker_result_guid
-    Returns:
-        Status code and results
-    """
     result = MatchmakerResult.objects.get(guid=matchmaker_result_guid)
     check_mme_permissions(result.submission, request.user)
 
@@ -441,14 +412,6 @@ def update_mme_project_contact(request, project_guid):
 
 @analyst_required
 def update_mme_contact_note(request, institution):
-    """
-    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
-    data field under key "patient_data"
-    Args:
-        project_id,indiv_id and POST all data in POST under key "patient_data"
-    Returns:
-        Status code and results
-    """
     institution = institution.strip().lower()
     request_json = json.loads(request.body)
     note, _ = get_or_create_model_from_json(
@@ -509,9 +472,6 @@ def _parse_mme_result(result, hpo_terms_by_id, gene_symbols_to_ids, submission_g
 
 
 def _generate_notification_for_seqr_match(submission, results):
-    """
-    Generate a notifcation to say that a match happened initiated from a seqr user.
-    """
     matches = []
     hpo_terms_by_id, genes_by_id, _ = get_mme_genes_phenotypes_for_results(results)
     for result in results:

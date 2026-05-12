@@ -12,7 +12,7 @@ from django.urls.base import reverse
 from io import BytesIO
 from openpyxl import load_workbook
 
-from seqr.models import Individual, Sample, SavedVariant, VariantTag
+from seqr.models import Individual, Dataset, SavedVariant, VariantTag
 from seqr.views.apis.individual_api import edit_individuals_handler, update_individual_handler, \
     delete_individuals_handler, receive_individuals_table_handler, save_individuals_table_handler, \
     receive_individuals_metadata_handler, save_individuals_metadata_table_handler, update_individual_hpo_terms, \
@@ -206,7 +206,9 @@ class IndividualAPITest(object):
         ])
 
         # send valid request
-        Sample.objects.filter(guid__in=['S000130_na19678', 'S000135_na20870']).update(is_active=False)
+        for dataset in Dataset.objects.filter(guid__in=['S000130_na19678', 'S000129_na19675']):
+            dataset.inactive_individuals.set(dataset.active_individuals.all())
+            dataset.active_individuals.set(set())
         response = self.client.post(edit_individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA, INDIVIDUAL_FAMILY_UPDATE_DATA]
         }))
@@ -345,6 +347,7 @@ class IndividualAPITest(object):
                 'updateFields': ['mother'],
                 'updateType': 'update',
             }}),
+            ('Reloading dictionary seqrdb_affected_status_dict', None),
             ('Triggering rebuild_gt_stats for R0004_non_analyst_project', None),
             (f'Error Triggering Rebuild Gt Stats: 400 Client Error: Bad Request for url: {TRIGGER_RELOAD_URL}', {
                 'severity': 'ERROR',
@@ -369,7 +372,9 @@ class IndividualAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Unable to delete individuals with active search sample: NA19678'])
-        Sample.objects.filter(guid__in=['S000130_na19678', 'S000143_na20885', 'S000173_na21987']).update(is_active=False)
+        for dataset in Dataset.objects.filter(guid__in=['S000130_na19678', 'S000143_na20885', 'S000147_na21234']):
+            dataset.inactive_individuals.set(dataset.active_individuals.all())
+            dataset.active_individuals.set(set())
 
         # send valid requests
         response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
@@ -385,6 +390,7 @@ class IndividualAPITest(object):
         })
         self.assertFalse('I000002_na19678' in response_json['familiesByGuid']['F000001_1']['individualGuids'])
         self.assertIsNone(response_json['familiesByGuid']['F000001_1']['pedigreeImage'])
+        self.assertFalse(Dataset.objects.filter(guid='S000130_na19678').exists())
 
         # Test PM permission
         pm_required_delete_individuals_url = reverse(delete_individuals_handler, args=[PM_REQUIRED_PROJECT_GUID])
@@ -433,6 +439,11 @@ class IndividualAPITest(object):
                 'individuals': [EXTERNAL_WORKSPACE_INDIVIDUAL_UPDATE_DATA]
             }))
         self.assertEqual(response.status_code, 200 if self.HAS_EXTERNAL_PROJECT_ACCESS else 403)
+        if self.HAS_EXTERNAL_PROJECT_ACCESS:
+            self.assertListEqual(
+                list(Dataset.objects.get(guid='S000147_na21234').inactive_individuals.order_by('id').values_list('guid', flat=True)),
+                ['I000018_na21234', 'I000021_na21654'],
+            )
 
     def test_individuals_table_handler_errors(self):
         individuals_url = reverse(receive_individuals_table_handler, args=[PROJECT_GUID])
@@ -1364,16 +1375,16 @@ class IndividualAPITest(object):
                 'ENSG00000135953': [{
                     'geneId': 'ENSG00000135953', 'zScore': 7.31, 'pValue': 0.00000000000948, 'pAdjust': 0.00000000781,
                     'isSignificant': True,
-                    'tissueType': 'M',
+                    'tissueType': 'M', 'sequencingType': 'T',
                 }],
                 'ENSG00000240361': [{
                     'geneId': 'ENSG00000240361', 'zScore': -4.08, 'pValue': 5.88, 'pAdjust': 0.09, 'isSignificant': False,
-                    'tissueType': 'M',
+                    'tissueType': 'M', 'sequencingType': 'T',
                 }],
                 'ENSG00000268903': [{
                     'geneId': 'ENSG00000268903', 'zScore': 7.08, 'pValue':0.000000000588, 'pAdjust': 0.00000000139,
                     'isSignificant': True,
-                    'tissueType': 'M',
+                    'tissueType': 'M', 'sequencingType': 'T',
                 }],
             },
             'spliceOutliers': {
@@ -1388,7 +1399,7 @@ class IndividualAPITest(object):
                 'meanCounts': 0.85,  'meanTotalCounts': 0.85, 'pAdjust': 3.08e-56,
                 'pValue': 1.08e-56, 'rareDiseaseSamplesTotal': 20, 'rareDiseaseSamplesWithThisJunction': 1,
                 'totalCounts': 1297, 'start': 132885746, 'strand': '*', 'type': 'psi5', 'deltaIntronJaccardIndex': 12.34,
-                'tissueType': 'F',
+                'tissueType': 'F', 'sequencingType': 'W',
             },
             outliers_by_pos[132885746]
         )

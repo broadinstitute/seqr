@@ -3,7 +3,6 @@ import mock
 from copy import deepcopy
 from datetime import datetime
 from django.contrib.auth.models import Group
-from django.db import connections
 from django.urls.base import reverse
 import responses
 
@@ -12,7 +11,7 @@ from seqr.utils.communication_utils import _set_bulk_notification_stream
 from seqr.views.apis.project_api import create_project_handler, delete_project_handler, update_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
     project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
-    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications, \
+    project_notifications, mark_read_project_notifications, subscribe_project_notifications, \
     update_project_rna_seq, load_rna_seq_sample_data
 from seqr.views.apis.data_manager_api_tests import RNA_OUTLIER_SAMPLE_DATA, RNA_OUTLIER_MUSCLE_SAMPLE_GUID, RNA_TPM_SAMPLE_DATA, \
     RNA_TPM_MUSCLE_SAMPLE_GUID, RNA_SPLICE_SAMPLE_DATA, RNA_SPLICE_SAMPLE_GUID, PLACEHOLDER_GUID, \
@@ -20,7 +19,7 @@ from seqr.views.apis.data_manager_api_tests import RNA_OUTLIER_SAMPLE_DATA, RNA_
 from seqr.views.utils.terra_api_utils import TerraAPIException, TerraRefreshTokenFailedException
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, \
     PROJECT_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS, \
-    SAMPLE_FIELDS, SUMMARY_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
+    DATASET_FIELDS, SUMMARY_FAMILY_FIELDS, INTERNAL_INDIVIDUAL_FIELDS, INDIVIDUAL_FIELDS, TAG_TYPE_FIELDS, \
     FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, ANALYSIS_GROUP_FIELDS, \
     EXT_WORKSPACE_NAMESPACE, TEST_EMPTY_PROJECT_WORKSPACE, DYNAMIC_ANALYSIS_GROUP_FIELDS
 
@@ -341,12 +340,12 @@ class ProjectAPITest(object):
 
         response_json = response.json()
         response_keys = {
-            'projectsByGuid', 'samplesByGuid', 'familyTagTypeCounts',
+            'projectsByGuid', 'datasetsByGuid', 'familyTagTypeCounts',
         }
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
         project_fields = {
-            'variantTagTypes', 'variantFunctionalTagTypes', 'sampleCounts',
+            'variantTagTypes', 'variantFunctionalTagTypes', 'rnaSampleCounts',
             'projectGuid', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
         }
         project_response = response_json['projectsByGuid'][PROJECT_GUID]
@@ -374,25 +373,16 @@ class ProjectAPITest(object):
             'order': 99,
             'numTags': 1,
         })
-        self.assertDictEqual(project_response['sampleCounts'], {
-            'WES__SNV_INDEL': [{
-                'familyCounts': {
-                    'F000001_1': 3, 'F000002_2': 3, 'F000003_3': 1, 'F000004_4': 1, 'F000005_5': 1, 'F000006_6': 1,
-                    'F000007_7': 1, 'F000008_8': 1, 'F000010_10': 1,
-                },
-                'loadedDate': '2017-02-05',
-            }],
-            'WES__SV': [{'familyCounts': {'F000002_2': 3}, 'loadedDate': '2018-02-05'}],
-            'WES__MITO': [{'familyCounts': {'F000002_2': 1}, 'loadedDate': '2022-02-05'}],
-            'RNA__S': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
-            'RNA__T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
-            'RNA__E': [{'familyCounts': {'F000001_1': 1}, 'loadedDate': '2017-02-05'}],
+        self.assertDictEqual(project_response['rnaSampleCounts'], {
+            'S': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
+            'T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
+            'E': [{'familyCounts': {'F000001_1': 1}, 'loadedDate': '2017-02-05'}],
         })
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
-        self.assertEqual(len(response_json['samplesByGuid']), 16)
-        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
+        self.assertEqual(len(response_json['datasetsByGuid']), 5)
+        self.assertSetEqual(set(next(iter(response_json['datasetsByGuid'].values())).keys()), DATASET_FIELDS)
         self.assertDictEqual(response_json['familyTagTypeCounts'],  {
             'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
             'F000002_2': {'AIP': 1, 'Excluded': 1, 'Known gene for phenotype': 1},
@@ -542,24 +532,6 @@ class ProjectAPITest(object):
             set(next(iter(response.json()['individualsByGuid'].values())).keys()),
             NO_INTERNAL_CASE_REVIEW_INDIVIDUAL_FIELDS,
         )
-
-    def test_project_samples(self):
-        url = reverse(project_samples, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-        response_json = response.json()
-        response_keys = {'samplesByGuid'}
-        self.assertSetEqual(set(response_json.keys()), response_keys)
-
-        self.assertEqual(len(response_json['samplesByGuid']), 17)
-        self.assertSetEqual(set(next(iter(response_json['samplesByGuid'].values())).keys()), SAMPLE_FIELDS)
-
-        # Test empty project
-        empty_url = reverse(project_samples, args=[EMPTY_PROJECT_GUID])
-        self._check_empty_project(empty_url, response_keys)
 
     def test_project_analysis_groups(self):
         url = reverse(project_analysis_groups, args=[PROJECT_GUID])
@@ -731,7 +703,7 @@ class ProjectAPITest(object):
         self._test_update_project_rna('T', **RNA_DATA_TYPE_PARAMS['T'], single_sample_file=True)
 
     def test_update_project_rna_splice_outlier(self):
-        self._test_update_project_rna('S', **RNA_DATA_TYPE_PARAMS['S'], tissue='F', allow_missing_gene=True)
+        self._test_update_project_rna('S', **RNA_DATA_TYPE_PARAMS['S'], tissue='F', sequencing_type='W', allow_missing_gene=True)
 
     @mock.patch('seqr.utils.communication_utils.BASE_URL', 'https://test-seqr.org/')
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -746,7 +718,7 @@ class ProjectAPITest(object):
     def _test_update_project_rna(self, data_type, mock_subprocess, mock_does_file_exist, mock_open, mock_os,
                                  mock_send_slack, mock_send_email, mock_datetime, sample_guid=None, model_cls=None,
                                  rows=None, parsed_file_data=None, required_columns=None,  allow_missing_gene=False,
-                                 tissue='M', message_data_type=None, single_sample_file=False, **kwargs):
+                                 tissue='M', sequencing_type='T', message_data_type=None, single_sample_file=False, **kwargs):
         mock_datetime.now.return_value = datetime(2025, 4, 15)
         mock_os.path.join.side_effect = lambda *args: '/'.join(args)
         initial_model_count = model_cls.objects.count()
@@ -758,7 +730,7 @@ class ProjectAPITest(object):
 
         # Test errors
         file = f'{self.TEMP_DIR}/new_samples.tsv.gz'
-        body = {'dataType': data_type, 'file': file, 'tissue': tissue}
+        body = {'dataType': data_type, 'file': file, 'tissue': tissue, 'sequencingType': sequencing_type}
         self._set_file_not_found(file, mock_subprocess, mock_does_file_exist, mock_open)
         self.reset_logs()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
@@ -813,7 +785,7 @@ class ProjectAPITest(object):
         # test database models are correct
         self.assertEqual(model_cls.objects.count(), initial_model_count - initial_sample_model_count)
         rna_samples = RnaSample.objects.filter(
-            tissue_type=tissue, data_type=data_type, data_source='new_samples.tsv.gz', is_active=False,
+            tissue_type=tissue, data_type=data_type, data_source='new_samples.tsv.gz', is_active=False, sequencing_type=sequencing_type,
         )
         self.assertEqual(rna_samples.count(), 1 if single_sample_file else 2)
         guid_map = {'NA19675_1': rna_samples.get(individual_id=1).guid}

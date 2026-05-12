@@ -1,4 +1,3 @@
-"""Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
 import difflib
 import os
 import json
@@ -15,7 +14,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.views.utils.json_utils import _to_snake_case, _to_title_case
 from seqr.views.utils.permissions_utils import user_is_pm, get_pm_user_emails
-from seqr.models import Individual, Sample
+from seqr.models import Individual
 
 logger = SeqrLogger(__name__)
 
@@ -25,23 +24,6 @@ RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_
 
 
 def parse_pedigree_table(parsed_file, filename, user, project):
-    """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
-
-    Args:
-        parsed_file (array): The parsed output from the raw file.
-        filename (string): The original filename - used to determine the file format based on the suffix.
-        user (User): Django User object
-        project (Project): Django Project object
-
-    Return:
-        A 3-tuple that contains:
-        (
-            json_records (list): list of dictionaries, with each dictionary containing info about
-                one of the individuals in the input data
-            errors (list): list of error message strings
-            warnings (list): list of warning message strings
-        )
-    """
     header_string = str(parsed_file[0])
     is_merged_pedigree_sample_manifest = "do not modify" in header_string.lower() and "Broad" in header_string
     if is_merged_pedigree_sample_manifest:
@@ -153,32 +135,6 @@ def parse_hpo_terms(hpo_term_string):
 
 
 def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None, update_features=False):
-    """Parse the values in rows and convert them to a json representation.
-
-    Args:
-        rows (list): a list of rows where each row is a list of strings corresponding to values in the table
-
-    Returns:
-        list: a list of dictionaries with each dictionary being a json representation of a parsed row.
-            For example:
-               {
-                    'familyId': family_id,
-                    'individualId': individual_id,
-                    'paternalId': paternal_id,
-                    'maternalId': maternal_id,
-                    'sex': sex,
-                    'affected': affected,
-                    'notes': notes,
-                    'codedPhenotype': ,
-                    'hpoTermsPresent': [...],
-                    'hpoTermsAbsent': [...],
-                    'fundingSource': [...],
-                    'caseReviewStatus': [...],
-                }
-
-    Raises:
-        ValueError: if there are unexpected values or row sizes
-    """
     required_columns = [JsonConstants.FAMILY_ID_COLUMN, JsonConstants.INDIVIDUAL_ID_COLUMN] + (required_columns or [])
     missing_cols = [_to_title_case(_to_snake_case(col)) for col in set(required_columns) - set(column_map.values())]
     if update_features and JsonConstants.FEATURES not in column_map.values():
@@ -252,19 +208,6 @@ def _format_value(value, column):
 
 
 def validate_fam_file_records(project, records, errors=None, clear_invalid_values=False, update_features=False, related_guids=None, search_dataset_type=None, validate_expected_samples=None):
-    """Basic validation such as checking that parents have the same family id as the child, etc.
-
-    Args:
-        records (list): a list of dictionaries (see return value of #process_rows).
-
-    Returns:
-        dict: json representation of any errors, warnings, or info messages:
-            {
-                'errors': ['error text1', 'error text2', ...],
-                'warnings': ['warning text1', 'warning text2', ...],
-                'info': ['info message', ...],
-            }
-    """
     records_by_id = {r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN]: r for r in records
                      if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
     records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
@@ -361,22 +304,24 @@ def get_validated_related_individuals(project, records_by_id, errors, related_gu
         affected = records_by_id[individual_id].get(JsonConstants.AFFECTED_COLUMN, Individual.AFFECTED_STATUS_UNKNOWN)
         affected_status_by_family[family_id].append(affected)
 
-    search_samples =  Sample.objects.filter(individual__family__project=project, is_active=True)
+    search_individuals =  Individual.objects.filter(family__project=project)
 
     sample_type = None
     if search_dataset_type:
-        search_samples = search_samples.filter(dataset_type=search_dataset_type)
+        search_individuals = search_individuals.filter(active_datasets__dataset_type=search_dataset_type)
         if search_sample_type:
-            search_samples = search_samples.filter(sample_type=search_sample_type)
-        elif search_samples:
-            sample_type = search_samples.first().sample_type
+            search_individuals = search_individuals.filter(active_datasets__sample_type=search_sample_type)
+        elif search_individuals:
+            sample_type = search_individuals.first().active_datasets.first().sample_type
+    else:
+        search_individuals = search_individuals.filter(active_datasets__dataset_type__isnull=False)
     previous_loaded_individuals = {
         i[JsonConstants.INDIVIDUAL_ID_COLUMN]: i
-        for i in search_samples.values(
-            'individual_id', **{
-                JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual__individual_id'),
-                JsonConstants.FAMILY_ID_COLUMN: F('individual__family__family_id'),
-            })
+        for i in search_individuals.values(
+            **{
+                JsonConstants.INDIVIDUAL_ID_COLUMN: F('individual_id'),
+                JsonConstants.FAMILY_ID_COLUMN: F('family__family_id'),
+            }).annotate(individual_id=F('id'))
     }
 
     if validate_expected_samples:
@@ -450,13 +395,6 @@ def _validate_parent(row, parent_id_type, parent_id_field, parent_guid_field, ex
 
 
 def _is_header_row(row):
-    """Checks if the 1st row of a table is a header row
-
-    Args:
-        row (string): 1st row of a table
-    Returns:
-        True if it's a header row rather than data
-    """
     row = row.lower()
     if "family" in row and ("indiv" in row or "participant" in row):
         return True
@@ -486,18 +424,6 @@ def _parse_merged_pedigree_sample_manifest_rows(rows):
 
 
 def _parse_merged_pedigree_sample_manifest_format(rows, project):
-    """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
-
-    Kit ID, Well Position, Sample ID, Family ID, Collaborator Participant ID, Collaborator Sample ID,
-    Paternal Sample ID, Maternal ID, Gender, Affected Status, Volume, Concentration, Notes, Coded Phenotype,
-    Data Use Restrictions
-
-    Args:
-        rows (list): A list of lists where each list contains values from each column in the table.
-
-    Returns:
-         3-tuple: rows, sample_manifest_rows, kit_id
-    """
     c = MergedPedigreeSampleManifestConstants
     kit_id = rows[0][c.KIT_ID_COLUMN]
 

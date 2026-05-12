@@ -1,8 +1,3 @@
-"""seqr URL Configuration
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/1.9/topics/http/urls/
-"""
 from seqr.views.react_app import main_app, no_login_main_app
 from seqr.views.status import status_view
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR, MEDIA_ROOT, API_LOGIN_REQUIRED_URL, LOGIN_URL, DEBUG, \
@@ -144,7 +139,7 @@ from seqr.views.apis.analysis_group_api import update_analysis_group_handler, de
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler, \
     project_page_data, project_families, project_overview, project_mme_submisssions, project_individuals, \
     project_analysis_groups, update_project_workspace, project_family_notes, project_collaborators, project_locus_lists, \
-    project_samples, project_notifications, mark_read_project_notifications, subscribe_project_notifications, \
+    project_notifications, mark_read_project_notifications, subscribe_project_notifications, \
     update_project_rna_seq, load_rna_seq_sample_data
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.anvil_workspace_api import anvil_workspace_page, create_project_from_workspace, \
@@ -212,7 +207,6 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/details': project_page_data,
     'project/(?P<project_guid>[^/]+)/get_families': project_families,
     'project/(?P<project_guid>[^/]+)/get_individuals': project_individuals,
-    'project/(?P<project_guid>[^/]+)/get_samples': project_samples,
     'project/(?P<project_guid>[^/]+)/get_family_notes': project_family_notes,
     'project/(?P<project_guid>[^/]+)/get_mme_submissions': project_mme_submisssions,
     'project/(?P<project_guid>[^/]+)/get_analysis_groups': project_analysis_groups,

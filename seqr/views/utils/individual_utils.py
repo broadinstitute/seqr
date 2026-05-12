@@ -1,13 +1,10 @@
-"""
-APIs for retrieving, updating, creating, and deleting Individual records
-"""
 from collections import defaultdict
 
-from clickhouse_search.models.postgres_dicts import SexDict
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
-from seqr.models import Sample, IgvSample, RnaSample, Individual, Family, FamilyNote
+from seqr.models import Dataset, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.search.add_data_utils import trigger_rebuild_gt_stats
+from seqr.utils.add_data_utils import trigger_rebuild_gt_stats
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json, update_individual_parents, create_model_from_json, \
     update_family_from_json
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individuals, _get_json_for_families, get_json_for_family_notes
@@ -24,19 +21,6 @@ def _get_record_individual_id(record):
 
 
 def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_db_ids=False, get_created_counts=False, allow_features_update=False, skip_gt_stats_rebuild=False):
-    """
-    Add or update individual and family records in the given project.
-
-    Args:
-        project (object): Django ORM model for the project to add families to
-        individual_records (list): A list of JSON records representing individuals. See
-            the return value of pedigree_info_utils#convert_fam_file_rows_to_json(..)
-        user (object): current user model
-
-    Return:
-        3-tuple: updated Individual models, updated Family models, and updated FamilyNote models
-
-    """
     updated_family_ids = set()
     updated_individuals = set()
     updated_affected = set()
@@ -86,10 +70,12 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
 
     updated_family_models = Family.objects.filter(id__in=updated_family_ids)
     _remove_pedigree_images(updated_family_models, user)
-    if updated_affected and not skip_gt_stats_rebuild:
-        trigger_rebuild_gt_stats(project, user)
+    if updated_affected:
+        AffectedDict.reload(user)
+        if not skip_gt_stats_rebuild:
+            trigger_rebuild_gt_stats(project, user)
     if updated_sex:
-        SexDict.reload()
+        SexDict.reload(user)
 
     pedigree_json = None
     if get_update_json:
@@ -180,20 +166,19 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
 
 
 def delete_individuals(project, individual_guids, user):
-    """Delete one or more individuals
-
-    Args:
-        project (object): Django ORM model for project
-        individual_guids (list): GUIDs of individuals to delete
-
-    Returns:
-        list: Family objects for families with deleted individuals
-    """
     errors, individuals_to_delete = check_project_individuals_deletable(project, individual_guids=individual_guids)
     if errors:
         raise ErrorsWarningsException(errors)
 
-    Sample.bulk_delete(user, individual__in=individuals_to_delete)
+    datasets = Dataset.objects.filter(inactive_individuals__in=individuals_to_delete)
+    if individual_guids is None:
+        Dataset.bulk_delete(user, queryset=datasets)
+    else:
+        for dataset in datasets:
+            dataset.inactive_individuals.remove(*individuals_to_delete)
+            if not dataset.inactive_individuals.exists():
+                dataset.delete_model(user, user_can_delete=True)
+
     IgvSample.bulk_delete(user, individual__in=individuals_to_delete)
     RnaSample.bulk_delete(user, individual__in=individuals_to_delete)
     MatchmakerResult.bulk_delete(user, submission__individual__in=individuals_to_delete, submission__deleted_date__isnull=False)
@@ -231,7 +216,7 @@ def _validate_no_sumissions_no_search_samples(individuals_to_delete):
         individuals_to_delete, 'MME submission',
         dict(matchmakersubmission__isnull=False, matchmakersubmission__deleted_date__isnull=True)
     ) + _validate_delete_individuals(
-        individuals_to_delete, 'search sample', dict(sample__is_active=True)
+        individuals_to_delete, 'search sample', dict(active_datasets__isnull=False)
     )
 
 
@@ -244,7 +229,7 @@ def _get_updated_pedigree_json(updated_individuals, updated_families, updated_no
         individual['individualGuid']: individual for individual in
         _get_json_for_individuals(Individual.objects.filter(id__in=[
             i.id for i in updated_individuals
-        ]), user, add_sample_guids_field=True)
+        ]), user)
     }
     families_by_guid = {
         family['familyGuid']: family for family in

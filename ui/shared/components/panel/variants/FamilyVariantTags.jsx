@@ -108,7 +108,14 @@ export const taggedByPopup = (tag, title) => (trigger, hideMetadata) => (
             ) : <i>{tag.metadata}</i>}
           </div>
         )}
-        {tag.searchHash && <div><NavLink to={`/variant_search/results/${tag.searchHash}`}>Re-run search</NavLink></div>}
+        {tag.searchHash && (
+          <div>
+            <NavLink to={`/variant_search/results/${tag.searchHash}`}>
+              Re-run &nbsp;
+              {tag.searchName ? `search: "${tag.searchName}"` : 'custom search'}
+            </NavLink>
+          </div>
+        )}
       </div>
     }
   />
@@ -393,10 +400,14 @@ const mapStateToProps = (state, ownProps) => {
 
 const mapDispatchToProps = (dispatch, ownProps) => ({
   dispatchUpdateVariantNote: updates => dispatch(
-    updateVariantNote({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }),
+    updateVariantNote({
+      ...updates, variant: ownProps.variant, searchHash: ownProps.searchHash, familyGuid: ownProps.familyGuid,
+    }),
   ),
   dispatchUpdateFamilyVariantTags: updates => dispatch(
-    updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }),
+    updateVariantTags({
+      ...updates, variant: ownProps.variant, searchHash: ownProps.searchHash, familyGuid: ownProps.familyGuid,
+    }),
   ),
   dispatchUpdateFamilyVariantFunctionalTags: updates => dispatch(
     updateVariantTags({ ...updates, variant: ownProps.variant, familyGuid: ownProps.familyGuid }, 'functional_data'),

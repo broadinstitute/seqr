@@ -388,7 +388,7 @@ class LocalUsersAPITest(AuthenticationTestCase, UsersAPITest):
         self.assertEqual(response.reason_phrase, 'Password is required')
 
         response = self.client.post(set_password_url, content_type='application/json', data=json.dumps({
-            'userToken': quote_plus(password), 'password': 'password123', 'firstName': 'Test', 'isSuperuser': True}))
+            'userToken': quote_plus(password), 'password': 'password123', 'firstName': 'Test', 'isSuperuser': True}))  # nosec
         self.assertEqual(response.status_code, 200)
 
         user = User.objects.get(username='test_new_user')

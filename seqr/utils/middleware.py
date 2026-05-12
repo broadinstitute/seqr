@@ -11,7 +11,7 @@ from social_core.exceptions import AuthException
 import json
 import traceback
 
-from seqr.utils.search.utils import InvalidSearchException
+from clickhouse_search.search import InvalidSearchException
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.terra_api_utils import TerraAPIException

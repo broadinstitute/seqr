@@ -43,10 +43,10 @@ const LargeRow = styled(Grid.Row)`
 
 const scrollToTop = () => window.scrollTo(0, 0)
 
-const DisplayVariants = React.memo(({ displayVariants, compoundHetToggle }) => (
+const DisplayVariants = React.memo(({ displayVariants, ...props }) => (
   <Grid.Row>
     <Grid.Column width={16}>
-      <Variants variants={displayVariants} compoundHetToggle={compoundHetToggle} linkToSavedVariants />
+      <Variants variants={displayVariants} {...props} linkToSavedVariants />
     </Grid.Column>
   </Grid.Row>
 ))
@@ -95,7 +95,7 @@ const BaseVariantSearchResultsContent = React.memo(({
         <GeneBreakdown searchHash={searchHash} />
       </Grid.Column>
     </LargeRow>,
-    <DisplayVariants key="variants" displayVariants={displayVariants} compoundHetToggle={compoundHetToggle} />,
+    <DisplayVariants key="variants" displayVariants={displayVariants} compoundHetToggle={compoundHetToggle} searchHash={searchHash} />,
     <LargeRow key="bottomPagination">
       <Grid.Column width={11} floated="right" textAlign="right">
         <SearchDisplayForm formLocation="Bottom" match={match} paginationOnly searchOnSubmit {...props} />

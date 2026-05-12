@@ -521,7 +521,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         ])
 
 
-@mock.patch('seqr.utils.search.add_data_utils.LOADING_DATASETS_DIR', 'gs://seqr-loading-temp/v3.1')
+@mock.patch('seqr.utils.add_data_utils.LOADING_DATASETS_DIR', 'gs://seqr-loading-temp/v3.1')
 @mock.patch('reference_data.models.GeneInfo.CURRENT_VERSION', '27')
 class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
     fixtures = ['users', 'social_auth', 'reference_data', '1kg_project']
@@ -546,7 +546,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         patcher = mock.patch('seqr.views.utils.airtable_utils.logger')
         self.mock_airtable_logger = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.search.add_data_utils.logger')
+        patcher = mock.patch('seqr.utils.add_data_utils.logger')
         self.mock_add_data_utils_logger = patcher.start()
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
@@ -574,7 +574,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         self.mock_datetime = patcher.start()
         self.mock_datetime.now.side_effect = lambda: datetime(2021, 3, 1, 0, 0, 0)
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.utils.search.add_data_utils.safe_post_to_slack')
+        patcher = mock.patch('seqr.utils.add_data_utils.safe_post_to_slack')
         self.mock_slack = patcher.start()
         self.addCleanup(patcher.stop)
 
