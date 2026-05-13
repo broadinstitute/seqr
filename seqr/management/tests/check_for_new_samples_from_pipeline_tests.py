@@ -209,6 +209,7 @@ OPENED_RUN_JSON_FILES = [{
         },
         'sex_check': {
             'F000001_1': {'reasons': ['Sample NA19679 has pedigree sex F but imputed sex M']},
+            'F000011_11': {'reasons': ['Sample NA20870 has pedigree sex M but imputed sex F']},
             'F000014_14': {'reasons': ['Sample NA21987 has pedigree sex M but imputed sex F']},
         },
         'missing_samples': {
@@ -488,7 +489,7 @@ class CheckNewSamplesTest(object):
         })
 
         # Test notifications
-        self.assertEqual(self.mock_send_slack.call_count, 7 + len(self.ADDITIONAL_SLACK_CALLS))
+        self.assertEqual(self.mock_send_slack.call_count, 8 + len(self.ADDITIONAL_SLACK_CALLS))
         self.mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
@@ -508,6 +509,13 @@ The following 1 families failed sex check:
 The following 2 families failed missing samples:
 - 2: Missing samples: {'HG00732', 'HG00733'}
 - 3: Missing samples: {'NA20870'}""",
+            ),
+            mock.call(
+                'seqr_loading_notifications',
+                f"""Encountered the following errors loading Test Reprocessed Project:
+
+The following 1 families failed sex check:
+- 11: Sample NA20870 has pedigree sex M but imputed sex F{self.SKIPPED_PDO_MESSAGE}""",
             ),
             mock.call(
                 'seqr_loading_notifications',
@@ -767,6 +775,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
 *Run ID:* manual__2025-01-14
 *Validation Errors:* ['Missing the following expected contigs:chr17']""")
     SLACK_VALIDATION_MESSAGE = ''
+    SKIPPED_PDO_MESSAGE = ''
 
     def setUp(self):
         patcher = mock.patch('seqr.views.utils.export_utils.os.makedirs')
@@ -878,6 +887,7 @@ Desired update:
 - Missing the following expected contigs:chr17
 The following users have been notified: test_user_manager@test.com""")
     SLACK_VALIDATION_MESSAGE = '\nSee more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json'
+    SKIPPED_PDO_MESSAGE = '\n\nSkipped samples in this project have been moved to PDO-1234_sr'
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
