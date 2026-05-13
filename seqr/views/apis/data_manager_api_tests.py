@@ -1048,6 +1048,12 @@ class DataManagerAPITest(AirtableTest):
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
 
+        self._add_file_iter([])
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            **self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/mito_calls.mt', 'datasetType': 'MITO',
+        }))
+        self._assert_expected_validate_mito_response(response)
+
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing', 'ext-data'])
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
     @responses.activate
@@ -1440,6 +1446,13 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 500)
         self.assertDictEqual(response.json(), {'error': 'Airtable is not configured'})
 
+    def _assert_expected_validate_mito_response(self, response):
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz'],
+            'warnings': None,
+        })
+
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
@@ -1753,3 +1766,7 @@ Loading pipeline should be triggered with:
         self.assertDictEqual(response.json(), {
             'error': 'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
         })
+
+    def _assert_expected_validate_mito_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfSamples': None})
