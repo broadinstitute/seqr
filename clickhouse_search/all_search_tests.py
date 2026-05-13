@@ -1341,12 +1341,16 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         no_access_missing_gt_variant = {
             **GRCH37_VARIANT,
             'familyGuids': ['F0_7-143270172-A-G'],
-            'genotypes': {'I1_F0_7-143270172-A-G': GRCH37_VARIANT['genotypes']['I000004_hg00731']},
+            'genotypes': {'I1_F0_7-143270172-A-G': {
+                k: v for k, v in GRCH37_VARIANT['genotypes']['I000004_hg00731'].items()
+                if k not in {'familyGuid', 'individualGuid', 'sampleId'}
+            }}
         }
-        self.maxDiff = None
         self._assert_expected_lookup(
             '7-143270172-A-G', no_access_missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT],
-            genome_version='37', expected_individuals=expected_individuals, locusListsByGuid={},
+            genome_version='37', expected_individuals=expected_individuals, locusListsByGuid={}, skip_fields={
+                'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
+            },
         )
         self.assert_json_logs(self.manager_user, [
             ('Looking up variant 7-143270172-A-G with data type SNV_INDEL', None),
