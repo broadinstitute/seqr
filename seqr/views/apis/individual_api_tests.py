@@ -1019,11 +1019,11 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing individual id column'], 'warnings': []})
 
-        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent,sex,birth year,other affected relatives,onset age,expected inheritance,maternal ancestry,candidate genes,assigned analyst'
+        header = 'individual_id,hpo_term_present,hpo_term_absent,sex,birth year,other affected relatives,onset age,expected inheritance,maternal ancestry,candidate genes,assigned analyst'
         rows = [
-            '1,NA19678,,,,,no,infant,recessive,,,not_an_email',
-            '1,NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,,test_user_no_access@test.com',
-            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia);HP:0011675 (Arrhythmia),,,,,,,,,',
+            'NA19678,,,,,no,infant,recessive,,,not_an_email',
+            'NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,,test_user_no_access@test.com',
+            'HG007311,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia);HP:0011675 (Arrhythmia),,,,,,,,,',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
@@ -1038,12 +1038,15 @@ class IndividualAPITest(object):
                 'The following invalid values for "onset_age" will not be added: infant (NA19678)',
                 'The following invalid values for "expected_inheritance" will not be added: recessive (NA19678)',
                 'The following invalid values for "assigned_analyst" will not be added: not_an_email (NA19678); test_user_no_access@test.com (NA19679)',
-                'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
+                'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG007311',
                 'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
             ]})
 
         # send valid request
+        header = f'family_id,{header}'
         rows[0] = '1,NA19678,,,,,false,,,,,'
+        rows[1] = f'1,{rows[1]}'
+        rows[2] = rows[2].replace('HG007311', '1,HG00731')
         rows.append('1,NA19675_1,HP:0002017,"HP:0012469 (Infantile spasms);HP:0004322 (Short stature, severe)",F,2000,True,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1",test_user_collaborator@test.com')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
