@@ -1326,14 +1326,16 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             }),
         ])
 
+        self.login_base_user()
+        self.maxDiff = None
         self._assert_expected_lookup(
-            '7-143260172-A-G', missing_gt_variant, 'variant_lookup_results__7-143260172-A-G__38',
-            cached_variants=[GRCH37_VARIANT], project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+            '7-143270172-A-G', missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT], genome_version='37',
+            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
             individual_guids=['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']
         )
         self.assert_json_logs(self.manager_user, [
-            ('Looking up variant 7-143260172-A-G with data type SNV_INDEL', None),
-            ('Unable to map sample HG00733 in family F000002_2 to an individual for variant 7-143260172-A-G', {
+            ('Looking up variant 7-143270172-A-G with data type SNV_INDEL', None),
+            ('Unable to map sample HG00733 in family F000002_2 to an individual for variant 7-143270172-A-G', {
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
             }),
