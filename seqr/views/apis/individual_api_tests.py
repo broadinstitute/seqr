@@ -1072,8 +1072,12 @@ class IndividualAPITest(object):
     def _set_metadata_file_iter(self, genetic_findings_table):
         self.gs_files.update({
             f'{file_name}.tsv': iter(['\t'.join(row).encode() for row in file]) for file_name, file in [
-                ('experiment_dna_short_read', EXPERIMENT_TABLE),
-                ('experiment', EXPERIMENT_LOOKUP_TABLE),
+                ('experiment_dna_short_read', EXPERIMENT_TABLE + [[
+                    'Broad_exome_HG00732', 'Broad_SM-JDBTM', 'Broad_HG00732_1', 'Kapa HyperPrep', '151', 'exome', '', '', '2022-08-15', '385', 'NovaSeq', '',
+                ]]),
+                ('experiment', EXPERIMENT_LOOKUP_TABLE + [[
+                    'experiment_dna_short_read.Broad_exome_HG00732', 'experiment_dna_short_read', 'Broad_exome_HG00732', 'Broad_HG00732',
+                ]]),
                 ('participant', LOAD_PARTICIPANT_TABLE),
                 ('phenotype', PHENOTYPE_TABLE),
                 ('genetic_findings', genetic_findings_table),
@@ -1171,8 +1175,8 @@ class IndividualAPITest(object):
             'mother__individual_id', 'father__individual_id', 'features', 'absent_features', 'case_review_status',
         )
         self.assertDictEqual(individual_db_data[0], {
-            'individual_id': 'Broad_HG00732',
-            'display_name': '',
+            'individual_id': 'Broad_HG00732_1',
+            'display_name': 'Broad_HG00732',
             'family__guid': new_family_guid,
             'affected': 'N',
             'sex': 'M',
@@ -1220,7 +1224,7 @@ class IndividualAPITest(object):
             'sex': 'F',
             'proband_relationship': 'S',
             'mother__individual_id': None,
-            'father__individual_id': 'Broad_HG00732',
+            'father__individual_id': 'Broad_HG00732_1',
             'population': 'AMR',
             'features': [{'id': 'HP:0011675'}],
             'absent_features': [{'id': 'HP:0002017'}],
