@@ -320,7 +320,6 @@ export const STATE1 = {
         },
       ],
       sex: 'F',
-      sampleGuids: [],
     },
     I021475_na19675: {
       affected: 'A',
@@ -355,7 +354,6 @@ export const STATE1 = {
         },
       ],
       sex: 'M',
-      sampleGuids: [],
     },
     I021476_na19678: {
       affected: 'N',
@@ -370,7 +368,6 @@ export const STATE1 = {
       maternalId: '',
       paternalId: '',
       sex: 'M',
-      sampleGuids: [],
     },
   },
   analysisGroupsByGuid: {},
