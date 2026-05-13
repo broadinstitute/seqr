@@ -616,6 +616,11 @@ class SummaryDataAPITest(AirtableTest):
             {'4': {'name': 'De-Novo', 'date': '2023-12-05'}, 'support': {'name': 'High in Silico Scores', 'date': '2023-12-05'}},
         )
 
+        # Test reloading skips unchanged tags
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'info': ['Loaded 0 new and 1 updated AIP tags for 2 families (skipped 2 unchanged tags)']})
+
         self.check_no_analyst_no_access(url)
 
     def _assert_expected_new_saved_variant(self, new_saved_variant):
