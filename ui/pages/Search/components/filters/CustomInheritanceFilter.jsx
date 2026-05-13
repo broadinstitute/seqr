@@ -19,9 +19,7 @@ const CUSTOM_FILTERS = [
   { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
 ]
 
-const CustomInheritanceFilterContent = React.memo((
-  { value, onChange, family, individualsByGuid },
-) => {
+const CustomInheritanceFilterContent = React.memo(({ value, onChange, family, individualsByGuid }) => {
   const individuals = (family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).filter(
     individual => individual,
   )
