@@ -31,7 +31,7 @@ class SocialAuthPipelineTest(AuthenticationTestCase):
         self.reset_logs()
         responses.replace(responses.GET, url, status=200, body=REGISTER_RESPONSE)
         r = validate_anvil_registration(GoogleOAuth2(), {'access_token': '', 'email': 'test@seqr.org'})
-        self.assert_json_logs(None, [('GET https://terra.api/register 200 127', None)])
+        self.assert_json_logs(None, [(f'GET {url} 200 127', None)])
         self.assertIsNone(r)
 
     def test_validate_user_exist(self):
