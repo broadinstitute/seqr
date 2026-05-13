@@ -105,7 +105,6 @@ export const STATE = {
           label: 'Skeletal dysplasia',
         },
       ],
-      sampleGuids: [],
       sex: 'F',
       familyGuid: FAMILY_GUID,
     },
@@ -141,7 +140,6 @@ export const STATE = {
           gene: 'LGMD panel',
         },
       ],
-      sampleGuids: [],
       sex: 'M',
     },
     I021476_na19678: {

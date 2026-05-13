@@ -66,7 +66,6 @@ export const STATE1 = {
           label: 'Skeletal dysplasia',
         },
       ],
-      sampleGuids: [],
       sex: 'F',
     },
     I021475_na19675: {
@@ -101,7 +100,6 @@ export const STATE1 = {
           gene: 'LGMD panel',
         },
       ],
-      sampleGuids: [],
       sex: 'M',
     },
     I021476_na19678: {
@@ -117,7 +115,6 @@ export const STATE1 = {
       maternalId: '',
       paternalId: '',
       death_year: 2008,
-      sampleGuids: [],
       sex: 'M',
     },
   },
@@ -211,7 +208,6 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:28:00.000Z',
       createdDate: '2016-12-05T10:28:00.000Z',
-      sampleGuids: [],
       sex: 'F',
     },
     I021475_na19675_1: {
@@ -223,7 +219,6 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
       createdDate: '2016-12-05T10:29:00.000Z',
-      sampleGuids: [],
       sex: 'M',
       birthYear: 2010,
       deathYear: 0,
@@ -267,7 +262,6 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:30:00.000Z',
       createdDate: '2016-12-05T10:30:00.000Z',
-      sampleGuids: [],
       sex: 'M',
     },
     I021476_na19678_2: {
@@ -281,7 +275,6 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-06T10:28:00.000Z',
       createdDate: '2016-12-06T10:28:00.000Z',
-      sampleGuids: ['S2310656_wal_mc16200_mc16203'],
       igvSampleGuids: ['IS2310656_wal_mc16200_mc16203'],
       sex: 'F',
     },
@@ -294,7 +287,6 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-06T10:29:00.000Z',
       createdDate: '2016-12-06T10:29:00.000Z',
-      sampleGuids: [],
       sex: 'M',
     },
     I021474_na19679_2: {
@@ -306,7 +298,6 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-06T10:30:00.000Z',
       createdDate: '2016-12-06T10:30:00.000Z',
-      sampleGuids: [],
       sex: 'M',
     },
   },
