@@ -669,7 +669,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
             individual_key = (genotype.pop('familyGuid'), genotype.pop('sampleId'))
             if individual_key not in individual_summary_map:
                 logger.error(
-                    f'Unable to map sample {genotype["sampleId"]} in family {family_guid} to an individual for variant {variant["variantId"]}',
+                    f'Unable to map sample {individual_key[1]} in family {individual_key[0]} to an individual for variant {variant["variantId"]}',
                     user,
                 )
                 continue
