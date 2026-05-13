@@ -1328,6 +1328,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assert_json_logs(self.manager_user, unmapped_sample_logs)
 
         self.login_base_user()
+        self.reset_logs()
         expected_individuals = {'I1_F0_7-143270172-A-G': {
             'affected': 'A',
             'familyGuid': 'F0_7-143270172-A-G',
@@ -1353,7 +1354,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
             },
         )
-        self.assert_json_logs(self.manager_user, unmapped_sample_logs)
+        self.assert_json_logs(self.no_access_user, unmapped_sample_logs)
 
     def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, expected_individuals=None, skip_fields=None, cached_variants=None, additional_variant=None, sample_type=None, **kwargs):
         url = f'{reverse(variant_lookup_handler)}?variantId={variant_id}&genomeVersion={genome_version}'
