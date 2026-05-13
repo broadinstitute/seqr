@@ -1472,6 +1472,7 @@
         "last_modified_date": "2017-03-13T09:07:49.744Z",
         "individual": 7,
         "sample_type": "alignment",
+        "index_file_path": "gs://readviz/NA20870.cram.crai",
         "file_path": "gs://readviz/NA20870.cram"
     }
 },
