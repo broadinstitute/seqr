@@ -5,7 +5,7 @@ import { FormSpy } from 'react-final-form'
 import { Table, Header, Popup, Loader, Divider } from 'semantic-ui-react'
 
 import { loadFamilyDetails } from 'redux/rootReducer'
-import { getFamiliesByGuid, getIndividualsByGuid, getFamilyDetailsLoading } from 'redux/selectors'
+import { getFamiliesByGuid, getIndividualsByGuid, getFamilyDetailsLoading, getActiveDatasetsByIndividual } from 'redux/selectors'
 import DataLoader from 'shared/components/DataLoader'
 import { helpLabel } from 'shared/components/form/FormHelpers'
 import { Select, InlineToggle } from 'shared/components/form/Inputs'
@@ -19,7 +19,7 @@ const CUSTOM_FILTERS = [
   { filterField: 'genotype', options: NUM_ALT_OPTIONS, placeholder: 'Allele count' },
 ]
 
-const CustomInheritanceFilterContent = React.memo(({ value, onChange, family, individualsByGuid }) => {
+const CustomInheritanceFilterContent = React.memo(({ value, onChange, family, individualsByGuid, activeDatasetsByIndividual }) => {
   const individuals = (family.individualGuids || []).map(individualGuid => individualsByGuid[individualGuid]).filter(
     individual => individual,
   )
@@ -70,7 +70,7 @@ const CustomInheritanceFilterContent = React.memo(({ value, onChange, family, in
                 <Table.Cell key={filterField}>
                   <Select
                     {...fieldProps}
-                    disabled={!individual.sampleGuids.length}
+                    disabled={!activeDatasetsByIndividual[individual.individualGuid]?.length}
                     value={individualFilters[individual.individualGuid][filterField]}
                     onChange={handleChange(individual, filterField)}
                   />
@@ -84,7 +84,7 @@ const CustomInheritanceFilterContent = React.memo(({ value, onChange, family, in
               ) : <Table.Cell collapsing />}
             </Table.Row>
           )
-          return individual.sampleGuids.length ? row : (
+          return activeDatasetsByIndividual[individual.individualGuid]?.length ? row : (
             <Popup
               key={individual.individualGuid}
               trigger={row}
@@ -102,6 +102,7 @@ CustomInheritanceFilterContent.propTypes = {
   onChange: PropTypes.func,
   family: PropTypes.object,
   individualsByGuid: PropTypes.object,
+  activeDatasetsByIndividual: PropTypes.object,
 }
 
 const NO_CALL_FIELD = 'allowNoCall'
@@ -146,6 +147,7 @@ const CustomInheritanceFilter = React.memo(({ load, loading, family, individuals
 const mapStateToProps = (state, ownProps) => ({
   family: getFamiliesByGuid(state)[ownProps.familyGuid],
   individualsByGuid: getIndividualsByGuid(state),
+  activeDatasetsByIndividual: getActiveDatasetsByIndividual(state),
   loading: !!getFamilyDetailsLoading(state)[ownProps.familyGuid],
 })
 
