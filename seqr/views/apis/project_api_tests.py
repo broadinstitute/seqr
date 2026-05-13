@@ -1068,6 +1068,7 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
         self.assertSetEqual(set(project.can_edit_group.user_set.all()), {self.pm_user})
         self.assertSetEqual(set(project.can_view_group.user_set.all()), {self.pm_user})
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project_workspace(self):
         url = reverse(update_project_workspace, args=[PROJECT_GUID])
         # For non-AnVIL seqr, updating workspace should always fail
