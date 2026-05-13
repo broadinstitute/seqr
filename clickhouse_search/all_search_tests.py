@@ -1327,11 +1327,26 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         ])
 
         self.login_base_user()
+        expected_individuals = {'I1_F0_7-143270172-A-G': {
+            'affected': 'A',
+            'familyGuid': 'F0_7-143270172-A-G',
+            'features': [
+                {'category': 'HP:0000707', 'id': 'HP:0002011', 'label': 'Morphological abnormality of the central nervous system'},
+                {'category': 'HP:0001626', 'id': 'HP:0011675',  'label': 'Arrhythmia'},
+            ],
+            'individualGuid': 'I1_F0_7-143270172-A-G',
+            'sex': 'X0',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        }}
+        no_access_missing_gt_variant = {
+            **GRCH37_VARIANT,
+            'familyGuids': ['F0_7-143270172-A-G'],
+            'genotypes': {'I1_F0_7-143270172-A-G': GRCH37_VARIANT['genotypes']['I000004_hg00731']},
+        }
         self.maxDiff = None
         self._assert_expected_lookup(
-            '7-143270172-A-G', missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT], genome_version='37',
-            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
-            individual_guids=['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']
+            '7-143270172-A-G', no_access_missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT],
+            genome_version='37', expected_individuals=expected_individuals, locusListsByGuid={},
         )
         self.assert_json_logs(self.manager_user, [
             ('Looking up variant 7-143270172-A-G with data type SNV_INDEL', None),
