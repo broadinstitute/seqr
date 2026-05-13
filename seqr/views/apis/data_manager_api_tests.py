@@ -1651,18 +1651,22 @@ Loading pipeline should be triggered with:
             required_sample_field='gCNV_CallsetPath', additional_vcf_ids=",SeqrIDWithMismatch='NA21987'",
         )
 
+        responses.replace(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=INVALID_AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.calls.reset()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
             'errors': [
+                'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
                 'The following families have previously loaded samples absent from airtable\nFamily fam14: NA21234, NA21654',
+                'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
                 'The following samples are included in airtable but are missing from the VCF: NA21987',
             ],
         })
         self.assertEqual(len(responses.calls), 2)
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
+        responses.replace(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200)
 
     def _test_load_single_project(self, mock_open, mock_gzip_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_gzip_open, mock_mkdir, response, url, body)
