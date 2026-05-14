@@ -12,7 +12,8 @@ import responses
 from clickhouse_search.models.gt_stats_models import ProjectGtStatsSnvIndel, \
     ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv, \
     GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv
-from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, IndividualMetadataDict, DiscoveryVariantDict, \
+    ExcludedVariantDict
 from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, \
     ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel, ClinvarSearchMvGRCh37SnvIndel, HgmdMv, HgmdSearchMv,  \
     DbnsfpSnvIndelMv, DbnsfpSnvIndelDict, EigenMv, EigenDict, SpliceAiMv, SpliceAiDict, GnomadNonCodingConstraintDict, \
@@ -81,8 +82,8 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        AffectedDict.reload()
-        SexDict.reload()
+        for postgres_dict in [AffectedDict, SexDict, ExcludedVariantDict]:
+            postgres_dict.reload()
         for view in [
             ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,

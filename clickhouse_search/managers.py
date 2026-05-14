@@ -1055,7 +1055,7 @@ class BaseEntriesManager(SearchQuerySet):
 
     def result_values(self, *args, sample_data=None, **kwargs):
         entries = self._join_annotations(self)
-        return self._search_call_data(entries, sample_data)
+        return self._search_call_data(entries, sample_data, **kwargs)
 
     def _filter_project_families(self, entries, sample_data):
        project_guids = sample_data['project_guids']
@@ -1312,7 +1312,7 @@ class BaseEntriesManager(SearchQuerySet):
             fields.append('seqrPop')
         return fields
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, override_annotations=None, **kwargs):
+    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, override_annotations=None, additional_expressions=None, **kwargs):
         if annotate_hom_alts:
             entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
 
@@ -1323,7 +1323,7 @@ class BaseEntriesManager(SearchQuerySet):
             if skip_entry_fields:
                 entries = entries.annotate(numFamilies=Count('family_guid'))
             else:
-                gt_field, gt_expression = self.genotype_expression(sample_data)
+                gt_field, gt_expression = self.genotype_expression(sample_data, additional_expressions)
                 entries = entries.annotate(
                     familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                     **{gt_field: GroupArrayArray(gt_expression)},
@@ -1363,7 +1363,7 @@ class BaseEntriesManager(SearchQuerySet):
 
         return entries
 
-    def genotype_expression(self, sample_data=None):
+    def genotype_expression(self, sample_data=None, additional_expressions=None):
         family_samples = defaultdict(list)
         samples = (sample_data or {}).get('samples') or []
         for s in samples:
@@ -1378,6 +1378,9 @@ class BaseEntriesManager(SearchQuerySet):
             genotype_expressions.insert(0, f"map({', '.join(sample_map)})[family_guid][x.sampleId]")
             output_base_fields.insert(0, ('individualGuid', models.StringField()))
             output_field_kwargs = {'group_by_key': 'individualGuid', 'flatten_groups': True}
+        if additional_expressions:
+            genotype_expressions += list(additional_expressions.keys())
+            output_base_fields += list(additional_expressions.values())
         return 'genotypes' if samples else 'familyGenotypes', ArrayFilter(
             ArrayMap(
                 'calls',

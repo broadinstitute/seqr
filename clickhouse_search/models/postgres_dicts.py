@@ -41,7 +41,7 @@ class GeneIdDict(Dictionary):
 
 class IndividualMetadataDict(Dictionary):
     family_guid = models.StringField(primary_key=True)
-    sampleId = models.StringField()
+    sampled = models.StringField()
     restrict_sharing = models.BoolField()
     features = models.StringField()
     omim_id = models.UInt32Field()
@@ -52,7 +52,7 @@ class IndividualMetadataDict(Dictionary):
         db_table = 'seqrdb_individual_metadata_dict'
         engine = models.MergeTree(primary_key=('family_guid', 'sampleId'))
         layout = 'COMPLEX_KEY_HASHED()'
-        postgres_query = "select f.guid as family_guid, i.individual_id as sample_id, p.restrict_sharing as restrict_sharing, i.features as features, i.post_discovery_omim_numbers[1] as omim_id, i.post_discovery_mondo_id as mondo_id, f.analysis_status in ('S', 'S_kgfp', 'S_kgdp', 'S_ng', 'ES') as is_solved FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id INNER JOIN seqr_project p ON f.project_id = p.id"
+        postgres_query = "select f.guid as family_guid, i.individual_id as sampled, p.restrict_sharing as restrict_sharing, i.features as features, i.post_discovery_omim_numbers[1] as omim_id, i.post_discovery_mondo_id as mondo_id, f.analysis_status in ('S', 'S_kgfp', 'S_kgdp', 'S_ng', 'ES') as is_solved FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id INNER JOIN seqr_project p ON f.project_id = p.id"
 
 
 class DiscoveryVariantDict(Dictionary):
