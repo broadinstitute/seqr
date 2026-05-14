@@ -457,17 +457,20 @@ class CheckNewSamplesTest(object):
         num_calls = self._assert_expected_airtable_calls(bool(run_loading_logs), single_call)
         self.assertEqual(len(responses.calls), num_calls)
 
-    def _test_success_call(self, anvil_email_calls, next_dataset_id=155):
+    def _test_success_call(self, anvil_email_calls, next_dataset_id=155, fetched_tracking=True):
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
 
         self.maxDiff = None
+        tracking_logs = [
+            ('Fetched 2 AnVIL Seqr Loading Requests Tracking records from airtable', None),
+        ] if fetched_tracking and self.AIRTABLE_LOGS  else []
         self._test_call(run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
                 (f'create Dataset D0000{next_dataset_id}_snv_indel_wes_2025_09', {'dbUpdate': mock.ANY}),
                 (f'create Dataset D0000{next_dataset_id+1}_snv_indel_wes_2025_09', {'dbUpdate': mock.ANY}),
-            ] + self.AIRTABLE_LOGS + [
+            ] + self.AIRTABLE_LOGS + tracking_logs + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + self.UPDATE_SAMPLE_LOGS,
             'GRCh38/MITO': [
@@ -739,9 +742,9 @@ The following 1 families failed sex check:
 
         # Test reloading shared annotations is skipped if too many saved variants
         snv_indel_datasets.delete()
-        airtable_logs = self.AIRTABLE_LOGS[:-1]
+        airtable_logs = []
         if self.AIRTABLE_LOGS:
-            airtable_logs.append(('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None))
+            airtable_logs = self.AIRTABLE_LOGS + [('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None)]
         self._test_call(num_runs=2, run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
@@ -850,7 +853,6 @@ class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTe
         ('Fetching PDO records 0-1 from airtable', None),
         ('Fetched 1 PDO records from airtable', None),
         ('Fetching AnVIL Seqr Loading Requests Tracking records 0-2 from airtable', None),
-        ('Fetched 2 AnVIL Seqr Loading Requests Tracking records from airtable', None),
     ]
     VALIDATION_LOGS = [
         '==> gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json',
@@ -903,14 +905,6 @@ The following users have been notified: test_user_manager@test.com""")
     def _add_responses(self):
         responses.add(
             responses.GET,
-            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
-            json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
-        responses.add(
-            responses.GET,
-            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
-            json={'records': [{'id': 'rec12345', 'fields': {}}]})
-        responses.add(
-            responses.GET,
             self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format('R0002_empty'),
             json={'records': [{'id': 'rec12345', 'fields': {}}]})
         responses.add(
@@ -933,6 +927,14 @@ The following users have been notified: test_user_manager@test.com""")
 
     @responses.activate
     def test_command(self, *args, **kwargs):
+        responses.add(
+            responses.GET,
+            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
+            json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
+        responses.add(
+            responses.GET,
+            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
+            json={'records': [{'id': 'rec12345', 'fields': {}}]})
         self._add_responses()
         super().test_command(*args, **kwargs)
 
@@ -1052,4 +1054,4 @@ The following users have been notified: test_user_manager@test.com""")
         self._test_success_call(self._anvil_email_calls(
             email_text=ANVIL_ERROR_TEXT_EMAIL_TEMPLATE.format(error='\n'+ANVIL_ERROR_DELAY),
             email_html=ANVIL_ERROR_HTML_EMAIL_TEMPLATE.format(error='<br />'+ANVIL_ERROR_DELAY),
-        ), next_dataset_id=161)
+        ), next_dataset_id=161, fetched_tracking=False)
