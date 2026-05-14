@@ -16,8 +16,8 @@ import re
 from clickhouse_search.constants import XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY
 from clickhouse_search.search import get_clickhouse_variants, format_clickhouse_results, format_clickhouse_export_results, \
     get_sorted_search_results, clickhouse_variant_lookup, InvalidSearchException
-from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
-from seqr.models import Project, Family, Individual, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Dataset
+from reference_data.models import HumanPhenotypeOntology, GENOME_VERSION_GRCh38, GENOME_VERSION_LOOKUP
+from seqr.models import Project, Family, SavedVariant, VariantSearch, VariantSearchResults, ProjectCategory, Dataset
 from seqr.views.utils.export_utils import export_table
 from seqr.utils.gene_utils import get_genes_for_variant_display
 from seqr.utils.logging_utils import SeqrLogger
@@ -27,7 +27,7 @@ from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
-    get_json_for_saved_searches, add_individual_hpo_details, FAMILY_ADDITIONAL_VALUES
+    get_json_for_saved_searches, FAMILY_ADDITIONAL_VALUES
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
     login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission, user_is_analyst
 from seqr.views.utils.project_context_utils import get_projects_child_entities
@@ -35,17 +35,6 @@ from seqr.views.utils.variant_utils import get_variants_response, variant_datase
 from seqr.views.utils.vlm_utils import vlm_lookup
 
 logger = SeqrLogger(__name__)
-
-
-GENOTYPE_AC_LOOKUP = {
-    'ref_ref': [0, 0],
-    'has_ref': [0, 1],
-    'ref_alt': [1, 1],
-    'has_alt': [1, 2],
-    'alt_alt': [2, 2],
-}
-AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
-UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
 
 @login_and_policies_required
@@ -631,17 +620,6 @@ def _get_lookup_cache_key(user, variant_id, sample_type, genome_version, affecte
 
 
 def _update_lookup_variant(variant, response, individual_guid_map, user):
-    no_access_families = set(variant['familyGenotypes']) - set(variant['familyGuids'])
-    individual_summary_map = {
-        (i.pop('family__guid'), i.pop('individual_id')): (i.pop('guid'), i)
-        for i in Individual.objects.filter(family__guid__in=no_access_families).values(
-            'family__guid', 'individual_id', 'affected', 'sex', 'features', 'guid',
-            vlmContactEmail=F('family__project__vlm_contact_email'),
-            restrict_sharing=F('family__project__restrict_sharing'),
-        )
-    }
-    add_individual_hpo_details([i for _, i in individual_summary_map.values()])
-
     variant['genotypes'] = {}
     variant['lookupFamilyGuids'] = sorted([guid for guid in variant.pop('familyGuids') if guid in variant['familyGenotypes']])
     variant['familyGuids'] = []
@@ -665,23 +643,17 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
         variant['lookupFamilyGuids'].append(family_guid)
         if unmapped_family_guid in variant.get('liftedFamilyGuids', []):
             variant['liftedFamilyGuids'][variant['liftedFamilyGuids'].index(unmapped_family_guid)] = family_guid
-        individual_guid_map = {}
+        individual_key_map = {}
         for j, genotype in enumerate(genotypes):
             individual_key = (genotype.pop('familyGuid'), genotype.pop('sampleId'))
-            if individual_key not in individual_summary_map:
-                logger.error(
-                    f'Unable to map sample {individual_key[1]} in family {individual_key[0]} to an individual for variant {variant["variantId"]}',
-                    user,
-                )
-                continue
-            unmapped_individual_guid, individual = individual_summary_map[individual_key]
-            if unmapped_individual_guid in individual_guid_map:
-                individual_guid = individual_guid_map[unmapped_individual_guid]
+            individual = genotype.pop('metadata')
+            if individual_key in individual_key_map:
+                individual_guid = individual_key_map[individual_key]
                 variant['genotypes'][individual_guid] = [variant['genotypes'][individual_guid], genotype]
                 continue
             individual_guid = f'I{j}_{family_guid}'
-            individual_guid_map[unmapped_individual_guid] = individual_guid
-            features = individual['features'] or []
+            individual_key_map[individual_key] = individual_guid
+            features = _add_hpo_details(individual['features'])
             if individual.pop('restrict_sharing'):
                 feature_category_count = defaultdict(int)
                 for feature in features:
@@ -697,6 +669,20 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
                 'features': features,
             }
             variant['genotypes'][individual_guid] = genotype
+
+
+def _add_hpo_details(raw_features):
+    if not raw_features:
+        return []
+    features = json.loads(raw_features)
+    hpo_terms_by_id = {
+        hpo.pop('hpo_id'): hpo for hpo in HumanPhenotypeOntology.objects.filter(
+            hpo_id__in=[feature['id'] for feature in features],
+        ).values('hpo_id', category=F('category_id'), label=F('name'))
+    }
+    for feature in features:
+        feature.update(hpo_terms_by_id.get(feature['id'], {}))
+    return features
 
 
 @login_and_policies_required

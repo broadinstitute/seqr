@@ -1004,6 +1004,27 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self.check_require_login(reverse(variant_lookup_handler))
 
+        individual_metadata = {
+            'I000006_hg00733': {
+                'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F',
+                'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+            },
+            'I000005_hg00732': {
+                'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M',
+                'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+            },
+            'I000004_hg00731': {
+                'affected': 'A', 'features': '[{"id": "HP:0002011"}, {"id": "HP:0011675"}]', 'restrict_sharing': False,
+                'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+            },
+            'I000015_na20885': {
+                'affected': 'A', 'features': '[{"id": "HP:0011675"}, {"id": "HP:0001509"}]', 'restrict_sharing': True,
+                'sex': 'M', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+            },
+            'I000018_na21234': {
+                'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'vlmContactEmail': 'vlm@broadinstitute.org',
+            },
+        }
         lookup_variant = {
             **VARIANT1,
             'liftedFamilyGuids': ['F000014_14'],
@@ -1077,7 +1098,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_lookup(
             '1-10439-AC-A', expected_variant, cache_key, cached_variants=[lookup_variant], skip_fields={
                 'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
-            }, expected_individuals=expected_individuals, locusListsByGuid={},
+            }, expected_individuals=expected_individuals, individual_metadata=individual_metadata, locusListsByGuid={},
         )
 
         expected_gcnv_variant = {
@@ -1155,6 +1176,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             additional_variant=expected_gcnv_variant, cached_variants=[SV_VARIANT4, GCNV_VARIANT4], skip_fields={
                 'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
             }, expected_individuals=expected_sv_individuals, sample_type='WGS', locusListsByGuid={}, genesById=sv_genes,
+            individual_metadata=individual_metadata,
         )
 
         self.login_manager()
@@ -1357,7 +1379,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
         self.assert_json_logs(self.no_access_user, unmapped_sample_logs)
 
-    def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, expected_individuals=None, skip_fields=None, cached_variants=None, additional_variant=None, sample_type=None, **kwargs):
+    def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, expected_individuals=None, individual_metadata=None, skip_fields=None, cached_variants=None, additional_variant=None, sample_type=None, **kwargs):
         url = f'{reverse(variant_lookup_handler)}?variantId={variant_id}&genomeVersion={genome_version}'
         if hom_only:
             url += '&homOnly=true'
@@ -1399,7 +1421,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                     gts = [gts]
                 for gt in gts:
                     family_guid = gt.get('familyGuid') or expected_individuals[individual_guid]['familyGuid']
-                    family_genotypes[family_guid].append({k: v for k, v in gt.items() if k != 'individualGuid'})
+                    family_genotypes[family_guid].append({
+                        **{k: v for k, v in gt.items() if k != 'individualGuid'},
+                        'metadata': (individual_metadata or {}).get(gt['individualGuid']),
+                    })
             parsed_cached_variants.append({
                 **{k: v for k, v in v.items() if k not in {'familyGuids', 'genotypes'}},
                 'familyGenotypes': {

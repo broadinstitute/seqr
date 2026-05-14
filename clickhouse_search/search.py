@@ -911,7 +911,7 @@ def _lookup_genotype_expressions():
             ('sex', StringField()),
             ('restrict_sharing', BoolField()),
             ('features', StringField()),
-            ('vlm_contact_email', StringField()),
+            ('vlmContactEmail', StringField()),
         ])),
     }
 
@@ -986,7 +986,7 @@ def _add_liftover_genotypes(variant, data_type, affected_only, hom_only):
     lifted_id = f"{variant['liftedOverChrom']}-{variant['liftedOverPos']}-{variant['ref']}-{variant['alt']}"
     lifted_entries = lifted_entry_cls.objects.filter_locus(raw_variant_items=lifted_id)
     lifted_entries = _filter_lookup_entries(lifted_entries, affected_only, hom_only)
-    gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression()
+    gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression(additional_expressions=_lookup_genotype_expressions())
     lifted_entry_data = lifted_entries.values('key').annotate(**{gt_field: GroupArrayArray(gt_expr)})
     if lifted_entry_data:
         variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
