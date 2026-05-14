@@ -93,6 +93,7 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
 LOAD_PARTICIPANT_TABLE = deepcopy(PARTICIPANT_TABLE)
 for row in LOAD_PARTICIPANT_TABLE[4:]:
     row[7] = row[7].replace('Broad_', '')
+LOAD_PARTICIPANT_TABLE[5][11] = 'Niece'
 LOAD_PARTICIPANT_TABLE[6][15] += '|Asian'
 LOAD_PARTICIPANT_TABLE[6][17] = ''
 
@@ -1128,6 +1129,7 @@ class IndividualAPITest(object):
         })
         warnings = [
             'Broad_HG00733 is the mother of VCGS_FAM203_621_D2 but is not included',
+            'Skipped Invalid proband relationship "Niece" for NA20888 with given gender Male',
             'Skipped the following unrecognized HPO terms: HP:0001509',
         ]
         self.assertDictEqual(response_json['importStats'], {'gregorMetadata': {
@@ -1211,7 +1213,7 @@ class IndividualAPITest(object):
             'family__guid': 'F000012_12',
             'affected': 'A',
             'sex': 'M',
-            'proband_relationship': '',
+            'proband_relationship': None,
             'mother__individual_id': None,
             'father__individual_id': None,
             'population': 'SAS',
