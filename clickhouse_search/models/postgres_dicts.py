@@ -47,12 +47,13 @@ class IndividualMetadataDict(Dictionary):
     omim_id = models.UInt32Field()
     mondo_id = models.StringField()
     is_solved = models.BoolField()
+    vlm_contact_email = models.StringField()
 
     class Meta:
         db_table = 'seqrdb_individual_metadata_dict'
         engine = models.MergeTree(primary_key=('family_guid', 'sampleId'))
         layout = 'COMPLEX_KEY_HASHED()'
-        postgres_query = "select f.guid as family_guid, i.individual_id as sampleId, p.restrict_sharing as restrict_sharing, i.features as features, f.post_discovery_omim_numbers[1] as omim_id, f.post_discovery_mondo_id as mondo_id, f.analysis_status in (''S'', ''S_kgfp'', ''S_kgdp'', ''S_ng'', ''ES'') as is_solved FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id INNER JOIN seqr_project p ON f.project_id = p.id"
+        postgres_query = "select f.guid as family_guid, i.individual_id as sampleId, p.restrict_sharing as restrict_sharing, i.features as features, f.post_discovery_omim_numbers[1] as omim_id, f.post_discovery_mondo_id as mondo_id, f.analysis_status in (''S'', ''S_kgfp'', ''S_kgdp'', ''S_ng'', ''ES'') as is_solved, p.vlm_contact_email as vlm_contact_email FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id INNER JOIN seqr_project p ON f.project_id = p.id"
 
 
 class DiscoveryVariantDict(Dictionary):

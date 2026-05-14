@@ -647,6 +647,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
     variant['familyGuids'] = []
     for family_guid in variant['lookupFamilyGuids']:
         for genotype in variant['familyGenotypes'].pop(family_guid):
+            del genotype['metadata']
             individual_guid = individual_guid_map.get((family_guid, genotype['sampleId']))
             if not individual_guid:
                 logger.error(

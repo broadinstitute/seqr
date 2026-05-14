@@ -903,7 +903,7 @@ def _lookup_genotype_expressions():
     affected_expr = AffectedDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['affected'], default='U')
     sex_expr = SexDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['sex'], default='U')
     metadata_expr = IndividualMetadataDict.dict_get_sql(
-        key='(family_guid, x.sampleId)', fields=['restrict_sharing', 'features'],
+        key='(family_guid, x.sampleId)', fields=['restrict_sharing', 'features', 'vlm_contact_email'],
     )
     return {
         f'tupleConcat(({affected_expr}, {sex_expr}), {metadata_expr})': ('metadata', NamedTupleField([
@@ -911,6 +911,7 @@ def _lookup_genotype_expressions():
             ('sex', StringField()),
             ('restrict_sharing', BoolField()),
             ('features', StringField()),
+            ('vlm_contact_email', StringField()),
         ])),
     }
 
