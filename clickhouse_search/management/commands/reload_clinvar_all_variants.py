@@ -261,7 +261,7 @@ def parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenu
             if existing_version_obj:
                 if existing_version_obj.version == new_version:
                     logger.info(f'Clinvar ClickHouse tables already successfully updated to {new_version}, gracefully exiting.')
-                    return new_version
+                    return None
             logger.info( f'Updating Clinvar ClickHouse tables to {new_version} from {existing_version_obj and existing_version_obj.version}.')
             # Drop any currently existing variants in the table that may exist due to a
             # previously failed partial run.  Note that we validate that the Postgresql existing version
@@ -305,6 +305,9 @@ class Command(BaseCommand):
                 shutil.copyfileobj(r.raw, tmpfile)
             with gzip.open(tmpfile.name, 'rb') as gzipped_file:
                 new_version = parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenumerated_value_alerts)
+
+        if not new_version:
+            return
 
         for model, batch in model_to_batch.items():
             if batch:

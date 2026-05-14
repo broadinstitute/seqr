@@ -103,6 +103,8 @@ class ReloadClinvarAllVariantsTest(TestCase):
         responses.add(responses.GET, WEEKLY_XML_RELEASE, status=200, body=gzip.compress(WEEKLY_XML_RELEASE_DATA.encode()), stream=True)
         call_command('reload_clinvar_all_variants')
         mock_logger.assert_called_with('Clinvar ClickHouse tables already successfully updated to 2025-06-30, gracefully exiting.')
+        mock_safe_post_to_slack.assert_not_called()
+        self.assertEqual(DataVersions.objects.get(data_model_name='Clinvar').version, '2025-06-30')
 
     @responses.activate
     def test_parse_variants_all_types(self, mock_logger, mock_safe_post_to_slack):
