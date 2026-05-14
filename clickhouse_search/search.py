@@ -1,4 +1,4 @@
-from clickhouse_backend.models import ArrayField, StringField
+from clickhouse_backend.models import ArrayField, BoolField, StringField
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
@@ -882,10 +882,7 @@ def _clickhouse_variant_lookup(entries, genome_version, data_type, affected_only
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
-    entries = entries.result_values(additional_expressions=OrderedDict({
-        SexDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['sex'], default='U'): ('sex', models.StringField()),
-        AffectedDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['affected'], default='U'): ('affected', models.StringField()),
-    }))
+    entries = entries.result_values(additional_expressions=_lookup_genotype_expressions())
     results = variants_cls.objects.subquery_join(entries)
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
@@ -901,6 +898,21 @@ def _filter_lookup_entries(entries, affected_only, hom_only):
     if hom_only:
         entries = entries.filter(calls__array_exists={'gt': (2,)})
     return entries
+
+def _lookup_genotype_expressions():
+    affected_expr = AffectedDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['affected'], default='U')
+    sex_expr = SexDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['sex'], default='U')
+    metadata_expr = IndividualMetadataDict.dict_get_sql(
+        key='(family_guid, x.sampleId)', fields=['restrict_sharing', 'features'],
+    )
+    return {
+        f'tupleConcat(({affected_expr}, {sex_expr}), {metadata_expr})': ('metadata', NamedTupleField([
+            ('affected', StringField()),
+            ('sex', StringField()),
+            ('restrict_sharing', BoolField()),
+            ('features', StringField()),
+        ])),
+    }
 
 def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, affected_only, hom_only):
     data_type = entry_qs = None
