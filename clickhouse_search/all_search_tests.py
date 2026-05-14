@@ -82,7 +82,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        for postgres_dict in [AffectedDict, SexDict, ExcludedVariantDict]:
+        for postgres_dict in [AffectedDict, SexDict, IndividualMetadataDict, DiscoveryVariantDict, ExcludedVariantDict]:
             postgres_dict.reload()
         for view in [
             ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,

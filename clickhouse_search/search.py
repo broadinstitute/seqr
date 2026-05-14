@@ -14,6 +14,7 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
     ArrayMap, Modulo
 from clickhouse_search.managers import InvalidDatasetTypeException, InvalidSearchException
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
+from clickhouse_search.models.postgres_dicts import SexDict, AffectedDict, IndividualMetadataDict
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, EntriesSnvIndel,  \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
@@ -881,7 +882,10 @@ def _clickhouse_variant_lookup(entries, genome_version, data_type, affected_only
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
-    entries = entries.result_values()
+    entries = entries.result_values(additional_expressions=OrderedDict({
+        SexDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['sex'], default='U'): ('sex', models.StringField()),
+        AffectedDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['affected'], default='U'): ('affected', models.StringField()),
+    }))
     results = variants_cls.objects.subquery_join(entries)
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
