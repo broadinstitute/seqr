@@ -1024,6 +1024,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'I000018_na21234': {
                 'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'vlmContactEmail': 'vlm@broadinstitute.org',
             },
+            'I000019_na21987': {
+                'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'M', 'vlmContactEmail': 'vlm@broadinstitute.org',
+            },
+            'I000021_na21654': {
+                'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'vlmContactEmail': 'vlm@broadinstitute.org',
+            },
         }
         lookup_variant = {
             **VARIANT1,
@@ -1199,7 +1205,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_lookup(
             '1-10439-AC-A', lookup_variant, cache_key, expected_individuals=expected_individuals,
             project_guids=['R0001_1kg', 'R0003_test', 'R0004_non_analyst_project'],
-            family_guids=['F000002_2', 'F000011_11', 'F000014_14'],
+            family_guids=['F000002_2', 'F000011_11', 'F000014_14'], individual_metadata=individual_metadata,
         )
 
         hom_only_lookup_variant = {
@@ -1217,6 +1223,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             '1-10439-AC-A', hom_only_lookup_variant, f'{cache_key}__hom', hom_only=True,
             project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
             individual_guids=[guid for guid in individual_guid_map.keys() if guid != 'I000018_na21234'],
+            individual_metadata=individual_metadata,
         )
 
         url = self._assert_expected_lookup(
@@ -1234,6 +1241,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'VFD0000023_1248367227_r0390_10': mock.ANY, 'VFD0000024_1248367227_r0390_10': mock.ANY,
                 'VFD0000025_1248367227_r0390_10': mock.ANY, 'VFD0000026_1248367227_r0390_10': mock.ANY,
             },
+            individual_metadata=individual_metadata,
         )
 
         response = self.client.get(url + '&affectedOnly=true')
