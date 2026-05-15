@@ -16,10 +16,10 @@ from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, L
 from seqr.utils.gene_utils import get_genes_for_variants
 from seqr.utils.xpos_utils import parse_variant_id, get_chrom_pos
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
-from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_saved_variants_child_entities, \
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_child_entities, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, _get_json_for_families, \
     get_json_for_matchmaker_submissions
-from seqr.views.utils.permissions_utils import has_case_review_permissions, get_project_guids_user_can_view
+from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst, get_project_guids_user_can_view
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 
@@ -453,7 +453,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
         families = Family.objects.filter(guid__in=family_guids)
         add_families_context(
-            response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=is_analyst,
+            response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=user_is_analyst(request.user),
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
