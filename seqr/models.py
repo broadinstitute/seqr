@@ -1150,9 +1150,7 @@ class BulkOperationBase(models.Model):
         return models
 
     @classmethod
-    def bulk_delete(cls, user, queryset=None, **filter_kwargs):
-        if queryset is None:
-            queryset = cls.objects.filter(**filter_kwargs)
+    def bulk_delete(cls, user, queryset):
         cls.log_model_no_guid_bulk_update(queryset, user, 'delete')
         return queryset.delete()
 

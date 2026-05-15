@@ -126,17 +126,11 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         record['displayName'] = ''
 
     # Update the parent ids last, so if they are referencing updated individuals they will check for the correct ID
-    if 'father' in record or 'mother' in record:
+    if record.get(JsonConstants.MATERNAL_ID_COLUMN) is not None or record.get(JsonConstants.PATERNAL_ID_COLUMN) is not None:
         parent_updates.append({
             'individual': individual,
-            'mother': record.pop('mother', None),
-            'father': record.pop('father', None),
-        })
-    elif record.get('maternalId') is not None or record.get('paternalId') is not None:
-        parent_updates.append({
-            'individual': individual,
-            'maternalId': record.pop('maternalId', None),
-            'paternalId': record.pop('paternalId', None),
+            JsonConstants.MATERNAL_ID_COLUMN: record.pop(JsonConstants.MATERNAL_ID_COLUMN, None),
+            JsonConstants.PATERNAL_ID_COLUMN: record.pop(JsonConstants.PATERNAL_ID_COLUMN, None),
         })
 
     family_notes = record.pop(JsonConstants.FAMILY_NOTES_COLUMN, None)

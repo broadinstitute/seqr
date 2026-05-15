@@ -323,7 +323,7 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
             exclude_key_pairs=exclude_key_pairs.get(f'{Dataset.DATASET_TYPE_VARIANT_CALLS},{sv_dataset_type}'),
         )
         dataset_results = _evaluate_results(result_q, is_comp_het=True)
-        if not sv_sample_data['samples']:
+        if not (sv_sample_data['samples'] and type_snv_indel_sample_data['samples']):
             _add_individual_guids(dataset_results)
         results += dataset_results
         searched_dataset_types.add(sv_dataset_type)
@@ -469,7 +469,7 @@ def _set_individual_guids(result, sample_map):
         for genotype in genotypes:
             individual_guid = sample_map[(family_guid, genotype['sampleId'])]
             individual_genotypes[individual_guid].append({**genotype, 'individualGuid': individual_guid})
-    result['genotypes'] = {k: v[0] if len(v) == 1 else v for k, v in individual_genotypes.items()}
+    result['genotypes'] = {k: v[0] if len(v) == 1 else sorted(v, key=lambda g: g.get('sampleType')) for k, v in individual_genotypes.items()}
 
 
 def get_sorted_search_results(results, sort, families):
@@ -482,20 +482,12 @@ def get_sorted_search_results(results, sort, families):
 
 
 def format_clickhouse_export_results(results):
+    details_by_key = _get_details_by_key(results, lambda detail_qs: detail_qs.values(
+        'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
+        **detail_qs.split_variant_id_annotations(),
+    ))
+
     formatted_results = [variant for result in results for variant in (result if isinstance(result, list) else [result])]
-    if not formatted_results:
-        return []
-
-    genome_version = formatted_results[0]['genomeVersion']
-    keys_with_no_details = {result['key'] for result in formatted_results if not 'transcripts' in result}
-    detail_qs = get_variant_details_queryset(genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details)
-    details_by_key = {
-        detail['key']: detail for detail in detail_qs.values(
-            'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
-            **detail_qs.split_variant_id_annotations(),
-        )
-    }
-
     gene_ids = set()
     for result in formatted_results:
         if 'transcripts' in result:
@@ -513,18 +505,23 @@ def format_clickhouse_export_results(results):
     return formatted_results
 
 
-def format_clickhouse_results(results):
+def _get_details_by_key(results, format_details):
     if not results:
-        return []
+        return {}
 
     genome_version = (results[0] if isinstance(results[0], list) else results)[0]['genomeVersion']
     keys_with_no_details = {
-        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
+        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if
+        not 'transcripts' in variant
     }
-    details_by_key = {
+    return {
         detail['key']: detail for detail in
-        get_variant_details_queryset(genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details).result_values()
+        format_details(get_variant_details_queryset(genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details))
     }
+
+
+def format_clickhouse_results(results):
+    details_by_key = _get_details_by_key(results, lambda detail_qs: detail_qs.result_values())
 
     formatted_results = []
     for variant in results:
@@ -699,7 +696,7 @@ def _add_missing_multi_type_samples(individuals, data):
 
 def _no_affected_male_families(sample_data, user):
     sample_type_families = {
-        sample_type: families - set(sample_data['affected_male_family_guids'])
+        sample_type: set(families) - set(sample_data['affected_male_family_guids'])
         for sample_type, families in sample_data['sample_type_families'].items()
     }
     num_families = len(set().union(*sample_type_families.values()))
@@ -715,7 +712,7 @@ def _affected_male_families(sample_data, affected_male_family_guids):
     if len(affected_male_family_guids) == sample_data['num_families']:
         return sample_data
     sample_type_families = {
-        sample_type: families.intersection(affected_male_family_guids)
+        sample_type: set(families).intersection(affected_male_family_guids)
         for sample_type, families in sample_data['sample_type_families'].items()
     }
     return {
@@ -1020,14 +1017,6 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
     return lookup
 
 
-def _main_transcript(selected_transcript_id, sorted_transcripts):
-    if not sorted_transcripts:
-        return {}
-    if selected_transcript_id:
-        return next((t for t in sorted_transcripts if t['transcriptId'] == selected_transcript_id), {})
-    return sorted_transcripts[0]
-
-
 def delete_clickhouse_project(project, dataset_type, sample_type=None):
     if dataset_type == Dataset.DATASET_TYPE_SV_CALLS and sample_type == Dataset.SAMPLE_TYPE_WES:
         dataset_type = 'GCNV'
@@ -1061,22 +1050,16 @@ PYLIFTOVER_BUILD_LOOKUP = {
     GENOME_VERSION_GRCh38: ('hg19', 'hg38'),
     GENOME_VERSION_GRCh37: ('hg38', 'hg19'),
 }
-def _get_liftover(genome_version):
+
+def _run_liftover(genome_version, chrom, pos):
     if not LIFTOVERS[genome_version]:
         try:
             LIFTOVERS[genome_version] = LiftOver(*PYLIFTOVER_BUILD_LOOKUP[genome_version])
         except Exception as e:
             logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
-    return LIFTOVERS[genome_version]
+            return None
 
-
-def _run_liftover(genome_version, chrom, pos):
-    liftover = _get_liftover(genome_version)
-    if not liftover:
-        return None
-    lifted_coord = liftover.convert_coordinate(
+    lifted_coord = LIFTOVERS[genome_version].convert_coordinate(
         'chr{}'.format(chrom.lstrip('chr')), int(pos)
     )
-    if lifted_coord and lifted_coord[0]:
-        return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1])
-    return None
+    return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1]) if lifted_coord and lifted_coord[0] else None

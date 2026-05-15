@@ -519,8 +519,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         inheritance_mode = 'x_linked_recessive'
-        self._assert_expected_search([], inheritance_mode=inheritance_mode)
-        # self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA_WITH_SEX)
+        self._assert_expected_search([], inheritance_mode=inheritance_mode, export_data=[EXPORT_DATA[0][:24]])
+        self._assert_expected_search([], inheritance_mode=inheritance_mode, inheritance_filter={'allowNoCall': True})
 
         inheritance_mode = 'homozygous_recessive'
         self._assert_expected_search(
@@ -587,6 +587,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_filter=sv_affected, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
             ], project_families=SV_PROJECT_FAMILIES,
+        )
+
+        self._assert_expected_search(
+            [], inheritance_mode=inheritance_mode, project_families=MULTI_PROJECT_PROJECT_FAMILIES,
+            **COMP_HET_ALL_PASS_FILTERS, locus={'rawItems': 'chrX:1-100000000'},
         )
 
         inheritance_mode = 'recessive'
@@ -1837,6 +1842,16 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}], {}],
         )
 
+        self._assert_expected_search(
+            [PROJECT_2_VARIANT1, VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4], MITO_VARIANT3],
+            inheritance_mode='recessive', project_families=MULTI_PROJECT_PROJECT_FAMILIES, pathogenicity=pathogenicity,
+            locus={'rawItems': 'chr1:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, M:1-100000000'},
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1, cached_variant_fields=[{}, {}, [
+                {'selectedGeneId': 'ENSG00000277258'},
+                {'selectedGeneId': 'ENSG00000277258'},
+            ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}], {}],
+        )
+
         selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
         self._assert_expected_search(
             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, MITO_VARIANT3],
@@ -1936,7 +1951,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT], in_silico={'gnomad_noncoding': 0.5, 'requireScore': True},
+            [VARIANT2, MULTI_FAMILY_VARIANT], in_silico={'gnomad_noncoding': 0.5, 'vest': None, 'requireScore': True},
         )
 
         self._assert_expected_search(
@@ -1953,6 +1968,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.login_manager()
         self._assert_expected_search(
             [SV_VARIANT4], in_silico=sv_in_silico, project_families=SV_PROJECT_FAMILIES,
+        )
+        self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3], in_silico={'strvctvre': 0.2}, project_families=SV_PROJECT_FAMILIES,
         )
 
         self._set_grch37_search()
