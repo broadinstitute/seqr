@@ -58,21 +58,23 @@ class IndividualMetadataDict(Dictionary):
 
 class DiscoveryVariantDict(Dictionary):
     key = models.UInt32Field(primary_key=True)
+    dataset_type = models.StringField()
     family_guids = models.ArrayField(models.StringField())
 
     class Meta:
         db_table = 'seqrdb_discovery_variant_dict'
-        engine = models.MergeTree(primary_key='key')
+        engine = models.MergeTree(primary_key=('key', 'dataset_type'))
         layout = 'COMPLEX_KEY_HASHED()'
-        postgres_query = "SELECT sv.key as key, array_agg(distinct f.guid) as family_guids FROM seqr_savedvariant sv INNER JOIN seqr_family f ON sv.family_id = f.id WHERE sv.id IN (SELECT savedvariant_id FROM seqr_varianttag_saved_variants vts LEFT JOIN seqr_varianttag vt ON vts.varianttag_id = vt.id LEFT JOIN seqr_varianttagtype vtt ON vt.variant_tag_type_id = vtt.id WHERE vtt.category = ''CMG Discovery Tags'') GROUP BY sv.key"
+        postgres_query = "SELECT sv.key as key, sv.dataset_type as dataset_type, array_agg(distinct f.guid) as family_guids FROM seqr_savedvariant sv INNER JOIN seqr_family f ON sv.family_id = f.id WHERE sv.id IN (SELECT savedvariant_id FROM seqr_varianttag_saved_variants vts LEFT JOIN seqr_varianttag vt ON vts.varianttag_id = vt.id LEFT JOIN seqr_varianttagtype vtt ON vt.variant_tag_type_id = vtt.id WHERE vtt.category = ''CMG Discovery Tags'') GROUP BY sv.key, sv.dataset_type"
 
 
 class ExcludedVariantDict(Dictionary):
     key = models.UInt32Field(primary_key=True)
+    dataset_type = models.StringField()
     family_guids = models.ArrayField(models.StringField())
 
     class Meta:
         db_table = 'seqrdb_excluded_variant_dict'
-        engine = models.MergeTree(primary_key='key')
+        engine = models.MergeTree(primary_key=('key', 'dataset_type'))
         layout = 'COMPLEX_KEY_HASHED()'
-        postgres_query = "SELECT sv.key as key, array_agg(distinct f.guid) as family_guids FROM seqr_savedvariant sv INNER JOIN seqr_family f ON sv.family_id = f.id WHERE sv.id IN (SELECT savedvariant_id FROM seqr_varianttag_saved_variants vts LEFT JOIN seqr_varianttag vt ON vts.varianttag_id = vt.id LEFT JOIN seqr_varianttagtype vtt ON vt.variant_tag_type_id = vtt.id WHERE vtt.name = ''Excluded'') GROUP BY sv.key"
+        postgres_query = "SELECT sv.key as key, sv.dataset_type as dataset_type, array_agg(distinct f.guid) as family_guids FROM seqr_savedvariant sv INNER JOIN seqr_family f ON sv.family_id = f.id WHERE sv.id IN (SELECT savedvariant_id FROM seqr_varianttag_saved_variants vts LEFT JOIN seqr_varianttag vt ON vts.varianttag_id = vt.id LEFT JOIN seqr_varianttagtype vtt ON vt.variant_tag_type_id = vtt.id WHERE vtt.name = ''Excluded'') GROUP BY sv.key, sv.dataset_type"
