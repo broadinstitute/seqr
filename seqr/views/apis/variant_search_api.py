@@ -596,6 +596,7 @@ def variant_lookup_handler(request):
         variant['familyGuids'] = list(families.values_list('guid', flat=True))
 
     saved_variants = _get_saved_variant_models(variants) if families else None
+    # TODO move discovery family parsing up so not removed or add flag for tracking
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
         add_all_context=True, add_locus_list_detail=True, genome_version=genome_version,
