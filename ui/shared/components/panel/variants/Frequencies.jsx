@@ -175,12 +175,11 @@ FreqSummary.propTypes = {
 
 const getGenePath = ({ variant }) => `gene/${getVariantMainGeneId(variant)}`
 
-const gnomadLink = ({ fieldTitle, esVersion, variant, ...props }) => {
-  const isEs = !(variant || {}).populations?.seqr
+const gnomadLink = ({ fieldTitle, variant, ...props }) => {
   const [prefix, detail] = fieldTitle.split(' ')
   return (
     <span>
-      <FreqLink {...props} variant={variant} displayValue={`${prefix} ${isEs ? esVersion : 'v4'}`} getPath={getGenePath} />
+      <FreqLink {...props} variant={variant} displayValue={`${prefix} v4`} getPath={getGenePath} />
       &nbsp;
       {detail}
     </span>
@@ -191,15 +190,14 @@ gnomadLink.propTypes = {
   fieldTitle: PropTypes.string,
 }
 
-const gnomadAnWarning = ({ ac, an }, { fieldTitle, maxAN, variant }) => {
-  const isEs = !(variant || {}).populations?.seqr
-  return (!isEs && ac && an < (maxAN / 2)) ? (
+const gnomadAnWarning = ({ ac, an }, { fieldTitle, maxAN }) => (
+  (ac && an < (maxAN / 2)) ? (
     <Popup
       trigger={<Label color="orange" content="low cov." size="mini" horizontal />}
       content={`This variant is covered in fewer than 50% of individuals in ${fieldTitle}. This may indicate a low-quality site.`}
     />
   ) : null
-}
+)
 
 const GNOMAD_URL_INFO = {
   urls: { [GENOME_VERSION_37]: 'gnomad.broadinstitute.org', [GENOME_VERSION_38]: 'gnomad.broadinstitute.org' },
@@ -242,15 +240,11 @@ GlobalAcSampleTypeSummary.propTypes = {
 const HOM_SECTION = 'Homoplasmy'
 const HET_SECTION = 'Heteroplasmy'
 
-const SV_CALLSET_POP = { field: 'sv_callset', fieldTitle: 'This Callset', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE }
-const CALLSET_POP = { field: 'callset', fieldTitle: 'This Callset', acDisplay: 'AC' }
-const SEQR_POP = { ...CALLSET_POP, field: 'seqr', fieldTitle: 'seqr' }
+const SEQR_POP = { field: 'seqr', fieldTitle: 'seqr', acDisplay: 'AC' }
 
 const POPULATIONS = [
-  SV_CALLSET_POP,
-  { ...SV_CALLSET_POP, field: 'sv_seqr', fieldTitle: 'seqr' },
+  { field: 'sv_seqr', fieldTitle: 'seqr', acDisplay: 'AC', helpMessage: SV_CALLSET_CRITERIA_MESSAGE },
   { ...SEQR_POP, field: 'sv_seqr_affected', fieldTitle: 'seqr affected' },
-  CALLSET_POP,
   SEQR_POP,
   { ...SEQR_POP, field: 'seqr_affected', fieldTitle: 'seqr affected' },
   {
@@ -259,7 +253,6 @@ const POPULATIONS = [
     titleContainer: gnomadLink,
     warningContainer: gnomadAnWarning,
     maxAN: 730947 * 2, // From https://gnomad.broadinstitute.org/stats
-    esVersion: 'v2',
     conditionalQueryParams: populations => (populations.seqr ? GNOMAD_URL_INFO.queryParams : { [GENOME_VERSION_37]: 'dataset=gnomad_r2_1' }),
     ...GNOMAD_URL_INFO,
   },
@@ -269,7 +262,6 @@ const POPULATIONS = [
     titleContainer: gnomadLink,
     warningContainer: gnomadAnWarning,
     maxAN: 76215 * 2, // From https://gnomad.broadinstitute.org/stats
-    esVersion: 'v3',
     conditionalQueryParams: populations => (populations.seqr ? GNOMAD_URL_INFO.queryParams : { [GENOME_VERSION_38]: 'dataset=gnomad_r3' }),
     precision: 3,
     ...GNOMAD_URL_INFO,
@@ -293,10 +285,8 @@ const POPULATIONS = [
   },
 ]
 
-const CALLSET_HET_POP = {
-  field: 'callset_heteroplasmy',
-  fieldTitle: 'This Callset',
-  acDisplay: 'AC',
+const SEQR_HET_POP = {
+  ...SEQR_POP,
   titleContainer: sectionTitle,
   section: HET_SECTION,
 }
@@ -309,19 +299,13 @@ const SEQR_HOM_POP = {
 
 const MITO_POPULATIONS = [
   {
-    ...CALLSET_POP,
-    titleContainer: sectionTitle,
-    section: HOM_SECTION,
-  },
-  {
     ...SEQR_POP,
     titleContainer: sectionTitle,
     section: HOM_SECTION,
   },
   { ...SEQR_HOM_POP, field: 'seqr_affected', fieldTitle: 'seqr affected' },
-  CALLSET_HET_POP,
-  { ...CALLSET_HET_POP, field: 'seqr_heteroplasmy', fieldTitle: 'seqr' },
-  { ...CALLSET_HET_POP, field: 'seqr_heteroplasmy_affected', fieldTitle: 'seqr affected' },
+  { ...SEQR_HET_POP, field: 'seqr_heteroplasmy', fieldTitle: 'seqr' },
+  { ...SEQR_HET_POP, field: 'seqr_heteroplasmy_affected', fieldTitle: 'seqr affected' },
   {
     field: 'gnomad_mito',
     fieldTitle: 'gnomAD mito',
@@ -388,8 +372,7 @@ const getValueDisplay = (pop, valueField, precision) => (valueField === 'ac' ?
 
 const Frequencies = React.memo(({ variant, totalSampleCounts }) => {
   const { populations = {}, svType } = variant
-  const callsetHetPop = populations.callset_heteroplasmy || populations.seqr_heteroplasmy
-  const isMito = callsetHetPop && callsetHetPop.ac !== null && callsetHetPop.ac !== undefined
+  const isMito = !!populations.seqr_heteroplasmy
   const popConfigs = isMito ? MITO_POPULATIONS : POPULATIONS
   let datasetType = isMito ? DATASET_TYPE_MITO_CALLS : DATASET_TYPE_SNV_INDEL_CALLS
   datasetType = svType ? DATASET_TYPE_SV_CALLS : datasetType
