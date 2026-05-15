@@ -196,11 +196,11 @@ const applyUserTrackSettings = (tracks, options) => tracks.map(track => ({
   } : {},
 }))
 
-const getVariantLocus = (variant, project) => {
+const getVariantLocus = (variant) => {
   const size = variant.end && variant.end - variant.pos
   return getLocus(
     variant.chrom,
-    (variant.genomeVersion !== project.genomeVersion && variant.liftedOverPos) ? variant.liftedOverPos : variant.pos,
+    variant.pos,
     size ? Math.max(Math.round(size / 2), MIN_LOCUS_RANGE_SIZE) : MIN_LOCUS_RANGE_SIZE,
     size,
   )
@@ -309,7 +309,7 @@ class FamilyReads extends React.PureComponent {
     this.setState({
       openFamily: familyGuid,
       sampleTypes,
-      locus: variant && getVariantLocus(variant, this.getProjectForFamily(familyGuid)),
+      locus: variant && getVariantLocus(variant),
     })
   }
 
@@ -416,7 +416,7 @@ class FamilyReads extends React.PureComponent {
     const project = openFamily && this.getProjectForFamily(openFamily)
     const geneLocus = project && variant && getGeneLocus(variant, genesById, project)
     const locusOptions = [
-      { text: 'Variant', value: geneLocus && getVariantLocus(variant, project) },
+      { text: 'Variant', value: geneLocus && getVariantLocus(variant) },
       { text: 'Gene', value: geneLocus },
       {
         text: 'Splice Outlier',

@@ -828,7 +828,7 @@ SORT_EXPRESSIONS = {
     'alphamissense': [
         lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else MIN_SORT_RANK,
     ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=MIN_SORT_RANK),
-    'callset_af': _subfield_sort('populations', ('seqr', 'sv_callset'), 'ac'),
+    'seqr_ac': _subfield_sort('populations', ('seqr', 'sv_callset'), 'ac'),
     'family_guid': [lambda x: sorted(x.get('familyGuids', ['z']))[0]],
     'gnomad': _subfield_sort('populations', ('gnomad_genomes', 'gnomad_mito', 'gnomad_svs'), 'af'),
     'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),

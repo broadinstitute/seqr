@@ -449,11 +449,9 @@ const svSizeDisplay = (size) => {
   return `${(size / 1000000).toFixed(2) / 1}Mb`
 }
 
-const getLofDetails = ({ isLofNagnag, lofFilters, lofFilter, lofFlags, lof }) => {
-  const isNagnag = isLofNagnag || lofFlags === 'NAGNAG_SITE'
-  const filters = lofFilters || (lof === 'LC' && lofFilter && lofFilter.split(/&|,/g))
-  return (filters || isNagnag) ? [
-    ...(filters ? [...new Set(filters)] : []).map((lofFilterKey) => {
+const getLofDetails = ({ isLofNagnag, lofFilters }) => (
+  (lofFilters || isLofNagnag) ? [
+    ...(lofFilters ? [...new Set(lofFilters)] : []).map((lofFilterKey) => {
       const filter = LOF_FILTER_MAP[lofFilterKey] || { message: lofFilterKey }
       return (
         <div key={lofFilterKey}>
@@ -463,7 +461,7 @@ const getLofDetails = ({ isLofNagnag, lofFilters, lofFilter, lofFlags, lof }) =>
         </div>
       )
     }),
-    isNagnag ? (
+    isLofNagnag ? (
       <div key="NAGNAG_SITE">
         <b>LOFTEE: NAGNAG site</b>
         <br />
@@ -471,7 +469,7 @@ const getLofDetails = ({ isLofNagnag, lofFilters, lofFilter, lofFlags, lof }) =>
       </div>
     ) : null,
   ] : null
-}
+)
 
 // Adapted from https://github.com/ImperialCardioGenetics/UTRannotator/blob/master/README.md#the-detailed-annotation-for-each-consequence
 const UTR_ANNOTATOR_DESCRIPTIONS = {
@@ -533,7 +531,7 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
     endChrom, CAID,
   } = variant
   const mainTranscript = getVariantMainTranscript(variant)
-  const lofDetails = getLofDetails(mainTranscript.loftee || mainTranscript)
+  const lofDetails = getLofDetails(mainTranscript.loftee || {})
 
   const transcriptPopupProps = mainTranscript.transcriptId && {
     content: <TranscriptLink variant={variant} transcript={mainTranscript} />,

@@ -2026,7 +2026,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search(
             [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, VARIANT4, MULTI_FAMILY_VARIANT, VARIANT1, VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT1],
-            sort='callset_af',
+            sort='seqr_ac',
         )
 
         self._assert_expected_search(
@@ -2096,7 +2096,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search(
             [MITO_VARIANT3, [VARIANT4, VARIANT3], VARIANT2],
-            sort='callset_af', inheritance_mode='recessive', **ALL_SNV_INDEL_PASS_FILTERS, cached_variant_fields=[
+            sort='seqr_ac', inheritance_mode='recessive', **ALL_SNV_INDEL_PASS_FILTERS, cached_variant_fields=[
                 {}, [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}], {},
             ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
@@ -2156,7 +2156,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search(
             [[VARIANT4, VARIANT3], [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4],
              [GCNV_VARIANT3, GCNV_VARIANT4]],
-            sort='callset_af', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
+            sort='seqr_ac', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
                 [{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}],
                 [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
