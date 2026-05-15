@@ -921,7 +921,7 @@ class VariantDetailsQuerySet(VariantsQuerySet):
         annotations = {
             **super().annotation_values,
             **self.split_variant_id_annotations(),
-            'discoveryFamilies': DiscoveryVariantDict.dict_get_expression('key'),
+            'discoveryFamilies': DiscoveryVariantDict.dict_get_expression('key', dataset_type='SNV_INDEL'),
         }
         if self.has_annotation('hgmd_join'):
             annotations.update({
