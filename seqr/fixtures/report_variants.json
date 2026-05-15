@@ -17,35 +17,6 @@
         "genotypes": {
             "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
         },
-        "saved_variant_json": {
-            "liftedOverGenomeVersion": "37",
-            "pos": 1912634,
-            "end": 1912634,
-            "xpos": 19001912634,
-            "ref": "C",
-            "alt": "T",
-            "genomeVersion": "38", "genotypeFilters": [],
-            "genotypes": {
-                "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
-            },
-            "populations": {
-                "g1k": {
-                    "ac": 2206,
-                    "af": 0.6838,
-                    "an": 5008,
-                    "hemi": null,
-                    "hom": null
-                    }
-                },
-            "liftedOverPos": 1912633,
-            "liftedOverChrom": "19",
-            "variantId": "19-1912634-C-T",
-            "chrom": "19",
-            "transcripts": {
-                "ENSG00000240361": []
-            },
-            "CAID": "CA403171634"
-        },
         "family": 2
     }
 },
@@ -68,38 +39,6 @@
         "genotypes": {
             "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
         },
-        "saved_variant_json": {
-            "liftedOverGenomeVersion": "37",
-            "pos": 1912633,
-            "end": 1912633,
-            "xpos": 19001912633,
-            "ref": "G",
-            "alt": "T",
-            "genomeVersion": "38", "genotypeFilters": [],
-            "genotypes": {
-                "I000004_hg00731": {"sampleId": "HG00731", "ab": 0, "ad": null, "gq": 21, "dp": 7, "pl": null, "numAlt": 1}
-            },
-            "populations": {
-                "g1k": {
-                    "ac": 2206,
-                    "af": 0.6838,
-                    "an": 5008,
-                    "hemi": null,
-                    "hom": null
-                    }
-                },
-            "liftedOverPos": 1912632,
-            "liftedOverChrom": "19",
-            "variantId": "19-1912633-G-T",
-            "chrom": "19",
-            "mainTranscriptId": "ENST00000371839",
-            "transcripts": {
-                "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361"}
-                ]
-            },
-            "CAID": "CA403171631"
-        },
         "family": 2
     }
 },
@@ -121,25 +60,6 @@
         "main_transcript": {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361", "hgvsc": "c.586_587delinsTT", "hgvsp": "p.Ala196Leu"},
         "genotypes": {
             "I000004_hg00731": {"numAlt": 1}
-        },
-        "saved_variant_json": {
-            "pos": 1912632,
-            "end": 1912632,
-            "xpos": 19001912632,
-            "genomeVersion": "38", "genotypeFilters": [],
-            "genotypes": {
-                "I000004_hg00731": {"numAlt": 1}
-            },
-            "variantId": "19-1912632-G-C",
-            "chrom": "19",
-            "mainTranscriptId": "ENST00000371839",
-            "transcripts": {
-                "ENSG00000135953": [
-                    {"transcriptId": "ENST00000371839", "biotype": "protein_coding", "geneId": "ENSG00000240361",
-                    "hgvsc": "c.586_587delinsTT", "hgvsp": "p.Ala196Leu"}
-                ]
-            },
-            "CAID": null
         },
         "family": 2
     }
@@ -164,7 +84,6 @@
         },
         "gene_ids": ["ENSG00000198727"],
         "main_transcript": {"aminoAcids": "L", "biotype": "protein_coding", "canonical": 1, "codons": "Tta/Cta", "consequenceTerms": ["synonymous_variant"], "geneId": "ENSG00000198727", "hgvsc": "ENST00000361789.2:c.37T>C", "hgvsp": "ENSP00000354554.2:p.Leu13=", "loftee": [null, []], "majorConsequence": "synonymous_variant", "transcriptId": "ENST00000361789", "transcriptRank": 0},
-        "saved_variant_json": {},
         "family": 14
     }
 }, {
@@ -187,7 +106,6 @@
             "I000018_na21234": { "cn": 1, "sampleId": "NA20885", "numAlt": -1,  "defragged": false, "qs": 33, "numExon": 2}
         },
         "gene_ids": ["ENSG00000240361", "ENSG00000135953", "ENSG00000223972"],
-        "saved_variant_json": {},
         "family": 14
     }
 },

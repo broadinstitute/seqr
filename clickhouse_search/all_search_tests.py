@@ -38,7 +38,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
     format_cached_variant
 from reference_data.models import Omim
-from seqr.models import Project, Family, Dataset, VariantSearch, VariantSearchResults, SavedVariant, Individual
+from seqr.models import Project, Family, Dataset, VariantSearch, VariantSearchResults, Individual
 from seqr.views.apis.data_manager_api import trigger_delete_project
 from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, GENE_VARIANT_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, \
     SAVED_VARIANT_DETAIL_FIELDS, FUNCTIONAL_FIELDS, TAG_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
@@ -2026,7 +2026,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search(
             [MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, VARIANT4, MULTI_FAMILY_VARIANT, VARIANT1, VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, GCNV_VARIANT2, GCNV_VARIANT1],
-            sort='callset_af',
+            sort='seqr_ac',
         )
 
         self._assert_expected_search(
@@ -2096,7 +2096,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_search(
             [MITO_VARIANT3, [VARIANT4, VARIANT3], VARIANT2],
-            sort='callset_af', inheritance_mode='recessive', **ALL_SNV_INDEL_PASS_FILTERS, cached_variant_fields=[
+            sort='seqr_ac', inheritance_mode='recessive', **ALL_SNV_INDEL_PASS_FILTERS, cached_variant_fields=[
                 {}, [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}], {},
             ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
@@ -2156,7 +2156,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search(
             [[VARIANT4, VARIANT3], [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4],
              [GCNV_VARIANT3, GCNV_VARIANT4]],
-            sort='callset_af', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
+            sort='seqr_ac', inheritance_mode='compound_het', **COMP_HET_ALL_PASS_FILTERS, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000097046'}, {'selectedGeneId': 'ENSG00000097046'}],
                 [{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}],
                 [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}],
@@ -2279,10 +2279,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_search_context(self):
-        sv = SavedVariant.objects.get(guid='SV0000001_2103343353_r0390_100')
-        sv.saved_variant_json['genomeVersion'] = '38'
-        sv.save()
-
         expected_results = [
             VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3,
             GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3,

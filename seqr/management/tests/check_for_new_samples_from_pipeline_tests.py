@@ -605,12 +605,6 @@ The following 1 families failed sex check:
         self._test_call(error_logs=error_logs)
         self.assertEqual(Dataset.objects.filter(guid__in=NEW_DATASET_GUIDS + NEW_GCNV_DATASET_GUIDS).count(), 0)
 
-        # Update fixture data to allow testing edge cases
-        svs = SavedVariant.objects.filter(guid__in=['SV0000002_1248367227_r0390_100', 'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'])
-        for sv in svs:
-            sv.saved_variant_json['genomeVersion'] = '38'
-            sv.save()
-
         # Test success
         self.mock_send_slack.reset_mock()
         self.mock_email.reset_mock()

@@ -817,7 +817,6 @@ class SavedVariant(ModelWithGUID):
     key = models.PositiveBigIntegerField(null=True, blank=True)
 
     selected_main_transcript_id = models.CharField(max_length=20, null=True)
-    saved_variant_json = models.JSONField(default=dict)
     genotypes = models.JSONField(default=dict)
     main_transcript = models.JSONField(default=dict, encoder=DjangoJSONEncoderWithSets)
     gene_ids = ArrayField(models.CharField(max_length=20), null=True, blank=True)
