@@ -8,13 +8,13 @@ import json
 
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
-from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
+from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, CAN_VIEW, CAN_EDIT, \
     get_audit_field_names, RnaSeqOutlier, RnaSeqSpliceOutlier, VariantSearchResults
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
-    is_internal_anvil_project, get_project_guids_user_can_view, get_anvil_analyst_user_emails
+    is_internal_anvil_project, get_anvil_analyst_user_emails
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
 from settings import ANALYST_USER_GROUP, SERVICE_ACCOUNT_FOR_ANVIL, MEDIA_URL
 
@@ -439,49 +439,6 @@ def get_json_for_saved_variants_with_tags(saved_variants, additional_model_field
     }
 
     return response
-
-
-def get_json_for_discovery_tags(variants, user):
-    from seqr.views.utils.variant_utils import get_variant_key
-    response = {}
-    discovery_tags = defaultdict(list)
-
-    saved_variants = SavedVariant.objects.filter(
-        variant_id__in={variant['variantId'] for variant in variants},
-        family__project__guid__in=get_project_guids_user_can_view(user),
-    ).only('id', 'guid', 'ref', 'alt', 'xpos', 'family_id').prefetch_related('family', 'family__project')
-    saved_variants_by_guid = {sv.guid: sv for sv in saved_variants}
-    saved_variant_id_map = {sv.id: guid for guid, sv in saved_variants_by_guid.items()}
-
-    discovery_tag_json, _ = get_json_for_saved_variants_child_entities(
-        VariantTag, saved_variant_id_map, tag_filter={'variant_tag_type__category': 'CMG Discovery Tags'})
-    if discovery_tag_json:
-        existing_families = set()
-        for variant in variants:
-            existing_families.update(variant['familyGuids'])
-
-        family_ids = set()
-        for tag in discovery_tag_json:
-            for variant_guid in tag.pop('variantGuids'):
-                variant = saved_variants_by_guid[variant_guid]
-                if variant.family.guid not in existing_families:
-                    family_ids.add(variant.family_id)
-                tag_json = {'savedVariant': {
-                    'variantGuid': variant.guid,
-                    'familyGuid': variant.family.guid,
-                    'projectGuid': variant.family.project.guid,
-                }}
-                tag_json.update(tag)
-                variant_key = get_variant_key(
-                    genomeVersion=variant.family.project.genome_version,
-                    xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
-                )
-                discovery_tags[variant_key].append(tag_json)
-
-        response['familiesByGuid'] = {
-            f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(id__in=family_ids))
-        }
-    return discovery_tags, response
 
 
 def get_json_for_variant_note(note):
