@@ -209,6 +209,7 @@ OPENED_RUN_JSON_FILES = [{
         },
         'sex_check': {
             'F000001_1': {'reasons': ['Sample NA19679 has pedigree sex F but imputed sex M']},
+            'F000011_11': {'reasons': ['Sample NA20870 has pedigree sex M but imputed sex F']},
             'F000014_14': {'reasons': ['Sample NA21987 has pedigree sex M but imputed sex F']},
         },
         'missing_samples': {
@@ -456,17 +457,20 @@ class CheckNewSamplesTest(object):
         num_calls = self._assert_expected_airtable_calls(bool(run_loading_logs), single_call)
         self.assertEqual(len(responses.calls), num_calls)
 
-    def _test_success_call(self, anvil_email_calls, next_dataset_id=155):
+    def _test_success_call(self, anvil_email_calls, next_dataset_id=155, fetched_tracking=True):
         Project.objects.filter(id__in=[1, 3]).update(genome_version=38)
 
         self.maxDiff = None
+        tracking_logs = [
+            ('Fetched 2 AnVIL Seqr Loading Requests Tracking records from airtable', None),
+        ] if fetched_tracking and self.AIRTABLE_LOGS  else []
         self._test_call(run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
                 ('update 2 Familys', {'dbUpdate': mock.ANY}),
                 (f'create Dataset D0000{next_dataset_id}_snv_indel_wes_2025_09', {'dbUpdate': mock.ANY}),
                 (f'create Dataset D0000{next_dataset_id+1}_snv_indel_wes_2025_09', {'dbUpdate': mock.ANY}),
-            ] + self.AIRTABLE_LOGS + [
+            ] + self.AIRTABLE_LOGS + tracking_logs + [
                 ('update 3 Familys', {'dbUpdate': mock.ANY}),
             ] + self.UPDATE_SAMPLE_LOGS,
             'GRCh38/MITO': [
@@ -488,7 +492,7 @@ class CheckNewSamplesTest(object):
         })
 
         # Test notifications
-        self.assertEqual(self.mock_send_slack.call_count, 7 + len(self.ADDITIONAL_SLACK_CALLS))
+        self.assertEqual(self.mock_send_slack.call_count, 8 + len(self.ADDITIONAL_SLACK_CALLS))
         self.mock_send_slack.assert_has_calls([
             mock.call(
                 'seqr-data-loading',
@@ -508,6 +512,13 @@ The following 1 families failed sex check:
 The following 2 families failed missing samples:
 - 2: Missing samples: {'HG00732', 'HG00733'}
 - 3: Missing samples: {'NA20870'}""",
+            ),
+            mock.call(
+                'seqr_loading_notifications',
+                f"""Encountered the following errors loading Test Reprocessed Project:
+
+The following 1 families failed sex check:
+- 11: Sample NA20870 has pedigree sex M but imputed sex F{self.SKIPPED_PDO_MESSAGE}""",
             ),
             mock.call(
                 'seqr_loading_notifications',
@@ -593,12 +604,6 @@ The following 1 families failed sex check:
         }
         self._test_call(error_logs=error_logs)
         self.assertEqual(Dataset.objects.filter(guid__in=NEW_DATASET_GUIDS + NEW_GCNV_DATASET_GUIDS).count(), 0)
-
-        # Update fixture data to allow testing edge cases
-        svs = SavedVariant.objects.filter(guid__in=['SV0000002_1248367227_r0390_100', 'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'])
-        for sv in svs:
-            sv.saved_variant_json['genomeVersion'] = '38'
-            sv.save()
 
         # Test success
         self.mock_send_slack.reset_mock()
@@ -731,9 +736,9 @@ The following 1 families failed sex check:
 
         # Test reloading shared annotations is skipped if too many saved variants
         snv_indel_datasets.delete()
-        airtable_logs = self.AIRTABLE_LOGS[:-1]
+        airtable_logs = []
         if self.AIRTABLE_LOGS:
-            airtable_logs.append(('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None))
+            airtable_logs = self.AIRTABLE_LOGS + [('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None)]
         self._test_call(num_runs=2, run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
@@ -767,6 +772,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
 *Run ID:* manual__2025-01-14
 *Validation Errors:* ['Missing the following expected contigs:chr17']""")
     SLACK_VALIDATION_MESSAGE = ''
+    SKIPPED_PDO_MESSAGE = ''
 
     def setUp(self):
         patcher = mock.patch('seqr.views.utils.export_utils.os.makedirs')
@@ -841,7 +847,6 @@ class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTe
         ('Fetching PDO records 0-1 from airtable', None),
         ('Fetched 1 PDO records from airtable', None),
         ('Fetching AnVIL Seqr Loading Requests Tracking records 0-2 from airtable', None),
-        ('Fetched 2 AnVIL Seqr Loading Requests Tracking records from airtable', None),
     ]
     VALIDATION_LOGS = [
         '==> gsutil ls gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-14/validation_errors.json',
@@ -878,6 +883,7 @@ Desired update:
 - Missing the following expected contigs:chr17
 The following users have been notified: test_user_manager@test.com""")
     SLACK_VALIDATION_MESSAGE = '\nSee more at https://storage.cloud.google.com/seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-01-24/validation_errors.json'
+    SKIPPED_PDO_MESSAGE = '\n\nSkipped samples in this project have been moved to PDO-1234_sr'
 
     def setUp(self):
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
@@ -891,14 +897,6 @@ The following users have been notified: test_user_manager@test.com""")
         super().setUp()
 
     def _add_responses(self):
-        responses.add(
-            responses.GET,
-            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
-            json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
-        responses.add(
-            responses.GET,
-            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
-            json={'records': [{'id': 'rec12345', 'fields': {}}]})
         responses.add(
             responses.GET,
             self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format('R0002_empty'),
@@ -923,6 +921,14 @@ The following users have been notified: test_user_manager@test.com""")
 
     @responses.activate
     def test_command(self, *args, **kwargs):
+        responses.add(
+            responses.GET,
+            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
+            json={'records': [{'id': 'rec12345', 'fields': {}}, {'id': 'rec67890', 'fields': {}}]})
+        responses.add(
+            responses.GET,
+            self.airtable_loading_tracking_url + self.AIRTABLE_LOADING_QUERY_TEMPLATE.format(EXTERNAL_PROJECT_GUID),
+            json={'records': [{'id': 'rec12345', 'fields': {}}]})
         self._add_responses()
         super().test_command(*args, **kwargs)
 
@@ -1042,4 +1048,4 @@ The following users have been notified: test_user_manager@test.com""")
         self._test_success_call(self._anvil_email_calls(
             email_text=ANVIL_ERROR_TEXT_EMAIL_TEMPLATE.format(error='\n'+ANVIL_ERROR_DELAY),
             email_html=ANVIL_ERROR_HTML_EMAIL_TEMPLATE.format(error='<br />'+ANVIL_ERROR_DELAY),
-        ), next_dataset_id=161)
+        ), next_dataset_id=161, fetched_tracking=False)

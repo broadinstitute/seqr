@@ -256,6 +256,10 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
         mock_has_service_account.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
         self.assertEqual(response.status_code, 400)
+        mock_logger.info.assert_called_with(
+            f'Added service account for {TEST_WORKSPACE_NAMESPACE}/{TEST_NO_PROJECT_WORKSPACE_NAME}, waiting for access to grant',
+            self.manager_user,
+        )
         self.assertEqual(response.json()['error'], 'Failed to grant seqr service account access to the workspace')
         mock_has_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE,
                                                     TEST_NO_PROJECT_WORKSPACE_NAME)
@@ -264,6 +268,7 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
 
         # Test valid operation
         mock_time.reset_mock()
+        mock_logger.reset_mock()
         mock_has_service_account.reset_mock()
         mock_add_service_account.return_value = False
         response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
@@ -273,6 +278,17 @@ class AnvilWorkspaceAPITest(AnvilAuthenticationTestCase):
                                                     TEST_NO_PROJECT_WORKSPACE_NAME)
         mock_has_service_account.assert_not_called()
         mock_time.sleep.assert_not_called()
+        mock_logger.assert_not_called()
+
+        mock_time.reset_mock()
+        mock_add_service_account.return_value = True
+        mock_has_service_account.return_value = True
+        response = self.client.post(url, content_type='application/json', data=json.dumps(GRANT_ACCESS_BODY))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'success': True})
+        mock_add_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
+        mock_has_service_account.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, TEST_NO_PROJECT_WORKSPACE_NAME)
+        mock_time.sleep.assert_called_with(3)
         mock_logger.info.assert_called_with(
             f'Added service account for {TEST_WORKSPACE_NAMESPACE}/{TEST_NO_PROJECT_WORKSPACE_NAME}, waiting for access to grant',
             self.manager_user,

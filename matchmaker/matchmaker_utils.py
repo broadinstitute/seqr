@@ -126,9 +126,7 @@ def _parse_mme_gene_variants(result, gene_symbols_to_ids):
 
 
 def get_gene_ids_for_feature(gene_feature, gene_symbols_to_ids):
-    gene_id = gene_feature.get('gene', {}).get('id')
-    if not gene_id:
-        return []
+    gene_id = gene_feature['gene']['id']
     if not gene_id.startswith('ENSG'):
         gene_ids = gene_symbols_to_ids.get(gene_feature['gene']['id'], [])
     else:
@@ -185,7 +183,7 @@ def _submission_genes_to_external_genomic_features(submission):
 def _submission_gene_to_external_genomic_features(submission_gene, individual):
     variant = submission_gene.saved_variant
     chrom, pos = get_chrom_pos(variant.xpos)
-    genome_version = variant.saved_variant_json.get('genomeVersion', individual.family.project.genome_version)
+    genome_version = individual.family.project.genome_version
 
     feature = {
         'gene': {'id': submission_gene.gene_id},
@@ -204,8 +202,7 @@ def _submission_gene_to_external_genomic_features(submission_gene, individual):
         _, end = get_chrom_pos(variant.xpos_end)
         feature['variant']['end'] = end
 
-    genotypes = variant.genotypes or variant.saved_variant_json.get('genotypes', {})
-    genotype = genotypes.get(individual.guid)
+    genotype = variant.genotypes.get(individual.guid)
     if genotype and genotype.get('numAlt', -1) > 0:
         feature['zygosity'] = genotype['numAlt']
 

@@ -359,8 +359,6 @@ AR_DEGG_COL = 'ar_donoregg'
 AR_DSPERM_COL = 'ar_donorsperm'
 
 def _bool_value(val):
-    if isinstance(val, bool):
-        return val
     if val.lower() == 'true':
         return True
     elif val.lower() == 'false':
@@ -368,8 +366,6 @@ def _bool_value(val):
     raise ValueError
 
 def _array_value(val):
-    if isinstance(val, list):
-        return val
     return [o.strip() for o in val.split(',')]
 
 def _gene_value(val):
@@ -380,8 +376,6 @@ def _gene_value(val):
     return gene
 
 def _gene_list_value(val):
-    if isinstance(val, list):
-        return val
     seperator_escaped_val = ''.join(m.replace(',', ';') if not m.startswith('(') else m for m in re.split('(\([^)]+\))', val))
     return [_gene_value(o) for o in seperator_escaped_val.split(';')]
 
@@ -410,60 +404,6 @@ INDIVIDUAL_METADATA_FIELDS = {
     CANDIDATE_GENES_COL: _gene_list_value,
 }
 
-def _get_year(val):
-    return datetime.strptime(val, '%Y-%m-%d').year
-
-def _nested_val(nested_key):
-    return lambda val: val.get(nested_key)
-
-def _get_phenotips_features(observed):
-    def get_observed_features(features):
-        return [{'id': feature['id']} for feature in features if feature['observed'] == observed]
-    return get_observed_features
-
-PHENOTIPS_JSON_FIELD_MAP = {
-    'family_id': [(FAMILY_ID_COL, None)],
-    'external_id': [(INDIVIDUAL_ID_COL, None)],
-    'features': [
-        (FEATURES_COL, _get_phenotips_features('yes')),
-        (ABSENT_FEATURES_COL, _get_phenotips_features('no')),
-    ],
-    'date_of_birth': [(BIRTH_COL, _get_year)],
-    'date_of_death': [(DEATH_COL, _get_year)],
-    'global_age_of_onset': [(ONSET_AGE_COL, lambda val: val[0]['label'])],
-    'family_history': [
-        (CONSANGUINITY_COL, _nested_val('consanguinity')),
-        (AFFECTED_REL_COL, _nested_val('affectedRelatives')),
-    ],
-    'global_mode_of_inheritance': [(EXP_INHERITANCE_COL, lambda val: [o['label'] for o in val])],
-    'prenatal_perinatal_history': [
-        (AR_FM_COL, _nested_val('assistedReproduction_fertilityMeds')),
-        (AR_IUI_COL, _nested_val('assistedReproduction_iui')),
-        (AR_IVF_COL, _nested_val('ivf')),
-        (AR_ICSI_COL, _nested_val('icsi')),
-        (AR_SURROGACY_COL, _nested_val('assistedReproduction_surrogacy')),
-        (AR_DEGG_COL, _nested_val('assistedReproduction_donoregg')),
-        (AR_DSPERM_COL, _nested_val('assistedReproduction_donorsperm')),
-    ],
-    'ethnicity': [
-        (MAT_ETHNICITY_COL, _nested_val('maternal_ethnicity')),
-        (PAT_ETHNICITY_COL, _nested_val('paternal_ethnicity')),
-    ],
-    'disorders': [(DISORDERS_COL, lambda val: [int(d['id'].lstrip('MIM:')) for d in val])],
-    'genes': [(CANDIDATE_GENES_COL, None)],
-    'rejectedGenes': [(REJECTED_GENES_COL, None)],
-}
-
-def _parse_phenotips_record(row):
-    record = {}
-    for k, formatters in PHENOTIPS_JSON_FIELD_MAP.items():
-        val = row.get(k)
-        if val:
-            for col, formatter in formatters:
-                field_val = formatter(val) if formatter else val
-                if field_val is not None:
-                    record[col] = field_val
-    return record
 
 @login_and_policies_required
 def receive_individuals_metadata_handler(request, project_guid):
@@ -500,64 +440,61 @@ def receive_individuals_metadata_handler(request, project_guid):
 
 
 def _process_hpo_records(records, filename, project, user):
-    if filename.endswith('.json'):
-        row_dicts = [_parse_phenotips_record(record) for record in records]
-    else:
-        column_map = {}
-        for i, field in enumerate(records[0]):
-            key = field.lower()
-            if re.match("hpo.*present", key):
-                column_map[FEATURES_COL] = i
-            elif re.match("hpo.*absent", key):
-                column_map[ABSENT_FEATURES_COL] = i
-            elif re.match("hp.*number*", key):
-                if not HPO_TERM_NUMBER_COL in column_map:
-                    column_map[HPO_TERM_NUMBER_COL] = []
-                column_map[HPO_TERM_NUMBER_COL].append(i)
-            elif 'family' in key or 'pedigree' in key:
-                column_map[FAMILY_ID_COL] = i
+    column_map = {}
+    for i, field in enumerate(records[0]):
+        key = field.lower()
+        if re.match("hpo.*present", key):
+            column_map[FEATURES_COL] = i
+        elif re.match("hpo.*absent", key):
+            column_map[ABSENT_FEATURES_COL] = i
+        elif re.match("hp.*number*", key):
+            if not HPO_TERM_NUMBER_COL in column_map:
+                column_map[HPO_TERM_NUMBER_COL] = []
+            column_map[HPO_TERM_NUMBER_COL].append(i)
+        elif 'family' in key or 'pedigree' in key:
+            column_map[FAMILY_ID_COL] = i
+        else:
+            col_key = next((col for col, text in [
+                (NOTES_COL, 'notes'), (INDIVIDUAL_ID_COL, 'individual'), (AFFECTED_REL_COL, 'affected relative'),
+                (AFFECTED_FEATURE_COL, 'affected'), (BIRTH_COL, 'birth'), (DEATH_COL, 'death'),
+                (ONSET_AGE_COL, 'onset'),  (AR_ICSI_COL, 'relative'),
+                (CONSANGUINITY_COL, 'consanguinity'), (EXP_INHERITANCE_COL, 'inheritance'), (AR_FM_COL, 'fertility'),
+                (AR_IUI_COL, 'intrauterine'), (AR_IVF_COL, 'in vitro'), (AR_ICSI_COL, 'cytoplasmic'),
+                (AR_SURROGACY_COL, 'surrogacy'), (AR_DEGG_COL, 'donor egg'), (AR_DSPERM_COL, 'donor sperm'),
+                (MAT_ETHNICITY_COL, 'maternal ancestry'), (PAT_ETHNICITY_COL, 'paternal ancestry'),
+                (DISORDERS_COL, 'disorders'), (REJECTED_GENES_COL, 'tested genes'),
+                (CANDIDATE_GENES_COL, 'candidate genes'), (ASSIGNED_ANALYST_COL, 'assigned analyst'),
+            ] if text in key), None)
+            if col_key:
+                column_map[col_key] = i
+
+    if INDIVIDUAL_ID_COL not in column_map:
+        raise ValueError('Invalid header, missing individual id column')
+
+    row_dicts = [{column: row[index] if isinstance(index, int) else next((row[i] for i in index if row[i]), None)
+                  for column, index in column_map.items()} for row in records[1:]]
+
+    if FEATURES_COL in column_map or ABSENT_FEATURES_COL in column_map:
+        for row in row_dicts:
+            row[FEATURES_COL] = parse_hpo_terms(row.get(FEATURES_COL))
+            row[ABSENT_FEATURES_COL] = parse_hpo_terms(row.get(ABSENT_FEATURES_COL))
+
+    elif HPO_TERM_NUMBER_COL in column_map:
+        aggregate_rows = defaultdict(lambda: {FEATURES_COL: set(), ABSENT_FEATURES_COL: set()})
+        for row in row_dicts:
+            column = ABSENT_FEATURES_COL if row.pop(AFFECTED_FEATURE_COL) == 'no' else FEATURES_COL
+            aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COL), row.get(INDIVIDUAL_ID_COL))]
+            term = row.pop(HPO_TERM_NUMBER_COL, None)
+            if term:
+                aggregate_entry[column].add(term.strip())
             else:
-                col_key = next((col for col, text in [
-                    (NOTES_COL, 'notes'), (INDIVIDUAL_ID_COL, 'individual'), (AFFECTED_REL_COL, 'affected relative'),
-                    (AFFECTED_FEATURE_COL, 'affected'), (BIRTH_COL, 'birth'), (DEATH_COL, 'death'),
-                    (ONSET_AGE_COL, 'onset'),  (AR_ICSI_COL, 'relative'),
-                    (CONSANGUINITY_COL, 'consanguinity'), (EXP_INHERITANCE_COL, 'inheritance'), (AR_FM_COL, 'fertility'),
-                    (AR_IUI_COL, 'intrauterine'), (AR_IVF_COL, 'in vitro'), (AR_ICSI_COL, 'cytoplasmic'),
-                    (AR_SURROGACY_COL, 'surrogacy'), (AR_DEGG_COL, 'donor egg'), (AR_DSPERM_COL, 'donor sperm'),
-                    (MAT_ETHNICITY_COL, 'maternal ancestry'), (PAT_ETHNICITY_COL, 'paternal ancestry'),
-                    (DISORDERS_COL, 'disorders'), (REJECTED_GENES_COL, 'tested genes'),
-                    (CANDIDATE_GENES_COL, 'candidate genes'), (ASSIGNED_ANALYST_COL, 'assigned analyst'),
-                ] if text in key), None)
-                if col_key:
-                    column_map[col_key] = i
+                aggregate_entry[column] = set()
+            aggregate_entry.update({k: v for k, v in row.items() if v})
 
-        if INDIVIDUAL_ID_COL not in column_map:
-            raise ValueError('Invalid header, missing individual id column')
-
-        row_dicts = [{column: row[index] if isinstance(index, int) else next((row[i] for i in index if row[i]), None)
-                      for column, index in column_map.items()} for row in records[1:]]
-
-        if FEATURES_COL in column_map or ABSENT_FEATURES_COL in column_map:
-            for row in row_dicts:
-                row[FEATURES_COL] = parse_hpo_terms(row.get(FEATURES_COL))
-                row[ABSENT_FEATURES_COL] = parse_hpo_terms(row.get(ABSENT_FEATURES_COL))
-
-        elif HPO_TERM_NUMBER_COL in column_map:
-            aggregate_rows = defaultdict(lambda: {FEATURES_COL: set(), ABSENT_FEATURES_COL: set()})
-            for row in row_dicts:
-                column = ABSENT_FEATURES_COL if row.pop(AFFECTED_FEATURE_COL) == 'no' else FEATURES_COL
-                aggregate_entry = aggregate_rows[(row.get(FAMILY_ID_COL), row.get(INDIVIDUAL_ID_COL))]
-                term = row.pop(HPO_TERM_NUMBER_COL, None)
-                if term:
-                    aggregate_entry[column].add(term.strip())
-                else:
-                    aggregate_entry[column] = set()
-                aggregate_entry.update({k: v for k, v in row.items() if v})
-
-            row_dicts = [
-                {**entry, **{col: [{'id': feature} for feature in entry[col]] for col in [FEATURES_COL, ABSENT_FEATURES_COL]}}
-                for entry in aggregate_rows.values()
-            ]
+        row_dicts = [
+            {**entry, **{col: [{'id': feature} for feature in entry[col]] for col in [FEATURES_COL, ABSENT_FEATURES_COL]}}
+            for entry in aggregate_rows.values()
+        ]
 
     return _parse_individual_hpo_terms(row_dicts, project, user)
 
@@ -893,9 +830,7 @@ def _parse_new_aip_saved_variants(new_variant_keys, family_variant_data):
         if variant_id in variants_by_id:
             variant.update(variants_by_id[variant_id])
         else:
-            variant.update({'key': None, 'saved_variant_json': {k: v for k, v in variant.items() if k in {
-                'chrom', 'pos', 'ref', 'alt', 'variantId', 'xpos', 'genomeVersion', 'genotypes', 'transcripts', 'mainTranscriptId',
-            }}})
+            variant.update({'key': None})
         new_variant_data[key] = variant
     return new_variant_data
 

@@ -75,8 +75,10 @@ class AirtableSession(object):
                 and_filters=record_and_filters,
                 page_size=max_records + 1,
             )
-            if not records or len(records) > max_records:
-                error = f'''Unable to identify Airtable "{record_type}" record to update
+        except Exception:
+            records = []
+        if not records or len(records) > max_records:
+            error = f'''Unable to identify Airtable "{record_type}" record to update
 
 Record lookup criteria:
 ```
@@ -88,12 +90,10 @@ Desired update:
 ```
 {json.dumps(update)}
 ```'''
-                safe_post_to_slack(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error)
-                return
+            safe_post_to_slack(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, error)
+            return
 
-            self.safe_patch_records_by_id(record_type, list(records.keys()), update, error_detail=error_detail)
-        except Exception as e:
-            logger.error(f'Airtable patch "{record_type}" error: {e}', self._user, detail=error_detail)
+        self.safe_patch_records_by_id(record_type, list(records.keys()), update, error_detail=error_detail)
 
     def safe_patch_records_by_id(self, record_type, record_ids, update, error_detail=None):
         self._safe_bulk_update_records(

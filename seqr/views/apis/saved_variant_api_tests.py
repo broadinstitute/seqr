@@ -177,7 +177,10 @@ class SavedVariantAPITest(object):
         variants = response_json['variantsById']
         self.assertSetEqual(set(variants.keys()), {'1-248367227-TC-T', '21-3343353-GAGA-G'})
         variant = variants['21-3343353-GAGA-G']
-        variant_fields = {*SAVED_VARIANT_DETAIL_FIELDS, 'mainTranscriptId'}
+        variant_fields = {
+            *SAVED_VARIANT_FIELDS, 'mainTranscriptId',  'genomeVersion', 'tagGuids', 'functionalDataGuids', 'noteGuids',
+            'genotypes', 'transcripts', 'acmgClassification',
+        }
         self.assertSetEqual(set(variant.keys()), variant_fields)
         self.assertListEqual(variant['familyGuids'], ['F000001_1'])
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
@@ -391,10 +394,10 @@ class SavedVariantAPITest(object):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals'})
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals', 'transcriptsById'})
         self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()), fields)
         self.assertSetEqual(set(response_json['variantsById']['1-248367227-TC-T'].keys()), {
-            *variant_fields, 'discoveryTags', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
+            *variant_fields, *SAVED_VARIANT_DETAIL_FIELDS, 'discoveryTags', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
         })
 
     def test_create_saved_variant(self):
@@ -449,7 +452,7 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(list(response.json()['savedVariantsByGuid'].keys()), [variant_guid])
 
-    def _assert_created_variant(self, saved_variant, variant_json, gene_ids=None, dataset_type='SNV_INDEL', sv_type=None, main_transcript=None, has_saved_variant_json=False):
+    def _assert_created_variant(self, saved_variant, variant_json, gene_ids=None, dataset_type='SNV_INDEL', sv_type=None, main_transcript=None):
         for field in ['xpos', 'ref', 'alt', 'key']:
             self.assertEqual(variant_json.get(field), getattr(saved_variant, field, None))
         self.assertEqual(saved_variant.gene_ids, gene_ids or [])
@@ -457,7 +460,6 @@ class SavedVariantAPITest(object):
         self.assertEqual(dataset_type, saved_variant.dataset_type)
         self.assertEqual(sv_type, saved_variant.sv_type)
         self.assertDictEqual(main_transcript or {}, saved_variant.main_transcript)
-        self.assertDictEqual(variant_json if has_saved_variant_json else {}, saved_variant.saved_variant_json)
 
     def test_create_saved_sv_variant(self):
         # SVs are only supported on build 38
@@ -628,10 +630,9 @@ class SavedVariantAPITest(object):
             'transcripts': {'ENSG00000277258': [{'hgvsc': 'c.156GAG>A', 'hgvsp': 'p.Leu52Phe', 'transcriptId': 'ENST00000459627'}]},
             **{k: v for k, v in manual_variant_request_body.items() if k in {'alt', 'ref', 'chrom', 'pos', 'genotypes', 'mainTranscriptId'}},
         }
-        self._assert_created_variant(saved_variant, variant_json, gene_ids=['ENSG00000277258'], has_saved_variant_json=True, main_transcript={
+        self._assert_created_variant(saved_variant, variant_json, gene_ids=['ENSG00000277258'], main_transcript={
             'hgvsc': 'c.156GAG>A', 'hgvsp': 'p.Leu52Phe', 'transcriptId': 'ENST00000459627',
         })
-        self.assertDictEqual(variant_json, saved_variant.saved_variant_json)
 
         base_variant_json = {
             'variantGuid': variant_guid,
@@ -684,7 +685,7 @@ class SavedVariantAPITest(object):
             'transcripts': {'ENSG00000240361': []},
             **{k: v for k, v in manual_variant_request_body.items() if k in {'chrom', 'pos', 'end', 'svName', 'svType', 'genotypes'}},
         }
-        self._assert_created_variant(saved_sv_variant, sv_variant_json, gene_ids=['ENSG00000240361'], dataset_type='SV', sv_type='DEL', has_saved_variant_json=True)
+        self._assert_created_variant(saved_sv_variant, sv_variant_json, gene_ids=['ENSG00000240361'], dataset_type='SV', sv_type='DEL')
 
         sv_variant_json = {
             **{k: v for k, v in sv_variant_json.items() if k in SAVED_VARIANT_FIELDS},
