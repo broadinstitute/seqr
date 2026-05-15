@@ -537,6 +537,9 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         if self.has_annotation('mitomapPathogenic'):
             annotations['mitomapPathogenic'] = F('mitomapPathogenic')
 
+        if not self.variant_detail_field:
+            annotations['discoveryFamilies'] = DiscoveryVariantDict.dict_get_expression('key', dataset_type='MITO')
+
         return annotations
 
     @staticmethod
@@ -752,7 +755,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
     def annotation_values(self):
         annotations = super().annotation_values
         annotations['transcripts'] = annotations.pop(self.model.sorted_gene_consequences.field.db_column)
-        annotations['discoveryFamilies'] = DiscoveryVariantDict.dict_get_expression('key', dataset_type=f'SV_{self.entry_model.SAMPLE_TYPE}'),
+        annotations['discoveryFamilies'] = DiscoveryVariantDict.dict_get_expression('key', dataset_type=f'SV_{self.entry_model.SAMPLE_TYPE}')
         return annotations
 
     @staticmethod

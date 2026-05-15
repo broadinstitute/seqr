@@ -1360,7 +1360,7 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
 
 def format_cached_variant(variant):
     if variant['key'] not in CACHED_CONSEQUENCES_BY_KEY:
-        return variant
+        return {**variant, 'discoveryFamilies': []}
     return {
         **{k: v for k, v in variant.items() if k not in [
             'mainTranscriptId', 'selectedMainTranscriptId', 'transcripts', 'CAID', 'chrom', 'pos', 'ref', 'alt',
