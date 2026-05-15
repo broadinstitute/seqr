@@ -1004,33 +1004,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self.check_require_login(reverse(variant_lookup_handler))
 
-        individual_metadata = {
-            'I000006_hg00733': {
-                'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F',
-                'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
-            },
-            'I000005_hg00732': {
-                'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M',
-                'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
-            },
-            'I000004_hg00731': {
-                'affected': 'A', 'features': '[{"id": "HP:0002011"}, {"id": "HP:0011675"}]', 'restrict_sharing': False,
-                'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
-            },
-            'I000015_na20885': {
-                'affected': 'A', 'features': '[{"id": "HP:0011675"}, {"id": "HP:0001509"}]', 'restrict_sharing': True,
-                'sex': 'M', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
-            },
-            'I000018_na21234': {
-                'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'vlmContactEmail': 'vlm@broadinstitute.org',
-            },
-            'I000019_na21987': {
-                'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'M', 'vlmContactEmail': 'vlm@broadinstitute.org',
-            },
-            'I000021_na21654': {
-                'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'vlmContactEmail': 'vlm@broadinstitute.org',
-            },
-        }
         lookup_variant = {
             **VARIANT1,
             'liftedFamilyGuids': ['F000014_14'],
@@ -1104,7 +1077,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_lookup(
             '1-10439-AC-A', expected_variant, cache_key, cached_variants=[lookup_variant], skip_fields={
                 'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
-            }, expected_individuals=expected_individuals, individual_metadata=individual_metadata, locusListsByGuid={},
+            }, expected_individuals=expected_individuals, locusListsByGuid={},
         )
 
         expected_gcnv_variant = {
@@ -1182,7 +1155,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             additional_variant=expected_gcnv_variant, cached_variants=[SV_VARIANT4, GCNV_VARIANT4], skip_fields={
                 'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
             }, expected_individuals=expected_sv_individuals, sample_type='WGS', locusListsByGuid={}, genesById=sv_genes,
-            individual_metadata=individual_metadata,
         )
 
         self.login_manager()
@@ -1205,7 +1177,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_lookup(
             '1-10439-AC-A', lookup_variant, cache_key, expected_individuals=expected_individuals,
             project_guids=['R0001_1kg', 'R0003_test', 'R0004_non_analyst_project'],
-            family_guids=['F000002_2', 'F000011_11', 'F000014_14'], individual_metadata=individual_metadata,
+            family_guids=['F000002_2', 'F000011_11', 'F000014_14'],
         )
 
         hom_only_lookup_variant = {
@@ -1223,7 +1195,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             '1-10439-AC-A', hom_only_lookup_variant, f'{cache_key}__hom', hom_only=True,
             project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000011_11'],
             individual_guids=[guid for guid in individual_guid_map.keys() if guid != 'I000018_na21234'],
-            individual_metadata=individual_metadata,
         )
 
         url = self._assert_expected_lookup(
@@ -1241,7 +1212,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'VFD0000023_1248367227_r0390_10': mock.ANY, 'VFD0000024_1248367227_r0390_10': mock.ANY,
                 'VFD0000025_1248367227_r0390_10': mock.ANY, 'VFD0000026_1248367227_r0390_10': mock.ANY,
             },
-            individual_metadata=individual_metadata,
         )
 
         response = self.client.get(url + '&affectedOnly=true')
@@ -1253,10 +1223,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertDictEqual(response.json(), {'error': 'Variant not present in seqr'})
 
-        self.set_cache('variant_lookup_results__1-91511686-TCA-G__38', [{
-            **VARIANT1,
-            'familyGenotypes': {'F000002_2': list(VARIANT1['genotypes'].values())},
-        }])
+        self.set_cache('variant_lookup_results__1-91511686-TCA-G__38', [
+            self._cached_lookup_variant(VARIANT1),
+        ])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['variantsById'], {'1-10439-AC-A': {
@@ -1387,7 +1356,42 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
         self.assert_json_logs(self.no_access_user, unmapped_sample_logs)
 
-    def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, expected_individuals=None, individual_metadata=None, skip_fields=None, cached_variants=None, additional_variant=None, sample_type=None, **kwargs):
+    INDIVIDUAL_METADATA = {
+        'I000006_hg00733': {
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        },
+        'I000005_hg00732': {
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        },
+        'I000004_hg00731': {
+            'affected': 'A', 'features': '[{"id": "HP:0002011"}, {"id": "HP:0011675"}]', 'restrict_sharing': False,
+            'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        },
+        'I000015_na20885': {
+            'affected': 'A', 'features': '[{"id": "HP:0011675"}, {"id": "HP:0001509"}]', 'restrict_sharing': True,
+            'sex': 'M', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+        },
+        'I000018_na21234': {
+            'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F',
+            'vlmContactEmail': 'vlm@broadinstitute.org',
+        },
+        'I000019_na21987': {
+            'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'M',
+            'vlmContactEmail': 'vlm@broadinstitute.org',
+        },
+        'I000021_na21654': {
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F',
+            'vlmContactEmail': 'vlm@broadinstitute.org',
+        },
+        'I000002_na19678': {
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        },
+    }
+
+    def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, expected_individuals=None, skip_fields=None, cached_variants=None, additional_variant=None, sample_type=None, **kwargs):
         url = f'{reverse(variant_lookup_handler)}?variantId={variant_id}&genomeVersion={genome_version}'
         if hom_only:
             url += '&homOnly=true'
@@ -1421,27 +1425,30 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         }
         self.assertDictEqual(response.json(), expected_body)
 
-        parsed_cached_variants = []
-        for v in (cached_variants or variants):
-            family_genotypes = defaultdict(list)
-            for individual_guid, gts in v['genotypes'].items():
-                if not isinstance(gts, list):
-                    gts = [gts]
-                for gt in gts:
-                    family_guid = gt.get('familyGuid') or expected_individuals[individual_guid]['familyGuid']
-                    family_genotypes[family_guid].append({
-                        **{k: v for k, v in gt.items() if k != 'individualGuid'},
-                        'metadata': (individual_metadata or {}).get(gt['individualGuid']),
-                    })
-            parsed_cached_variants.append({
-                **{k: v for k, v in v.items() if k not in {'familyGuids', 'genotypes'}},
-                'familyGenotypes': {
-                    family_guid: sorted(gts, key=lambda x: (x['sampleType'] == 'WES', x.get('sampleId')), reverse=True)
-                    for family_guid, gts in family_genotypes.items()
-                },
-            })
+        parsed_cached_variants = [
+            self._cached_lookup_variant(v, expected_individuals) for v in (cached_variants or variants)
+        ]
         self.assert_cached_results(parsed_cached_variants, cache_key)
         return url
+
+    def _cached_lookup_variant(self, variant, expected_individuals=None):
+        family_genotypes = defaultdict(list)
+        for individual_guid, gts in variant['genotypes'].items():
+            if not isinstance(gts, list):
+                gts = [gts]
+            for gt in gts:
+                family_guid = gt.get('familyGuid') or expected_individuals[individual_guid]['familyGuid']
+                family_genotypes[family_guid].append({
+                    **{k: v for k, v in gt.items() if k != 'individualGuid'},
+                    'metadata': self.INDIVIDUAL_METADATA.get(gt['individualGuid']),
+                })
+        return {
+            **{k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}},
+            'familyGenotypes': {
+                family_guid: sorted(gts, key=lambda x: (x['sampleType'] == 'WES', x.get('sampleId')), reverse=True)
+                for family_guid, gts in family_genotypes.items()
+            },
+        }
 
     def test_get_single_variant(self):
         url_template = (reverse(query_single_variant_handler, args=['variant_id']) + '?familyGuid={}').replace('variant_id', '{}')
