@@ -173,9 +173,7 @@ def _parse_header_columns(header, allow_id_update, update_features):
         column = None
         full_key = key
         key = key.lower()
-        if full_key in JsonConstants.JSON_COLUMNS:
-            column = full_key
-        elif key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
+        if key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
             column = JsonConstants.FAMILY_NOTES_COLUMN
         elif key.startswith("notes"):
             column = JsonConstants.NOTES_COLUMN
@@ -474,8 +472,6 @@ def _set_proband_relationship(json_records):
             )
             if affected_children:
                 affected = affected_children
-        if not affected:
-            continue
         affected = affected[0]
 
         relationships = {
@@ -770,30 +766,24 @@ def _get_rgp_dsm_family_notes(row):
 def _get_rgp_dsm_proband_fields(row):
     DC = DSMConstants
 
-    try:
+    if row[DC.AGE_COLUMN]:
         age = int(row[DC.AGE_COLUMN])
         birth_year = date.today().year - age
-    except ValueError:
-        birth_year = None
 
     death_year = None
     if row[DC.DECEASED_COLUMN] == DC.YES:
-        try:
-            age = int(row[DC.DECEASED_AGE_COLUMN])
-            death_year = birth_year + age
-        except (ValueError, TypeError):
-            death_year = 0
+        age = int(row[DC.DECEASED_AGE_COLUMN])
+        death_year = birth_year + age
 
-    try:
+    onset_age = None
+    if row[DC.AGE_OF_ONSET_COLUMN]:
         onset_age_val = int(row[DC.AGE_OF_ONSET_COLUMN])
         onset_age = next(age for cutoff, age in [
             (2, 'I'), # Infantile onset
             (13, 'C'), # Childhood onset
             (20, 'J'), # Juvenile onset
-            (200, 'A')# Adult onset
+            (200, 'A') # Adult onset
         ] if onset_age_val < cutoff)
-    except (ValueError, TypeError):
-        onset_age = None
 
     affected_relatives = any(
         row['{}_{}'.format(parent, DC.AFFECTED_KEY)] == DC.YES for parent in [DC.MOTHER, DC.FATHER]

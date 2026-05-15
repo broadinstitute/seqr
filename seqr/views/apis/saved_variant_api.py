@@ -56,34 +56,28 @@ def create_manual_saved_variant_handler(request, family_guid):
     tags = variant_json.pop('tags', [])
     saved_variant_guids = {guid for guid, is_selected in variant_json.pop('variants', {}).items() if is_selected}
 
-    genome_version = family.project.genome_version
     try:
         xpos = get_xpos(variant_json['chrom'], variant_json['pos'])
         variant_id = variant_json.get('svName') or f"{variant_json['chrom']}-{variant_json['pos']}-{variant_json['ref']}-{variant_json['alt']}"
     except (KeyError, ValueError) as e:
         return create_json_response({'error': str(e)}, status=400)
 
+    gene_id = variant_json.pop('geneId', None)
+    main_transcript = {}
+    if variant_json.get('mainTranscriptId'):
+        main_transcript = {
+            'transcriptId': variant_json['mainTranscriptId'],
+            'hgvsc': variant_json.pop('hgvsc', None),
+            'hgvsp': variant_json.pop('hgvsp', None),
+        }
+
     variant_json.update({
-        'genomeVersion': genome_version,
-        'transcripts': {},
         'variantId': variant_id,
         'xpos': xpos,
-    })
-
-    gene_id = variant_json.pop('geneId', None)
-    if gene_id:
-        variant_json['transcripts'][gene_id] = []
-        if variant_json.get('mainTranscriptId'):
-            variant_json['transcripts'][gene_id].append({
-                'transcriptId': variant_json['mainTranscriptId'],
-                'hgvsc': variant_json.pop('hgvsc', None),
-                'hgvsp': variant_json.pop('hgvsp', None),
-            })
-
-    variant_json['saved_variant_json'] = {**variant_json}
-    variant_json.update({
         'key': None,
         'dataset_type': Dataset.DATASET_TYPE_SV_CALLS if variant_json.get('svName') else Dataset.DATASET_TYPE_VARIANT_CALLS,
+        'gene_ids': [gene_id] if gene_id else [],
+        'main_transcript': main_transcript,
     })
 
     model_json = parse_saved_variant_json(variant_json, family.id)

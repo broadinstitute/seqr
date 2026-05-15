@@ -92,11 +92,6 @@ def add_families_context(response, family_models, project_guid, user, is_analyst
 
 
 def add_child_ids(response):
-    if 'samplesByGuid' in response:
-        sample_guids_by_individual = defaultdict(list)
-        for sample in response['samplesByGuid'].values():
-            sample_guids_by_individual[sample['individualGuid']].append(sample['sampleGuid'])
-
     if 'igvSamplesByGuid' in response:
         igv_sample_guids_by_individual = defaultdict(list)
         for sample in response['igvSamplesByGuid'].values():
@@ -104,8 +99,6 @@ def add_child_ids(response):
 
     individual_guids_by_family = defaultdict(list)
     for individual in response['individualsByGuid'].values():
-        if 'samplesByGuid' in response:
-            individual['sampleGuids'] = sample_guids_by_individual[individual['individualGuid']]
         if 'igvSamplesByGuid' in response:
             individual['igvSampleGuids'] = igv_sample_guids_by_individual[individual['individualGuid']]
         individual_guids_by_family[individual['familyGuid']].append(individual['individualGuid'])

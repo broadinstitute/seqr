@@ -57,14 +57,14 @@ RNA_DATA_TYPE_PARAMS = {
         'parsed_file_data': RNA_OUTLIER_SAMPLE_DATA,
         'required_columns': RNA_OUTLIER_REQUIRED_COLUMNS,
         'rows': [
-            'sampleID\tgeneID\tFDR set\tpValue\tpadjust\tzScore',
-            'NA19675_1\tENSG00000240361\tdetail1\t0.01\t0.13\t-3.1',
-            'NA19675_1\tENSG00000240361\tdetail2\t0.01\t0.13\t-3.1',
-            'NA19675_1\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8',
-            'NA21234\tENSG00000233750\tdetail1\t0.064\t0.0000057\t7.8',
-            'HG00731\tENSG00000240361\t\t0.04\t0.112\t1.9',
-            'NA21234\tNOT_A_GENE_ID1\tdetail1\t0.064\t0.0000057\t7.8',
-            'NA21234\t\tdetail1\t0.064\t0.0000057\t7.8',
+            'sampleID,geneID,FDR set,pValue,padjust,zScore',
+            'NA19675_1,ENSG00000240361,detail1,0.01,0.13,-3.1',
+            'NA19675_1,ENSG00000240361,detail2,0.01,0.13,-3.1',
+            'NA19675_1,ENSG00000233750,detail1,0.064,0.0000057,7.8',
+            'NA21234,ENSG00000233750,detail1,0.064,0.0000057,7.8',
+            'HG00731,ENSG00000240361,,0.04,0.112,1.9',
+            'NA21234,NOT_A_GENE_ID1,detail1,0.064,0.0000057,7.8',
+            'NA21234,,detail1,0.064,0.0000057,7.8',
         ],
         'message_data_type': 'Expression Outlier',
     },
@@ -75,11 +75,11 @@ RNA_DATA_TYPE_PARAMS = {
         'required_columns': RNA_TPM_REQUIRED_COLUMNS,
         'mismatch_field': 'tpm',
         'rows': [
-            'Name\tDescription\tNA19675_1',
-            'ENSG00000240361\tsome gene of interest\t7.8',
-            'ENSG00000233750\t\t0.0',
-            'NOT_A_GENE_ID1\t\t0.064',
-            '\t\t0.064',
+            'Name,Description,NA19675_1',
+            'ENSG00000240361,some gene of interest,7.8',
+            'ENSG00000233750,,0.0',
+            'NOT_A_GENE_ID1,,0.064',
+            ',,0.064',
         ],
         'message_data_type': 'Expression',
     },
@@ -94,13 +94,13 @@ RNA_DATA_TYPE_PARAMS = {
         'row_id': 'ENSG00000233750-2-167254166-167258349-*-psi3',
         'invalid_format_field': 'p_value',
         'rows': [
-            'hgncSymbol\tseqnames\tstart\tend\tstrand\tsampleID\ttype\tpValue\tpadjust\tdeltaPsi\tcounts\tmeanCounts\ttotalCounts\tmeanTotalCounts\tnonsplitCounts',
-            'ENSG00000233750;ENSG00000240361\tchr2\t167254166\t167258349\t*\tNA19675_1\tpsi3\t1.56E-25\t-4.9\t-0.46\t166\t16.6\t1660\t1.66\t1',
-            'ENSG00000240361\tchr7\t132885746\t132975168\t*\tNA19675_1\tpsi5\t1.08E-56\t-6.53\t-0.85\t231\t0.231\t2313\t231.3\t1',
-            'ENSG00000233750\tchr2\t167258096\t167258349\t*\tNA21234\tpsi3\t1.56E-25\t6.33\t0.45\t143\t14.3\t1433\t143.3\t1',
-            '\tchr2\t167258096\t167258349\t*\tHG00731\tpsi3\t1.56E-25\t6.33\t0.45\t143\t14.3\t1433\t143.3\t1',
-            'NOT_A_GENE_ID1\tchr2\t167258096\t167258349\t*\tNA21234\tpsi3\t1.56E-25\t6.33\t0.45\t143\t14.3\t1433\t143.3\t1',
-            '\tchr2\t167258096\t167258349\t*\tNA19675_1\tpsi3\t1.56E-25\t6.33\t0.45\t143\t14.3\t1433\t143.3\t1',
+            'hgncSymbol,seqnames,start,end,strand,sampleID,type,pValue,padjust,deltaPsi,counts,meanCounts,totalCounts,meanTotalCounts,nonsplitCounts',
+            'ENSG00000233750;ENSG00000240361,chr2,167254166,167258349,*,NA19675_1,psi3,1.56E-25,-4.9,-0.46,166,16.6,1660,1.66,1',
+            'ENSG00000240361,chr7,132885746,132975168,*,NA19675_1,psi5,1.08E-56,-6.53,-0.85,231,0.231,2313,231.3,1',
+            'ENSG00000233750,chr2,167258096,167258349,*,NA21234,psi3,1.56E-25,6.33,0.45,143,14.3,1433,143.3,1',
+            ',chr2,167258096,167258349,*,HG00731,psi3,1.56E-25,6.33,0.45,143,14.3,1433,143.3,1',
+            'NOT_A_GENE_ID1,chr2,167258096,167258349,*,NA21234,psi3,1.56E-25,6.33,0.45,143,14.3,1433,143.3,1',
+            ',chr2,167258096,167258349,*,NA19675_1,psi3,1.56E-25,6.33,0.45,143,14.3,1433,143.3,1',
         ],
         'message_data_type': 'Splice Outlier',
     }
@@ -729,7 +729,7 @@ class ProjectAPITest(object):
         self.login_manager()
 
         # Test errors
-        file = f'{self.TEMP_DIR}/new_samples.tsv.gz'
+        file = f'{self.TEMP_DIR}/new_samples.csv.gz'
         body = {'dataType': data_type, 'file': file, 'tissue': tissue, 'sequencingType': sequencing_type}
         self._set_file_not_found(file, mock_subprocess, mock_does_file_exist, mock_open)
         self.reset_logs()
@@ -739,7 +739,7 @@ class ProjectAPITest(object):
 
         mock_subprocess.return_value.wait.return_value = 0
         self._set_local_file_iter([], mock_does_file_exist, mock_open)
-        invalid_file_ext = file.replace('tsv.gz', 'xlsx')
+        invalid_file_ext = file.replace('csv.gz', 'xlsx')
         invalid_body = {**body, 'file': invalid_file_ext}
         response = self.client.post(url, content_type='application/json', data=json.dumps(invalid_body))
         self.assertEqual(response.status_code, 400)
@@ -785,7 +785,7 @@ class ProjectAPITest(object):
         # test database models are correct
         self.assertEqual(model_cls.objects.count(), initial_model_count - initial_sample_model_count)
         rna_samples = RnaSample.objects.filter(
-            tissue_type=tissue, data_type=data_type, data_source='new_samples.tsv.gz', is_active=False, sequencing_type=sequencing_type,
+            tissue_type=tissue, data_type=data_type, data_source='new_samples.csv.gz', is_active=False, sequencing_type=sequencing_type,
         )
         self.assertEqual(rna_samples.count(), 1 if single_sample_file else 2)
         guid_map = {'NA19675_1': rna_samples.get(individual_id=1).guid}
@@ -795,7 +795,7 @@ class ProjectAPITest(object):
 
         # test notifications
         subprocess_logs = self._get_expected_read_file_subprocess_calls([
-            f'gsutil cp gs://seqr-scratch-temp/new_samples.tsv.gz tmp/temp_uploads/{file_path}',
+            f'gsutil cp gs://seqr-scratch-temp/new_samples.csv.gz tmp/temp_uploads/{file_path}',
             f'gsutil mv tmp/temp_uploads/{file_path}/*.json.gz gs://seqr-scratch-temp/{file_path}',
         ], mock_subprocess, wait_command=True)
         self.assert_json_logs(self.manager_user, subprocess_logs[:1] + [
@@ -1068,6 +1068,7 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
         self.assertSetEqual(set(project.can_edit_group.user_set.all()), {self.pm_user})
         self.assertSetEqual(set(project.can_view_group.user_set.all()), {self.pm_user})
 
+    @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_update_project_workspace(self):
         url = reverse(update_project_workspace, args=[PROJECT_GUID])
         # For non-AnVIL seqr, updating workspace should always fail
