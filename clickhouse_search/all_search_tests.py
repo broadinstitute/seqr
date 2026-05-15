@@ -1327,34 +1327,44 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         ]
         self.assert_json_logs(self.manager_user, unmapped_sample_logs)
 
+        # With no project access, all genotypes are returned regardless of whether a corresponding seqr individual exists
         self.login_base_user()
         self.reset_logs()
-        expected_individuals = {'I1_F0_7-143270172-A-G': {
+        expected_individuals = {'I0_F0_7-143270172-A-G': {
+            'affected': 'N',
+            'familyGuid': 'F0_7-143270172-A-G',
+            'features': [],
+            'individualGuid': 'I0_F0_7-143270172-A-G',
+            'sex': 'F',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        }, 'I1_F0_7-143270172-A-G': {
             'affected': 'A',
             'familyGuid': 'F0_7-143270172-A-G',
             'features': [
                 {'category': 'HP:0000707', 'id': 'HP:0002011', 'label': 'Morphological abnormality of the central nervous system'},
-                {'category': 'HP:0001626', 'id': 'HP:0011675',  'label': 'Arrhythmia'},
+                {'category': 'HP:0001626', 'id': 'HP:0011675', 'label': 'Arrhythmia'},
             ],
             'individualGuid': 'I1_F0_7-143270172-A-G',
             'sex': 'X0',
             'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
         }}
-        no_access_missing_gt_variant = {
+        no_access_variant = {
             **GRCH37_VARIANT,
             'familyGuids': ['F0_7-143270172-A-G'],
-            'genotypes': {'I1_F0_7-143270172-A-G': {
-                k: v for k, v in GRCH37_VARIANT['genotypes']['I000004_hg00731'].items()
+            'genotypes': {mapped_guid: {
+                k: v for k, v in GRCH37_VARIANT['genotypes'][guid].items()
                 if k not in {'familyGuid', 'individualGuid', 'sampleId'}
-            }}
+            } for guid, mapped_guid in {
+                'I000004_hg00731': 'I1_F0_7-143270172-A-G', 'I000006_hg00733': 'I0_F0_7-143270172-A-G',
+            }.items()}
         }
         self._assert_expected_lookup(
-            '7-143270172-A-G', no_access_missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT],
+            '7-143270172-A-G', no_access_variant, cache_key, cached_variants=[GRCH37_VARIANT],
             genome_version='37', expected_individuals=expected_individuals, locusListsByGuid={}, skip_fields={
                 'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
             },
         )
-        self.assert_json_logs(self.no_access_user, unmapped_sample_logs)
+        self.assert_json_logs(self.no_access_user, unmapped_sample_logs[:1])
 
     INDIVIDUAL_METADATA = {
         'I000006_hg00733': {

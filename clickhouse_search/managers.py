@@ -1494,9 +1494,9 @@ class BaseEntriesManager(SearchQuerySet):
     def _can_filter_gene_interval(self, genes):
         return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS or self.filtered_chrom
 
-    def search_padded_interval(self, chrom, pos, padding):
+    def search_padded_interval(self, chrom, pos, padding, **kwargs):
         interval_q = self._interval_query(chrom, start=max(pos - padding, MIN_POS), end=min(pos + padding, MAX_POS))
-        return self.filter(interval_q).result_values()
+        return self.filter(interval_q).result_values(**kwargs)
 
     @staticmethod
     def _interval_query(chrom, start, end, **kwargs):
