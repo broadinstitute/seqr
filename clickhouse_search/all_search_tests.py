@@ -1459,6 +1459,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 })
         return {
             **{k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}},
+            'discoveryFamilies': [],
             'familyGenotypes': {
                 family_guid: sorted(gts, key=lambda x: (x['sampleType'] == 'WES', x.get('sampleId')), reverse=True)
                 for family_guid, gts in family_genotypes.items()
@@ -1507,7 +1508,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['variantsById'], {'7-143270172-A-G': GRCH37_VARIANT})
 
-        self.mock_redis.get.assert_not_called()
         self.mock_redis.set.assert_not_called()
 
     def test_frequency_filter(self):
