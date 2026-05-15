@@ -69,4 +69,7 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
+        migrations.RunSQL('SYSTEM RELOAD DICTIONARY "seqrdb_discovery_variant_dict"'),
+        migrations.RunSQL('SYSTEM RELOAD DICTIONARY "seqrdb_excluded_variant_dict"'),
+        migrations.RunSQL('SYSTEM RELOAD DICTIONARY "seqrdb_individual_metadata_dict"'),
     ]
