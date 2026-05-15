@@ -625,7 +625,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
     variant['familyGuids'] = []
     for family_guid in variant['lookupFamilyGuids']:
         for genotype in variant['familyGenotypes'].pop(family_guid):
-            del genotype['metadata']
+            genotype.pop('metadata', None)
             individual_guid = individual_guid_map.get((family_guid, genotype['sampleId']))
             if not individual_guid:
                 logger.error(
@@ -638,6 +638,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
                 genotype = [variant['genotypes'][individual_guid], genotype]
             variant['genotypes'][individual_guid] = genotype
 
+    all_feature_ids = set()
     for i, (unmapped_family_guid, genotypes) in enumerate(sorted(variant.pop('familyGenotypes').items())):
         family_guid = f'F{i}_{variant["variantId"]}'
         variant['lookupFamilyGuids'].append(family_guid)
@@ -646,22 +647,15 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
         individual_key_map = {}
         for j, genotype in enumerate(genotypes):
             individual_key = (genotype.pop('familyGuid'), genotype.pop('sampleId'))
-            individual = genotype.pop('metadata')
+            individual = genotype.pop('metadata', {})
             if individual_key in individual_key_map:
                 individual_guid = individual_key_map[individual_key]
                 variant['genotypes'][individual_guid] = [variant['genotypes'][individual_guid], genotype]
                 continue
             individual_guid = f'I{j}_{family_guid}'
             individual_key_map[individual_key] = individual_guid
-            features = _add_hpo_details(individual['features'])
-            if individual.pop('restrict_sharing'):
-                feature_category_count = defaultdict(int)
-                for feature in features:
-                    feature_category_count[feature.get('category', 'Other')] += 1
-                features = [
-                    {'category': category, 'label': f'{count} terms'}
-                    for category, count in feature_category_count.items()
-                ]
+            features = json.loads(individual['features']) if individual.get('features') else []
+            all_feature_ids.update([feature['id'] for feature in features])
             response['individualsByGuid'][individual_guid] = {
                 **individual,
                 'familyGuid': family_guid,
@@ -670,19 +664,26 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
             }
             variant['genotypes'][individual_guid] = genotype
 
+    _parse_hpo_terms(all_feature_ids, response['individualsByGuid'].values())
 
-def _add_hpo_details(raw_features):
-    if not raw_features:
-        return []
-    features = json.loads(raw_features)
+
+def _parse_hpo_terms(all_feature_ids, individuals):
     hpo_terms_by_id = {
-        hpo.pop('hpo_id'): hpo for hpo in HumanPhenotypeOntology.objects.filter(
-            hpo_id__in=[feature['id'] for feature in features],
-        ).values('hpo_id', category=F('category_id'), label=F('name'))
+        hpo.pop('hpo_id'): hpo for hpo in HumanPhenotypeOntology.objects.filter(hpo_id__in=all_feature_ids).values(
+            'hpo_id', category=F('category_id'), label=F('name'),
+        )
     }
-    for feature in features:
-        feature.update(hpo_terms_by_id.get(feature['id'], {}))
-    return features
+    for individual in individuals:
+        for feature in individual['features'] or []:
+            feature.update(hpo_terms_by_id.get(feature['id'], {}))
+        if individual.pop('restrict_sharing', False) and individual['features']:
+            feature_category_count = defaultdict(int)
+            for feature in individual['features']:
+                feature_category_count[feature.get('category', 'Other')] += 1
+            individual['features'] = [
+                {'category': category, 'label': f'{count} terms'}
+                for category, count in feature_category_count.items()
+            ]
 
 
 @login_and_policies_required
