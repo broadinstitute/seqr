@@ -351,14 +351,14 @@ def _get_family_has_rna_tpm(family_genes, gene_ids, sample_family_map):
 
 
 def _parse_discovery_tags(variants_by_id, family_guids, user):
-    keys = set()
+    discovery_variant_ids = set()
     discovery_family_guids = set()
     for variant_id, variant in variants_by_id.items():
         if not variant['key']:
             continue
         discovery_families = set(variant.pop('discoveryFamilies')) - set(variant['familyGuids'])
         if discovery_families:
-            keys.add(variant['key'])
+            discovery_variant_ids.add(variant_id)
             discovery_family_guids.update(discovery_families)
             variant['discoveryTags'] = []
             variant['noAccessDiscoveryFamilies'] = len(discovery_families)
@@ -373,7 +373,7 @@ def _parse_discovery_tags(variants_by_id, family_guids, user):
 
     saved_variants_by_guid = {
         sv['variantGuid']: sv for sv in SavedVariant.objects.filter(
-            key__in=keys, family__guid__in=discovery_families_by_guid,
+            variant_id__in=discovery_variant_ids, family__guid__in=discovery_families_by_guid,
         ).values('id', 'variant_id', variantGuid=F('guid'), familyGuid=F('family__guid'), projectGuid=F('family__project__guid'))
     }
 
