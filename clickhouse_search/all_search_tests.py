@@ -519,8 +519,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         inheritance_mode = 'x_linked_recessive'
-        self._assert_expected_search([], inheritance_mode=inheritance_mode)
-        # self._assert_expected_search([], inheritance_mode=inheritance_mode, sample_data=SV_WGS_SAMPLE_DATA_WITH_SEX)
+        self._assert_expected_search([], inheritance_mode=inheritance_mode, export_data=[EXPORT_DATA[0][:24]])
+        self._assert_expected_search([], inheritance_mode=inheritance_mode, inheritance_filter={'allowNoCall': True})
 
         inheritance_mode = 'homozygous_recessive'
         self._assert_expected_search(
@@ -587,6 +587,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_filter=sv_affected, cached_variant_fields=[
                 [{'selectedGeneId': 'ENSG00000171621'}, {'selectedGeneId': 'ENSG00000171621'}],
             ], project_families=SV_PROJECT_FAMILIES,
+        )
+
+        self._assert_expected_search(
+            [], inheritance_mode=inheritance_mode, project_families=MULTI_PROJECT_PROJECT_FAMILIES,
+            **COMP_HET_ALL_PASS_FILTERS, locus={'rawItems': 'chrX:1-100000000'},
         )
 
         inheritance_mode = 'recessive'
@@ -1318,13 +1323,43 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             project_guids=['R0001_1kg'], family_guids=['F000002_2'],
             individual_guids=['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']
         )
-        self.assert_json_logs(self.manager_user, [
+        unmapped_sample_logs = [
             ('Looking up variant 7-143270172-A-G with data type SNV_INDEL', None),
             ('Unable to map sample HG00733 in family F000002_2 to an individual for variant 7-143270172-A-G', {
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
             }),
-        ])
+        ]
+        self.assert_json_logs(self.manager_user, unmapped_sample_logs)
+
+        self.login_base_user()
+        self.reset_logs()
+        expected_individuals = {'I1_F0_7-143270172-A-G': {
+            'affected': 'A',
+            'familyGuid': 'F0_7-143270172-A-G',
+            'features': [
+                {'category': 'HP:0000707', 'id': 'HP:0002011', 'label': 'Morphological abnormality of the central nervous system'},
+                {'category': 'HP:0001626', 'id': 'HP:0011675',  'label': 'Arrhythmia'},
+            ],
+            'individualGuid': 'I1_F0_7-143270172-A-G',
+            'sex': 'X0',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        }}
+        no_access_missing_gt_variant = {
+            **GRCH37_VARIANT,
+            'familyGuids': ['F0_7-143270172-A-G'],
+            'genotypes': {'I1_F0_7-143270172-A-G': {
+                k: v for k, v in GRCH37_VARIANT['genotypes']['I000004_hg00731'].items()
+                if k not in {'familyGuid', 'individualGuid', 'sampleId'}
+            }}
+        }
+        self._assert_expected_lookup(
+            '7-143270172-A-G', no_access_missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT],
+            genome_version='37', expected_individuals=expected_individuals, locusListsByGuid={}, skip_fields={
+                'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
+            },
+        )
+        self.assert_json_logs(self.no_access_user, unmapped_sample_logs)
 
     def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, expected_individuals=None, skip_fields=None, cached_variants=None, additional_variant=None, sample_type=None, **kwargs):
         url = f'{reverse(variant_lookup_handler)}?variantId={variant_id}&genomeVersion={genome_version}'
@@ -1807,6 +1842,16 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}], {}],
         )
 
+        self._assert_expected_search(
+            [PROJECT_2_VARIANT1, VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, [GCNV_VARIANT3, GCNV_VARIANT4], MITO_VARIANT3],
+            inheritance_mode='recessive', project_families=MULTI_PROJECT_PROJECT_FAMILIES, pathogenicity=pathogenicity,
+            locus={'rawItems': 'chr1:1-100000000, chr14:1-100000000, chr16:1-100000000, chr17:1-100000000, M:1-100000000'},
+            annotations=gcnv_annotations_2, annotations_secondary=gcnv_annotations_1, cached_variant_fields=[{}, {}, [
+                {'selectedGeneId': 'ENSG00000277258'},
+                {'selectedGeneId': 'ENSG00000277258'},
+            ], {}, [{'selectedGeneId': 'ENSG00000275023'}, {'selectedGeneId': 'ENSG00000275023'}], {}],
+        )
+
         selected_transcript_annotations = {'other': ['non_coding_transcript_exon_variant']}
         self._assert_expected_search(
             [VARIANT2, [MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4], GCNV_VARIANT3, MITO_VARIANT3],
@@ -1906,7 +1951,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT], in_silico={'gnomad_noncoding': 0.5, 'requireScore': True},
+            [VARIANT2, MULTI_FAMILY_VARIANT], in_silico={'gnomad_noncoding': 0.5, 'vest': None, 'requireScore': True},
         )
 
         self._assert_expected_search(
@@ -1923,6 +1968,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.login_manager()
         self._assert_expected_search(
             [SV_VARIANT4], in_silico=sv_in_silico, project_families=SV_PROJECT_FAMILIES,
+        )
+        self._assert_expected_search(
+            [SV_VARIANT1, SV_VARIANT2, SV_VARIANT3], in_silico={'strvctvre': 0.2}, project_families=SV_PROJECT_FAMILIES,
         )
 
         self._set_grch37_search()
@@ -2400,6 +2448,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'category': 'CMG Discovery Tags',
             'color': '#03441E',
             'searchHash': None,
+            'searchName': None,
             'metadata': None,
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,

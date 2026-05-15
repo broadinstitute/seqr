@@ -14,7 +14,7 @@ import re
 import responses
 from urllib.parse import quote_plus, urlparse
 
-from seqr.models import Project, SavedVariant, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, CAN_VIEW, CAN_EDIT
 
 WINDOW_REGEX_TEMPLATE = 'window\.{key}=(?P<value>[^)<]+)'
 
@@ -27,7 +27,7 @@ class DifferentDbTransactionSupportMixin(object):
 
     @classmethod
     def _rollback_atomics(cls, atomics):
-        """Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis"""
+        # Django testcases asssume either all database support transactions or none do. This properly cleans up transaction blocks on a per-db basis
         for db_name in reversed(cls._databases_names()):
             if connections[db_name].features.supports_transactions:
                 transaction.set_rollback(True, using=db_name)
@@ -170,15 +170,6 @@ class AuthenticationTestMixin(object):
 
     def _check_login(self, url, permission_level, request_data=None, login_redirect_url='/api/login-required-error',
                      policy_redirect_url='/api/policy-required-error', permission_denied_error=403):
-        """For integration tests of django views that can only be accessed by a logged-in user,
-        the 1st step is to authenticate. This function checks that the given url redirects requests
-        if the user isn't logged-in, and then authenticates a test user.
-
-        Args:
-            test_case (object): the django.TestCase or unittest.TestCase object
-            url (string): The url of the django view being tested.
-            permission_level (string): what level of permission this url requires
-         """
         # check that it redirects if you don't login
         parsed_url = urlparse(url)
         next_query = quote_plus('?{}'.format(parsed_url.query)) if parsed_url.query else ''
@@ -721,7 +712,7 @@ SAVED_VARIANT_DETAIL_FIELDS = {
 SAVED_VARIANT_DETAIL_FIELDS.update(SAVED_VARIANT_FIELDS)
 
 TAG_FIELDS = {
-    'tagGuid', 'name', 'category', 'color', 'searchHash', 'metadata', 'lastModifiedDate', 'createdBy', 'variantGuids',
+    'tagGuid', 'name', 'category', 'color', 'searchHash', 'searchName', 'metadata', 'lastModifiedDate', 'createdBy', 'variantGuids',
 }
 
 VARIANT_NOTE_FIELDS = {'noteGuid', 'note', 'report', 'lastModifiedDate', 'createdBy', 'variantGuids'}

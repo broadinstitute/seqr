@@ -24,8 +24,10 @@ def export_table(filename_prefix, header, rows, file_format='tsv', titlecase_hea
         header (list): List of column names
         rows (list): List of rows, where each row is a list of column values
         file_format (string): "tsv", "xls", or "json"
+
     Returns:
         Django HttpResponse object with the table data as an attachment.
+    
     """
 
     for i, row in enumerate(rows):

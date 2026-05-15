@@ -3,7 +3,7 @@ from django.core.management import call_command
 import json
 import mock
 
-from clickhouse_search.search_tests import ClickhouseSearchTestCase
+from clickhouse_search.all_search_tests import ClickhouseSearchTestCase
 from clickhouse_search.test_utils import VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT3, GCNV_VARIANT4
 from seqr.models import SavedVariant, VariantTag
 

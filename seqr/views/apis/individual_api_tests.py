@@ -93,6 +93,7 @@ INDIVIDUAL_FAMILY_UPDATE_DATA = {
 LOAD_PARTICIPANT_TABLE = deepcopy(PARTICIPANT_TABLE)
 for row in LOAD_PARTICIPANT_TABLE[4:]:
     row[7] = row[7].replace('Broad_', '')
+LOAD_PARTICIPANT_TABLE[5][11] = 'Niece'
 LOAD_PARTICIPANT_TABLE[6][15] += '|Asian'
 LOAD_PARTICIPANT_TABLE[6][17] = ''
 
@@ -347,6 +348,7 @@ class IndividualAPITest(object):
                 'updateFields': ['mother'],
                 'updateType': 'update',
             }}),
+            ('Reloading dictionary seqrdb_affected_status_dict', None),
             ('Triggering rebuild_gt_stats for R0004_non_analyst_project', None),
             (f'Error Triggering Rebuild Gt Stats: 400 Client Error: Bad Request for url: {TRIGGER_RELOAD_URL}', {
                 'severity': 'ERROR',
@@ -1018,11 +1020,11 @@ class IndividualAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'errors': ['Invalid header, missing individual id column'], 'warnings': []})
 
-        header = 'family_id,individual_id,hpo_term_present,hpo_term_absent,sex,birth year,other affected relatives,onset age,expected inheritance,maternal ancestry,candidate genes,assigned analyst'
+        header = 'individual_id,hpo_term_present,hpo_term_absent,sex,birth year,other affected relatives,onset age,expected inheritance,maternal ancestry,candidate genes,assigned analyst'
         rows = [
-            '1,NA19678,,,,,no,infant,recessive,,,not_an_email',
-            '1,NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,,test_user_no_access@test.com',
-            '1,HG00731,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia);HP:0011675 (Arrhythmia),,,,,,,,,',
+            'NA19678,,,,,no,infant,recessive,,,not_an_email',
+            'NA19679,HP:0100258 (Preaxial polydactyly),,,,,,,,,test_user_no_access@test.com',
+            'HG007311,HP:0002017,HP:0012469 (Infantile spasms);HP:0011675 (Arrhythmia);HP:0011675 (Arrhythmia),,,,,,,,,',
         ]
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
@@ -1037,12 +1039,15 @@ class IndividualAPITest(object):
                 'The following invalid values for "onset_age" will not be added: infant (NA19678)',
                 'The following invalid values for "expected_inheritance" will not be added: recessive (NA19678)',
                 'The following invalid values for "assigned_analyst" will not be added: not_an_email (NA19678); test_user_no_access@test.com (NA19679)',
-                'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG00731',
+                'Unable to find matching ids for 1 individuals. The following entries will not be updated: HG007311',
                 'No changes detected for 2 individuals. The following entries will not be updated: NA19678, NA19679',
             ]})
 
         # send valid request
+        header = f'family_id,{header}'
         rows[0] = '1,NA19678,,,,,false,,,,,'
+        rows[1] = f'1,{rows[1]}'
+        rows[2] = rows[2].replace('HG007311', '1,HG00731')
         rows.append('1,NA19675_1,HP:0002017,"HP:0012469 (Infantile spasms);HP:0004322 (Short stature, severe)",F,2000,True,Juvenile onset,"Autosomal dominant inheritance, Sporadic","Finnish, Irish","IKBKAP -- (multiple panels, no confirm), EHBP1L1",test_user_collaborator@test.com')
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
@@ -1071,8 +1076,12 @@ class IndividualAPITest(object):
     def _set_metadata_file_iter(self, genetic_findings_table):
         self.gs_files.update({
             f'{file_name}.tsv': iter(['\t'.join(row).encode() for row in file]) for file_name, file in [
-                ('experiment_dna_short_read', EXPERIMENT_TABLE),
-                ('experiment', EXPERIMENT_LOOKUP_TABLE),
+                ('experiment_dna_short_read', EXPERIMENT_TABLE + [[
+                    'Broad_exome_HG00732', 'Broad_SM-JDBTM', 'Broad_HG00732_1', 'Kapa HyperPrep', '151', 'exome', '', '', '2022-08-15', '385', 'NovaSeq', '',
+                ]]),
+                ('experiment', EXPERIMENT_LOOKUP_TABLE + [[
+                    'experiment_dna_short_read.Broad_exome_HG00732', 'experiment_dna_short_read', 'Broad_exome_HG00732', 'Broad_HG00732',
+                ]]),
                 ('participant', LOAD_PARTICIPANT_TABLE),
                 ('phenotype', PHENOTYPE_TABLE),
                 ('genetic_findings', genetic_findings_table),
@@ -1120,6 +1129,7 @@ class IndividualAPITest(object):
         })
         warnings = [
             'Broad_HG00733 is the mother of VCGS_FAM203_621_D2 but is not included',
+            'Skipped Invalid proband relationship "Niece" for NA20888 with given gender Male',
             'Skipped the following unrecognized HPO terms: HP:0001509',
         ]
         self.assertDictEqual(response_json['importStats'], {'gregorMetadata': {
@@ -1170,8 +1180,8 @@ class IndividualAPITest(object):
             'mother__individual_id', 'father__individual_id', 'features', 'absent_features', 'case_review_status',
         )
         self.assertDictEqual(individual_db_data[0], {
-            'individual_id': 'Broad_HG00732',
-            'display_name': '',
+            'individual_id': 'Broad_HG00732_1',
+            'display_name': 'Broad_HG00732',
             'family__guid': new_family_guid,
             'affected': 'N',
             'sex': 'M',
@@ -1203,7 +1213,7 @@ class IndividualAPITest(object):
             'family__guid': 'F000012_12',
             'affected': 'A',
             'sex': 'M',
-            'proband_relationship': '',
+            'proband_relationship': None,
             'mother__individual_id': None,
             'father__individual_id': None,
             'population': 'SAS',
@@ -1219,7 +1229,7 @@ class IndividualAPITest(object):
             'sex': 'F',
             'proband_relationship': 'S',
             'mother__individual_id': None,
-            'father__individual_id': 'Broad_HG00732',
+            'father__individual_id': 'Broad_HG00732_1',
             'population': 'AMR',
             'features': [{'id': 'HP:0011675'}],
             'absent_features': [{'id': 'HP:0002017'}],

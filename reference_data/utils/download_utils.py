@@ -8,13 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 def download_file(url):
-    """Download the given file and returns its local path.
-     Args:
-        url (string): HTTP or FTP url
-     Returns:
-        string: local file path
-    """
-
     to_dir = tempfile.gettempdir()
     if not (url and url.startswith(("http://", "https://"))):
         raise ValueError("Invalid url: {}".format(url))

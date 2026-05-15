@@ -898,6 +898,7 @@ class DataManagerAPITest(AirtableTest):
         # Test uploading new data
         self.reset_logs()
         mock_send_email.reset_mock()
+        mock_send_email.side_effect = Exception('Email server down')
         mock_subprocess.return_value.stdout = self._join_data(PHENOTYPE_PRIORITIZATION_HEADER + UPDATE_LIRICAL_DATA)
         mock_random.randint.side_effect = [177442291, 215071655]
         response = self.client.post(url, content_type='application/json', data=json.dumps(request_body))
@@ -919,33 +920,44 @@ class DataManagerAPITest(AirtableTest):
                 'entityIds': ['PP177442291_na19678ensg0000010', 'PP215071655_na19678ensg0000010'],
             }}),
         ])
+        email_body = 'data for 2 Lirical sample(s)'
+        self.assert_json_logs(user=None,  offset=4, expected=[
+            ('Error sending project email for R0001_1kg: Email server down', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+                'detail': {
+                    'to': ['test_user_manager@test.com'],
+                    'subject': 'New Lirical data available in seqr',
+                    'email_body': self._expected_email_body(email_body=email_body),
+                },
+            }),
+        ])
         saved_data = _get_json_for_models(PhenotypePrioritization.objects.filter(tool='lirical').order_by('id'),
                                           nested_fields=[{'fields': ('individual', 'guid'), 'key': 'individualGuid'}])
         self.assertListEqual(saved_data, EXPECTED_UPDATED_LIRICAL_DATA)
         self._assert_expected_notifications(mock_send_email, [
-            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': 'data for 2 Lirical sample(s)'},
+            {'data_type': 'Lirical', 'user': self.data_manager_user, 'email_body': email_body},
         ])
 
     @staticmethod
-    def _assert_expected_notifications(mock_send_email, expected_notifs: list[dict]):
-        calls = []
-        for notif_dict in expected_notifs:
-            project_guid = notif_dict.get('project_guid', PROJECT_GUID)
-            project_name = notif_dict.get('project_name', '1kg project nåme with uniçøde')
-            url = f'https://test-seqr.org/project/{project_guid}/project_page'
-            project_link = f'<a href={url}>{project_name}</a>'
-            expected_email_body = (
-                f'Dear seqr user,\n\nThis is to notify you that {notif_dict["email_body"]} '
-                f'has been loaded in seqr project {project_link}\n\nAll the best,\nThe seqr team'
-            )
-            calls.append(
-                mock.call(
-                    email_body=expected_email_body,
-                    subject=f'New {notif_dict["data_type"]} data available in seqr',
-                    to=['test_user_manager@test.com'],
-                    process_message=_set_bulk_notification_stream,
-                )
-            )
+    def _expected_email_body(email_body='', project_guid=PROJECT_GUID, project_name='1kg project nåme with uniçøde', **kwargs):
+        url = f'https://test-seqr.org/project/{project_guid}/project_page'
+        project_link = f'<a href={url}>{project_name}</a>'
+        return (
+            f'Dear seqr user,\n\nThis is to notify you that {email_body} '
+            f'has been loaded in seqr project {project_link}\n\nAll the best,\nThe seqr team'
+        )
+
+    @classmethod
+    def _assert_expected_notifications(cls, mock_send_email, expected_notifs: list[dict]):
+        calls = [
+            mock.call(
+                email_body=cls._expected_email_body(**notif_dict),
+                subject=f'New {notif_dict["data_type"]} data available in seqr',
+                to=['test_user_manager@test.com'],
+                process_message=_set_bulk_notification_stream,
+            ) for notif_dict in expected_notifs
+        ]
         mock_send_email.assert_has_calls(calls)
 
     def test_loading_vcfs(self):
@@ -1035,6 +1047,12 @@ class DataManagerAPITest(AirtableTest):
         self.login_data_manager_user()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
+
+        self._add_file_iter([])
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            **self.REQUEST_BODY, 'filePath': f'{self.CALLSET_DIR}/mito_calls.mt', 'datasetType': 'MITO',
+        }))
+        self._assert_expected_validate_mito_response(response)
 
     @mock.patch('seqr.views.utils.permissions_utils.INTERNAL_NAMESPACES', ['my-seqr-billing', 'ext-data'])
     @mock.patch('seqr.views.utils.airtable_utils.BASE_URL', 'https://seqr.broadinstitute.org/')
@@ -1428,6 +1446,13 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
         self.assertEqual(response.status_code, 500)
         self.assertDictEqual(response.json(), {'error': 'Airtable is not configured'})
 
+    def _assert_expected_validate_mito_response(self, response):
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), {
+            'errors': ['Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz'],
+            'warnings': None,
+        })
+
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
 class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
@@ -1626,18 +1651,22 @@ Loading pipeline should be triggered with:
             required_sample_field='gCNV_CallsetPath', additional_vcf_ids=",SeqrIDWithMismatch='NA21987'",
         )
 
+        responses.replace(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=INVALID_AIRTABLE_SAMPLE_RECORDS, status=200)
         responses.calls.reset()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {
             'warnings': None,
             'errors': [
+                'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
                 'The following families have previously loaded samples absent from airtable\nFamily fam14: NA21234, NA21654',
+                'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
                 'The following samples are included in airtable but are missing from the VCF: NA21987',
             ],
         })
         self.assertEqual(len(responses.calls), 2)
         self._assert_expected_airtable_call(required_sample_field='SV_CallsetPath', project_guid='R0004_non_analyst_project')
+        responses.replace(responses.GET, 'https://api.airtable.com/v0/app3Y97xtbbaOopVR/Samples', json=AIRTABLE_SAMPLE_RECORDS, status=200)
 
     def _test_load_single_project(self, mock_open, mock_gzip_open, mock_mkdir, response, *args, url=None, body=None, **kwargs):
         super()._test_load_single_project(mock_open, mock_gzip_open, mock_mkdir, response, url, body)
@@ -1741,3 +1770,7 @@ Loading pipeline should be triggered with:
         self.assertDictEqual(response.json(), {
             'error': 'The following samples are associated with misconfigured PDOs in Airtable: HG00731, NA21234',
         })
+
+    def _assert_expected_validate_mito_response(self, response):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfSamples': None})

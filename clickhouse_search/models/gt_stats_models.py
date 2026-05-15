@@ -1,5 +1,4 @@
 from clickhouse_backend import models
-from django.db.models import OneToOneField, CASCADE
 
 from clickhouse_search.backend.fields import UInt32FieldDeltaCodecField, DictKeyForeignKey
 from clickhouse_search.backend.table_models import RefreshableMaterializedView, RefreshableMaterializedViewMeta, \

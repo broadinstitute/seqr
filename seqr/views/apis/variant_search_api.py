@@ -50,8 +50,6 @@ UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
 
 @login_and_policies_required
 def query_variants_handler(request, search_hash):
-    """Search variants.
-    """
     page = int(request.GET.get('page') or 1)
     per_page = int(request.GET.get('per_page') or 100)
     sort = request.GET.get('sort') or XPOS_SORT_KEY
@@ -184,8 +182,6 @@ def _get_exclude_keys(search_hash, user):
 
 @login_and_policies_required
 def query_single_variant_handler(request, variant_id):
-    """Search variants.
-    """
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
     family = families.first()
     check_project_permissions(family.project, request.user)
@@ -356,8 +352,8 @@ def export_variants_handler(request, search_hash):
 
         variants = split_variants
 
-    max_families_per_variant = max([len(variant.get('familyGuids', [1])) for variant in variants])
-    max_samples_per_variant = max([len(variant.get('genotypes', {})) for variant in variants])
+    max_families_per_variant = max([len(variant.get('familyGuids', [1])) for variant in variants] or [0])
+    max_samples_per_variant = max([len(variant.get('genotypes', {})) for variant in variants] or [0])
 
     rows = []
     for variant in variants:
@@ -404,8 +400,6 @@ def _get_field_value(value, config):
 
 @login_and_policies_required
 def search_context_handler(request):
-    """Search variants.
-    """
     response = _get_saved_searches(request.user)
     context = json.loads(request.body)
 
@@ -672,7 +666,14 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
             variant['liftedFamilyGuids'][variant['liftedFamilyGuids'].index(unmapped_family_guid)] = family_guid
         individual_guid_map = {}
         for j, genotype in enumerate(genotypes):
-            unmapped_individual_guid, individual = individual_summary_map[(genotype.pop('familyGuid'), genotype.pop('sampleId'))]
+            individual_key = (genotype.pop('familyGuid'), genotype.pop('sampleId'))
+            if individual_key not in individual_summary_map:
+                logger.error(
+                    f'Unable to map sample {individual_key[1]} in family {individual_key[0]} to an individual for variant {variant["variantId"]}',
+                    user,
+                )
+                continue
+            unmapped_individual_guid, individual = individual_summary_map[individual_key]
             if unmapped_individual_guid in individual_guid_map:
                 individual_guid = individual_guid_map[unmapped_individual_guid]
                 variant['genotypes'][individual_guid] = [variant['genotypes'][individual_guid], genotype]

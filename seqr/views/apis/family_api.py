@@ -1,6 +1,3 @@
-"""
-APIs used to retrieve and modify Individual fields
-"""
 import json
 from collections import defaultdict
 from django.contrib.auth.models import User
@@ -145,12 +142,6 @@ def family_variant_tag_summary(request, family_guid):
 
 @login_and_policies_required
 def edit_families_handler(request, project_guid):
-    """Edit or one or more Family records.
-
-    Args:
-        project_guid (string): GUID of project that contains these individuals.
-    """
-
     project = get_project_and_check_pm_permissions(project_guid, request.user)
 
     request_json = json.loads(request.body)
@@ -201,12 +192,6 @@ def edit_families_handler(request, project_guid):
 
 @login_and_policies_required
 def delete_families_handler(request, project_guid):
-    """Edit or delete one or more Individual records.
-
-    Args:
-        project_guid (string): GUID of project that contains these individuals.
-    """
-
     project = get_project_and_check_pm_permissions(project_guid, request.user, override_permission_func=external_anvil_project_can_edit)
 
     request_json = json.loads(request.body)
@@ -238,12 +223,6 @@ def delete_families_handler(request, project_guid):
 
 @login_and_policies_required
 def update_family_fields_handler(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-    """
-
     family = Family.objects.get(guid=family_guid)
 
     # check permission - can be edited by anyone with access to the project
@@ -266,11 +245,6 @@ def _set_display_name(family_json, family_model):
 
 @login_and_policies_required
 def update_family_assigned_analyst(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-    """
     family = Family.objects.get(guid=family_guid)
     # assigned_analyst can be edited by anyone with access to the project
     check_project_permissions(family.project, request.user, can_edit=False)
@@ -298,13 +272,6 @@ def update_family_assigned_analyst(request, family_guid):
 
 @login_and_policies_required
 def update_family_analysed_by(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-        field_name (string): Family model field name to update
-    """
-
     family = Family.objects.get(guid=family_guid)
     # analysed_by can be edited by anyone with access to the project
     check_project_permissions(family.project, request.user, can_edit=False)
@@ -319,12 +286,6 @@ def update_family_analysed_by(request, family_guid):
 
 @login_and_policies_required
 def update_family_pedigree_image(request, family_guid):
-    """Updates the specified field in the Family model.
-
-    Args:
-        family_guid (string): GUID of the family.
-    """
-
     family = Family.objects.get(guid=family_guid)
 
     # check permission
@@ -388,6 +349,7 @@ def receive_families_table_handler(request, project_guid):
     Args:
         request (object): Django request object
         project_guid (string): project GUID
+
     """
 
     project = get_project_and_check_pm_permissions(project_guid, request.user)

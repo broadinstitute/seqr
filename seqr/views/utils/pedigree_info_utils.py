@@ -1,4 +1,3 @@
-"""Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
 import difflib
 import os
 import json
@@ -25,23 +24,6 @@ RELATIONSHIP_REVERSE_LOOKUP = {v.lower(): k for k, v in Individual.RELATIONSHIP_
 
 
 def parse_pedigree_table(parsed_file, filename, user, project):
-    """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
-
-    Args:
-        parsed_file (array): The parsed output from the raw file.
-        filename (string): The original filename - used to determine the file format based on the suffix.
-        user (User): Django User object
-        project (Project): Django Project object
-
-    Return:
-        A 3-tuple that contains:
-        (
-            json_records (list): list of dictionaries, with each dictionary containing info about
-                one of the individuals in the input data
-            errors (list): list of error message strings
-            warnings (list): list of warning message strings
-        )
-    """
     header_string = str(parsed_file[0])
     is_merged_pedigree_sample_manifest = "do not modify" in header_string.lower() and "Broad" in header_string
     if is_merged_pedigree_sample_manifest:
@@ -153,32 +135,6 @@ def parse_hpo_terms(hpo_term_string):
 
 
 def _convert_fam_file_rows_to_json(column_map, rows, required_columns=None, update_features=False):
-    """Parse the values in rows and convert them to a json representation.
-
-    Args:
-        rows (list): a list of rows where each row is a list of strings corresponding to values in the table
-
-    Returns:
-        list: a list of dictionaries with each dictionary being a json representation of a parsed row.
-            For example:
-               {
-                    'familyId': family_id,
-                    'individualId': individual_id,
-                    'paternalId': paternal_id,
-                    'maternalId': maternal_id,
-                    'sex': sex,
-                    'affected': affected,
-                    'notes': notes,
-                    'codedPhenotype': ,
-                    'hpoTermsPresent': [...],
-                    'hpoTermsAbsent': [...],
-                    'fundingSource': [...],
-                    'caseReviewStatus': [...],
-                }
-
-    Raises:
-        ValueError: if there are unexpected values or row sizes
-    """
     required_columns = [JsonConstants.FAMILY_ID_COLUMN, JsonConstants.INDIVIDUAL_ID_COLUMN] + (required_columns or [])
     missing_cols = [_to_title_case(_to_snake_case(col)) for col in set(required_columns) - set(column_map.values())]
     if update_features and JsonConstants.FEATURES not in column_map.values():
@@ -217,9 +173,7 @@ def _parse_header_columns(header, allow_id_update, update_features):
         column = None
         full_key = key
         key = key.lower()
-        if full_key in JsonConstants.JSON_COLUMNS:
-            column = full_key
-        elif key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
+        if key == JsonConstants.FAMILY_NOTES_COLUMN.lower():
             column = JsonConstants.FAMILY_NOTES_COLUMN
         elif key.startswith("notes"):
             column = JsonConstants.NOTES_COLUMN
@@ -252,19 +206,6 @@ def _format_value(value, column):
 
 
 def validate_fam_file_records(project, records, errors=None, clear_invalid_values=False, update_features=False, related_guids=None, search_dataset_type=None, validate_expected_samples=None):
-    """Basic validation such as checking that parents have the same family id as the child, etc.
-
-    Args:
-        records (list): a list of dictionaries (see return value of #process_rows).
-
-    Returns:
-        dict: json representation of any errors, warnings, or info messages:
-            {
-                'errors': ['error text1', 'error text2', ...],
-                'warnings': ['warning text1', 'warning text2', ...],
-                'info': ['info message', ...],
-            }
-    """
     records_by_id = {r[JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN]: r for r in records
                      if r.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN)}
     records_by_id.update({r[JsonConstants.INDIVIDUAL_ID_COLUMN]: r for r in records})
@@ -452,13 +393,6 @@ def _validate_parent(row, parent_id_type, parent_id_field, parent_guid_field, ex
 
 
 def _is_header_row(row):
-    """Checks if the 1st row of a table is a header row
-
-    Args:
-        row (string): 1st row of a table
-    Returns:
-        True if it's a header row rather than data
-    """
     row = row.lower()
     if "family" in row and ("indiv" in row or "participant" in row):
         return True
@@ -488,18 +422,6 @@ def _parse_merged_pedigree_sample_manifest_rows(rows):
 
 
 def _parse_merged_pedigree_sample_manifest_format(rows, project):
-    """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
-
-    Kit ID, Well Position, Sample ID, Family ID, Collaborator Participant ID, Collaborator Sample ID,
-    Paternal Sample ID, Maternal ID, Gender, Affected Status, Volume, Concentration, Notes, Coded Phenotype,
-    Data Use Restrictions
-
-    Args:
-        rows (list): A list of lists where each list contains values from each column in the table.
-
-    Returns:
-         3-tuple: rows, sample_manifest_rows, kit_id
-    """
     c = MergedPedigreeSampleManifestConstants
     kit_id = rows[0][c.KIT_ID_COLUMN]
 
@@ -550,8 +472,6 @@ def _set_proband_relationship(json_records):
             )
             if affected_children:
                 affected = affected_children
-        if not affected:
-            continue
         affected = affected[0]
 
         relationships = {
@@ -846,30 +766,24 @@ def _get_rgp_dsm_family_notes(row):
 def _get_rgp_dsm_proband_fields(row):
     DC = DSMConstants
 
-    try:
+    if row[DC.AGE_COLUMN]:
         age = int(row[DC.AGE_COLUMN])
         birth_year = date.today().year - age
-    except ValueError:
-        birth_year = None
 
     death_year = None
     if row[DC.DECEASED_COLUMN] == DC.YES:
-        try:
-            age = int(row[DC.DECEASED_AGE_COLUMN])
-            death_year = birth_year + age
-        except (ValueError, TypeError):
-            death_year = 0
+        age = int(row[DC.DECEASED_AGE_COLUMN])
+        death_year = birth_year + age
 
-    try:
+    onset_age = None
+    if row[DC.AGE_OF_ONSET_COLUMN]:
         onset_age_val = int(row[DC.AGE_OF_ONSET_COLUMN])
         onset_age = next(age for cutoff, age in [
             (2, 'I'), # Infantile onset
             (13, 'C'), # Childhood onset
             (20, 'J'), # Juvenile onset
-            (200, 'A')# Adult onset
+            (200, 'A') # Adult onset
         ] if onset_age_val < cutoff)
-    except (ValueError, TypeError):
-        onset_age = None
 
     affected_relatives = any(
         row['{}_{}'.format(parent, DC.AFFECTED_KEY)] == DC.YES for parent in [DC.MOTHER, DC.FATHER]

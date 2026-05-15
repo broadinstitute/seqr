@@ -1,9 +1,6 @@
-"""
-APIs for retrieving, updating, creating, and deleting Individual records
-"""
 from collections import defaultdict
 
-from clickhouse_search.models.postgres_dicts import SexDict
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
 from matchmaker.models import MatchmakerSubmission, MatchmakerResult
 from seqr.models import Dataset, IgvSample, RnaSample, Individual, Family, FamilyNote
 from seqr.utils.middleware import ErrorsWarningsException
@@ -24,19 +21,6 @@ def _get_record_individual_id(record):
 
 
 def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_db_ids=False, get_created_counts=False, allow_features_update=False, skip_gt_stats_rebuild=False):
-    """
-    Add or update individual and family records in the given project.
-
-    Args:
-        project (object): Django ORM model for the project to add families to
-        individual_records (list): A list of JSON records representing individuals. See
-            the return value of pedigree_info_utils#convert_fam_file_rows_to_json(..)
-        user (object): current user model
-
-    Return:
-        3-tuple: updated Individual models, updated Family models, and updated FamilyNote models
-
-    """
     updated_family_ids = set()
     updated_individuals = set()
     updated_affected = set()
@@ -86,10 +70,12 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
 
     updated_family_models = Family.objects.filter(id__in=updated_family_ids)
     _remove_pedigree_images(updated_family_models, user)
-    if updated_affected and not skip_gt_stats_rebuild:
-        trigger_rebuild_gt_stats(project, user)
+    if updated_affected:
+        AffectedDict.reload(user)
+        if not skip_gt_stats_rebuild:
+            trigger_rebuild_gt_stats(project, user)
     if updated_sex:
-        SexDict.reload()
+        SexDict.reload(user)
 
     pedigree_json = None
     if get_update_json:
@@ -140,17 +126,11 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         record['displayName'] = ''
 
     # Update the parent ids last, so if they are referencing updated individuals they will check for the correct ID
-    if 'father' in record or 'mother' in record:
+    if record.get(JsonConstants.MATERNAL_ID_COLUMN) is not None or record.get(JsonConstants.PATERNAL_ID_COLUMN) is not None:
         parent_updates.append({
             'individual': individual,
-            'mother': record.pop('mother', None),
-            'father': record.pop('father', None),
-        })
-    elif record.get('maternalId') is not None or record.get('paternalId') is not None:
-        parent_updates.append({
-            'individual': individual,
-            'maternalId': record.pop('maternalId', None),
-            'paternalId': record.pop('paternalId', None),
+            JsonConstants.MATERNAL_ID_COLUMN: record.pop(JsonConstants.MATERNAL_ID_COLUMN, None),
+            JsonConstants.PATERNAL_ID_COLUMN: record.pop(JsonConstants.PATERNAL_ID_COLUMN, None),
         })
 
     family_notes = record.pop(JsonConstants.FAMILY_NOTES_COLUMN, None)
@@ -180,15 +160,6 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
 
 
 def delete_individuals(project, individual_guids, user):
-    """Delete one or more individuals
-
-    Args:
-        project (object): Django ORM model for project
-        individual_guids (list): GUIDs of individuals to delete
-
-    Returns:
-        list: Family objects for families with deleted individuals
-    """
     errors, individuals_to_delete = check_project_individuals_deletable(project, individual_guids=individual_guids)
     if errors:
         raise ErrorsWarningsException(errors)

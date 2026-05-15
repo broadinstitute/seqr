@@ -1,10 +1,6 @@
-"""
-Utility functions for converting Django ORM object to JSON
-"""
-
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
-from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When
+from django.db.models import prefetch_related_objects, Count, Value, F, Q, CharField, Case, When, OuterRef, Subquery
 from django.db.models.functions import Concat, Coalesce, NullIf, Lower, Trim, JSONObject
 from django.contrib.auth.models import User
 from guardian.shortcuts import get_users_with_perms, get_groups_with_perms
@@ -13,7 +9,7 @@ import json
 from panelapp.models import PaLocusList
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData, SavedVariant, Family, CAN_VIEW, CAN_EDIT, \
-    get_audit_field_names, RnaSeqOutlier, RnaSeqSpliceOutlier
+    get_audit_field_names, RnaSeqOutlier, RnaSeqSpliceOutlier, VariantSearchResults
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
 from seqr.views.utils.permissions_utils import has_project_permissions, \
@@ -41,18 +37,6 @@ def _get_model_json_fields(model_class, user, is_analyst, additional_model_field
 
 
 def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None, process_result=None, guid_key=None, additional_model_fields=None):
-    """Returns an array JSON representations of the given models.
-
-    Args:
-        models (array): Array of django models
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-        nested_fields (array): Optional array of fields to get from the model that are nested on related objects
-        process_result (lambda): Optional function to post-process a given model json
-        guid_key (string): Optional key to use for the model's guid
-    Returns:
-        array: json objects
-    """
-
     if not models:
         return []
 
@@ -93,14 +77,6 @@ def _get_json_for_models(models, nested_fields=None, user=None, is_analyst=None,
 
 
 def _get_json_for_model(model, get_json_for_models=_get_json_for_models, **kwargs):
-    """Helper function to return a JSON representations of the given model.
-
-    Args:
-        model (object): Django models
-        get_json_for_models (lambda): Function used to determine the json for an array of the given model
-    Returns:
-        object: json object
-    """
     return get_json_for_models([model], **kwargs)[0]
 
 
@@ -171,14 +147,6 @@ def get_json_for_current_user(user):
 
 
 def get_json_for_projects(projects, user=None, is_analyst=None, add_project_category_guids_field=True, add_permissions=False):
-    """Returns JSON representation of the given Projects.
-
-    Args:
-        projects (object array): Django models for the projects
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-    Returns:
-        dict: json object
-    """
     def _process_result(result, project):
         result.update({
             'isMmeEnabled': result['isMmeEnabled'] and not result['isDemo'],
@@ -198,14 +166,6 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
 
 
 def _get_json_for_project(project, user, **kwargs):
-    """Returns JSON representation of the given Project.
-
-    Args:
-        project (object): Django model for the project
-        user (object): Django User object for determining whether to include restricted/internal-only fields
-    Returns:
-        dict: json object
-    """
     return _get_json_for_model(project, get_json_for_models=get_json_for_projects, user=user, add_permissions=True, **kwargs)
 
 
@@ -323,14 +283,6 @@ def _get_sample_json_kwargs(project_guid=None, family_guid=None, individual_guid
 
 
 def get_json_for_samples(samples, **kwargs):
-    """Returns a JSON representation of the given list of Samples.
-
-    Args:
-        samples (array): array of django models for the Samples.
-    Returns:
-        array: array of json objects
-    """
-
     return get_json_for_queryset(samples, **_get_sample_json_kwargs(**kwargs))
 
 
@@ -343,27 +295,10 @@ def get_json_for_datasets(datasets, project_guid):
 
 
 def get_json_for_sample(sample, **kwargs):
-    """Returns a JSON representation of the given Sample.
-
-    Args:
-        sample (object): Django model for the Sample.
-    Returns:
-        dict: json object
-    """
-
     return _get_json_for_model(sample, **_get_sample_json_kwargs(**kwargs))
 
 
 def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested=False, is_dynamic=False, **kwargs):
-    """Returns a JSON representation of the given list of AnalysisGroups.
-
-    Args:
-        analysis_groups (array): array of django models for the AnalysisGroups.
-        project_guid (string): An optional field to use as the projectGuid instead of querying the DB
-    Returns:
-        array: array of json objects
-    """
-
     def _process_result(result, group):
         result.update({
             'familyGuids': [f.guid for f in group.families.all()]
@@ -384,14 +319,6 @@ def get_json_for_analysis_groups(analysis_groups, project_guid=None, skip_nested
 
 
 def get_json_for_analysis_group(analysis_group, **kwargs):
-    """Returns a JSON representation of the given AnalysisGroup.
-
-    Args:
-        analysis_group (object): Django model for the AnalysisGroup.
-        project_guid (string): An optional field to use as the projectGuid instead of querying the DB
-    Returns:
-        dict: json object
-    """
     return _get_json_for_model(analysis_group, get_json_for_models=get_json_for_analysis_groups, **kwargs)
 
 
@@ -452,14 +379,18 @@ def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, ta
 
     guid_key = 'tagGuid'
     nested_fields = None
+    additional_model_fields = ['id']
     if tag_cls == VariantTag:
         nested_fields = [
             {'fields': ('variant_tag_type', field), 'key': field} for field in ['name', 'category', 'color']]
+        related_searches = VariantSearchResults.objects.filter(search_hash=OuterRef('search_hash')).values('variant_search__name')
+        tag_models = tag_models.annotate(search_name=Subquery(related_searches[:1]))
+        additional_model_fields.append('search_name')
     elif tag_cls == VariantNote:
         guid_key = 'noteGuid'
 
     tags = get_json_for_queryset(
-        tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=['id'])
+        tag_models, guid_key=guid_key, nested_fields=nested_fields, additional_model_fields=additional_model_fields)
     if tag_cls == VariantFunctionalData:
         _format_functional_tags(tags)
     elif tag_cls == VariantTag:
@@ -554,36 +485,14 @@ def get_json_for_discovery_tags(variants, user):
 
 
 def get_json_for_variant_note(note):
-    """Returns a JSON representation of the given variant note.
-
-    Args:
-        note (object): Django model for the VariantNote.
-    Returns:
-        dict: json object
-    """
     return _get_json_for_model(note, guid_key='noteGuid')
 
 
 def get_json_for_gene_notes(notes, user):
-    """Returns a JSON representation of the given gene note.
-
-    Args:
-        note (object): Django model for the GeneNote.
-    Returns:
-        dict: json object
-    """
-
     return _get_json_for_models(notes, user=user, guid_key='noteGuid')
 
 
 def get_json_for_gene_notes_by_gene_id(gene_ids, user):
-    """Returns a JSON representation of the gene notes for the given gene ids.
-
-    Args:
-        note (object): Django model for the GeneNote.
-    Returns:
-        dict: json object
-    """
     notes_by_gene_id = defaultdict(list)
     for note in get_json_for_gene_notes(GeneNote.objects.filter(gene_id__in=gene_ids), user):
         notes_by_gene_id[note['geneId']].append(note)
@@ -619,13 +528,6 @@ def get_json_for_locus_lists(locus_lists, user, include_metadata=True, additiona
 
 
 def get_json_for_locus_list(locus_list, user):
-    """Returns a JSON representation of the given LocusList.
-
-    Args:
-        locus_list (object): LocusList django model.
-    Returns:
-        dict: json object
-    """
     result = _get_json_for_model(locus_list, user=user)
 
     intervals = _get_json_for_models(locus_list.locuslistinterval_set.all())
@@ -663,7 +565,6 @@ def get_json_for_project_collaborator_groups(project):
 
 
 def get_json_for_project_collaborator_list(user, project):
-    """Returns a JSON representation of the collaborators in the given project"""
     collaborator_list = list(
         get_project_collaborators_by_username(
             user, project, fields=['username', 'email', 'display_name'], include_permissions=True,
@@ -674,7 +575,6 @@ def get_json_for_project_collaborator_list(user, project):
 
 
 def get_project_collaborators_by_username(user, project, fields, include_permissions=False, expand_user_groups=False):
-    """Returns a JSON representation of the collaborators in the given project"""
     collaborators = {}
     if not anvil_enabled():
         if expand_user_groups:
