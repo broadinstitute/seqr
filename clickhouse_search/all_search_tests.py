@@ -2497,7 +2497,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,
         }
-        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], [{
+        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], [discovery_tag, {
             **discovery_tag,
             'savedVariant': {
                 'variantGuid': 'SV0000006_1248367227_r0004_non',
@@ -2505,7 +2505,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'projectGuid': 'R0004_non_analyst_project',
             },
             'tagGuid': 'VT1726961_2103343353_r0005_tes',
-        }, discovery_tag])
+        }])
         self.assertEqual(variants['1-248367227-TC-T']['noAccessDiscoveryFamilies'], 0)
         self.assertDictEqual(response.json()['familiesByGuid'], {'F000012_12': mock.ANY, 'F000014_14': mock.ANY})
 
