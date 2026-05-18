@@ -440,7 +440,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_mode='any_affected', quality_filter={'min_gq': 40, 'min_qs': 20}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
-        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1],
             inheritance_mode='de_novo', quality_filter=None, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
@@ -1031,23 +1030,23 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'liftedFamilyGuids': ['F2_1-10439-AC-A'],
             'genotypes': {
                 'I0_F0_1-10439-AC-A': [
-                    {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'filters': [], 'sampleType': 'WES'},
-                    {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'filters': [], 'sampleType': 'WGS'},
+                    {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'filters': [], 'sampleType': 'WES', 'hasDiscoveryTag': False},
+                    {'ab': 0.0, 'dp': 60, 'gq': 20, 'numAlt': 0, 'filters': [], 'sampleType': 'WGS', 'hasDiscoveryTag': False},
                 ],
                 'I1_F0_1-10439-AC-A': [
-                    {'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'filters': [], 'sampleType': 'WES'},
-                    {'ab': 0.0, 'dp': 24, 'gq': 99, 'numAlt': 1, 'filters': [], 'sampleType': 'WGS'},
+                    {'ab': 0.0, 'dp': 24, 'gq': 0, 'numAlt': 0, 'filters': [], 'sampleType': 'WES', 'hasDiscoveryTag': False},
+                    {'ab': 0.0, 'dp': 24, 'gq': 99, 'numAlt': 1, 'filters': [], 'sampleType': 'WGS', 'hasDiscoveryTag': False},
                 ],
                 'I2_F0_1-10439-AC-A': [
-                    {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'filters': [], 'sampleType': 'WES'},
-                    {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 2, 'filters': [], 'sampleType': 'WGS'},
+                    {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 1, 'filters': [], 'sampleType': 'WES', 'hasDiscoveryTag': False},
+                    {'ab': 0.5, 'dp': 10, 'gq': 99, 'numAlt': 2, 'filters': [], 'sampleType': 'WGS', 'hasDiscoveryTag': False},
                 ],
                 'I0_F1_1-10439-AC-A': [
-                    {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'filters': [], 'sampleType': 'WES'},
-                    {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'filters': [], 'sampleType': 'WGS'},
+                    {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'filters': [], 'sampleType': 'WES', 'hasDiscoveryTag': False},
+                    {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'filters': [], 'sampleType': 'WGS', 'hasDiscoveryTag': False},
                 ],
                 'I0_F2_1-10439-AC-A': {'ab': 0.531, 'dp': 27, 'gq': 87, 'numAlt': 1, 'filters': [],
-                                       'sampleType': 'WGS'},
+                                       'sampleType': 'WGS', 'hasDiscoveryTag': False},
             },
         }
         expected_individuals = {
@@ -1089,36 +1088,36 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             **GCNV_VARIANT4,
             'familyGuids': ['F0_suffix_140608_DUP'],
             'genotypes': {
-                'I0_F0_suffix_140608_DUP': {
+                'I0_F0_suffix_140608_DUP': {'hasDiscoveryTag': False, **{
                     k: v for k, v in GCNV_VARIANT4['genotypes']['I000006_hg00733'].items()
                     if k not in {'familyGuid', 'individualGuid', 'sampleId'}
-                },
-                'I1_F0_suffix_140608_DUP': {
+                }},
+                'I1_F0_suffix_140608_DUP': {'hasDiscoveryTag': False, **{
                     k: v for k, v in GCNV_VARIANT4['genotypes']['I000005_hg00732'].items()
                     if k not in {'familyGuid', 'individualGuid', 'sampleId'}
-                },
-                'I2_F0_suffix_140608_DUP': {
+                }},
+                'I2_F0_suffix_140608_DUP': {'hasDiscoveryTag': False, **{
                     k: v for k, v in GCNV_VARIANT4['genotypes']['I000004_hg00731'].items()
                     if k not in {'familyGuid', 'individualGuid', 'sampleId'}
-                },
+                }},
             },
         }
         expected_sv_variant = {
             **SV_VARIANT4,
             'familyGuids': ['F0_phase2_DEL_chr14_4640'],
             'genotypes': {
-                'I0_F0_phase2_DEL_chr14_4640': {
+                'I0_F0_phase2_DEL_chr14_4640': {'hasDiscoveryTag': False, **{
                     k: v for k, v in SV_VARIANT4['genotypes']['I000021_na21654'].items()
                     if k not in {'familyGuid', 'individualGuid', 'sampleId'}
-                },
-                'I1_F0_phase2_DEL_chr14_4640': {
+                }},
+                'I1_F0_phase2_DEL_chr14_4640': {'hasDiscoveryTag': False, **{
                     k: v for k, v in SV_VARIANT4['genotypes']['I000019_na21987'].items()
                     if k not in {'familyGuid', 'individualGuid', 'sampleId'}
-                },
-                'I2_F0_phase2_DEL_chr14_4640': {
+                }},
+                'I2_F0_phase2_DEL_chr14_4640': {'hasDiscoveryTag': False, **{
                     k: v for k, v in SV_VARIANT4['genotypes']['I000018_na21234'].items()
                     if k not in {'familyGuid', 'individualGuid', 'sampleId'}
-                },
+                }},
             },
         }
         expected_sv_individuals = {
@@ -1356,10 +1355,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         no_access_variant = {
             **GRCH37_VARIANT,
             'familyGuids': ['F0_7-143270172-A-G'],
-            'genotypes': {mapped_guid: {
+            'genotypes': {mapped_guid: {'hasDiscoveryTag': False, **{
                 k: v for k, v in GRCH37_VARIANT['genotypes'][guid].items()
                 if k not in {'familyGuid', 'individualGuid', 'sampleId'}
-            } for guid, mapped_guid in {
+            }} for guid, mapped_guid in {
                 'I000004_hg00731': 'I1_F0_7-143270172-A-G', 'I000006_hg00733': 'I0_F0_7-143270172-A-G',
             }.items()}
         }

@@ -587,16 +587,17 @@ def variant_lookup_handler(request):
     family_guids = set()
     for variant in variants:
         family_guids.update(variant['familyGenotypes'].keys())
+        family_guids.update(variant['discoveryFamilies'])
 
-    families = Family.objects.filter(
+    family_guids = set(Family.objects.filter(
         guid__in=family_guids,
         project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=True),
-    )
+    ).values_list('guid', flat=True))
     for variant in variants:
-        variant['familyGuids'] = list(families.values_list('guid', flat=True))
+        variant['familyGuids'] = family_guids.intersection(variant['familyGenotypes'].keys())
+        variant['lookupDiscoveryFamilies'] = set(variant['discoveryFamilies']) - family_guids
 
-    saved_variants = _get_saved_variant_models(variants) if families else None
-    # TODO move discovery family parsing up so not removed or add flag for tracking
+    saved_variants = _get_saved_variant_models(variants) if family_guids else None
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
         add_all_context=True, add_locus_list_detail=True, genome_version=genome_version,
@@ -624,6 +625,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
     variant['genotypes'] = {}
     variant['lookupFamilyGuids'] = sorted([guid for guid in variant.pop('familyGuids') if guid in variant['familyGenotypes']])
     variant['familyGuids'] = []
+    discovery_families = variant.pop('lookupDiscoveryFamilies')
     for family_guid in variant['lookupFamilyGuids']:
         for genotype in variant['familyGenotypes'].pop(family_guid):
             genotype.pop('metadata', None)
@@ -649,6 +651,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
         for j, genotype in enumerate(genotypes):
             individual_key = (genotype.pop('familyGuid'), genotype.pop('sampleId'))
             individual = genotype.pop('metadata', {})
+            genotype = {**genotype, 'hasDiscoveryTag': unmapped_family_guid in discovery_families}
             if individual_key in individual_key_map:
                 individual_guid = individual_key_map[individual_key]
                 variant['genotypes'][individual_guid] = [variant['genotypes'][individual_guid], genotype]
