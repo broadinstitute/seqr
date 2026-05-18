@@ -1508,7 +1508,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['variantsById'], {'7-143270172-A-G': GRCH37_VARIANT})
 
-        self.mock_redis.set.assert_not_called()
+        self.assertTrue(all(call.args[0].startswith('projects__') for call in self.mock_redis.get.mock_calls))
+        self.assertTrue(all(call.args[0].startswith('projects__') for call in self.mock_redis.set.mock_calls))
 
     def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
