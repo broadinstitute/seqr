@@ -1332,6 +1332,78 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         ]
         self.assert_json_logs(self.manager_user, unmapped_sample_logs)
 
+        self.login_analyst_user()
+        discovery_variant = {
+            'key': 100,
+            'variantId': '1-248367227-TC-T',
+            'chrom': '1',
+            'pos': 248367227,
+            'ref': 'TC',
+            'alt': 'T',
+            'genomeVersion': '38',
+            'liftedOverGenomeVersion': '37',
+            'liftedOverChrom': None,
+            'liftedOverPos': None,
+            'xpos': 1248367227,
+            'rsid': None,
+            'familyGuids': ['F000002_2', 'F000012_12', 'F0_1-248367227-TC-T'],
+            'genotypes': {
+                'I000004_hg00731': {
+                    'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731',
+                    'familyGuid': 'F000002_2',
+                    'numAlt': 1, 'dp': 10, 'gq': 99, 'ab': 0.5, 'filters': [],
+                },
+                'I000005_hg00732': {
+                    'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732',
+                    'familyGuid': 'F000002_2',
+                    'numAlt': 0, 'dp': 24, 'gq': 0, 'ab': 0.0, 'filters': [],
+                },
+                'I000006_hg00733': {
+                    'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733',
+                    'familyGuid': 'F000002_2',
+                    'numAlt': 0, 'dp': 60, 'gq': 20, 'ab': 0.0, 'filters': [],
+                },
+            },
+            'clinvar': None,
+            'hgmd': None,
+            'screenRegionType': None,
+            'populations': {
+                'seqr': {'ac': 7, 'hom': 2, 'ac_wes': 0, 'ac_wgs': 7, 'hom_wes': 0, 'hom_wgs': 2},
+                'seqr_affected': {'ac': 4, 'hom': 2},
+                'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
+                'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
+                'gnomad_genomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
+            },
+            'predictions': {
+                'cadd': None,
+                'eigen': None,
+                'fathmm': None,
+                'gnomad_noncoding': None,
+                'mpc': None,
+                'mut_pred': None,
+                'primate_ai': None,
+                'splice_ai': None,
+                'splice_ai_consequence': None,
+                'vest': None,
+                'mut_taster': None,
+                'polyphen': None,
+                'revel': None,
+                'sift': None,
+                'absplice': None,
+                'pext': None,
+                'promoter_ai': None,
+            },
+            'transcripts': {},
+            'sortedMotifFeatureConsequences': None,
+            'sortedRegulatoryFeatureConsequences': None,
+            'mainTranscriptId': None,
+            'selectedMainTranscriptId': None,
+            'CAID': None,
+            'noAccessDiscoveryFamilies': 1,
+        }
+        self.maxDiff = None
+        self._assert_expected_lookup('1-248367227-TC-T', discovery_variant, 'variant_lookup_results__1-248367227-TC-T__38')
+
         # With no project access, all genotypes are returned regardless of whether a corresponding seqr individual exists
         self.login_base_user()
         self.reset_logs()
