@@ -356,7 +356,7 @@ def _parse_discovery_tags(variants_by_id, family_guids, user):
     for variant_id, variant in variants_by_id.items():
         if not variant['key']:
             continue
-        discovery_families = set(variant.pop('discoveryFamilies')) - set(variant['familyGuids'])
+        discovery_families = set(variant.pop('discoveryFamilies')) - set(variant.get('familyGuids', []))
         if discovery_families:
             discovery_variant_ids.add(variant_id)
             discovery_family_guids.update(discovery_families)
