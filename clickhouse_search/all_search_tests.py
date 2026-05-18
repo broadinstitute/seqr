@@ -2482,14 +2482,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         variants = response.json()['variantsById']
         self.assertEqual(len(variants), 1)
-        self.assertFalse('discoveryTags' in variants['1-248367227-TC-T'])
-
-        self.login_analyst_user()
-        response, _, _ = self._execute_search(search_hash=9876)
-        self.assertEqual(response.status_code, 200)
-        variants = response.json()['variantsById']
-        self.assertEqual(len(variants), 1)
-        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], [{
+        discovery_tag = {
             'savedVariant': {
                 'variantGuid': 'SV0000006_1248367227_r0003_tes',
                 'familyGuid': 'F000012_12',
@@ -2504,7 +2497,26 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'metadata': None,
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,
-        }])
+        }
+        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], [{
+            **discovery_tag,
+            'savedVariant': {
+                'variantGuid': 'SV0000006_1248367227_r0004_non',
+                'familyGuid': 'F000014_14',
+                'projectGuid': 'R0004_non_analyst_project',
+            },
+            'tagGuid': 'VT1726961_2103343353_r0005_tes',
+        }, discovery_tag])
+        self.assertEqual(variants['1-248367227-TC-T']['noAccessDiscoveryFamilies'], 0)
+        self.assertDictEqual(response.json()['familiesByGuid'], {'F000012_12': mock.ANY, 'F000014_14': mock.ANY})
+
+        self.login_analyst_user()
+        response, _, _ = self._execute_search(search_hash=9876)
+        self.assertEqual(response.status_code, 200)
+        variants = response.json()['variantsById']
+        self.assertEqual(len(variants), 1)
+        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], [discovery_tag])
+        self.assertEqual(variants['1-248367227-TC-T']['noAccessDiscoveryFamilies'], 1)
         self.assertDictEqual(response.json()['familiesByGuid'], {'F000012_12': mock.ANY})
 
     def test_cached_query_variants(self):
