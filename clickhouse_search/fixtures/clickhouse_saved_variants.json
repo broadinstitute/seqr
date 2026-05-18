@@ -59,7 +59,7 @@
       "pathogenicity": "Uncertain_significance"
     }
 }, {
-    "model": "clickhouse_search.entriesgrch37snvindel",
+    "model": "clickhouse_search.entriessnvindel",
     "pk": 100,
     "fields": {
       "key": 100,
@@ -119,7 +119,7 @@
       "transcripts": []
     }
 }, {
-    "model": "clickhouse_search.entriesgrch37snvindel",
+    "model": "clickhouse_search.entriessnvindel",
     "pk": 101,
     "fields": {
       "key": 101,
@@ -305,16 +305,16 @@
     }
 }, {
     "model": "clickhouse_search.keylookupmito",
-    "pk": 100,
+    "pk": 8,
     "fields": {
-      "key": 100,
+      "key": 8,
       "variant_id": "M-14783-T-C"
     }
 }, {
     "model": "clickhouse_search.variantsmito",
-    "pk": 100,
+    "pk": 8,
     "fields": {
-      "key": 100,
+      "key": 8,
       "variant_id": "M-14783-T-C",
       "rsid": "rs193302982",
       "lifted_over_pos": 14783,
