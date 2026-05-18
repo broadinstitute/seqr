@@ -371,7 +371,7 @@ def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, ta
     for savedvariant_id, tag_id in tag_cls.saved_variants.through.objects.filter(
             savedvariant_id__in=saved_variant_id_map.keys()).values_list(
         'savedvariant_id', f'{tag_cls.__name__.lower()}_id',
-    ).order_by():
+    ):
         variant_tag_id_map[tag_id].append(savedvariant_id)
     tag_models = tag_cls.objects.filter(id__in=variant_tag_id_map.keys()).order_by('id')
     if tag_filter:

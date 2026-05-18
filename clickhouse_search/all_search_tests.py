@@ -440,6 +440,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_mode='any_affected', quality_filter={'min_gq': 40, 'min_qs': 20}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
+        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1],
             inheritance_mode='de_novo', quality_filter=None, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
