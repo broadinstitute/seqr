@@ -1349,19 +1349,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'familyGuids': ['F000002_2', 'F000012_12', 'F0_1-248367227-TC-T'],
             'genotypes': {
                 'I000004_hg00731': {
-                    'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731',
+                    'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
                     'familyGuid': 'F000002_2',
-                    'numAlt': 1, 'dp': 10, 'gq': 99, 'ab': 0.5, 'filters': [],
+                    'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1.0, 'filters': [],
                 },
-                'I000005_hg00732': {
-                    'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732',
-                    'familyGuid': 'F000002_2',
-                    'numAlt': 0, 'dp': 24, 'gq': 0, 'ab': 0.0, 'filters': [],
-                },
-                'I000006_hg00733': {
-                    'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733',
-                    'familyGuid': 'F000002_2',
-                    'numAlt': 0, 'dp': 60, 'gq': 20, 'ab': 0.0, 'filters': [],
+                'I0_F0_1-248367227-TC-T': {
+                    'sampleType': 'WGS', 'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
+                    'hasDiscoveryTag': True,
                 },
             },
             'clinvar': None,
@@ -1399,10 +1393,34 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'mainTranscriptId': None,
             'selectedMainTranscriptId': None,
             'CAID': None,
+            'discoveryTags': [],
             'noAccessDiscoveryFamilies': 1,
         }
+        expected_individuals = {
+            **{guid: mock.ANY for guid in [
+                'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000016_na20888', 'I000017_na20889', 'I000020_na20870',
+            ]},
+            'I0_F0_1-248367227-TC-T': {
+                'familyGuid': 'F0_1-248367227-TC-T',
+                'individualGuid': 'I0_F0_1-248367227-TC-T',
+                'affected': 'A',
+                'sex': 'F',
+                'features': [],
+                'vlmContactEmail': 'vlm@broadinstitute.org',
+            },
+        }
         self.maxDiff = None
-        self._assert_expected_lookup('1-248367227-TC-T', discovery_variant, 'variant_lookup_results__1-248367227-TC-T__38')
+        self._assert_expected_lookup(
+            '1-248367227-TC-T', discovery_variant, 'variant_lookup_results__1-248367227-TC-T__38',
+            project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000012_12'], expected_individuals=expected_individuals,
+            mmeSubmissionsByGuid={'MS000015_na20885': mock.ANY},
+            savedVariantsByGuid={'SV0000002_1248367227_r0390_100': mock.ANY, 'SV0000006_1248367227_r0003_tes': mock.ANY},
+            variantNotesByGuid={'VN0714935_2103343353_r0390_100': mock.ANY, 'VN0714937_2103343353_r0390_100': mock.ANY},
+            variantTagsByGuid={
+                'VT1726945_2103343353_r0390_100': mock.ANY, 'VT1726961_2103343353_r0003_tes': mock.ANY,
+                'VT1726970_2103343353_r0004_tes': mock.ANY, 'VT1726985_2103343353_r0390_100': mock.ANY,
+            },
+        )
 
         # With no project access, all genotypes are returned regardless of whether a corresponding seqr individual exists
         self.login_base_user()
@@ -1527,7 +1545,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 family_guid = gt.get('familyGuid') or expected_individuals[individual_guid]['familyGuid']
                 family_genotypes[family_guid].append({
                     **{k: v for k, v in gt.items() if k != 'individualGuid'},
-                    'metadata': self.INDIVIDUAL_METADATA.get(gt['individualGuid']),
+                    'metadata': self.INDIVIDUAL_METADATA.get(gt.get('individualGuid')),
                 })
         return {
             **{k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}},
