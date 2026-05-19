@@ -1053,7 +1053,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         expected_individuals = {
             'I0_F0_1-10439-AC-A': {
                 'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
-                'individualGuid': 'I0_F0_1-10439-AC-A', 'sex': 'F',
+                'individualGuid': 'I0_F0_1-10439-AC-A', 'sex': 'F', 'isSolved': False, 'disease': 'OMIM:615123',
                 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
             },
             'I0_F1_1-10439-AC-A': {
@@ -1062,20 +1062,20 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
             },
             'I0_F2_1-10439-AC-A': {
-                'affected': 'A', 'familyGuid': 'F2_1-10439-AC-A', 'features': [],
+                'affected': 'A', 'familyGuid': 'F2_1-10439-AC-A', 'features': [], 'isSolved': True, 'disease': '',
                 'individualGuid': 'I0_F2_1-10439-AC-A', 'sex': 'F',
                 'vlmContactEmail': 'vlm@broadinstitute.org',
             },
             'I1_F0_1-10439-AC-A': {
                 'affected': 'N', 'familyGuid': 'F0_1-10439-AC-A', 'features': [],
-                'individualGuid': 'I1_F0_1-10439-AC-A', 'sex': 'M',
+                'individualGuid': 'I1_F0_1-10439-AC-A', 'sex': 'M', 'isSolved': False, 'disease': 'OMIM:615123',
                 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
             },
             'I2_F0_1-10439-AC-A': {
                 'affected': 'A', 'familyGuid': 'F0_1-10439-AC-A', 'individualGuid': 'I2_F0_1-10439-AC-A', 'sex': 'X0',
                 'features': [{'category': 'HP:0000707', 'label': 'Morphological abnormality of the central nervous system', 'id': 'HP:0002011'},
                              {'category': 'HP:0001626', 'label': 'Arrhythmia', 'id': 'HP:0011675'}],
-                'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org', 'isSolved': False, 'disease': 'OMIM:615123',
             },
         }
         cache_key = 'variant_lookup_results__1-10439-AC-A__38'
@@ -1125,31 +1125,34 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'I0_F0_phase2_DEL_chr14_4640': {
                 'affected': 'A', 'familyGuid': 'F0_phase2_DEL_chr14_4640', 'features': [],
                 'individualGuid': 'I0_F0_phase2_DEL_chr14_4640', 'sex': 'M',
-                'vlmContactEmail': 'vlm@broadinstitute.org',
+                'vlmContactEmail': 'vlm@broadinstitute.org', 'isSolved': True, 'disease': '',
             },
             'I0_F0_suffix_140608_DUP': {
                 'affected': 'N', 'familyGuid': 'F0_suffix_140608_DUP', 'individualGuid': 'I0_F0_suffix_140608_DUP',
                 'sex': 'F', 'features': [], 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                'isSolved': False, 'disease': 'OMIM:615123',
             },
             'I1_F0_phase2_DEL_chr14_4640': {
                 'affected': 'N', 'familyGuid': 'F0_phase2_DEL_chr14_4640', 'features': [],
                 'individualGuid': 'I1_F0_phase2_DEL_chr14_4640', 'sex': 'F',
-                'vlmContactEmail': 'vlm@broadinstitute.org',
+                'vlmContactEmail': 'vlm@broadinstitute.org', 'isSolved': True, 'disease': '',
             },
             'I1_F0_suffix_140608_DUP': {
                 'affected': 'N', 'familyGuid': 'F0_suffix_140608_DUP', 'individualGuid': 'I1_F0_suffix_140608_DUP',
                 'sex': 'M', 'features': [], 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                'isSolved': False, 'disease': 'OMIM:615123',
             },
             'I2_F0_phase2_DEL_chr14_4640': {
                 'affected': 'A', 'familyGuid': 'F0_phase2_DEL_chr14_4640', 'features': [],
                 'individualGuid': 'I2_F0_phase2_DEL_chr14_4640', 'sex': 'F',
-                'vlmContactEmail': 'vlm@broadinstitute.org',
+                'vlmContactEmail': 'vlm@broadinstitute.org', 'isSolved': True, 'disease': '',
             },
             'I2_F0_suffix_140608_DUP': {
                 'affected': 'A', 'familyGuid': 'F0_suffix_140608_DUP', 'individualGuid': 'I2_F0_suffix_140608_DUP',
                 'features': [{'category': 'HP:0000707', 'label': 'Morphological abnormality of the central nervous system', 'id': 'HP:0002011'},
                              {'category': 'HP:0001626', 'label': 'Arrhythmia', 'id': 'HP:0011675'}],
                 'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                'isSolved': False, 'disease': 'OMIM:615123',
             },
         }
         sv_genes = {
@@ -1174,7 +1177,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             individual_guid: {
                 **{k: mock.ANY for k in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']},
                 **{k: v for k, v in expected_individuals[anon_individual_guid].items()
-                   if k not in {'individualGuid', 'familyGuid', 'features', 'vlmContactEmail'}},
+                   if k not in {'individualGuid', 'familyGuid', 'features', 'vlmContactEmail', 'isSolved', 'disease'}},
             } for individual_guid, anon_individual_guid in individual_guid_map.items()
         }
         expected_individuals.update(
@@ -1337,19 +1340,23 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.reset_logs()
         expected_individuals = {'I0_F0_7-143270172-A-G': {
             'affected': 'N',
+            'disease': 'OMIM:615123',
             'familyGuid': 'F0_7-143270172-A-G',
             'features': [],
             'individualGuid': 'I0_F0_7-143270172-A-G',
+            'isSolved': False,
             'sex': 'F',
             'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
         }, 'I1_F0_7-143270172-A-G': {
             'affected': 'A',
+            'disease': 'OMIM:615123',
             'familyGuid': 'F0_7-143270172-A-G',
             'features': [
                 {'category': 'HP:0000707', 'id': 'HP:0002011', 'label': 'Morphological abnormality of the central nervous system'},
                 {'category': 'HP:0001626', 'id': 'HP:0011675', 'label': 'Arrhythmia'},
             ],
             'individualGuid': 'I1_F0_7-143270172-A-G',
+            'isSolved': False,
             'sex': 'X0',
             'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
         }}
@@ -1373,36 +1380,38 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
     INDIVIDUAL_METADATA = {
         'I000006_hg00733': {
-            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F',
-            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'omim_id': 615123, 'mondo_id': 'MONDO:0044970',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org', 'isSolved': False,
         },
         'I000005_hg00732': {
-            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M',
-            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M', 'isSolved': False,
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org', 'omim_id': 615123, 'mondo_id': 'MONDO:0044970',
         },
         'I000004_hg00731': {
             'affected': 'A', 'features': '[{"id": "HP:0002011"}, {"id": "HP:0011675"}]', 'restrict_sharing': False,
-            'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+            'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org', 'isSolved': False,
+            'omim_id': 615123, 'mondo_id': 'MONDO:0044970',
         },
         'I000015_na20885': {
             'affected': 'A', 'features': '[{"id": "HP:0011675"}, {"id": "HP:0001509"}]', 'restrict_sharing': True,
             'sex': 'M', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+            'omim_id': 0, 'mondo_id': '', 'isSolved': False,
         },
         'I000018_na21234': {
-            'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F',
-            'vlmContactEmail': 'vlm@broadinstitute.org',
+            'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'isSolved': True,
+            'vlmContactEmail': 'vlm@broadinstitute.org', 'omim_id': 0, 'mondo_id': '',
         },
         'I000019_na21987': {
-            'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'M',
-            'vlmContactEmail': 'vlm@broadinstitute.org',
+            'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'M', 'isSolved': True,
+            'vlmContactEmail': 'vlm@broadinstitute.org', 'omim_id': 0, 'mondo_id': '',
         },
         'I000021_na21654': {
-            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F',
-            'vlmContactEmail': 'vlm@broadinstitute.org',
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'isSolved': True,
+            'vlmContactEmail': 'vlm@broadinstitute.org', 'omim_id': 0, 'mondo_id': '',
         },
         'I000002_na19678': {
-            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M',
-            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M', 'isSolved': False,
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org', 'omim_id': 615123, 'mondo_id': '',
         },
     }
 

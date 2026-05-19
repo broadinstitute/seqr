@@ -656,6 +656,12 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
             individual_key_map[individual_key] = individual_guid
             features = json.loads(individual['features']) if individual.get('features') else []
             all_feature_ids.update([feature['id'] for feature in features])
+            omim_id = individual.pop('omim_id')
+            mondo_id = individual.pop('mondo_id')
+            if individual.get('restrict_sharing'):
+                individual.pop('isSolved')
+            else:
+                individual['disease'] = f'OMIM:{omim_id}' if omim_id else mondo_id
             response['individualsByGuid'][individual_guid] = {
                 **individual,
                 'familyGuid': family_guid,
