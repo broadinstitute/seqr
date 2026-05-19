@@ -1331,7 +1331,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'I000004_hg00731': {
                     'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
                     'familyGuid': 'F000002_2',
-                    'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1.0, 'filters': [],
+                    'numAlt': 0, 'dp': 16, 'gq': 48, 'ab': 1.0, 'filters': [],
                 },
                 'I000006_hg00733': {
                     'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733',
@@ -1353,8 +1353,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'hgmd': None,
             'screenRegionType': None,
             'populations': {
-                'seqr': {'ac': 7, 'hom': 2, 'ac_wes': 0, 'ac_wgs': 7, 'hom_wes': 0, 'hom_wgs': 2},
-                'seqr_affected': {'ac': 6, 'hom': 2},
+                'seqr': {'ac': 5, 'hom': 1, 'ac_wes': 0, 'ac_wgs': 5, 'hom_wes': 0, 'hom_wgs': 1},
+                'seqr_affected': {'ac': 4, 'hom': 1},
                 'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
                 'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
                 'gnomad_genomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
