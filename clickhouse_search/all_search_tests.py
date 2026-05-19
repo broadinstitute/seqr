@@ -1334,7 +1334,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                     'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1.0, 'filters': [],
                 },
                 'I000006_hg00733': {
-                    'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
+                    'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733',
                     'familyGuid': 'F000002_2',
                     'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.65306, 'filters': [],
                 },
@@ -1348,11 +1348,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                     'individualGuid': 'I000016_na20888',
                     'ab': 0.55555, 'gq': 99, 'dp': 9, 'numAlt': 1, 'filters': [],
                 },
-                'I000018_na21234': {
-                    'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14',
-                    'individualGuid': 'I000018_na21234',
-                    'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
-                },
             },
             'clinvar': None,
             'hgmd': None,
@@ -1365,23 +1360,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 'gnomad_genomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
             },
             'predictions': {
-                'cadd': None,
-                'eigen': None,
-                'fathmm': None,
-                'gnomad_noncoding': None,
-                'mpc': None,
-                'mut_pred': None,
-                'primate_ai': None,
-                'splice_ai': None,
-                'splice_ai_consequence': None,
-                'vest': None,
-                'mut_taster': None,
-                'polyphen': None,
-                'revel': None,
-                'sift': None,
-                'absplice': None,
-                'pext': None,
-                'promoter_ai': None,
+                'cadd': None, 'eigen': None, 'fathmm': None, 'gnomad_noncoding': None, 'mpc': None, 'mut_pred': None,
+                'primate_ai': None, 'splice_ai': None, 'splice_ai_consequence': None, 'vest': None, 'mut_taster': None,
+                'polyphen': None, 'revel': None, 'sift': None, 'absplice': None, 'pext': None, 'promoter_ai': None,
             },
             'transcripts': {},
             'sortedMotifFeatureConsequences': None,
@@ -1395,9 +1376,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'discoveryTags': [],
             'noAccessDiscoveryFamilies': 1,
             'genotypes': {
-                # TODO why are some genotypes missing??
-                **{guid: gt for guid, gt in base_discovery_variant['genotypes'].items() if
-                   guid not in {'I000006_hg00733', 'I000018_na21234'}},
+                **base_discovery_variant['genotypes'],
                 'I0_F0_1-248367227-TC-T': {
                     'sampleType': 'WGS', 'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
                     'hasDiscoveryTag': True,
@@ -1407,8 +1386,14 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         cached_discovery_variant = {
             **base_discovery_variant,
             'discoveryFamilies': ['F000002_2', 'F000012_12', 'F000014_14'],
+            'genotypes': {
+                **base_discovery_variant['genotypes'],
+                'I000018_na21234': {
+                    'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14', 'individualGuid': 'I000018_na21234',
+                    'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
+                },
+            },
         }
-        self.maxDiff = None
         self._assert_expected_lookup(
             '1-248367227-TC-T', discovery_variant, 'variant_lookup_results__1-248367227-TC-T__38',
             cached_variants=[cached_discovery_variant], project_guids=['R0001_1kg', 'R0003_test'],
@@ -1427,8 +1412,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 },
             },
             mmeSubmissionsByGuid={'MS000015_na20885': mock.ANY},
-            savedVariantsByGuid={'SV0000002_1248367227_r0390_100': mock.ANY,
-                                 'SV0000006_1248367227_r0003_tes': mock.ANY},
+            savedVariantsByGuid={'SV0000002_1248367227_r0390_100': mock.ANY, 'SV0000006_1248367227_r0003_tes': mock.ANY},
             variantNotesByGuid={'VN0714935_2103343353_r0390_100': mock.ANY, 'VN0714937_2103343353_r0390_100': mock.ANY},
             variantTagsByGuid={
                 'VT1726945_2103343353_r0390_100': mock.ANY, 'VT1726961_2103343353_r0003_tes': mock.ANY,
@@ -1454,7 +1438,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
             }),
         ]
-        self.assert_json_logs(self.manager_user, unmapped_sample_logs)
+        self.assert_json_logs(self.analyst_user, unmapped_sample_logs)
 
         # With no project access, all genotypes are returned regardless of whether a corresponding seqr individual exists
         self.login_base_user()
