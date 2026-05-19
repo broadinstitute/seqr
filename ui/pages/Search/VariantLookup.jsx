@@ -7,6 +7,7 @@ import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { getVlmEnabled } from 'redux/selectors'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
+import { VerticalSpacer } from 'shared/components/Spacers'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import SendEmailButton from 'shared/components/buttons/SendEmailButton'
 import FormWrapper from 'shared/components/form/FormWrapper'
@@ -207,6 +208,7 @@ const ExternalFamily = ({ familyGuid, variant }) => {
       {tags.length > 0 && (
         <Grid.Column width={16}>
           {tags.map(tag => <Label key={tag.content} size="small" horizontal {...tag} />)}
+          <VerticalSpacer height={5} />
         </Grid.Column>
       )}
       <Grid.Column width={16}>
