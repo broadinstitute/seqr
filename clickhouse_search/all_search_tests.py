@@ -12,7 +12,8 @@ import responses
 from clickhouse_search.models.gt_stats_models import ProjectGtStatsSnvIndel, \
     ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv, \
     GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv
-from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, IndividualMetadataDict, DiscoveryVariantDict, \
+    ExcludedVariantDict
 from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, \
     ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel, ClinvarSearchMvGRCh37SnvIndel, HgmdMv, HgmdSearchMv,  \
     DbnsfpSnvIndelMv, DbnsfpSnvIndelDict, EigenMv, EigenDict, SpliceAiMv, SpliceAiDict, GnomadNonCodingConstraintDict, \
@@ -81,8 +82,8 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        AffectedDict.reload()
-        SexDict.reload()
+        for postgres_dict in [AffectedDict, SexDict, IndividualMetadataDict, DiscoveryVariantDict, ExcludedVariantDict]:
+            postgres_dict.reload()
         for view in [
             ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
@@ -1227,10 +1228,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertDictEqual(response.json(), {'error': 'Variant not present in seqr'})
 
-        self.set_cache('variant_lookup_results__1-91511686-TCA-G__38', [{
-            **VARIANT1,
-            'familyGenotypes': {'F000002_2': list(VARIANT1['genotypes'].values())},
-        }])
+        self.set_cache('variant_lookup_results__1-91511686-TCA-G__38', [
+            self._cached_lookup_variant(VARIANT1),
+        ])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['variantsById'], {'1-10439-AC-A': {
@@ -1332,34 +1332,79 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         ]
         self.assert_json_logs(self.manager_user, unmapped_sample_logs)
 
+        # With no project access, all genotypes are returned regardless of whether a corresponding seqr individual exists
         self.login_base_user()
         self.reset_logs()
-        expected_individuals = {'I1_F0_7-143270172-A-G': {
+        expected_individuals = {'I0_F0_7-143270172-A-G': {
+            'affected': 'N',
+            'familyGuid': 'F0_7-143270172-A-G',
+            'features': [],
+            'individualGuid': 'I0_F0_7-143270172-A-G',
+            'sex': 'F',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        }, 'I1_F0_7-143270172-A-G': {
             'affected': 'A',
             'familyGuid': 'F0_7-143270172-A-G',
             'features': [
                 {'category': 'HP:0000707', 'id': 'HP:0002011', 'label': 'Morphological abnormality of the central nervous system'},
-                {'category': 'HP:0001626', 'id': 'HP:0011675',  'label': 'Arrhythmia'},
+                {'category': 'HP:0001626', 'id': 'HP:0011675', 'label': 'Arrhythmia'},
             ],
             'individualGuid': 'I1_F0_7-143270172-A-G',
             'sex': 'X0',
             'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
         }}
-        no_access_missing_gt_variant = {
+        no_access_variant = {
             **GRCH37_VARIANT,
             'familyGuids': ['F0_7-143270172-A-G'],
-            'genotypes': {'I1_F0_7-143270172-A-G': {
-                k: v for k, v in GRCH37_VARIANT['genotypes']['I000004_hg00731'].items()
+            'genotypes': {mapped_guid: {
+                k: v for k, v in GRCH37_VARIANT['genotypes'][guid].items()
                 if k not in {'familyGuid', 'individualGuid', 'sampleId'}
-            }}
+            } for guid, mapped_guid in {
+                'I000004_hg00731': 'I1_F0_7-143270172-A-G', 'I000006_hg00733': 'I0_F0_7-143270172-A-G',
+            }.items()}
         }
         self._assert_expected_lookup(
-            '7-143270172-A-G', no_access_missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT],
+            '7-143270172-A-G', no_access_variant, cache_key, cached_variants=[GRCH37_VARIANT],
             genome_version='37', expected_individuals=expected_individuals, locusListsByGuid={}, skip_fields={
                 'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
             },
         )
-        self.assert_json_logs(self.no_access_user, unmapped_sample_logs)
+        self.assert_json_logs(self.no_access_user, unmapped_sample_logs[:1])
+
+    INDIVIDUAL_METADATA = {
+        'I000006_hg00733': {
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        },
+        'I000005_hg00732': {
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        },
+        'I000004_hg00731': {
+            'affected': 'A', 'features': '[{"id": "HP:0002011"}, {"id": "HP:0011675"}]', 'restrict_sharing': False,
+            'sex': 'X0', 'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        },
+        'I000015_na20885': {
+            'affected': 'A', 'features': '[{"id": "HP:0011675"}, {"id": "HP:0001509"}]', 'restrict_sharing': True,
+            'sex': 'M', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+        },
+        'I000018_na21234': {
+            'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F',
+            'vlmContactEmail': 'vlm@broadinstitute.org',
+        },
+        'I000019_na21987': {
+            'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'M',
+            'vlmContactEmail': 'vlm@broadinstitute.org',
+        },
+        'I000021_na21654': {
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'F',
+            'vlmContactEmail': 'vlm@broadinstitute.org',
+        },
+        'I000002_na19678': {
+            'affected': 'N', 'features': '', 'restrict_sharing': False, 'sex': 'M',
+            'vlmContactEmail': 'test@broadinstitute.org,vlm@broadinstitute.org',
+        },
+    }
 
     def _assert_expected_lookup(self, variant_id, variant, cache_key, genome_version='38', hom_only=False, affected_only=False, project_guids=None, family_guids=None, individual_guids=None, expected_individuals=None, skip_fields=None, cached_variants=None, additional_variant=None, sample_type=None, **kwargs):
         url = f'{reverse(variant_lookup_handler)}?variantId={variant_id}&genomeVersion={genome_version}'
@@ -1395,24 +1440,30 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         }
         self.assertDictEqual(response.json(), expected_body)
 
-        parsed_cached_variants = []
-        for v in (cached_variants or variants):
-            family_genotypes = defaultdict(list)
-            for individual_guid, gts in v['genotypes'].items():
-                if not isinstance(gts, list):
-                    gts = [gts]
-                for gt in gts:
-                    family_guid = gt.get('familyGuid') or expected_individuals[individual_guid]['familyGuid']
-                    family_genotypes[family_guid].append({k: v for k, v in gt.items() if k != 'individualGuid'})
-            parsed_cached_variants.append({
-                **{k: v for k, v in v.items() if k not in {'familyGuids', 'genotypes'}},
-                'familyGenotypes': {
-                    family_guid: sorted(gts, key=lambda x: (x['sampleType'] == 'WES', x.get('sampleId')), reverse=True)
-                    for family_guid, gts in family_genotypes.items()
-                },
-            })
+        parsed_cached_variants = [
+            self._cached_lookup_variant(v, expected_individuals) for v in (cached_variants or variants)
+        ]
         self.assert_cached_results(parsed_cached_variants, cache_key)
         return url
+
+    def _cached_lookup_variant(self, variant, expected_individuals=None):
+        family_genotypes = defaultdict(list)
+        for individual_guid, gts in variant['genotypes'].items():
+            if not isinstance(gts, list):
+                gts = [gts]
+            for gt in gts:
+                family_guid = gt.get('familyGuid') or expected_individuals[individual_guid]['familyGuid']
+                family_genotypes[family_guid].append({
+                    **{k: v for k, v in gt.items() if k != 'individualGuid'},
+                    'metadata': self.INDIVIDUAL_METADATA.get(gt['individualGuid']),
+                })
+        return {
+            **{k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}},
+            'familyGenotypes': {
+                family_guid: sorted(gts, key=lambda x: (x['sampleType'] == 'WES', x.get('sampleId')), reverse=True)
+                for family_guid, gts in family_genotypes.items()
+            },
+        }
 
     def test_get_single_variant(self):
         url_template = (reverse(query_single_variant_handler, args=['variant_id']) + '?familyGuid={}').replace('variant_id', '{}')

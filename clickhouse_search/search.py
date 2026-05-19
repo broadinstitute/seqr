@@ -1,4 +1,4 @@
-from clickhouse_backend.models import ArrayField, StringField
+from clickhouse_backend.models import ArrayField, BoolField, StringField
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
@@ -14,6 +14,7 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
     ArrayMap, Modulo
 from clickhouse_search.managers import InvalidDatasetTypeException, InvalidSearchException
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
+from clickhouse_search.models.postgres_dicts import SexDict, AffectedDict, IndividualMetadataDict
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, EntriesSnvIndel,  \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
@@ -878,7 +879,7 @@ def _clickhouse_variant_lookup(entries, genome_version, data_type, affected_only
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
-    entries = entries.result_values()
+    entries = entries.result_values(additional_expressions=_lookup_genotype_expressions())
     results = variants_cls.objects.subquery_join(entries)
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
@@ -894,6 +895,22 @@ def _filter_lookup_entries(entries, affected_only, hom_only):
     if hom_only:
         entries = entries.filter(calls__array_exists={'gt': (2,)})
     return entries
+
+def _lookup_genotype_expressions():
+    affected_expr = AffectedDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['affected'], default='U')
+    sex_expr = SexDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['sex'], default='U')
+    metadata_expr = IndividualMetadataDict.dict_get_sql(
+        key='(family_guid, x.sampleId)', fields=['restrict_sharing', 'features', 'vlm_contact_email'],
+    )
+    return {
+        f'tupleConcat(({affected_expr}, {sex_expr}), {metadata_expr})': ('metadata', NamedTupleField([
+            ('affected', StringField()),
+            ('sex', StringField()),
+            ('restrict_sharing', BoolField()),
+            ('features', StringField()),
+            ('vlmContactEmail', StringField()),
+        ])),
+    }
 
 def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, affected_only, hom_only):
     data_type = entry_qs = None
@@ -947,7 +964,9 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
         other_variants_cls = VARIANTS_CLASS_MAP[genome_version][other_sample_type]
 
         padding = int((variant['end'] - variant['pos']) * 0.2)
-        entries = other_entry_class.objects.search_padded_interval(variant['chrom'], variant['pos'], padding)
+        entries = other_entry_class.objects.search_padded_interval(
+            variant['chrom'], variant['pos'], padding, additional_expressions=_lookup_genotype_expressions(),
+        )
         entries = _filter_lookup_entries(entries, affected_only, hom_only)
         results = other_variants_cls.objects.subquery_join(entries).search(
             padded_interval_end=(variant['end'], padding), **other_variants_cls.objects.get_parsed_annotations_filters(
@@ -966,7 +985,7 @@ def _add_liftover_genotypes(variant, data_type, affected_only, hom_only):
     lifted_id = f"{variant['liftedOverChrom']}-{variant['liftedOverPos']}-{variant['ref']}-{variant['alt']}"
     lifted_entries = lifted_entry_cls.objects.filter_locus(raw_variant_items=lifted_id)
     lifted_entries = _filter_lookup_entries(lifted_entries, affected_only, hom_only)
-    gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression()
+    gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression(additional_expressions=_lookup_genotype_expressions())
     lifted_entry_data = lifted_entries.values('key').annotate(**{gt_field: GroupArrayArray(gt_expr)})
     if lifted_entry_data:
         variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
