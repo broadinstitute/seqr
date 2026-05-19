@@ -1333,7 +1333,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assert_json_logs(self.manager_user, unmapped_sample_logs)
 
         self.login_analyst_user()
-        discovery_variant = {
+        base_discovery_variant = {
             'key': 100,
             'variantId': '1-248367227-TC-T',
             'chrom': '1',
@@ -1349,13 +1349,25 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'familyGuids': ['F000002_2', 'F000012_12', 'F0_1-248367227-TC-T'],
             'genotypes': {
                 'I000004_hg00731': {
-                    'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
-                    'familyGuid': 'F000002_2',
+                    'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
                     'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1.0, 'filters': [],
                 },
-                'I0_F0_1-248367227-TC-T': {
-                    'sampleType': 'WGS', 'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
-                    'hasDiscoveryTag': True,
+                'I000006_hg00733': {
+                    'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+                    'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.65306, 'filters': [],
+                },
+                'I000017_na20889': {
+                    'sampleId': 'NA20889', 'sampleType': 'WGS', 'familyGuid': 'F000012_12', 'individualGuid': 'I000017_na20889',
+                    'ab': 0.0, 'gq': 99, 'dp': 71, 'numAlt': 1, 'filters': [],
+                },
+                'I000016_na20888': {
+                    'sampleId': 'NA20888', 'sampleType': 'WGS', 'familyGuid': 'F000012_12',
+                    'individualGuid': 'I000016_na20888',
+                    'ab': 0.55555, 'gq': 99, 'dp': 9, 'numAlt': 1, 'filters': [],
+                },
+                'I000018_na21234': {
+                    'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14', 'individualGuid': 'I000018_na21234',
+                    'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
                 },
             },
             'clinvar': None,
@@ -1363,7 +1375,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'screenRegionType': None,
             'populations': {
                 'seqr': {'ac': 7, 'hom': 2, 'ac_wes': 0, 'ac_wgs': 7, 'hom_wes': 0, 'hom_wgs': 2},
-                'seqr_affected': {'ac': 4, 'hom': 2},
+                'seqr_affected': {'ac': 6, 'hom': 2},
                 'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
                 'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
                 'gnomad_genomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
@@ -1393,26 +1405,41 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'mainTranscriptId': None,
             'selectedMainTranscriptId': None,
             'CAID': None,
+        }
+        discovery_variant = {
+            **base_discovery_variant,
             'discoveryTags': [],
             'noAccessDiscoveryFamilies': 1,
-        }
-        expected_individuals = {
-            **{guid: mock.ANY for guid in [
-                'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000016_na20888', 'I000017_na20889', 'I000020_na20870',
-            ]},
-            'I0_F0_1-248367227-TC-T': {
-                'familyGuid': 'F0_1-248367227-TC-T',
-                'individualGuid': 'I0_F0_1-248367227-TC-T',
-                'affected': 'A',
-                'sex': 'F',
-                'features': [],
-                'vlmContactEmail': 'vlm@broadinstitute.org',
+            'genotypes': {
+                # TODO why are some genotypes missing??
+                **{guid: gt for guid, gt in base_discovery_variant['genotypes'].items() if guid not in {'I000006_hg00733', 'I000018_na21234'}},
+                'I0_F0_1-248367227-TC-T': {
+                    'sampleType': 'WGS', 'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
+                    'hasDiscoveryTag': True,
+                },
             },
+        }
+        cached_discovery_variant = {
+            **base_discovery_variant,
+            'discoveryFamilies': ['F000002_2', 'F000012_12', 'F000014_14'],
         }
         self.maxDiff = None
         self._assert_expected_lookup(
             '1-248367227-TC-T', discovery_variant, 'variant_lookup_results__1-248367227-TC-T__38',
-            project_guids=['R0001_1kg', 'R0003_test'], family_guids=['F000002_2', 'F000012_12'], expected_individuals=expected_individuals,
+            cached_variants=[cached_discovery_variant], project_guids=['R0001_1kg', 'R0003_test'],
+            family_guids=['F000002_2', 'F000012_12'], expected_individuals={
+                **{guid: mock.ANY for guid in [
+                    'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000016_na20888', 'I000017_na20889', 'I000020_na20870',
+                ]},
+                'I0_F0_1-248367227-TC-T': {
+                    'familyGuid': 'F0_1-248367227-TC-T',
+                    'individualGuid': 'I0_F0_1-248367227-TC-T',
+                    'affected': 'A',
+                    'sex': 'F',
+                    'features': [],
+                    'vlmContactEmail': 'vlm@broadinstitute.org',
+                },
+            },
             mmeSubmissionsByGuid={'MS000015_na20885': mock.ANY},
             savedVariantsByGuid={'SV0000002_1248367227_r0390_100': mock.ANY, 'SV0000006_1248367227_r0003_tes': mock.ANY},
             variantNotesByGuid={'VN0714935_2103343353_r0390_100': mock.ANY, 'VN0714937_2103343353_r0390_100': mock.ANY},
@@ -1477,6 +1504,14 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         'I000015_na20885': {
             'affected': 'A', 'features': '[{"id": "HP:0011675"}, {"id": "HP:0001509"}]', 'restrict_sharing': True,
             'sex': 'M', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+        },
+        'I000016_na20888': {
+            'affected': 'A', 'features': '', 'restrict_sharing': True, 'sex': 'M',
+            'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+        },
+        'I000017_na20889': {
+            'affected': 'A', 'features': '[{"id": "HP:0011675"}, {"id": "HP:0001509"}]', 'restrict_sharing': True,
+            'sex': 'F', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
         },
         'I000018_na21234': {
             'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F',
@@ -1545,11 +1580,11 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 family_guid = gt.get('familyGuid') or expected_individuals[individual_guid]['familyGuid']
                 family_genotypes[family_guid].append({
                     **{k: v for k, v in gt.items() if k != 'individualGuid'},
-                    'metadata': self.INDIVIDUAL_METADATA.get(gt.get('individualGuid')),
+                    'metadata': self.INDIVIDUAL_METADATA.get(gt['individualGuid']),
                 })
         return {
-            **{k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}},
             'discoveryFamilies': [],
+            **{k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}},
             'familyGenotypes': {
                 family_guid: sorted(gts, key=lambda x: (x['sampleType'] == 'WES', x.get('sampleId')), reverse=True)
                 for family_guid, gts in family_genotypes.items()
