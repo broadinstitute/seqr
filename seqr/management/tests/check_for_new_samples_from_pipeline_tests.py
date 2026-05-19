@@ -358,8 +358,9 @@ class CheckNewSamplesTest(object):
             'updateType': 'bulk_update'}}
          ),
         ('Reloading saved variants in 2 projects', None),
-        ('Reloading genotypes for 0 SNV_INDEL variants in family F000012_12', None),
-        ('Updated 0 variants in 2 families for project Test Reprocessed Project', None),
+        ('Reloading genotypes for 1 SNV_INDEL variants in family F000012_12', None),
+        ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
+        ('Updated 1 variants in 2 families for project Test Reprocessed Project', None),
         ('Reloading genotypes for 1 SNV_INDEL variants in family F000014_14', None),
         ('update 1 SavedVariants', {'dbUpdate': mock.ANY}),
         ('Updated 1 variants in 1 families for project Non-Analyst Project', None),
@@ -749,7 +750,7 @@ The following 1 families failed sex check:
 
 
 class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
-    fixtures = ['users', '1kg_project', 'clickhouse_saved_variants']
+    fixtures = ['users', '1kg_project', 'clickhouse_discovery_variants']
     databases = '__all__'
 
     MOCK_DATA_DIR = '/seqr/seqr-hail-search-data'
@@ -821,7 +822,7 @@ class LocalCheckNewSamplesTest(AuthenticationTestCase, CheckNewSamplesTest):
 
 
 class AirtableCheckNewSamplesTest(AnvilAuthenticationTestCase, CheckNewSamplesTest):
-    fixtures = ['users', '1kg_project', 'clickhouse_saved_variants']
+    fixtures = ['users', '1kg_project', 'clickhouse_discovery_variants']
 
     airtable_samples_url = 'http://testairtable/app3Y97xtbbaOopVR/Samples'
     airtable_pdo_url = 'http://testairtable/app3Y97xtbbaOopVR/PDO'

@@ -1132,7 +1132,7 @@ class SavedVariantAPITest(object):
 
 # Tests for AnVIL access disabled
 class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
+    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_discovery_variants', 'clickhouse_saved_variants']
 
 
 def assert_no_list_ws_has_al(self, acl_call_count):
@@ -1145,7 +1145,7 @@ def assert_no_list_ws_has_al(self, acl_call_count):
 
 # Test for permissions from AnVIL only
 class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_discovery_variants', 'clickhouse_saved_variants']
 
     @classmethod
     def setUpTestData(cls):
