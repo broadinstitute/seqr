@@ -59,6 +59,25 @@
       "pathogenicity": "Uncertain_significance"
     }
 }, {
+    "model": "clickhouse_search.entriesgrch37snvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+       "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WGS",
+      "xpos": 1248367227,
+      "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [6, 48],
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 1, 99, 0.6530612111091614, 49],
+        ["HG00731", 2, 48, 1, 16]
+      ]
+    }
+}, {
     "model": "clickhouse_search.keylookupgrch37snvindel",
     "pk": 101,
     "fields": {
