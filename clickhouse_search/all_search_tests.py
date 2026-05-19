@@ -1312,26 +1312,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733'],
         )
 
-        # Test error handling when the ClickHouse sampleId cannot be mapped to any Postgres Individual
-        self.reset_logs()
-        Individual.objects.filter(guid='I000006_hg00733').update(individual_id='unmapped_id')
-        missing_gt_variant = {
-            **GRCH37_VARIANT, 'genotypes': {k: v for k, v in GRCH37_VARIANT['genotypes'].items() if k != 'I000006_hg00733'},
-        }
-        self._assert_expected_lookup(
-            '7-143270172-A-G', missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT], genome_version='37',
-            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
-            individual_guids=['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']
-        )
-        unmapped_sample_logs = [
-            ('Looking up variant 7-143270172-A-G with data type SNV_INDEL', None),
-            ('Unable to map sample HG00733 in family F000002_2 to an individual for variant 7-143270172-A-G', {
-                'severity': 'ERROR',
-                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
-            }),
-        ]
-        self.assert_json_logs(self.manager_user, unmapped_sample_logs)
-
         self.login_analyst_user()
         base_discovery_variant = {
             'key': 100,
@@ -1349,15 +1329,18 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'familyGuids': ['F000002_2', 'F000012_12', 'F0_1-248367227-TC-T'],
             'genotypes': {
                 'I000004_hg00731': {
-                    'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+                    'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
+                    'familyGuid': 'F000002_2',
                     'numAlt': 2, 'dp': 16, 'gq': 48, 'ab': 1.0, 'filters': [],
                 },
                 'I000006_hg00733': {
-                    'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
+                    'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
+                    'familyGuid': 'F000002_2',
                     'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.65306, 'filters': [],
                 },
                 'I000017_na20889': {
-                    'sampleId': 'NA20889', 'sampleType': 'WGS', 'familyGuid': 'F000012_12', 'individualGuid': 'I000017_na20889',
+                    'sampleId': 'NA20889', 'sampleType': 'WGS', 'familyGuid': 'F000012_12',
+                    'individualGuid': 'I000017_na20889',
                     'ab': 0.0, 'gq': 99, 'dp': 71, 'numAlt': 1, 'filters': [],
                 },
                 'I000016_na20888': {
@@ -1366,7 +1349,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                     'ab': 0.55555, 'gq': 99, 'dp': 9, 'numAlt': 1, 'filters': [],
                 },
                 'I000018_na21234': {
-                    'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14', 'individualGuid': 'I000018_na21234',
+                    'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14',
+                    'individualGuid': 'I000018_na21234',
                     'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
                 },
             },
@@ -1412,7 +1396,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'noAccessDiscoveryFamilies': 1,
             'genotypes': {
                 # TODO why are some genotypes missing??
-                **{guid: gt for guid, gt in base_discovery_variant['genotypes'].items() if guid not in {'I000006_hg00733', 'I000018_na21234'}},
+                **{guid: gt for guid, gt in base_discovery_variant['genotypes'].items() if
+                   guid not in {'I000006_hg00733', 'I000018_na21234'}},
                 'I0_F0_1-248367227-TC-T': {
                     'sampleType': 'WGS', 'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
                     'hasDiscoveryTag': True,
@@ -1429,7 +1414,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             cached_variants=[cached_discovery_variant], project_guids=['R0001_1kg', 'R0003_test'],
             family_guids=['F000002_2', 'F000012_12'], expected_individuals={
                 **{guid: mock.ANY for guid in [
-                    'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000016_na20888', 'I000017_na20889', 'I000020_na20870',
+                    'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000016_na20888', 'I000017_na20889',
+                    'I000020_na20870',
                 ]},
                 'I0_F0_1-248367227-TC-T': {
                     'familyGuid': 'F0_1-248367227-TC-T',
@@ -1441,13 +1427,34 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 },
             },
             mmeSubmissionsByGuid={'MS000015_na20885': mock.ANY},
-            savedVariantsByGuid={'SV0000002_1248367227_r0390_100': mock.ANY, 'SV0000006_1248367227_r0003_tes': mock.ANY},
+            savedVariantsByGuid={'SV0000002_1248367227_r0390_100': mock.ANY,
+                                 'SV0000006_1248367227_r0003_tes': mock.ANY},
             variantNotesByGuid={'VN0714935_2103343353_r0390_100': mock.ANY, 'VN0714937_2103343353_r0390_100': mock.ANY},
             variantTagsByGuid={
                 'VT1726945_2103343353_r0390_100': mock.ANY, 'VT1726961_2103343353_r0003_tes': mock.ANY,
                 'VT1726970_2103343353_r0004_tes': mock.ANY, 'VT1726985_2103343353_r0390_100': mock.ANY,
             },
         )
+
+        # Test error handling when the ClickHouse sampleId cannot be mapped to any Postgres Individual
+        self.reset_logs()
+        Individual.objects.filter(guid='I000006_hg00733').update(individual_id='unmapped_id')
+        missing_gt_variant = {
+            **GRCH37_VARIANT, 'genotypes': {k: v for k, v in GRCH37_VARIANT['genotypes'].items() if k != 'I000006_hg00733'},
+        }
+        self._assert_expected_lookup(
+            '7-143270172-A-G', missing_gt_variant, cache_key, cached_variants=[GRCH37_VARIANT], genome_version='37',
+            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+            individual_guids=['I000006_hg00733', 'I000005_hg00732', 'I000004_hg00731']
+        )
+        unmapped_sample_logs = [
+            ('Looking up variant 7-143270172-A-G with data type SNV_INDEL', None),
+            ('Unable to map sample HG00733 in family F000002_2 to an individual for variant 7-143270172-A-G', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
+        ]
+        self.assert_json_logs(self.manager_user, unmapped_sample_logs)
 
         # With no project access, all genotypes are returned regardless of whether a corresponding seqr individual exists
         self.login_base_user()
