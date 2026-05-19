@@ -266,16 +266,16 @@
     }
 }, {
     "model": "clickhouse_search.keylookupmito",
-    "pk": 8,
+    "pk": 100,
     "fields": {
-      "key": 8,
+      "key": 100,
       "variant_id": "M-14783-T-C"
     }
 }, {
     "model": "clickhouse_search.variantsmito",
-    "pk": 8,
+    "pk": 100,
     "fields": {
-      "key": 8,
+      "key": 100,
       "variant_id": "M-14783-T-C",
       "rsid": "rs193302982",
       "lifted_over_pos": 14783,
