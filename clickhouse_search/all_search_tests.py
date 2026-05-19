@@ -1374,7 +1374,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         discovery_variant = {
             **base_discovery_variant,
             'discoveryTags': [],
-            'noAccessDiscoveryFamilies': 1,
             'genotypes': {
                 **base_discovery_variant['genotypes'],
                 'I0_F0_1-248367227-TC-T': {

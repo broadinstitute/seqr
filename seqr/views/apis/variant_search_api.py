@@ -626,6 +626,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
     variant['lookupFamilyGuids'] = sorted([guid for guid in variant.pop('familyGuids') if guid in variant['familyGenotypes']])
     variant['familyGuids'] = []
     discovery_families = variant.pop('lookupDiscoveryFamilies')
+    variant.pop('noAccessDiscoveryFamilies', None)
     for family_guid in variant['lookupFamilyGuids']:
         for genotype in variant['familyGenotypes'].pop(family_guid):
             genotype.pop('metadata', None)
