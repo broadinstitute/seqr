@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { NavLink } from 'react-router-dom'
 import styled from 'styled-components'
 import { Grid, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
@@ -139,6 +140,29 @@ export const Variant = React.memo((
   { variant, mainGeneId, reads, showReads, dispatch, isCompoundHet, updateReads, ...props },
 ) => {
   const variantMainGeneId = mainGeneId || getVariantMainGeneId(variant)
+  const discoveryTags = []
+  if (variant.discoveryTags?.length > 0) {
+    discoveryTags.push(
+      <TagFieldDisplay
+        key="discoveryTags"
+        displayFieldValues={variant.discoveryTags}
+        popup={taggedByPopup}
+        tagAnnotation={tagFamily}
+        displayAnnotationFirst
+      />
+    )
+  }
+  if (variant.noAccessDiscoveryFamilies > 0) {
+    discoveryTags.push(
+      <NavLink
+        to={`/variant_lookup?variantId=${variant.variantId}&genomeVersion=${variant.genomeVersion}`}
+        target="_blank"
+        key="noAccessDiscoveryTags"
+      >
+        <Label basic color="teal" content={`${variant.noAccessDiscoveryFamilies} families in external projects`} />
+      </NavLink>
+    )
+  }
   return (
     <VariantLayout
       severityColor={clinvarColor(variant.clinvar, '#eaa8a857', '#f5d55c57', '#21a92624')}
@@ -148,17 +172,12 @@ export const Variant = React.memo((
       topContent={
         <div>
           <Pathogenicity variant={variant} />
-          {variant.discoveryTags && variant.discoveryTags.length > 0 && (
+          {discoveryTags.length > 0 && (
             <InlinePopup
               on="click"
               position="right center"
               trigger={<Button as={Label} basic color="grey">Other Project Discovery Tags</Button>}
-              content={<TagFieldDisplay
-                displayFieldValues={variant.discoveryTags}
-                popup={taggedByPopup}
-                tagAnnotation={tagFamily}
-                displayAnnotationFirst
-              />}
+              content={discoveryTags}
             />
           )}
         </div>
