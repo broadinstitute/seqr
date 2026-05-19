@@ -883,7 +883,7 @@ def _clickhouse_variants_lookup(entries, genome_version, data_type, format_resul
     results = variants_cls.objects.subquery_join(entries)
 
     return format_results(results).result_values(additional_values={
-        'excludeTagFamilies': ExcludedVariantDict.dict_get_expression('key', dataset_type=data_type),
+        'excludedTagFamilies': ExcludedVariantDict.dict_get_expression('key', dataset_type=data_type),
     })
 
 def _add_results_override_annotations(results):
@@ -999,13 +999,13 @@ def _add_liftover_genotypes(variant, data_type, affected_only, hom_only):
     lifted_entries = _filter_lookup_entries(lifted_entries, affected_only, hom_only)
     gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression(additional_expressions=_lookup_genotype_expressions())
     lifted_entry_data = lifted_entries.values('key').annotate(
-        excludeTagFamilies=ExcludedVariantDict.dict_get_expression('key', dataset_type=data_type),
+        excludedTagFamilies=ExcludedVariantDict.dict_get_expression('key', dataset_type=data_type),
         **{gt_field: GroupArrayArray(gt_expr)},
     )
     if lifted_entry_data:
         variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
-        variant['excludeTagFamilies'] += lifted_entry_data[0]['excludeTagFamilies']
+        variant['excludedTagFamilies'] += lifted_entry_data[0]['excludedTagFamilies']
 
 
 def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, additional_fields=None):
