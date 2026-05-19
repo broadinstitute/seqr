@@ -875,16 +875,28 @@ def _get_sort_key(sort, gene_metadata):
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
 
-def _clickhouse_variant_lookup(entries, genome_version, data_type, affected_only=False, hom_only=False):
+def _clickhouse_variants_lookup(entries, genome_version, data_type, format_results, affected_only=False, hom_only=False):
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
     entries = entries.result_values(additional_expressions=_lookup_genotype_expressions())
     results = variants_cls.objects.subquery_join(entries)
+
+    return format_results(results).result_values()
+
+
+def _add_results_override_annotations(results):
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
+    return results
 
-    variant = results.result_values().first()
+
+def _clickhouse_variant_lookup(entries, genome_version, data_type, **kwargs):
+    results = _clickhouse_variants_lookup(
+        entries, genome_version, data_type, format_results=_add_results_override_annotations, **kwargs,
+    )
+
+    variant = results.first()
     if variant:
         variant = format_clickhouse_results([variant])[0]
     return variant
@@ -964,16 +976,18 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
         other_variants_cls = VARIANTS_CLASS_MAP[genome_version][other_sample_type]
 
         padding = int((variant['end'] - variant['pos']) * 0.2)
-        entries = other_entry_class.objects.search_padded_interval(
-            variant['chrom'], variant['pos'], padding, additional_expressions=_lookup_genotype_expressions(),
-        )
-        entries = _filter_lookup_entries(entries, affected_only, hom_only)
-        results = other_variants_cls.objects.subquery_join(entries).search(
-            padded_interval_end=(variant['end'], padding), **other_variants_cls.objects.get_parsed_annotations_filters(
-                annotations={'structural': [variant['svType'], f"gCNV_{variant['svType']}"]},
-            ),
-        )
-        variants += list(results.result_values())
+        entries = other_entry_class.objects.search_padded_interval(variant['chrom'], variant['pos'], padding)
+
+        def format_results(results):
+            return results.search(
+                padded_interval_end=(variant['end'], padding), **results.get_parsed_annotations_filters(
+                    annotations={'structural': [variant['svType'], f"gCNV_{variant['svType']}"]},
+                ),
+            )
+
+        variants += list(_clickhouse_variants_lookup(
+            entries, genome_version, other_sample_type, format_results, affected_only=affected_only, hom_only=hom_only,
+        ))
 
     return variants
 
