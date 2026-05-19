@@ -197,9 +197,9 @@ class SearchQuerySet(QuerySet):
             if field.db_column and field.name != field.db_column and field.db_column
         }
 
-    def result_values(self, additional_fields=None, **kwargs):
+    def result_values(self, additional_fields=None, additional_values=None, **kwargs):
         fields = [*self.annotation_fields] + (additional_fields or [])
-        values = {**self.annotation_values}
+        values = {**self.annotation_values, **(additional_values or {})}
         values.update(self.conditional_selects(self, **kwargs))
 
         override_model_annotations = set(values).intersection(fields)
@@ -1478,9 +1478,9 @@ class BaseEntriesManager(SearchQuerySet):
     def _can_filter_gene_interval(self, genes):
         return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS or self.filtered_chrom
 
-    def search_padded_interval(self, chrom, pos, padding, **kwargs):
+    def search_padded_interval(self, chrom, pos, padding):
         interval_q = self._interval_query(chrom, start=max(pos - padding, MIN_POS), end=min(pos + padding, MAX_POS))
-        return self.filter(interval_q).result_values(**kwargs)
+        return self.filter(interval_q)
 
     @staticmethod
     def _interval_query(chrom, start, end, **kwargs):

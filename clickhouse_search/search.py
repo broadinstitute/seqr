@@ -14,7 +14,7 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
     ArrayMap, Modulo
 from clickhouse_search.managers import InvalidDatasetTypeException, InvalidSearchException
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
-from clickhouse_search.models.postgres_dicts import SexDict, AffectedDict, IndividualMetadataDict
+from clickhouse_search.models.postgres_dicts import SexDict, AffectedDict, IndividualMetadataDict, ExcludedVariantDict
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, EntriesSnvIndel,  \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
@@ -882,14 +882,14 @@ def _clickhouse_variants_lookup(entries, genome_version, data_type, format_resul
     entries = entries.result_values(additional_expressions=_lookup_genotype_expressions())
     results = variants_cls.objects.subquery_join(entries)
 
-    return format_results(results).result_values()
-
+    return format_results(results).result_values(additional_values={
+        'excludeTagFamilies': ExcludedVariantDict.dict_get_expression('key', dataset_type=data_type),
+    })
 
 def _add_results_override_annotations(results):
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
     return results
-
 
 def _clickhouse_variant_lookup(entries, genome_version, data_type, **kwargs):
     results = _clickhouse_variants_lookup(
@@ -973,11 +973,8 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
             (dt, cls) for dt, cls in ENTRY_CLASS_MAP[genome_version].items()
             if dt != data_type and dt.startswith(Dataset.DATASET_TYPE_SV_CALLS)
         )
-        other_variants_cls = VARIANTS_CLASS_MAP[genome_version][other_sample_type]
 
         padding = int((variant['end'] - variant['pos']) * 0.2)
-        entries = other_entry_class.objects.search_padded_interval(variant['chrom'], variant['pos'], padding)
-
         def format_results(results):
             return results.search(
                 padded_interval_end=(variant['end'], padding), **results.get_parsed_annotations_filters(
@@ -985,6 +982,7 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
                 ),
             )
 
+        entries = other_entry_class.objects.search_padded_interval(variant['chrom'], variant['pos'], padding)
         variants += list(_clickhouse_variants_lookup(
             entries, genome_version, other_sample_type, format_results, affected_only=affected_only, hom_only=hom_only,
         ))
@@ -1000,10 +998,14 @@ def _add_liftover_genotypes(variant, data_type, affected_only, hom_only):
     lifted_entries = lifted_entry_cls.objects.filter_locus(raw_variant_items=lifted_id)
     lifted_entries = _filter_lookup_entries(lifted_entries, affected_only, hom_only)
     gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression(additional_expressions=_lookup_genotype_expressions())
-    lifted_entry_data = lifted_entries.values('key').annotate(**{gt_field: GroupArrayArray(gt_expr)})
+    lifted_entry_data = lifted_entries.values('key').annotate(
+        excludeTagFamilies=ExcludedVariantDict.dict_get_expression('key', dataset_type=data_type),
+        **{gt_field: GroupArrayArray(gt_expr)},
+    )
     if lifted_entry_data:
         variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
+        variant['excludeTagFamilies'] += lifted_entry_data[0]['excludeTagFamilies']
 
 
 def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, additional_fields=None):
