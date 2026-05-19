@@ -109,7 +109,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
 class ClickhouseSearchTests(ClickhouseSearchTestCase):
     databases = '__all__'
-    fixtures = ['users', 'social_auth', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_saved_variants', 'clickhouse_search', 'clickhouse_transcripts']
+    fixtures = ['users', 'social_auth', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_discovery_variants', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
         self.MOCK_CACHE = {}

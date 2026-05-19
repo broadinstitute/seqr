@@ -77,7 +77,7 @@
         "ref": "T",
         "alt": "C",
         "variant_id": "M-14783-T-C",
-        "key": 8,
+        "key": 100,
         "dataset_type": "MITO",
         "genotypes": {
             "I000018_na21234": {"sampleId": "NA20885", "numAlt": 2, "dp": 3943, "hl": 1.0, "mitoCn": 214, "contamination": 0.0, "filters": ["artifact_prone_site"]}
