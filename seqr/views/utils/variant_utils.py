@@ -378,17 +378,21 @@ def _parse_discovery_tags(variants_by_id, family_guids, user):
     }
 
     saved_variant_id_map = {sv.pop('id'): guid for guid, sv in saved_variants_by_guid.items()}
-    discovery_tag_json, _ = get_json_for_saved_variants_child_entities(
+    discovery_tag_json, variant_tag_map = get_json_for_saved_variants_child_entities(
         VariantTag, saved_variant_id_map, tag_filter={'variant_tag_type__category': 'CMG Discovery Tags'})
 
+    tags_by_guid = {}
     for tag in discovery_tag_json:
-        for variant_guid in tag.pop('variantGuids'):
-            variant = saved_variants_by_guid[variant_guid]
-            variant_id = variant.pop('variant_id')
-            tag_json = {'savedVariant': variant}
-            tag_json.update(tag)
-            variants_by_id[variant_id]['discoveryTags'].append(tag_json)
-            variants_by_id[variant_id]['noAccessDiscoveryFamilies'] -= 1
+        del tag['variantGuids']
+        tags_by_guid[tag['tagGuid']] = tag
+
+    for variant_guid, tag_guids in variant_tag_map.items():
+        variant = saved_variants_by_guid[variant_guid]
+        variant_id = variant.pop('variant_id')
+        variants_by_id[variant_id]['discoveryTags'] += [
+            {'savedVariant': variant, **tags_by_guid[tag_guid]} for tag_guid in tag_guids
+        ]
+        variants_by_id[variant_id]['noAccessDiscoveryFamilies'] -= 1
 
     return {'familiesByGuid': discovery_families_by_guid}
 

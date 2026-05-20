@@ -366,7 +366,7 @@ def _format_variant_tags(tags):
     return tags
 
 
-def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, tag_filter=None):
+def get_json_for_saved_variants_child_entities(tag_cls, saved_variant_id_map, tag_filter=None, ):
     variant_tag_id_map = defaultdict(list)
     for savedvariant_id, tag_id in tag_cls.saved_variants.through.objects.filter(
             savedvariant_id__in=saved_variant_id_map.keys()).values_list(
