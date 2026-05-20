@@ -1,4 +1,6 @@
 aioresponses
 coverage<5.2
-Django>=4.2,<4.3
+django>=4.2,<4.3
+django-clickhouse-backend
+django-guardian
 pytest-aiohttp
