@@ -14,14 +14,20 @@ attrs==26.1.0
     # via aiohttp
 certifi==2026.5.20
     # via clickhouse-connect
+cffi==2.0.0
+    # via cryptography
 clickhouse-connect==0.8.18
     # via -r vlm/requirements.in
+cryptography==48.0.0
+    # via jwt
 frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
 idna==3.15
     # via yarl
+jwt==1.4.0
+    # via -r vlm/requirements.in
 lz4==4.4.5
     # via clickhouse-connect
 multidict==6.7.1
@@ -32,6 +38,8 @@ propcache==0.5.2
     # via
     #   aiohttp
     #   yarl
+pycparser==3.0
+    # via cffi
 pyliftover==0.4.1
     # via -r vlm/requirements.in
 pytz==2026.2
