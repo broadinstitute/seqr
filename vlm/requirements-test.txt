@@ -44,6 +44,8 @@ pluggy==1.2.0
     # via pytest
 propcache==0.2.0
     # via yarl
+pyliftover==0.4
+    # via -r vlm/requirements-test.in
 pytest==7.4.0
     # via
     #   pytest-aiohttp
