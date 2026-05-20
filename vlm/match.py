@@ -37,6 +37,14 @@ ASSEMBLY_LOOKUP = {
     'hg19': GENOME_VERSION_GRCh37,
 }
 
+CHROMOSOMES = {
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
+    '20', '21', '22', 'X', 'Y', 'M',
+}
+MIN_POS = 1
+MAX_POS = 3e8
+
+
 def get_variant_match(query: dict) -> dict:
     chrom, pos, ref, alt, genome_build = _parse_match_query(query)
 
@@ -78,16 +86,14 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
         raise HTTPBadRequest(reason=f'Invalid assemblyId: {query["assemblyId"]}')
 
     chrom = query['referenceName'].replace('chr', '')
-    if genome_build == GENOME_VERSION_GRCh38:
-        chrom = f'chr{chrom}'
-    if not hl.eval(hl.is_valid_contig(chrom, reference_genome=genome_build)):
+    if chrom not in CHROMOSOMES:
         raise HTTPBadRequest(reason=f'Invalid referenceName: {query["referenceName"]}')
 
     start = query['start']
     if not start.isnumeric():
         raise HTTPBadRequest(reason=f'Invalid start: {start}')
     start = int(start)
-    if not hl.eval(hl.is_valid_locus(chrom, start, reference_genome=genome_build)):
+    if start < MIN_POS or start > MAX_POS:
         raise HTTPBadRequest(reason=f'Invalid start: {start}')
 
     for allele_field in ['referenceBases', 'alternateBases']:
@@ -95,7 +101,7 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
         if not re.fullmatch(r'[ATCG]', allele):
             raise HTTPBadRequest(reason=f'Invalid {allele_field}: {allele}')
 
-    return chrom.replace('chr', ''), start, query['referenceBases'], query['alternateBases'], genome_build
+    return chrom, start, query['referenceBases'], query['alternateBases'], genome_build
 
 
 def _format_results(ac: int, hom: int, url: str) -> dict:
