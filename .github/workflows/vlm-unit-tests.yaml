@@ -47,8 +47,8 @@ jobs:
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Settings and Data
         run: |
-          python3 -m venv venv
-          source venv/bin/activate 
+          python3 -m venv .venv
+          source .venv/bin/activate
           pip install -r requirements.txt
           export CLICKHOUSE_WRITER_USER=clickhouse_test_user
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
