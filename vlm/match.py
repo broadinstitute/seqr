@@ -49,7 +49,6 @@ def get_variant_match(query: dict) -> dict:
     chrom, pos, ref, alt, genome_build = _parse_match_query(query)
 
     ac, hom = get_clickhouse_variant_counts(chrom, pos, genome_build, ref, alt)
-
     liftover = _liftover_variant(chrom, pos, genome_build)
     lift_ac, lift_hom = get_clickhouse_variant_counts(*liftover, ref, alt) if liftover else (0, 0)
 
@@ -70,7 +69,7 @@ def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str
     if not SEQR_BASE_URL:
         return SEQR_BASE_URL
 
-    if liftover_locus is not None:
+    if liftover is not None:
         chrom, pos, genome_build = liftover
     genome_build = genome_build.replace('GRCh', '')
     return f'{SEQR_BASE_URL}variant_lookup?genomeVersion={genome_build}&variantId={chrom}-{pos}-{ref}-{alt}'
