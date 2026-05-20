@@ -46,7 +46,19 @@ jobs:
           python3 -m pip install --upgrade pip wheel
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Settings and Data
-        run: python3 vlm/setup_clickhouse_test_data.py clickhouse 8123 clickhouse_test_user clickhouse_test_password
+        run: |
+          export CLICKHOUSE_WRITER_USER=clickhouse_test_user
+          export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
+          export CLICKHOUSE_SERVICE_HOSTNAME=localhost
+          export CLICKHOUSE_SERVICE_PORT=8123
+          python3 -u manage.py migrate --database=clickhouse_write
+          python3 -u manage.py loaddata clickhouse_search
+          docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
+          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON seqr.`GRCh37/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON seqr.`GRCh38/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
       - name: Run coverage tests
         run: |
           export SEQR_BASE_URL=https://test-seqr.org/
