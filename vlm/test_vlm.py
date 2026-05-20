@@ -42,7 +42,6 @@ class VlmTestCase(AioHTTPTestCase):
         jwt_body = {'iss': 'https://vlm-auth.us.auth0.com/', 'azp': REQUESTER_CLIENT_ID}
         headers = {'Authorization': f'Bearer {jwt.encode(jwt_body, "")}'}
 
-        self.maxDiff = None
         async with self.client.request('GET', '/vlm/match?assemblyId=GRCh38&referenceName=1&start=38724419&referenceBases=T&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
@@ -53,7 +52,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'id': 'TestVLM',
                         'label': 'TestVLM browser',
                     },
-                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=chr1-38724419-T-G',
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=1-38724419-T-G',
                     'email': None,
                 }
             ],
@@ -196,7 +195,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'id': 'TestVLM',
                         'label': 'TestVLM browser',
                     },
-                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=chr7-143270172-A-G',
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=7-143270172-A-G',
                     'email': None,
                 }
             ],

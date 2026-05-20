@@ -62,7 +62,7 @@ def _liftover_variant(chrom: str, pos: int, genome_build: str) -> tuple[str, int
     liftover_genome_build = GENOME_VERSION_GRCh38 if genome_build == GENOME_VERSION_GRCh37 else GENOME_VERSION_GRCh37
     lo = LiftOver(f'{LIFTOVER_DIR}/{genome_build.lower()}_to_{liftover_genome_build.lower()}.over.chain.gz')
     lifted_coord = lo.convert_coordinate(f'chr{chrom}', pos)
-    return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1], liftover_genome_build) if lifted_coord and lifted_coord[0] else None
+    return (lifted_coord[0][0].replace('chr', ''), lifted_coord[0][1], liftover_genome_build) if lifted_coord and lifted_coord[0] else None
 
 
 def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover: tuple[str, int, str]) -> str:
