@@ -1,4 +1,4 @@
-from clickhouse_backend.models import ArrayField, BoolField, StringField
+from clickhouse_backend.models import ArrayField, BoolField, StringField, UInt32Field
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
@@ -908,7 +908,7 @@ def _lookup_genotype_expressions():
             ('sex', StringField()),
             ('restrict_sharing', BoolField()),
             ('isSolved', BoolField()),
-            ('omim_id', StringField()),
+            ('omim_id', UInt32Field()),
             ('mondo_id', StringField()),
             ('features', StringField()),
             ('vlmContactEmail', StringField()),
