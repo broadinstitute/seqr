@@ -521,6 +521,33 @@ const FAQS = [
     },
   }, {
     [ENGLISH]: {
+      header: 'Q. Can I get assistance with processing my data?',
+      content: (
+        <div>
+          Yes - If you need support processing your data for seqr, such as generating a joint-called VCF from CRAM files
+          or reprocessing data using DRAGEN, the Broad Institute’s Data Science Services group offers fee-for-service
+          support. These services are designed to help prepare your data for successful ingestion into seqr and are
+          available to both internal Broad cohorts and external research groups. To discuss project scope, timelines,
+          and pricing, please reach out to <a href="mailto:bclservices@broadinstitute.org">bclservices@broadinstitute.org</a>.
+        </div>
+      ),
+    },
+    [SPANISH]: {
+      header: 'P. ¿Puedo recibir asistencia para procesar mis datos?',
+      content: (
+        <div>
+          Sí. Si necesita asistencia para el procesamiento de sus datos destinados a seqr - como la generación de un
+          archivo VCF de llamada conjunta a partir de archivos CRAM, o el reprocesamiento de datos mediante DRAGEN - el
+          grupo de Servicios de Ciencia de Datos del Broad Institute ofrece soporte bajo la modalidad de pago por
+          servicio. Estos servicios están diseñados para ayudarle a preparar sus datos y asegurar su correcta ingesta en
+          seqr, y se encuentran a disposición tanto de las cohortes internas del Broad como de grupos de investigación
+          externos. Para conversar sobre el alcance del proyecto, los plazos y las tarifas, por favor póngase en
+          contacto con <a href="mailto:bclservices@broadinstitute.org">bclservices@broadinstitute.org</a>.
+        </div>
+      ),
+    },
+  }, {
+    [ENGLISH]: {
       header: 'Q. Who has access to my data in seqr?',
       content: (
         <div>
