@@ -42,7 +42,7 @@ CHROMOSOMES = {
     '20', '21', '22', 'X', 'Y', 'M',
 }
 MIN_POS = 1
-MAX_POS = 3e8
+MAX_POS = 300_000_000
 
 
 def get_variant_match(query: dict) -> dict:
@@ -58,14 +58,14 @@ def get_variant_match(query: dict) -> dict:
     return _format_results(ac+lift_ac, hom+lift_hom, url)
 
 
-def _liftover_variant(chrom: str, pos: int, genome_build: str) -> tuple[str, int, str]:
+def _liftover_variant(chrom: str, pos: int, genome_build: str) -> Optional[tuple[str, int, str]]:
     liftover_genome_build = GENOME_VERSION_GRCh38 if genome_build == GENOME_VERSION_GRCh37 else GENOME_VERSION_GRCh37
     lo = LiftOver(f'{LIFTOVER_DIR}/{genome_build.lower()}_to_{liftover_genome_build.lower()}.over.chain.gz')
     lifted_coord = lo.convert_coordinate(f'chr{chrom}', pos)
     return (lifted_coord[0][0].replace('chr', ''), lifted_coord[0][1], liftover_genome_build) if lifted_coord and lifted_coord[0] else None
 
 
-def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover: tuple[str, int, str]) -> str:
+def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover: Optional[tuple[str, int, str]]) -> str:
     if not SEQR_BASE_URL:
         return SEQR_BASE_URL
 
