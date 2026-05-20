@@ -38,6 +38,17 @@ jobs:
           CLICKHOUSE_USER: clickhouse_test_user
           CLICKHOUSE_PASSWORD: clickhouse_test_password
           ALLOW_EMPTY_PASSWORD: no
+      postgres:
+        image: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          POSTGRES_PASSWORD: pgtest
 
     steps:
       - uses: actions/checkout@v2
@@ -46,8 +57,8 @@ jobs:
           python3 -m pip install --upgrade pip wheel
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Database
-        run: |
-          pip install -r requirements.txt
+        run: | # TODO add venv
+          pip install -r requirements.txt 
           export CLICKHOUSE_WRITER_USER=clickhouse_test_user
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
@@ -61,6 +72,7 @@ jobs:
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT dictGet ON seqr.`GRCh37/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT dictGet ON seqr.`GRCh38/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS user='postgres', password='pgtest', host='postgres', port='5432'"
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
       - name: Run coverage tests
         run: |
