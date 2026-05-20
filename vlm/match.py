@@ -1,6 +1,6 @@
 from aiohttp.web import HTTPBadRequest
-import hail as hl
 import os
+from pyliftover.liftover import LiftOver
 import re
 
 from vlm.clickhouse_utils import get_clickhouse_variant_counts
@@ -8,7 +8,7 @@ from vlm.clickhouse_utils import get_clickhouse_variant_counts
 SEQR_BASE_URL = os.environ.get('SEQR_BASE_URL')
 VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL')
 NODE_ID = os.environ.get('NODE_ID')
-
+LIFTOVER_DIR = f'{os.path.dirname(os.path.abspath(__file__))}/liftover_references'
 
 BEACON_HANDOVER_TYPE = {
     'id': NODE_ID,
@@ -37,31 +37,40 @@ ASSEMBLY_LOOKUP = {
     'hg19': GENOME_VERSION_GRCh37,
 }
 
+CHROMOSOMES = {
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
+    '20', '21', '22', 'X', 'Y', 'M',
+}
+MIN_POS = 1
+MAX_POS = 3e8
+
+
 def get_variant_match(query: dict) -> dict:
     chrom, pos, ref, alt, genome_build = _parse_match_query(query)
-    locus = hl.locus(chrom, pos, reference_genome=genome_build)
 
-    ac, hom = get_clickhouse_variant_counts(locus, ref, alt, genome_build)
-
-    liftover_genome_build = GENOME_VERSION_GRCh38 if genome_build == GENOME_VERSION_GRCh37 else GENOME_VERSION_GRCh37
-    liftover_locus = hl.liftover(locus, liftover_genome_build)
-    lift_ac, lift_hom = get_clickhouse_variant_counts(liftover_locus, ref, alt, liftover_genome_build)
+    ac, hom = get_clickhouse_variant_counts(chrom, pos, genome_build, ref, alt)
+    liftover = _liftover_variant(chrom, pos, genome_build)
+    lift_ac, lift_hom = get_clickhouse_variant_counts(*liftover, ref, alt) if liftover else (0, 0)
 
     url = _get_contact_url(
-        chrom, pos, ref, alt, genome_build, liftover_genome_build, liftover_locus if lift_ac and not ac else None,
+        chrom, pos, ref, alt, genome_build, liftover if lift_ac and not ac else None,
     )
     return _format_results(ac+lift_ac, hom+lift_hom, url)
 
 
-def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover_genome_build: str, liftover_locus: hl.LocusExpression) -> str:
+def _liftover_variant(chrom: str, pos: int, genome_build: str) -> tuple[str, int, str]:
+    liftover_genome_build = GENOME_VERSION_GRCh38 if genome_build == GENOME_VERSION_GRCh37 else GENOME_VERSION_GRCh37
+    lo = LiftOver(f'{LIFTOVER_DIR}/{genome_build.lower()}_to_{liftover_genome_build.lower()}.over.chain.gz')
+    lifted_coord = lo.convert_coordinate(f'chr{chrom}', pos)
+    return (lifted_coord[0][0].replace('chr', ''), lifted_coord[0][1], liftover_genome_build) if lifted_coord and lifted_coord[0] else None
+
+
+def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover: tuple[str, int, str]) -> str:
     if not SEQR_BASE_URL:
         return SEQR_BASE_URL
 
-    if liftover_locus is not None:
-        lifted = hl.eval(liftover_locus)
-        chrom = lifted.contig
-        pos = lifted.position
-        genome_build = liftover_genome_build
+    if liftover is not None:
+        chrom, pos, genome_build = liftover
     genome_build = genome_build.replace('GRCh', '')
     return f'{SEQR_BASE_URL}variant_lookup?genomeVersion={genome_build}&variantId={chrom}-{pos}-{ref}-{alt}'
 
@@ -76,16 +85,14 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
         raise HTTPBadRequest(reason=f'Invalid assemblyId: {query["assemblyId"]}')
 
     chrom = query['referenceName'].replace('chr', '')
-    if genome_build == GENOME_VERSION_GRCh38:
-        chrom = f'chr{chrom}'
-    if not hl.eval(hl.is_valid_contig(chrom, reference_genome=genome_build)):
+    if chrom not in CHROMOSOMES:
         raise HTTPBadRequest(reason=f'Invalid referenceName: {query["referenceName"]}')
 
     start = query['start']
     if not start.isnumeric():
         raise HTTPBadRequest(reason=f'Invalid start: {start}')
     start = int(start)
-    if not hl.eval(hl.is_valid_locus(chrom, start, reference_genome=genome_build)):
+    if start < MIN_POS or start > MAX_POS:
         raise HTTPBadRequest(reason=f'Invalid start: {start}')
 
     for allele_field in ['referenceBases', 'alternateBases']:

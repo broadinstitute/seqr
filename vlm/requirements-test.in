@@ -1,3 +1,4 @@
+-c vlm/requirements.txt
 aioresponses
 coverage<5.2
 pytest-aiohttp
