@@ -168,6 +168,7 @@ export const Variant = React.memo((
                     <NavLink
                       to={`/variant_lookup?variantId=${variant.variantId}&genomeVersion=${variant.genomeVersion}`}
                       target="_blank"
+                      rel="noopener noreferrer"
                     >
                       <Label basic color="teal" content={`${variant.noAccessDiscoveryFamilies} families in external projects`} />
                     </NavLink>
