@@ -2,10 +2,10 @@
 
 import PropTypes from 'prop-types'
 import React from 'react'
-import { Header, Segment, List, Icon } from 'semantic-ui-react'
+import { Header, Segment, List, Icon, Accordion } from 'semantic-ui-react'
 
 import { WORKSPACE_REQUIREMENTS } from 'shared/components/panel/LoadWorkspaceDataForm'
-import { ActiveDisabledNavLink } from 'shared/components/StyledComponents'
+import { ActiveDisabledNavLink, InlineHeader } from 'shared/components/StyledComponents'
 import { VCF_DOCUMENTATION_URL } from 'shared/utils/constants'
 import { SeqrAvailability } from './LandingPage'
 
@@ -608,6 +608,15 @@ const FAQS = [
   },
 ]
 
+const LANGUAGE_PANELS = [ENGLISH, SPANISH].reduce((acc, language) => ({
+  ...acc,
+  [language]: FAQS.map(faq => ({
+    key: faq[language].header,
+    title: { content: <InlineHeader content={faq[language].header} size="medium" /> },
+    content: { content: <Segment basic>{faq[language].content}</Segment> },
+  })),
+}), {})
+
 const LANGUAGES = [{ path: '', text: 'English' }, { path: SPANISH, text: 'Español' }]
 
 const FaqPages = ({ match }) => (
@@ -620,13 +629,7 @@ const FaqPages = ({ match }) => (
         <ActiveDisabledNavLink key={path} exact padded activeColor="black" to={`/faq/${path}`}>{text}</ActiveDisabledNavLink>
       ))}
     />
-    {FAQS.map((config) => {
-      const { header, content } = config[match.params.language || ENGLISH]
-      return [
-        <Header content={header} size="medium" />,
-        content,
-      ]
-    })}
+    <Accordion panels={LANGUAGE_PANELS[match.params.language || ENGLISH]} />
   </Segment>
 )
 
