@@ -165,9 +165,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         return response, search_hash, search_body
 
-    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, skip_cache_check=False, response_search=None, project_families=None, additional_response=None, export_data=None, cache_sort=None, **kwargs):
+    def _assert_expected_search(self, expected_results, results_page=None, gene_counts=None, cached_variant_fields=None, sort='xpos', is_37=False, skip_cache_check=False, response_search=None, project_families=None, searched_project_families=None, additional_response=None, export_data=None, cache_sort=None, **kwargs):
         response, search_hash, search_body = self._execute_search(project_families=project_families, sort=sort, **kwargs)
         self.assertEqual(response.status_code, 200)
+        project_families = searched_project_families or project_families
         expected_response = {
             'searchedVariantIds': [],
             'variantsById': {},
@@ -395,17 +396,23 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         request_body['unsolvedFamiliesOnly'] = True
-        project_families[0]['familyGuids'].remove('F000007_7')
-        project_families[0]['familyGuids'].remove('F000010_10')
+        searched_project_families = [{
+            **project_families[0],
+            'familyGuids': [guid for guid in project_families[0]['familyGuids'] if guid not in {'F000007_7', 'F000010_10'}],
+        }]
         self._assert_expected_search(
-            results, request_body=request_body, project_families=project_families, additional_response=additional_response, locus=locus,
+            [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3,
+                GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
+            request_body=request_body, project_families=project_families, searched_project_families=searched_project_families,
+            additional_response=additional_response, locus=locus,
         )
 
         request_body['trioFamiliesOnly'] = True
         self._assert_expected_search(
             [VARIANT1, VARIANT2, VARIANT3, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3,
              GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            request_body=request_body, project_families=SINGLE_FAMILY_PROJECT_FAMILIES, locus=locus,
+            request_body=request_body, project_families=project_families, searched_project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
+            locus=locus,
         )
 
     def test_both_sample_types_search(self):
