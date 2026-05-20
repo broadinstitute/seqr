@@ -2,9 +2,9 @@ FROM python:3.11-slim-bullseye
 
 LABEL maintainer="Broad TGG"
 
-WORKDIR /vlm
+RUN pip install --no-cache-dir -r vlm/requirements.txt
 
-RUN pip install --no-cache-dir -r requirements.txt
+WORKDIR /vlm
 
 # Application Code
 COPY vlm/ .
