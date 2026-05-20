@@ -710,7 +710,7 @@ The following 1 families failed sex check:
             set(Family.objects.filter(guid__in=['F000001_1', 'F000003_3']).values_list('analysis_status', flat=True)),
             {'F'},
         )
-        self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'Rncc')
+        self.assertEqual(Family.objects.get(guid='F000014_14').analysis_status, 'S_ng')
 
         saved_variant = SavedVariant.objects.get(key=100, family_id=14)
         self.assertDictEqual(saved_variant.genotypes, {'I000018_na21234': {
