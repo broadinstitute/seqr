@@ -2,6 +2,7 @@ from aiohttp.web import HTTPBadRequest
 import os
 from pyliftover.liftover import LiftOver
 import re
+from typing import Optional, Tuple
 
 from vlm.clickhouse_utils import get_clickhouse_variant_counts
 
@@ -58,7 +59,7 @@ def get_variant_match(query: dict) -> dict:
     return _format_results(ac+lift_ac, hom+lift_hom, url)
 
 
-def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover: Optional[tuple[str, int, str]]) -> str:
+def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover: Optional[Tuple[str, int, str]]) -> str:
     if not SEQR_BASE_URL:
         return SEQR_BASE_URL
 
@@ -137,11 +138,11 @@ LIFTOVERS = {
 }
 
 
-def _liftover_variant(chrom: str, pos: int, genome_build: str) -> Optional[tuple[str, int, str]]:
+def _liftover_variant(chrom: str, pos: int, genome_build: str) -> Optional[Tuple[str, int, str]]:
     liftover_genome_build = GENOME_VERSION_GRCh38 if genome_build == GENOME_VERSION_GRCh37 else GENOME_VERSION_GRCh37
-    if not LIFTOVERS[genome_version]:
-        LIFTOVERS[genome_version] = LiftOver(
+    if not LIFTOVERS[genome_build]:
+        LIFTOVERS[genome_build] = LiftOver(
             f'{LIFTOVER_DIR}/{genome_build.lower()}_to_{liftover_genome_build.lower()}.over.chain.gz'
         )
-    lifted_coord = LIFTOVERS[genome_version].convert_coordinate(f'chr{chrom}', pos)
+    lifted_coord = LIFTOVERS[genome_build].convert_coordinate(f'chr{chrom}', pos)
     return (lifted_coord[0][0].replace('chr', ''), lifted_coord[0][1], liftover_genome_build) if lifted_coord and lifted_coord[0] else None
