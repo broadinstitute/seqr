@@ -45,7 +45,7 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip wheel
           pip install -r vlm/requirements-test.txt
-      - name: Set up Clickhouse Settings and Data
+      - name: Set up Clickhouse Database
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
@@ -56,6 +56,8 @@ jobs:
           export CLICKHOUSE_SERVICE_PORT=8123
           python3 -u manage.py migrate clickhouse_search --database=clickhouse_write
           python3 -u manage.py loaddata clickhouse_search
+      - name: Set up Clickhouse Settings
+        run: |
           docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
