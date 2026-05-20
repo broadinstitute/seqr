@@ -6,39 +6,39 @@
 #
 aiohappyeyeballs==2.6.2
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   aiohttp
 aiohttp==3.13.5
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   aioresponses
     #   pytest-aiohttp
 aioresponses==0.7.8
-    # via -r requirements-test.in
+    # via -r vlm/requirements.in
 aiosignal==1.4.0
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   aiohttp
 attrs==26.1.0
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   aiohttp
 coverage==5.1
-    # via -r requirements-test.in
+    # via -r vlm/requirements.in
 frozenlist==1.8.0
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   aiohttp
     #   aiosignal
 idna==3.15
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   yarl
 iniconfig==2.3.0
     # via pytest
 multidict==6.7.1
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   aiohttp
     #   yarl
 packaging==26.2
@@ -49,7 +49,7 @@ pluggy==1.6.0
     # via pytest
 propcache==0.5.2
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   aiohttp
     #   yarl
 pygments==2.20.0
@@ -59,15 +59,15 @@ pytest==9.0.3
     #   pytest-aiohttp
     #   pytest-asyncio
 pytest-aiohttp==1.1.0
-    # via -r requirements-test.in
+    # via -r vlm/requirements.in
 pytest-asyncio==1.3.0
     # via pytest-aiohttp
 typing-extensions==4.15.0
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   aiosignal
     #   pytest-asyncio
 yarl==1.24.2
     # via
-    #   -c requirements.txt
+    #   -c vlm/requirements.txt
     #   aiohttp

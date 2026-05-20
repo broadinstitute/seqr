@@ -7,7 +7,7 @@
 aiohappyeyeballs==2.6.2
     # via aiohttp
 aiohttp==3.13.5
-    # via -r requirements.in
+    # via -r vlm/requirements.in
 aiosignal==1.4.0
     # via aiohttp
 attrs==26.1.0
@@ -15,7 +15,7 @@ attrs==26.1.0
 certifi==2026.5.20
     # via clickhouse-connect
 clickhouse-connect==0.8.18
-    # via -r requirements.in
+    # via -r vlm/requirements.in
 frozenlist==1.8.0
     # via
     #   aiohttp
@@ -33,7 +33,7 @@ propcache==0.5.2
     #   aiohttp
     #   yarl
 pyliftover==0.4.1
-    # via -r requirements.in
+    # via -r vlm/requirements.in
 pytz==2026.2
     # via clickhouse-connect
 typing-extensions==4.15.0

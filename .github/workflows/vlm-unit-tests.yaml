@@ -44,6 +44,7 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip wheel
+          pip install -r vlm/requirements.txt
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Settings and Data
         run: python3 vlm/setup_clickhouse_test_data.py clickhouse 8123 clickhouse_test_user clickhouse_test_password
