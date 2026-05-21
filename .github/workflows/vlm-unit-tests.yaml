@@ -68,6 +68,7 @@ jobs:
           pip install -r vlm/requirements-test.txt
           pip install pytest-django
           pip install -r requirements.txt 
+          which pytest  
           export CLICKHOUSE_WRITER_USER=clickhouse_test_user
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
