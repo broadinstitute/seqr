@@ -62,6 +62,7 @@ jobs:
           export CLICKHOUSE_WRITER_USER=clickhouse_test_user
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
           export CLICKHOUSE_SERVICE_HOSTNAME=clickhouse
+          docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
           python3 -u manage.py migrate clickhouse_search --database=clickhouse_write
           python3 -u manage.py loaddata clickhouse_search
       - name: Set up Clickhouse Settings
