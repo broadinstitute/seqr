@@ -75,7 +75,8 @@ jobs:
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
       - name: Install dependencies
         run: |
-          pip install -r vlm/requirements.txt # TODO clean up other packages
+          pip freeze | xargs pip uninstall -y
+          pip install -r vlm/requirements.txt
           pip install -r vlm/requirements-test.txt
       - name: Run coverage tests
         run: |
