@@ -73,6 +73,8 @@ jobs:
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
       - name: Set up Clickhouse Test Database
         run: | 
+          python3 -m venv .venv
+          source .venv/bin/activate
           pip install -r requirements.txt 
           export CLICKHOUSE_WRITER_USER=clickhouse_test_user
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
@@ -81,7 +83,6 @@ jobs:
           python3 -u manage.py loaddata clickhouse_search
       - name: Install dependencies
         run: |
-          pip freeze | xargs pip uninstall -y
           pip install -r vlm/requirements.txt
           pip install -r vlm/requirements-test.txt
       - name: Run coverage tests
