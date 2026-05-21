@@ -70,6 +70,7 @@ jobs:
           export CLICKHOUSE_WRITER_USER=clickhouse_test_user
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
+          python3 -u manage.py migrate
           python3 -u manage.py migrate --database=clickhouse_write
           python3 -u manage.py loaddata clickhouse_search
       - name: Set up Clickhouse
