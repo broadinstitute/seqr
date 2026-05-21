@@ -64,7 +64,7 @@ jobs:
           pip install -r requirements.txt 
           export CLICKHOUSE_WRITER_USER=clickhouse_test_user
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
-          export CLICKHOUSE_SERVICE_HOSTNAME=clickhouse
+          export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
           python3 -u manage.py migrate clickhouse_search --database=clickhouse_write
           python3 -u manage.py loaddata clickhouse_search
@@ -86,7 +86,7 @@ jobs:
         run: |
           export SEQR_BASE_URL=https://test-seqr.org/
           export NODE_ID=TestVLM
-          export CLICKHOUSE_SERVICE_HOSTNAME=clickhouse
+          export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           export CLICKHOUSE_SERVICE_PORT=8123
           export CLICKHOUSE_VLM_USERNAME=vlm_test_user
           export CLICKHOUSE_VLM_PASSWORD=vlm_test_password
