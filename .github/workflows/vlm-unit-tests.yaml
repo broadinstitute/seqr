@@ -55,7 +55,8 @@ jobs:
       - name: Install pip
         run: python3 -m pip install --upgrade pip wheel
       - name: Set up Clickhouse Database
-        run: | # TODO add venv
+        run: | 
+          pip install psycopg-binary
           pip install -r requirements.txt 
           export CLICKHOUSE_WRITER_USER=clickhouse_test_user
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
@@ -74,7 +75,7 @@ jobs:
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
       - name: Install dependencies
         run: |
-          pip install -r vlm/requirements.txt
+          pip install -r vlm/requirements.txt # TODO clean up other packages
           pip install -r vlm/requirements-test.txt
       - name: Run coverage tests
         run: |
