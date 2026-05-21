@@ -65,6 +65,7 @@ jobs:
         run: |
           docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
           docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
+          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT dictGet ON seqr.`GRCh37/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
