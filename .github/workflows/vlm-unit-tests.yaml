@@ -60,7 +60,6 @@ jobs:
         run: python3 -m pip install --upgrade pip wheel
       - name: Set up Clickhouse Database
         run: | 
-          pip install psycopg-binary
           pip install -r requirements.txt 
           export CLICKHOUSE_WRITER_USER=clickhouse_test_user
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
