@@ -58,17 +58,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install pip
         run: python3 -m pip install --upgrade pip wheel
-      - name: Set up Clickhouse Database
-        run: | 
-          pip install -r requirements.txt 
-          export CLICKHOUSE_WRITER_USER=clickhouse_test_user
-          export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
-          export CLICKHOUSE_SERVICE_HOSTNAME=localhost
-          docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
-          python3 -u manage.py migrate clickhouse_search --database=clickhouse_write
-          python3 -u manage.py loaddata clickhouse_search
-      - name: Set up Clickhouse Settings
+      - name: Set up Clickhouse
         run: |
+          docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
           docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
@@ -76,6 +68,14 @@ jobs:
           docker exec clickhouse clickhouse-client --query "GRANT dictGet ON seqr.`GRCh38/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS user='postgres', password='pgtest', host='postgres', port='5432'"
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
+      - name: Set up Clickhouse Test Database
+        run: | 
+          pip install -r requirements.txt 
+          export CLICKHOUSE_WRITER_USER=clickhouse_test_user
+          export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
+          export CLICKHOUSE_SERVICE_HOSTNAME=localhost
+          python3 -u manage.py migrate clickhouse_search --database=clickhouse_write
+          python3 -u manage.py loaddata clickhouse_search
       - name: Install dependencies
         run: |
           pip freeze | xargs pip uninstall -y
