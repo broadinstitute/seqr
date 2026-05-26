@@ -9,7 +9,6 @@ from vlm.web_app import init_web_app
 REQUESTER_CLIENT_ID = 'abc123'
 
 class VlmTestCase(AioHTTPTestCase):
-    databases = '__all__'
 
     async def get_application(self):
         return await init_web_app()
