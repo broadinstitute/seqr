@@ -66,6 +66,7 @@ jobs:
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Test Database
         run: | 
+          docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r vlm/requirements.txt
