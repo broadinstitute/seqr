@@ -98,6 +98,6 @@ jobs:
           export CLICKHOUSE_VLM_USERNAME=vlm_test_user
           export CLICKHOUSE_VLM_PASSWORD=vlm_test_password
           export CLICKHOUSE_DATABASE=test_seqr
-          coverage run --source="./vlm" --omit="./vlm/__main__.py" -m pytest vlm/
+          coverage run --source="./vlm" --omit="./vlm/__main__.py" -m pytest vlm/ --reuse-db
           coverage report -m --fail-under=95
 
