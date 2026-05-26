@@ -5,12 +5,7 @@ def enable_db_access_for_all_tests(db):
     pass
 
 @pytest.fixture(scope='session')
-def django_db_setup(
-    request: pytest.FixtureRequest,
-    django_db_blocker: DjangoDbBlocker,
-    django_db_keepdb: bool,
-):
-    """Top level fixture to ensure test databases are available"""
+def django_db_setup(request, django_db_blocker,django_db_keepdb):
     from django.test.utils import setup_databases, teardown_databases
 
     with django_db_blocker.unblock():
