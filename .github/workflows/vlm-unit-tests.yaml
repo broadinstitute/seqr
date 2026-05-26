@@ -65,6 +65,7 @@ jobs:
         run: | 
           python3 -m venv .venv
           source .venv/bin/activate
+          pip install -r vlm/requirements.txt
           pip install -r vlm/requirements-test.txt
           pip install pytest-django
           pip install -r requirements.txt 
