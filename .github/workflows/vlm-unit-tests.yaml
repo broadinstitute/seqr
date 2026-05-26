@@ -12,11 +12,13 @@ on:
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
+      - 'clickhouse_search/fixtures/clickhouse_search.json'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
+      - 'clickhouse_search/fixtures/clickhouse_search.json'
 
 jobs:
   vlm_clickhouse:
