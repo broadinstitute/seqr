@@ -79,6 +79,7 @@ jobs:
           export POSTGRES_SERVICE_HOSTNAME=localhost
           export DJANGO_SETTINGS_MODULE=settings
           python3 -m pytest --create-db --collect-only
+          python3 -u manage.py migrate --database=clickhouse_write
           python3 -u manage.py loaddata clickhouse_search --database=clickhouse_write
       - name: Set up Clickhouse User
         run: |
