@@ -77,7 +77,7 @@ jobs:
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           export POSTGRES_SERVICE_HOSTNAME=localhost
-          python3 -m pytest --create-db --reuse-db --collect-only --ds=vlm.test_django_settings -vv
+          python3 -m pytest --create-db --reuse-db --ds=vlm.test_django_settings -vv
           python3 -u manage.py loaddata clickhouse_search --database=clickhouse_write
       - name: Set up Clickhouse User
         run: |
