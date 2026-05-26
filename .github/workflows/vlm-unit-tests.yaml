@@ -68,17 +68,15 @@ jobs:
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Settings
         run: |
-          cat <<EOF > test_config.xml
-          <clickhouse>
-            <users>
-              <clickhouse_test>
-                <named_collection_control>1</named_collection_control>
-              </clickhouse_test>
-            </users>
-          </clickhouse>
-          EOF
-          docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/users.d/users.xml
           docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS user='postgres', password='pgtest', host='postgres', port='5432'"
+          docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
+          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
+          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh37/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh38/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS allow_materialized_view_with_bad_select=1, stop_refreshable_materialized_views_on_startup=1 TO vlm_test_user, clickhouse_test_user"
+          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
       - name: Set up Clickhouse Test Database
         run: | 
           python3 -m venv .venv
@@ -94,15 +92,6 @@ jobs:
           export POSTGRES_SERVICE_HOSTNAME=localhost
           python3 -m pytest --setup-only --create-db --reuse-db --ds=settings -vv
           python3 -u manage.py loaddata clickhouse_search --database=clickhouse_write
-      - name: Set up Clickhouse User
-        run: |
-          docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
-          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
-          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh37/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh38/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
       - name: Run coverage tests
         run: |
           export SEQR_BASE_URL=https://test-seqr.org/
