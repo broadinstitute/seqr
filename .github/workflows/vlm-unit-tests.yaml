@@ -68,7 +68,16 @@ jobs:
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Settings
         run: |
-          docker exec clickhouse clickhouse-client --query "GRANT CREATE NAMED COLLECTION TO clickhouse_test_user"
+          cat <<EOF > test_config.xml
+          <clickhouse>
+            <users>
+              <clickhouse_test_user>
+                <named_collection_control>1</named_collection_control>
+              </clickhouse_test_user>
+            </users>
+          </clickhouse>
+          EOF
+          docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/users.d/users.xml
           docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
