@@ -73,7 +73,7 @@ jobs:
           export CLICKHOUSE_WRITER_PASSWORD=clickhouse_test_password
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           export POSTGRES_SERVICE_HOSTNAME=localhost
-          .venv/bin/python3 -m pytest --create-db --collect-only -k "not ui"
+          python3 -m pytest --create-db --collect-only
           python3 -u manage.py loaddata clickhouse_search --database=clickhouse_write
       - name: Set up Clickhouse User
         run: |
