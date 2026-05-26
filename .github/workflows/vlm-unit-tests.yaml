@@ -68,15 +68,15 @@ jobs:
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Settings
         run: |
-          docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS user='postgres', password='pgtest', host='postgres', port='5432'"
+          docker exec clickhouse clickhouse-client --query "GRANT CREATE NAMED COLLECTION TO clickhouse_test_user"
           docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
-          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh37/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh38/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS allow_materialized_view_with_bad_select=1, stop_refreshable_materialized_views_on_startup=1 TO vlm_test_user, clickhouse_test_user"
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
+          docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS user='postgres', password='pgtest', host='postgres', port='5432'"
       - name: Set up Clickhouse Test Database
         run: | 
           python3 -m venv .venv
