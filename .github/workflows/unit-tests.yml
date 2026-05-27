@@ -44,6 +44,7 @@ jobs:
         image: clickhouse/clickhouse-server:26.3
         ports:
           - 9000:9000   # Native client interface
+          - 8123:8123   # HTTP interface
         volumes:
           - /var/tmp:/var/seqr/clickhouse-data
           - /tmp:/in-memory-dir
@@ -105,7 +106,7 @@ jobs:
       - name: Wait for service restart
         run: |
           timeout 60s sh -c '
-          until curl --fail http://localhost:9000; do
+          until curl --fail http://localhost:8123; do
             echo "Waiting for service to restart..."
             sleep 2
           done
