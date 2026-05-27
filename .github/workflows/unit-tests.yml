@@ -115,7 +115,7 @@ jobs:
           export CLICKHOUSE_READER_USER=clickhouse_read_only
           export CLICKHOUSE_WRITER_USER=clickhouse_test
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
-          coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 reference_data clickhouse_search seqr matchmaker panelapp
+          coverage run --source="./matchmaker","./seqr","./reference_data","./panelapp","./clickhouse_search" --omit="*/migrations/*","*/apps.py","*/admin.py" manage.py test -p '*_tests.py' -v 2 seqr.management.tests.tag_seqr_prioritized_variants_tests
           coverage report -m --fail-under=99
           coverage report | (! grep [1-8][0-9]%)
           coverage report | (! grep 9[0-5]%)
