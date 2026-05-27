@@ -105,10 +105,9 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Wait for service restart
         run: |
-          timeout 60s sh -c '
+          timeout 50s sh -c '
           until curl --fail http://localhost:8123/ping; do
-            echo "Waiting for service to restart..."
-            sleep 2
+            sleep 5
           done
           '
       - name: Run coverage tests
