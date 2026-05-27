@@ -74,17 +74,21 @@ jobs:
               <clickhouse_test_user>
                 <named_collection_control>1</named_collection_control>
               </clickhouse_test_user>
+              <vlm_test_user>
+                <password>vlm_test_password</password>
+                <grants>
+                  <query>GRANT SELECT ON test_seqr.`GRCh37/SNV_INDEL/key_lookup`</query>
+                  <query>GRANT SELECT ON test_seqr.`GRCh38/SNV_INDEL/key_lookup`</query>
+                  <query>GRANT dictGet ON test_seqr.`GRCh37/SNV_INDEL/gt_stats_dict`/query>
+                  <query>GRANT dictGet ON test_seqr.`GRCh38/SNV_INDEL/gt_stats_dict`/query>
+                </grants>
+            </vlm_test_user>
             </users>
           </clickhouse>
           EOF
           docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/users.d/users.xml
-          docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
-          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh37/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh38/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
-          docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS allow_materialized_view_with_bad_select=1, stop_refreshable_materialized_views_on_startup=1 TO vlm_test_user, clickhouse_test_user"
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
+          docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS allow_materialized_view_with_bad_select=1, stop_refreshable_materialized_views_on_startup=1 TO vlm_test_user, clickhouse_test_user"
           docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS user='postgres', password='pgtest', host='postgres', port='5432'"
       - name: Set up Clickhouse Test Database
         run: | 
