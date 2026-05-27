@@ -69,7 +69,7 @@ jobs:
           </clickhouse>
           EOF
           docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/config.d/config.xml
-          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD CONFIG"
+          docker restart clickhouse
           cat <<EOF > test_user_config.xml
           <clickhouse>
             <users>
