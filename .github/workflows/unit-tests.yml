@@ -57,6 +57,7 @@ jobs:
           CLICKHOUSE_USER: clickhouse_test
           CLICKHOUSE_PASSWORD: clickhouse_test
           ALLOW_EMPTY_PASSWORD: no
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
 
     steps:
       - uses: actions/checkout@v2
