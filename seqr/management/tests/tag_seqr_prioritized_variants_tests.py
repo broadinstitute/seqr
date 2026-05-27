@@ -133,13 +133,15 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         mock_email.reset_mock()
         mock_slack.reset_mock()
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
+        self.maxDiff = None
+        self.assertListEqual([json.loads(log) for log in self._log_stream.getvalue().split('\n') if log], [])
+        self._assert_expected_logs(num_unchanged=7)
         mock_email.assert_not_called()
         mock_slack.assert_not_called()
         self.assertDictEqual(expected_tags, {
             tuple(sorted(tag.saved_variants.values_list('key', flat=True))): json.loads(tag.metadata)
             for tag in VariantTag.objects.filter(variant_tag_type__name='seqr Prioritized')
         })
-        self._assert_expected_logs(num_unchanged=7)
 
     def _assert_expected_logs(self, num_new=0, num_unchanged=0, creation_stats=None):
         creation_stats = creation_stats or {}
