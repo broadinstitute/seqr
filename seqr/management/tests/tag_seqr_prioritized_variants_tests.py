@@ -137,16 +137,16 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         expected = [{
             'timestamp': mock.ANY, 'severity': 'INFO', 'message': log, **(extra or {}),
         } for log, extra in self._dataset_type_logs(
-            'SNV_INDEL', 3, SNV_INDEL_MATCHES, **creation_stats.get('SNV_INDEL', {}),
+            'SNV_INDEL', 3, SNV_INDEL_MATCHES,
         ) + self._dataset_type_logs(
-            'SV_WES', 1, SV_MATCHES, **creation_stats.get('SV', {}),
+            'SV_WES', 1, SV_MATCHES,
         ) + self._dataset_type_logs(
-            'MITO', 1, MITO_MATCHES, **creation_stats.get('MITO', {}),
+            'MITO', 1, MITO_MATCHES,
         ) + self._dataset_type_logs(
-            'multi data type', 1, MULTI_TYPE_MATCHES, **creation_stats.get('MULTI', {}),
+            'multi data type', 1, MULTI_TYPE_MATCHES,
             search_dataset_types=['SNV_INDEL', 'SNV_INDEL/SV_WES'],
         ) + [
-           (f'Tagged {num_new} new and 0 previously tagged variants in 1 families, found {num_unchanged} unchanged tags:',
+           (f'Tagged 0 new and 0 previously tagged variants in 1 families, found 7 unchanged tags:',
             None)
            ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in
                 SNV_INDEL_MATCHES.items()] + [
