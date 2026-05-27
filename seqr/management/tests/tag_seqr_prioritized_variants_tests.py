@@ -134,7 +134,27 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         mock_slack.reset_mock()
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
         self.maxDiff = None
-        self.assertListEqual([json.loads(log) for log in self._log_stream.getvalue().split('\n') if log], [])
+        expected = [{
+            'timestamp': mock.ANY, 'severity': 'INFO', 'message': log, **(extra or {}),
+        } for log, extra in self._dataset_type_logs(
+            'SNV_INDEL', 3, SNV_INDEL_MATCHES, **creation_stats.get('SNV_INDEL', {}),
+        ) + self._dataset_type_logs(
+            'SV_WES', 1, SV_MATCHES, **creation_stats.get('SV', {}),
+        ) + self._dataset_type_logs(
+            'MITO', 1, MITO_MATCHES, **creation_stats.get('MITO', {}),
+        ) + self._dataset_type_logs(
+            'multi data type', 1, MULTI_TYPE_MATCHES, **creation_stats.get('MULTI', {}),
+            search_dataset_types=['SNV_INDEL', 'SNV_INDEL/SV_WES'],
+        ) + [
+           (f'Tagged {num_new} new and 0 previously tagged variants in 1 families, found {num_unchanged} unchanged tags:',
+            None)
+           ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in
+                SNV_INDEL_MATCHES.items()] + [
+               (f'  {criteria}: {count} variants', None) for criteria, (count, _) in SV_MATCHES.items()
+           ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in MITO_MATCHES.items()] + [
+               (f'  {criteria}: {count} variants', None) for criteria, (count, _) in MULTI_TYPE_MATCHES.items()
+           ]]
+        self.assertListEqual([json.loads(log) for log in self._log_stream.getvalue().split('\n') if log], expected)
         self._assert_expected_logs(num_unchanged=7)
         mock_email.assert_not_called()
         mock_slack.assert_not_called()
