@@ -25,7 +25,7 @@ jobs:
 
     services:
       clickhouse:
-        image: clickhouse/clickhouse-server:26.3
+        image: gcr.io/seqr-project/seqr-clickhouse:26.3.9
         ports:
           - 8123:8123   # HTTP interface
         options: >-

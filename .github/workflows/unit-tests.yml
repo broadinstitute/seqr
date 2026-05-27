@@ -41,7 +41,7 @@ jobs:
           # Maps tcp port 5432 on service container to the host
           - 5432:5432
       clickhouse:
-        image: clickhouse/clickhouse-server:26.3
+        image: gcr.io/seqr-project/seqr-clickhouse:26.3.9
         ports:
           - 9000:9000   # Native client interface
           - 8123:8123   # HTTP interface
