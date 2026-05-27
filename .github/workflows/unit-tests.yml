@@ -70,6 +70,9 @@ jobs:
           EOF
           docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/config.d/config.xml
           docker restart clickhouse
+          until docker exec clickhouse clickhouse-client --query "SELECT 1" > /dev/null 2>&1; do
+            sleep 1
+          done
           cat <<EOF > test_user_config.xml
           <clickhouse>
             <users>
