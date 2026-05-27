@@ -62,15 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Set up Clickhouse Settings
-        run: |
-          cat <<EOF > test_config.xml
-          <clickhouse>
-            <user_files_path>/</user_files_path>
-          </clickhouse>
-          EOF
-          docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/config.d/config.xml
-          docker restart clickhouse
-          sleep 5
+        run: |          
           cat <<EOF > test_user_config.xml
           <clickhouse>
             <users>
@@ -87,6 +79,13 @@ jobs:
           docker exec clickhouse clickhouse-client --query "GRANT SELECT, SYSTEM VIEWS, dictGet ON *.* TO clickhouse_read_only"
           docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS user='postgres', password='pgtest', host='postgres', port='5432'"
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
+          cat <<EOF > test_config.xml
+          <clickhouse>
+            <user_files_path>/</user_files_path>
+          </clickhouse>
+          EOF
+          docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/config.d/config.xml
+          docker restart clickhouse
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
