@@ -76,12 +76,6 @@ jobs:
               </clickhouse_test_user>
               <vlm_test_user>
                 <password>vlm_test_password</password>
-                <grants>
-                  <query>GRANT SELECT ON test_seqr.`GRCh37/SNV_INDEL/key_lookup`</query>
-                  <query>GRANT SELECT ON test_seqr.`GRCh38/SNV_INDEL/key_lookup`</query>
-                  <query>GRANT dictGet ON test_seqr.`GRCh37/SNV_INDEL/gt_stats_dict`</query>
-                  <query>GRANT dictGet ON test_seqr.`GRCh38/SNV_INDEL/gt_stats_dict`</query>
-                </grants>
               </vlm_test_user>
             </users>
           </clickhouse>
