@@ -63,6 +63,13 @@ jobs:
       - uses: actions/checkout@v2
       - name: Set up Clickhouse Settings
         run: |
+          cat <<EOF > test_config.xml
+          <clickhouse>
+            <user_files_path>/</user_files_path>
+          </clickhouse>
+          EOF
+          docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/config.d/config.xml
+          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD CONFIG"
           cat <<EOF > test_user_config.xml
           <clickhouse>
             <users>
@@ -73,12 +80,6 @@ jobs:
           </clickhouse>
           EOF
           docker cp ${{ github.workspace }}/test_user_config.xml clickhouse:/etc/clickhouse-server/users.d/users.xml
-          cat <<EOF > test_config.xml
-          <clickhouse>
-            <user_files_path>/</user_files_path>
-          </clickhouse>
-          EOF
-          docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/config.d/config.xml
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
           docker exec clickhouse clickhouse-client --query "CREATE USER clickhouse_read_only IDENTIFIED WITH plaintext_password BY 'clickhouse_test'"
           docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS flatten_nested=0, join_use_nulls=1, stop_refreshable_materialized_views_on_startup=1, allow_materialized_view_with_bad_select=1 TO clickhouse_test, clickhouse_read_only"
