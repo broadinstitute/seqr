@@ -100,6 +100,13 @@ jobs:
           export POSTGRES_SERVICE_HOSTNAME=localhost
           python3 -m pytest --setup-only --create-db --reuse-db --ds=settings -vv
           python3 -u manage.py loaddata clickhouse_search --database=clickhouse_write
+      - name: Set up Clickhouse test user
+        run: |
+          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh38/SNV_INDEL/key_lookup` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh37/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.`GRCh38/SNV_INDEL/gt_stats_dict` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
       - name: Run coverage tests
         run: |
           export SEQR_BASE_URL=https://test-seqr.org/
