@@ -82,7 +82,7 @@ jobs:
                   <query>GRANT dictGet ON test_seqr.`GRCh37/SNV_INDEL/gt_stats_dict`/query>
                   <query>GRANT dictGet ON test_seqr.`GRCh38/SNV_INDEL/gt_stats_dict`/query>
                 </grants>
-            </vlm_test_user>
+              </vlm_test_user>
             </users>
           </clickhouse>
           EOF
