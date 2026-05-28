@@ -4620,4 +4620,9 @@ class Migration(migrations.Migration):
                 reference_dataset="promoterAI",
             ),
         ),
+        migrations.RunPython(
+            conditionally_refresh_reference_dataset(
+                reference_dataset="eigen",
+            ),
+        ),
     ]
