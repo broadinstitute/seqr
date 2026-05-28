@@ -8,7 +8,7 @@ from clickhouse_search.test_utils import VARIANT2, VARIANT3, VARIANT4, GCNV_VARI
 from seqr.models import SavedVariant, VariantTag
 
 PROJECT_GUID = 'R0001_1kg'
-# allow_experimental_analyzer=0, allow_general_join_planning=0, allow_reorder_prewhere_conditions=0
+# allow_experimental_analyzer=0, allow_general_join_planning=0,
 SNV_INDEL_MATCHES = {
     'Clinvar Pathogenic': (0, None),
     'Clinvar Pathogenic - Compound Heterozygous': (0, None),
