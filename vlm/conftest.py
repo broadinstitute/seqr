@@ -12,7 +12,7 @@ def django_db_setup(request, django_db_blocker,django_db_keepdb):
         db_cfg = setup_databases(
             verbosity=request.config.option.verbose,
             interactive=False,
-            aliases=['default', 'clickhouse_write'],
+            aliases=['default', 'reference_data', 'clickhouse_write'],
             keepdb=django_db_keepdb,
         )
         #     TODO loaddata
