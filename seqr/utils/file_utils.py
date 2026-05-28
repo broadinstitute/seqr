@@ -68,9 +68,9 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs
         )
         if file_path.endswith("gz") and not raw_content:  # Avoids unzipping BED files
             command += " | gunzip -c - "
-        process = run_command(command, user=user, pipe_errors=True)
+        process = run_command(command, user=user)
         if process.wait() != 0:  # Check subprocess status for errors
-            raise Exception(f'Run command failed: \nCommand: {command}\nError:{process.stderr}')
+            raise Exception(f'Run command failed: \nCommand: {command}\nError:{process.stdout}')
         for line in process.stdout:
             yield line
     else:
