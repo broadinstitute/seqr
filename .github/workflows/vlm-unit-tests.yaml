@@ -42,7 +42,6 @@ jobs:
         env:
           CLICKHOUSE_USER: clickhouse_test_user
           CLICKHOUSE_PASSWORD: clickhouse_test_password
-          CLICKHOUSE_DB: seqr
           ALLOW_EMPTY_PASSWORD: no
           CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
       postgres:
@@ -106,6 +105,7 @@ jobs:
       - name: Set up Test Databases
         run: | 
           docker exec postgres createdb -U postgres reference_data_db
+          docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r vlm/requirements.txt
