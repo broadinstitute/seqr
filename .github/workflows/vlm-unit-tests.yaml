@@ -105,8 +105,7 @@ jobs:
           '
       - name: Set up Test Databases
         run: | 
-          docker container ls
-          docker exec postgres createdb reference_data_db
+          docker exec postgres createdb -U postgres reference_data_db
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r vlm/requirements.txt
