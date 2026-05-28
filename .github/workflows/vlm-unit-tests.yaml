@@ -42,6 +42,7 @@ jobs:
         env:
           CLICKHOUSE_USER: clickhouse_test_user
           CLICKHOUSE_PASSWORD: clickhouse_test_password
+          CLICKHOUSE_DB: seqr
           ALLOW_EMPTY_PASSWORD: no
           CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
       postgres:
@@ -55,6 +56,7 @@ jobs:
           --health-retries 5
         env:
           POSTGRES_PASSWORD: pgtest
+          POSTGRES_DB: seqrdb
 
     steps:
       - name: Set up Python
