@@ -8,8 +8,7 @@ from clickhouse_search.test_utils import VARIANT2, VARIANT3, VARIANT4, GCNV_VARI
 from seqr.models import SavedVariant, VariantTag
 
 PROJECT_GUID = 'R0001_1kg'
-# allow_general_join_planning=0
-#  , enable_lazy_columns_replication=0
+
 SNV_INDEL_MATCHES = {
     'Clinvar Pathogenic': (0, None),
     'Clinvar Pathogenic - Compound Heterozygous': (0, None),
@@ -134,28 +133,6 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         mock_email.reset_mock()
         mock_slack.reset_mock()
         call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
-        self.maxDiff = None
-        expected = [{
-            'timestamp': mock.ANY, 'severity': 'INFO', 'message': log, **(extra or {}),
-        } for log, extra in self._dataset_type_logs(
-            'SNV_INDEL', 3, SNV_INDEL_MATCHES,
-        ) + self._dataset_type_logs(
-            'SV_WES', 1, SV_MATCHES,
-        ) + self._dataset_type_logs(
-            'MITO', 1, MITO_MATCHES,
-        ) + self._dataset_type_logs(
-            'multi data type', 1, MULTI_TYPE_MATCHES,
-            search_dataset_types=['SNV_INDEL', 'SNV_INDEL/SV_WES'],
-        ) + [
-           (f'Tagged 0 new and 0 previously tagged variants in 1 families, found 7 unchanged tags:',
-            None)
-           ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in
-                SNV_INDEL_MATCHES.items()] + [
-               (f'  {criteria}: {count} variants', None) for criteria, (count, _) in SV_MATCHES.items()
-           ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in MITO_MATCHES.items()] + [
-               (f'  {criteria}: {count} variants', None) for criteria, (count, _) in MULTI_TYPE_MATCHES.items()
-           ]]
-        self.assertListEqual([json.loads(log) for log in self._log_stream.getvalue().split('\n') if log], expected)
         self._assert_expected_logs(num_unchanged=7)
         mock_email.assert_not_called()
         mock_slack.assert_not_called()
