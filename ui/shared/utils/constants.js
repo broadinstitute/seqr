@@ -1650,7 +1650,7 @@ export const predictorColorRanges = (thresholds, { citation, reverseThresholds, 
     {citation && (
       <small>
         {`Based on ${citation.name} (${citation.pmid ? 'PMID: ' : ''}`}
-        <a href={citation.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${citation.pmid}`: citation.href} target="_blank" rel="noreferrer">
+        <a href={citation.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${citation.pmid}` : citation.href} target="_blank" rel="noreferrer">
           {citation.pmid || citation.linkText}
         </a>
         )
