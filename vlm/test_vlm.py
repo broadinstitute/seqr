@@ -42,7 +42,6 @@ class VlmTestCase(AioHTTPTestCase):
         jwt_body = {'iss': 'https://vlm-auth.us.auth0.com/', 'azp': REQUESTER_CLIENT_ID}
         headers = {'Authorization': f'Bearer {jwt.encode(jwt_body, "")}'}
 
-        self.maxDiff = None
         async with self.client.request('GET', '/vlm/match?assemblyId=GRCh38&referenceName=1&start=38724419&referenceBases=T&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
