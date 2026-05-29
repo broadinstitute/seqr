@@ -149,14 +149,14 @@ class VlmTestCase(AioHTTPTestCase):
                         'exists': True,
                         'id': 'TestVLM Homozygous',
                         'results': [],
-                        'resultsCount': 1508,
+                        'resultsCount': 2,
                         'setType': 'genomicVariant'
                     },
                     {
                         'exists': True,
                         'id': 'TestVLM Heterozygous',
                         'results': [],
-                        'resultsCount': 1695,
+                        'resultsCount': 0,
                         'setType': 'genomicVariant'
                     },
                     {
