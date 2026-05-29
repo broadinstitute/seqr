@@ -102,6 +102,8 @@ jobs:
           '
       - name: Set up Test Databases
         run: | 
+          docker exec postgres createdb -U postgres reference_data_db
+          docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r vlm/requirements.txt
