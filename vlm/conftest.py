@@ -1,5 +1,8 @@
 import pytest
 
+@pytest.fixture(scope='session')
+def django_db_blocker(django_db_blocker, db):
+    pass
 
 @pytest.fixture(scope='session')
 def django_db_setup(request, django_db_blocker,django_db_keepdb):
