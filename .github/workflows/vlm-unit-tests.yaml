@@ -25,7 +25,7 @@ jobs:
 
     services:
       clickhouse:
-        image: bitnamilegacy/clickhouse:latest
+        image: gcr.io/seqr-project/seqr-clickhouse:26.3.9
         ports:
           - 8123:8123   # HTTP interface
         options: >-
@@ -38,6 +38,7 @@ jobs:
           CLICKHOUSE_USER: clickhouse_test_user
           CLICKHOUSE_PASSWORD: clickhouse_test_password
           ALLOW_EMPTY_PASSWORD: no
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
 
     steps:
       - uses: actions/checkout@v2
