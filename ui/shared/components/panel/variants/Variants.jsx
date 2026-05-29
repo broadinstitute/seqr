@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { NavLink } from 'react-router-dom'
 import styled from 'styled-components'
 import { Grid, Popup, Label, Button, Header, Tab } from 'semantic-ui-react'
 
@@ -148,17 +149,32 @@ export const Variant = React.memo((
       topContent={
         <div>
           <Pathogenicity variant={variant} />
-          {variant.discoveryTags && variant.discoveryTags.length > 0 && (
+          {(variant.discoveryTags?.length > 0 || variant.noAccessDiscoveryFamilies > 0) && (
             <InlinePopup
               on="click"
               position="right center"
               trigger={<Button as={Label} basic color="grey">Other Project Discovery Tags</Button>}
-              content={<TagFieldDisplay
-                displayFieldValues={variant.discoveryTags}
-                popup={taggedByPopup}
-                tagAnnotation={tagFamily}
-                displayAnnotationFirst
-              />}
+              content={(
+                <span>
+                  {variant.discoveryTags?.length > 0 && (
+                    <TagFieldDisplay
+                      displayFieldValues={variant.discoveryTags}
+                      popup={taggedByPopup}
+                      tagAnnotation={tagFamily}
+                      displayAnnotationFirst
+                    />
+                  )}
+                  {variant.noAccessDiscoveryFamilies > 0 && (
+                    <NavLink
+                      to={`/variant_lookup?variantId=${variant.variantId}&genomeVersion=${variant.genomeVersion}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Label basic color="teal" content={`${variant.noAccessDiscoveryFamilies} families in external projects`} />
+                    </NavLink>
+                  )}
+                </span>
+              )}
             />
           )}
         </div>

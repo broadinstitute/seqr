@@ -11,7 +11,7 @@ MOCK_GCNV_DATA = [
 
 
 class SetSavedVariantKeyTest(AnvilAuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'report_variants', 'clickhouse_saved_variants']
+    fixtures = ['users', '1kg_project', 'report_variants', 'clickhouse_discovery_variants', 'clickhouse_saved_variants']
 
     MOCK_GCNV_DATA = MOCK_GCNV_DATA
 

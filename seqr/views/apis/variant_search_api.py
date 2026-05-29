@@ -587,15 +587,19 @@ def variant_lookup_handler(request):
     family_guids = set()
     for variant in variants:
         family_guids.update(variant['familyGenotypes'].keys())
+        family_guids.update(variant['discoveryFamilies'])
+        family_guids.update(variant['excludedTagFamilies'])
 
-    families = Family.objects.filter(
+    family_guids = set(Family.objects.filter(
         guid__in=family_guids,
         project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=True),
-    )
+    ).values_list('guid', flat=True))
     for variant in variants:
-        variant['familyGuids'] = list(families.values_list('guid', flat=True))
+        variant['familyGuids'] = family_guids.intersection(variant['familyGenotypes'].keys())
+        variant['discoveryTagFamilies'] = set(variant['discoveryFamilies']) - family_guids
+        variant['excludedTagFamilies'] = set(variant['excludedTagFamilies']) - family_guids
 
-    saved_variants = _get_saved_variant_models(variants) if families else None
+    saved_variants = _get_saved_variant_models(variants) if family_guids else None
     response = get_variants_response(
         request, saved_variants=saved_variants, response_variants=variants,
         add_all_context=True, add_locus_list_detail=True, genome_version=genome_version,
@@ -623,6 +627,7 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
     variant['genotypes'] = {}
     variant['lookupFamilyGuids'] = sorted([guid for guid in variant.pop('familyGuids') if guid in variant['familyGenotypes']])
     variant['familyGuids'] = []
+    variant.pop('noAccessDiscoveryFamilies', None)
     for family_guid in variant['lookupFamilyGuids']:
         for genotype in variant['familyGenotypes'].pop(family_guid):
             genotype.pop('metadata', None)
@@ -639,8 +644,10 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
             variant['genotypes'][individual_guid] = genotype
 
     all_feature_ids = set()
+    family_guid_map = {}
     for i, (unmapped_family_guid, genotypes) in enumerate(sorted(variant.pop('familyGenotypes').items())):
         family_guid = f'F{i}_{variant["variantId"]}'
+        family_guid_map[unmapped_family_guid] = family_guid
         variant['lookupFamilyGuids'].append(family_guid)
         if unmapped_family_guid in variant.get('liftedFamilyGuids', []):
             variant['liftedFamilyGuids'][variant['liftedFamilyGuids'].index(unmapped_family_guid)] = family_guid
@@ -669,6 +676,13 @@ def _update_lookup_variant(variant, response, individual_guid_map, user):
                 'features': features,
             }
             variant['genotypes'][individual_guid] = genotype
+
+    variant['discoveryTagFamilies'] = sorted([
+        family_guid_map[family_guid] for family_guid in variant['discoveryTagFamilies'] if family_guid in family_guid_map
+    ])
+    variant['excludedTagFamilies'] = sorted([
+        family_guid_map[family_guid] for family_guid in variant['excludedTagFamilies'] if family_guid in family_guid_map
+    ])
 
     _parse_hpo_terms(all_feature_ids, response['individualsByGuid'].values())
 

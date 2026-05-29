@@ -185,6 +185,26 @@ class SavedVariantAPITest(object):
         self.assertListEqual(variant['familyGuids'], ['F000001_1'])
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
 
+        discovery_tags = [{
+            'savedVariant': {
+                'variantGuid': 'SV0000006_1248367227_r0003_tes',
+                'familyGuid': 'F000012_12',
+                'projectGuid': 'R0003_test',
+            },
+            'tagGuid': 'VT1726961_2103343353_r0003_tes',
+            'name': 'Tier 1 - Novel gene and phenotype',
+            'category': 'CMG Discovery Tags',
+            'color': '#03441E',
+            'searchHash': None,
+            'searchName': None,
+            'metadata': None,
+            'lastModifiedDate': '2018-05-29T16:32:51.449Z',
+            'createdBy': None,
+        }]
+        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], discovery_tags)
+        self.assertEqual(variants['1-248367227-TC-T']['noAccessDiscoveryFamilies'], 1)
+        self.assertListEqual(variants['1-248367227-TC-T']['familyGuids'], ['F000002_2'])
+
         tag = response_json['variantTagsByGuid']['VT1708633_2103343353_r0390_100']
         self.assertSetEqual(set(tag.keys()), TAG_FIELDS)
         self.assertDictEqual(tag, {
@@ -228,7 +248,9 @@ class SavedVariantAPITest(object):
             'spliceOutliers': {},
         }})
 
-        self.assertDictEqual(response_json['familiesByGuid'], {'F000001_1': {'tpmGenes': ['ENSG00000135953']}})
+        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000012_12'})
+        self.assertSetEqual(set(response_json['familiesByGuid']['F000012_12'].keys()), FAMILY_FIELDS)
+        self.assertDictEqual(response_json['familiesByGuid']['F000001_1'], {'tpmGenes': ['ENSG00000135953']})
 
         self.assertDictEqual(response_json['omimIntervals'], {})
 
@@ -266,7 +288,7 @@ class SavedVariantAPITest(object):
         family_context_response_keys.update(SAVED_VARIANT_RESPONSE_KEYS)
         self.assertSetEqual(set(response_json.keys()), family_context_response_keys)
         self.assertEqual(len(response_json['savedVariantsByGuid']), 2)
-        self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2'})
+        self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2', 'F000012_12'})
         family_fields = {'individualGuids', 'tpmGenes'}
         family_fields.update(FAMILY_FIELDS)
         self.assertSetEqual(set(response_json['familiesByGuid']['F000001_1'].keys()), family_fields)
@@ -317,7 +339,7 @@ class SavedVariantAPITest(object):
         response = self.client.get(url.replace(PROJECT_GUID, 'R0003_test'))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), no_families_response_keys)
+        self.assertSetEqual(set(response_json.keys()), {*no_families_response_keys, 'familiesByGuid'})
 
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
@@ -333,52 +355,8 @@ class SavedVariantAPITest(object):
         }})
         self.assertDictEqual(response_json['rnaSeqData'], {})
 
-        # Test cross-project discovery for analyst users
-        self.login_analyst_user()
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
-        self.assertSetEqual(
-            set(response_json['savedVariantsByGuid'].keys()),
-            {'SV0000002_1248367227_r0390_100', VARIANT_GUID}
-        )
-        variants = response_json['variantsById']
-        self.assertSetEqual(set(variants.keys()), {'1-248367227-TC-T', '21-3343353-GAGA-G'})
-        discovery_tags = [{
-            'savedVariant': {
-                'variantGuid': 'SV0000006_1248367227_r0003_tes',
-                'familyGuid': 'F000012_12',
-                'projectGuid': 'R0003_test',
-            },
-            'tagGuid': 'VT1726961_2103343353_r0003_tes',
-            'name': 'Tier 1 - Novel gene and phenotype',
-            'category': 'CMG Discovery Tags',
-            'color': '#03441E',
-            'searchHash': None,
-            'searchName': None,
-            'metadata': None,
-            'lastModifiedDate': '2018-05-29T16:32:51.449Z',
-            'createdBy': None,
-        }]
-        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], discovery_tags)
-        self.assertListEqual(variants['1-248367227-TC-T']['familyGuids'], ['F000002_2'])
-        self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000012_12'})
-        self.assertSetEqual(set(response_json['familiesByGuid']['F000012_12'].keys()), FAMILY_FIELDS)
-        self.assertDictEqual(response_json['familiesByGuid']['F000001_1'], {'tpmGenes': ['ENSG00000135953']})
-
-        # Test discovery tags with family context
-        response = self.client.get(load_family_context_url)
-        self.assertEqual(response.status_code, 200)
-        response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), family_context_response_keys)
-        variants = response_json['variantsById']
-        self.assertSetEqual(set(variants.keys()), {'1-248367227-TC-T', '21-3343353-GAGA-G'})
-        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], discovery_tags)
-        self.assertListEqual(variants['1-248367227-TC-T']['familyGuids'], ['F000002_2'])
-        self.assertEqual(set(response_json['familiesByGuid'].keys()), {'F000001_1', 'F000002_2', 'F000012_12'})
-
         # Test empty project
+        self.login_analyst_user()
         empty_project_url = url.replace(PROJECT_GUID, 'R0002_empty')
         response = self.client.get(empty_project_url)
         self.assertEqual(response.status_code, 200)
@@ -397,7 +375,7 @@ class SavedVariantAPITest(object):
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals', 'transcriptsById'})
         self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()), fields)
         self.assertSetEqual(set(response_json['variantsById']['1-248367227-TC-T'].keys()), {
-            *variant_fields, *SAVED_VARIANT_DETAIL_FIELDS, 'discoveryTags', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
+            *variant_fields, *SAVED_VARIANT_DETAIL_FIELDS, 'discoveryTags', 'noAccessDiscoveryFamilies', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
         })
 
     def test_create_saved_variant(self):
@@ -1154,7 +1132,7 @@ class SavedVariantAPITest(object):
 
 # Tests for AnVIL access disabled
 class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
+    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_discovery_variants', 'clickhouse_saved_variants']
 
 
 def assert_no_list_ws_has_al(self, acl_call_count):
@@ -1167,7 +1145,7 @@ def assert_no_list_ws_has_al(self, acl_call_count):
 
 # Test for permissions from AnVIL only
 class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_discovery_variants', 'clickhouse_saved_variants']
 
     @classmethod
     def setUpTestData(cls):
@@ -1182,9 +1160,9 @@ class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest)
             mock.ANY, 'ext-data', 'empty')
         self.mock_get_ws_access_level.assert_called_with(
             mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 18)
-        self.mock_get_groups.assert_has_calls([mock.call(self.collaborator_user), mock.call(self.analyst_user)])
-        self.assertEqual(self.mock_get_groups.call_count, 12)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 15)
+        self.mock_get_groups.assert_called_with(self.collaborator_user)
+        self.assertEqual(self.mock_get_groups.call_count, 1)
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_group_members.assert_not_called()
 

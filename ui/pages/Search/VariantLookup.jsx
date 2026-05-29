@@ -7,6 +7,7 @@ import { RECEIVE_DATA } from 'redux/utils/reducerUtils'
 import { navigateSavedHashedSearch } from 'redux/rootReducer'
 import { getVlmEnabled } from 'redux/selectors'
 import { QueryParamsEditor } from 'shared/components/QueryParamEditor'
+import { VerticalSpacer } from 'shared/components/Spacers'
 import StateDataLoader from 'shared/components/StateDataLoader'
 import SendEmailButton from 'shared/components/buttons/SendEmailButton'
 import FormWrapper from 'shared/components/form/FormWrapper'
@@ -193,6 +194,35 @@ InternalFamily.propTypes = {
   showReads: PropTypes.object,
 }
 
+const ExternalFamily = ({ familyGuid, variant }) => {
+  const { discoveryTagFamilies = [], excludedTagFamilies = [] } = variant
+  const tags = []
+  if (discoveryTagFamilies.includes(familyGuid)) {
+    tags.push({ color: 'teal', content: 'Discovery Variant' })
+  }
+  if (excludedTagFamilies.includes(familyGuid)) {
+    tags.push({ color: 'grey', content: 'Excluded' })
+  }
+  return (
+    <Grid.Row>
+      {tags.length > 0 && (
+        <Grid.Column width={16}>
+          {tags.map(tag => <Label key={tag.content} size="small" horizontal {...tag} />)}
+          <VerticalSpacer height={5} />
+        </Grid.Column>
+      )}
+      <Grid.Column width={16}>
+        <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
+      </Grid.Column>
+    </Grid.Row>
+  )
+}
+
+ExternalFamily.propTypes = {
+  familyGuid: PropTypes.string,
+  variant: PropTypes.object,
+}
+
 const BaseLookupVariant = ({ variant, familiesByContactEmail, vlmDefaultContactEmails }) => {
   const { internal, disabled, ...familiesByContact } = familiesByContactEmail
   return (
@@ -211,18 +241,14 @@ const BaseLookupVariant = ({ variant, familiesByContactEmail, vlmDefaultContactE
         >
           <Grid stackable divided="vertically">
             {families.map(familyGuid => (
-              <Grid.Row key={familyGuid}>
-                <Grid.Column width={16}>
-                  <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
-                </Grid.Column>
-              </Grid.Row>
+              <ExternalFamily key={familyGuid} familyGuid={familyGuid} variant={variant} />
             ))}
           </Grid>
         </LookupFamilyLayout>
       ))}
       {(disabled || []).map(familyGuid => (
         <LookupFamilyLayout key={familyGuid} defaultEmail={vlmDefaultContactEmails.disabled} disabled buttonText="Contact Opted Out">
-          <FamilyVariantIndividuals familyGuid={familyGuid} variant={variant} />
+          <ExternalFamily familyGuid={familyGuid} variant={variant} />
         </LookupFamilyLayout>
       ))}
     </Grid>

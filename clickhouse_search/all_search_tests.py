@@ -34,7 +34,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
     SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, NEW_SV_FILTER, GCNV_VARIANT1, GCNV_VARIANT2, \
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
-    MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, \
+    MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, DISCOVERY_VARIANT, \
     MITO_GENE_COUNTS, PROJECT_4_COMP_HET_VARIANT, FAMILY_1_VARIANT, EXPORT_DATA, SPLIT_FAMILY_EXPORT_DATA, \
     DEFAULT_PROJECT_FAMILIES, SINGLE_FAMILY_PROJECT_FAMILIES, SV_PROJECT_FAMILIES, MULTI_PROJECT_PROJECT_FAMILIES, \
     format_cached_variant
@@ -109,7 +109,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
 class ClickhouseSearchTests(ClickhouseSearchTestCase):
     databases = '__all__'
-    fixtures = ['users', 'social_auth', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_search', 'clickhouse_transcripts']
+    fixtures = ['users', 'social_auth', '1kg_project', 'variant_searches', 'reference_data', 'clickhouse_discovery_variants', 'clickhouse_search', 'clickhouse_transcripts']
 
     def setUp(self):
         self.MOCK_CACHE = {}
@@ -431,6 +431,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         dataset.sample_type = 'WGS'
         dataset.save()
         dataset.active_individuals.add(4)
+        self.maxDiff = None
 
         # Variant 1 is de novo in exome but inherited and homozygous in genome.
         # Variant 2 is inherited and homozygous in exome and de novo and homozygous in genome, so it fails de-novo inheritance when parental data is missing in genome.
@@ -447,7 +448,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             inheritance_mode='any_affected', quality_filter={'min_gq': 40, 'min_qs': 20}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
-        self.maxDiff = None
         self._assert_expected_search(
             [VARIANT1_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GCNV_VARIANT1],
             inheritance_mode='de_novo', quality_filter=None, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
@@ -1053,8 +1053,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                     {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'filters': [], 'sampleType': 'WES'},
                     {'ab': 1.0, 'dp': 6, 'gq': 16, 'numAlt': 2, 'filters': [], 'sampleType': 'WGS'},
                 ],
-                'I0_F2_1-10439-AC-A': {'ab': 0.531, 'dp': 27, 'gq': 87, 'numAlt': 1, 'filters': [],
-                                       'sampleType': 'WGS'},
+                'I0_F2_1-10439-AC-A': {'ab': 0.531, 'dp': 27, 'gq': 87, 'numAlt': 1, 'filters': [], 'sampleType': 'WGS'},
             },
         }
         expected_individuals = {
@@ -1180,17 +1179,17 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'I000015_na20885': 'I0_F1_1-10439-AC-A',
             'I000018_na21234': 'I0_F2_1-10439-AC-A',
         }
-        expected_individuals = {
+        access_expected_individuals = {
             individual_guid: {
                 **{k: mock.ANY for k in [*INDIVIDUAL_FIELDS, 'igvSampleGuids']},
                 **{k: v for k, v in expected_individuals[anon_individual_guid].items()
                    if k not in {'individualGuid', 'familyGuid', 'features', 'vlmContactEmail', 'isSolved', 'disease'}},
             } for individual_guid, anon_individual_guid in individual_guid_map.items()
         }
-        expected_individuals.update(
+        access_expected_individuals.update(
             {individual_guid: mock.ANY for individual_guid in ['I000019_na21987', 'I000021_na21654']})
         self._assert_expected_lookup(
-            '1-10439-AC-A', lookup_variant, cache_key, expected_individuals=expected_individuals,
+            '1-10439-AC-A', lookup_variant, cache_key, expected_individuals=access_expected_individuals,
             project_guids=['R0001_1kg', 'R0003_test', 'R0004_non_analyst_project'],
             family_guids=['F000002_2', 'F000011_11', 'F000014_14'],
         )
@@ -1247,6 +1246,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             **VARIANT1,
             'familyGuids': [],
             'lookupFamilyGuids': VARIANT1['familyGuids'],
+            'discoveryTagFamilies': [],
+            'excludedTagFamilies': [],
         }})
 
         cache_key = 'variant_lookup_results__7-143270172-A-G__37'
@@ -1322,6 +1323,120 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733'],
         )
 
+        discovery_variant = {
+            **DISCOVERY_VARIANT,
+            'discoveryTags': [],
+            'familyGuids': ['F0_1-248367227-TC-T', 'F1_1-248367227-TC-T', 'F2_1-248367227-TC-T'],
+            'discoveryTagFamilies': ['F0_1-248367227-TC-T', 'F1_1-248367227-TC-T', 'F2_1-248367227-TC-T'],
+            'excludedTagFamilies': ['F0_1-248367227-TC-T'],
+            'genotypes': {
+                'I0_F0_1-248367227-TC-T': {
+                    'sampleType': 'WGS', 'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.65306, 'filters': [],
+                },
+                'I1_F0_1-248367227-TC-T': {
+                    'sampleType': 'WGS', 'numAlt': 0, 'dp': 16, 'gq': 48, 'ab': 1.0, 'filters': [],
+                },
+                'I0_F1_1-248367227-TC-T': {
+                    'sampleType': 'WGS', 'ab': 0.0, 'gq': 99, 'dp': 71, 'numAlt': 1, 'filters': [],
+                },
+                'I1_F1_1-248367227-TC-T': {
+                    'sampleType': 'WGS', 'ab': 0.55555, 'gq': 99, 'dp': 9, 'numAlt': 1, 'filters': [],
+                },
+                'I0_F2_1-248367227-TC-T': {
+                    'sampleType': 'WGS', 'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
+                },
+            },
+        }
+        cached_discovery_variant = {
+            **DISCOVERY_VARIANT,
+            'discoveryFamilies': ['F000002_2', 'F000012_12', 'F000014_14'],
+            'excludedTagFamilies': ['F000002_2'],
+            'genotypes': {
+                **DISCOVERY_VARIANT['genotypes'],
+                'I000017_na20889': {
+                    'sampleId': 'NA20889', 'sampleType': 'WGS', 'familyGuid': 'F000012_12',
+                    'individualGuid': 'I000017_na20889',
+                    'ab': 0.0, 'gq': 99, 'dp': 71, 'numAlt': 1, 'filters': [],
+                },
+                'I000016_na20888': {
+                    'sampleId': 'NA20888', 'sampleType': 'WGS', 'familyGuid': 'F000012_12',
+                    'individualGuid': 'I000016_na20888',
+                    'ab': 0.55555, 'gq': 99, 'dp': 9, 'numAlt': 1, 'filters': [],
+                },
+                'I000018_na21234': {
+                    'sampleId': 'NA21234', 'sampleType': 'WGS', 'familyGuid': 'F000014_14', 'individualGuid': 'I000018_na21234',
+                    'numAlt': 2, 'dp': 49, 'gq': 99, 'ab': 0.0, 'filters': [],
+                },
+            },
+        }
+        expected_individuals = {
+            'I0_F0_1-248367227-TC-T': {
+                **expected_individuals['I0_F0_1-10439-AC-A'],
+                'familyGuid': 'F0_1-248367227-TC-T',
+                'individualGuid': 'I0_F0_1-248367227-TC-T',
+            }, 'I1_F0_1-248367227-TC-T': {
+                **expected_individuals['I2_F0_1-10439-AC-A'],
+                'familyGuid': 'F0_1-248367227-TC-T',
+                'individualGuid': 'I1_F0_1-248367227-TC-T',
+            }, 'I0_F1_1-248367227-TC-T': {
+                **expected_individuals['I0_F1_1-10439-AC-A'],
+                'sex': 'F',
+                'familyGuid': 'F1_1-248367227-TC-T',
+                'individualGuid': 'I0_F1_1-248367227-TC-T',
+            }, 'I1_F1_1-248367227-TC-T': {
+                **expected_individuals['I0_F1_1-10439-AC-A'],
+                'features': [],
+                'familyGuid': 'F1_1-248367227-TC-T',
+                'individualGuid': 'I1_F1_1-248367227-TC-T',
+            }, 'I0_F2_1-248367227-TC-T': {
+                **expected_individuals['I0_F2_1-10439-AC-A'],
+                'familyGuid': 'F2_1-248367227-TC-T',
+                'individualGuid': 'I0_F2_1-248367227-TC-T',
+            }
+        }
+        self.login_base_user()
+        self._assert_expected_lookup(
+            '1-248367227-TC-T', discovery_variant, 'variant_lookup_results__1-248367227-TC-T__38',
+            cached_variants=[cached_discovery_variant], expected_individuals=expected_individuals, skip_fields={
+                'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
+            }, locusListsByGuid={},
+        )
+
+        self.login_analyst_user()
+        discovery_variant = {
+            **discovery_variant,
+            'familyGuids': ['F000002_2', 'F000012_12', 'F0_1-248367227-TC-T'],
+            'discoveryTagFamilies': ['F0_1-248367227-TC-T'],
+            'excludedTagFamilies': [],
+            'genotypes': {
+                **cached_discovery_variant['genotypes'],
+                'I0_F0_1-248367227-TC-T': discovery_variant['genotypes']['I0_F2_1-248367227-TC-T'],
+            },
+        }
+        del discovery_variant['genotypes']['I000018_na21234']
+        self._assert_expected_lookup(
+            '1-248367227-TC-T', discovery_variant, 'variant_lookup_results__1-248367227-TC-T__38',
+            cached_variants=[cached_discovery_variant], project_guids=['R0001_1kg', 'R0003_test'],
+            family_guids=['F000002_2', 'F000012_12'], expected_individuals={
+                **{guid: mock.ANY for guid in [
+                    'I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000016_na20888', 'I000017_na20889',
+                    'I000020_na20870',
+                ]},
+                'I0_F0_1-248367227-TC-T': {
+                    **expected_individuals['I0_F2_1-248367227-TC-T'],
+                    'familyGuid': 'F0_1-248367227-TC-T',
+                    'individualGuid': 'I0_F0_1-248367227-TC-T',
+                },
+            },
+            mmeSubmissionsByGuid={'MS000015_na20885': mock.ANY},
+            savedVariantsByGuid={'SV0000002_1248367227_r0390_100': mock.ANY, 'SV0000006_1248367227_r0003_tes': mock.ANY},
+            variantNotesByGuid={'VN0714935_2103343353_r0390_100': mock.ANY, 'VN0714937_2103343353_r0390_100': mock.ANY},
+            variantTagsByGuid={
+                'VT1726945_2103343353_r0390_100': mock.ANY, 'VT1726961_2103343353_r0003_tes': mock.ANY,
+                'VT1726970_2103343353_r0004_tes': mock.ANY, 'VT1726985_2103343353_r0390_100': mock.ANY,
+            },
+        )
+
         # Test error handling when the ClickHouse sampleId cannot be mapped to any Postgres Individual
         self.reset_logs()
         Individual.objects.filter(guid='I000006_hg00733').update(individual_id='unmapped_id')
@@ -1340,7 +1455,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
             }),
         ]
-        self.assert_json_logs(self.manager_user, unmapped_sample_logs)
+        self.assert_json_logs(self.analyst_user, unmapped_sample_logs)
 
         # With no project access, all genotypes are returned regardless of whether a corresponding seqr individual exists
         self.login_base_user()
@@ -1404,6 +1519,14 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'sex': 'M', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
             'omim_id': 0, 'mondo_id': '', 'isSolved': False,
         },
+        'I000016_na20888': {
+            'affected': 'A', 'features': '', 'restrict_sharing': True, 'sex': 'M',
+            'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+        },
+        'I000017_na20889': {
+            'affected': 'A', 'features': '[{"id": "HP:0011675"}, {"id": "HP:0001509"}]', 'restrict_sharing': True,
+            'sex': 'F', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+        },
         'I000018_na21234': {
             'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'isSolved': True,
             'vlmContactEmail': 'vlm@broadinstitute.org', 'omim_id': 0, 'mondo_id': '',
@@ -1448,6 +1571,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'locusListsByGuid': {'LL00049_pid_genes_autosomal_do': mock.ANY, 'LL00005_retina_proteome': mock.ANY},
             'totalSampleCounts': {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3, 'WGS': 3}} if genome_version == '38' else {},
             'variantsById': {v['variantId']: {
+                'discoveryTagFamilies': [],
+                'excludedTagFamilies': [],
                 **v,
                 'familyGuids': [],
                 'lookupFamilyGuids': v['familyGuids'] + v.get('liftedFamilyGuids', []),
@@ -1474,6 +1599,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                     'metadata': self.INDIVIDUAL_METADATA.get(gt['individualGuid']),
                 })
         return {
+            'discoveryFamilies': [],
+            'excludedTagFamilies': [],
             **{k: v for k, v in variant.items() if k not in {'familyGuids', 'genotypes'}},
             'familyGenotypes': {
                 family_guid: sorted(gts, key=lambda x: (x['sampleType'] == 'WES', x.get('sampleId')), reverse=True)
@@ -1523,8 +1650,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['variantsById'], {'7-143270172-A-G': GRCH37_VARIANT})
 
-        self.mock_redis.get.assert_not_called()
-        self.mock_redis.set.assert_not_called()
+        self.assertTrue(all(call.args[0].startswith('projects__') for call in self.mock_redis.get.mock_calls))
+        self.assertTrue(all(call.args[0].startswith('projects__') for call in self.mock_redis.set.mock_calls))
 
     def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
@@ -2489,22 +2616,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             '3': {'chrom': '1', 'end': 249055991, 'mimNumber': 600315, 'phenotypeDescription': '?Immunodeficiency 16', 'phenotypeInheritance': 'Autosomal recessive', 'phenotypeMimNumber': 615120, 'start': 249044482},
         })
 
-        # Test cross-project discovery for analyst users
-        self.set_cache('search_results__VRS0009876__xpos',[{
-            'key': 100, 'familyGuids': ['F000002_2'], 'xpos': 1248367227, 'genomeVersion': '38', 'sortedTranscriptConsequences': [],
-        }])
-        response, _, _ = self._execute_search(search_hash=9876)
-        self.assertEqual(response.status_code, 200)
-        variants = response.json()['variantsById']
-        self.assertEqual(len(variants), 1)
-        self.assertFalse('discoveryTags' in variants['1-248367227-TC-T'])
-
-        self.login_analyst_user()
-        response, _, _ = self._execute_search(search_hash=9876)
-        self.assertEqual(response.status_code, 200)
-        variants = response.json()['variantsById']
-        self.assertEqual(len(variants), 1)
-        self.assertListEqual(variants['1-248367227-TC-T']['discoveryTags'], [{
+        # Test cross-project discovery tags
+        discovery_tag = {
             'savedVariant': {
                 'variantGuid': 'SV0000006_1248367227_r0003_tes',
                 'familyGuid': 'F000012_12',
@@ -2519,8 +2632,26 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'metadata': None,
             'lastModifiedDate': '2018-05-29T16:32:51.449Z',
             'createdBy': None,
-        }])
-        self.assertDictEqual(response.json()['familiesByGuid'], {'F000012_12': mock.ANY})
+        }
+        self._add_sample_type_samples('WGS', active_individuals__family__guid='F000002_2')
+        self._assert_expected_search(
+            [{**DISCOVERY_VARIANT, 'noAccessDiscoveryFamilies': 0, 'discoveryTags': [discovery_tag, {
+            **discovery_tag,
+            'savedVariant': {
+                'variantGuid': 'SV0000006_1248367227_r0004_non',
+                'familyGuid': 'F000014_14',
+                'projectGuid': 'R0004_non_analyst_project',
+            },
+            'tagGuid': 'VT1726961_2103343353_r0005_tes',
+        }]}], locus={'rawVariantItems': '1-248367227-TC-T'}, additional_response={
+            'familiesByGuid': {'F000012_12': mock.ANY, 'F000014_14': mock.ANY},
+        })
+
+        self.login_analyst_user()
+        self._assert_expected_search(
+            [{**DISCOVERY_VARIANT, 'noAccessDiscoveryFamilies': 1, 'discoveryTags': [discovery_tag]}],
+             locus={'rawVariantItems': '1-248367227-TC-T'}, additional_response={'familiesByGuid': {'F000012_12': mock.ANY}},
+        )
 
     def test_cached_query_variants(self):
         search_hash = 987
