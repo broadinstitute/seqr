@@ -202,18 +202,10 @@ Alleles.propTypes = {
 
 const GENOTYPE_DETAILS = [
   { title: 'Sample Type', field: 'sampleType' },
-  {
-    title: 'Raw Alt. Alleles',
-    variantField: 'originalAltAlleles',
-    format: val => (val || []).join(', '),
-    shouldHide: (val, variant) => (val || []).length < 1 || ((val || []).length === 1 && val[0] === variant.alt),
-  },
-  { title: 'Allelic Depth', field: 'ad' },
   { title: 'Read Depth', field: 'dp' },
   { title: 'Genotype Quality', field: 'gq' },
   { title: 'Allelic Balance', field: 'ab', format: val => val && val.toPrecision(2) },
-  { title: 'Filter', field: 'filters', variantField: 'genotypeFilters', shouldHide: val => (val || []).length < 1 },
-  { title: 'Phred Likelihoods', field: 'pl' },
+  { title: 'Filter', field: 'filters' },
   { title: 'Quality Score', field: 'qs' },
   {
     title: 'Mitochondrial Copy Number',
@@ -236,10 +228,10 @@ const SV_GENOTYPE_DETAILS = [
   },
 ]
 
-const formattedGenotypeDetails = (details, genotype, variant, genesById) => details.map(
-  ({ shouldHide, title, field, variantField, format, comment }) => {
-    const value = genotype[field] || variant[variantField]
-    return value && !(shouldHide && shouldHide(value, variant)) ? (
+const formattedGenotypeDetails = (details, genotype, genesById) => details.map(
+  ({ title, field, format, comment }) => {
+    const value = genotype[field]
+    return value ? (
       <div key={title}>
         {`${title}:  `}
         <b>{format ? format(value, genesById) : value}</b>
@@ -249,9 +241,9 @@ const formattedGenotypeDetails = (details, genotype, variant, genesById) => deta
   },
 ).filter(val => val)
 
-const genotypeDetails = (genotype, variant, genesById) => {
-  const details = formattedGenotypeDetails(GENOTYPE_DETAILS, genotype, variant)
-  const svDetails = formattedGenotypeDetails(SV_GENOTYPE_DETAILS, genotype, variant, genesById)
+const genotypeDetails = (genotype, genesById) => {
+  const details = formattedGenotypeDetails(GENOTYPE_DETAILS, genotype)
+  const svDetails = formattedGenotypeDetails(SV_GENOTYPE_DETAILS, genotype, genesById)
   if (svDetails.length < 1) {
     return details
   }
@@ -393,7 +385,7 @@ const GenotypeQuality = ({ genotype, variant, showSampleType }) => {
   const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
   const secondaryQuality = genotype.ab || genotype.hl
   const quality = Number.isInteger(genotype.gq) ? genotype.gq : genotype.qs
-  const filters = genotype.filters?.join(', ') || variant.genotypeFilters
+  const filters = genotype.filters?.join(', ')
 
   return (
     <div>
@@ -442,8 +434,8 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
 
   const details = genotypes.flatMap((genotype, index) => (
     index === 0 ?
-      [genotypeDetails(genotype, variant, genesById)] :
-      [<Divider />, genotypeDetails(genotype, variant, genesById)]
+      [genotypeDetails(genotype, genesById)] :
+      [<Divider />, genotypeDetails(genotype, genesById)]
   ))
 
   const content = (
@@ -474,14 +466,31 @@ Genotype.propTypes = {
   genesById: PropTypes.object,
 }
 
-const INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_FEATURES]
+const INDIVIDUAL_FIELD_IS_SOLVED = 'isSolved'
+const INDIVIDUAL_FIELD_DISEASE = 'disease'
+const INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_DISEASE, INDIVIDUAL_FIELD_IS_SOLVED, INDIVIDUAL_FIELD_FEATURES]
 const VARIANT_INDIVIDUAL_DETAIL_FIELDS = [
   INDIVIDUAL_FIELD_FILTER_FLAGS, INDIVIDUAL_FIELD_POP_FILTERS, ...INDIVIDUAL_DETAIL_FIELDS,
 ]
 const SV_INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_SV_FLAGS, ...INDIVIDUAL_DETAIL_FIELDS]
 
+const VARIANT_INDIVIDUAL_FIELD_LOOKUP = {
+  ...INDIVIDUAL_FIELD_LOOKUP,
+  [INDIVIDUAL_FIELD_IS_SOLVED]: {
+    fieldDisplay: isSolved => (isSolved ? <Label color="olive" size="small" content="Solved" /> : null),
+  },
+  [INDIVIDUAL_FIELD_DISEASE]: {
+    fieldDisplay: disease => (
+      <div>
+        <b>Disease:&nbsp;</b>
+        {disease}
+      </div>
+    ),
+  },
+}
+
 const IndividualDetailField = ({ field, individual }) => {
-  const { individualFields, ...fieldProps } = INDIVIDUAL_FIELD_LOOKUP[field]
+  const { individualFields, ...fieldProps } = VARIANT_INDIVIDUAL_FIELD_LOOKUP[field]
   const individualProps = individualFields ? individualFields(individual) : {}
   return (
     <BaseFieldView

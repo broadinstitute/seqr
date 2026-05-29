@@ -1205,6 +1205,55 @@ PROJECT_4_COMP_HET_VARIANT = {
     'CAID': None,
 }
 
+DISCOVERY_VARIANT = {
+    'key': 100,
+    'variantId': '1-248367227-TC-T',
+    'chrom': '1',
+    'pos': 248367227,
+    'ref': 'TC',
+    'alt': 'T',
+    'genomeVersion': '38',
+    'liftedOverGenomeVersion': '37',
+    'liftedOverChrom': None,
+    'liftedOverPos': None,
+    'xpos': 1248367227,
+    'rsid': None,
+    'familyGuids': ['F000002_2'],
+    'genotypes': {
+        'I000004_hg00731': {
+            'sampleId': 'HG00731', 'sampleType': 'WGS', 'individualGuid': 'I000004_hg00731',
+            'familyGuid': 'F000002_2',
+            'numAlt': 0, 'dp': 16, 'gq': 48, 'ab': 1.0, 'filters': [],
+        },
+        'I000006_hg00733': {
+            'sampleId': 'HG00733', 'sampleType': 'WGS', 'individualGuid': 'I000006_hg00733',
+            'familyGuid': 'F000002_2',
+            'numAlt': 1, 'dp': 49, 'gq': 99, 'ab': 0.65306, 'filters': [],
+        },
+    },
+    'clinvar': None,
+    'hgmd': None,
+    'screenRegionType': None,
+    'populations': {
+        'seqr': {'ac': 5, 'hom': 1, 'ac_wes': 0, 'ac_wgs': 5, 'hom_wes': 0, 'hom_wgs': 1},
+        'seqr_affected': {'ac': 4, 'hom': 1},
+        'topmed': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'het': 0},
+        'gnomad_exomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
+        'gnomad_genomes': {'af': 0.0, 'ac': 0, 'an': 0, 'hom': 0, 'hemi': 0, 'filter_af': 0.0},
+    },
+    'predictions': {
+        'cadd': None, 'eigen': None, 'fathmm': None, 'gnomad_noncoding': None, 'mpc': None, 'mut_pred': None,
+        'primate_ai': None, 'splice_ai': None, 'splice_ai_consequence': None, 'vest': None, 'mut_taster': None,
+        'polyphen': None, 'revel': None, 'sift': None, 'absplice': None, 'pext': None, 'promoter_ai': None,
+    },
+    'transcripts': {},
+    'sortedMotifFeatureConsequences': None,
+    'sortedRegulatoryFeatureConsequences': None,
+    'mainTranscriptId': None,
+    'selectedMainTranscriptId': None,
+    'CAID': None,
+}
+
 CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'alphamissensePathogenicity': 0.99779,
     'canonical': 1,
@@ -1356,16 +1405,17 @@ CACHED_CONSEQUENCES_BY_KEY = {1: [], 2: [{
     'geneId': 'ENSG00000268903',
     'isManeSelect': False,
 }],
+100: [],
 }
 
 def format_cached_variant(variant):
     if variant['key'] not in CACHED_CONSEQUENCES_BY_KEY:
-        return variant
+        return {**variant, 'discoveryFamilies': []}
     return {
         **{k: v for k, v in variant.items() if k not in [
             'mainTranscriptId', 'selectedMainTranscriptId', 'transcripts', 'CAID', 'chrom', 'pos', 'ref', 'alt',
             'liftedOverChrom', 'liftedOverPos', 'rsid', 'variantId', 'sortedMotifFeatureConsequences',
-            'sortedRegulatoryFeatureConsequences',
+            'sortedRegulatoryFeatureConsequences', 'noAccessDiscoveryFamilies', 'discoveryTags',
         ]},
         'sortedTranscriptConsequences': CACHED_CONSEQUENCES_BY_KEY[variant['key']],
     }

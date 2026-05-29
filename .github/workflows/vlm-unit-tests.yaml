@@ -21,7 +21,7 @@ on:
 jobs:
   vlm_clickhouse:
     runs-on: ubuntu-latest
-    container: hailgenetics/hail:0.2.128
+    container: python:3.11-slim-bullseye
 
     services:
       clickhouse:
@@ -44,6 +44,7 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip wheel
+          pip install -r vlm/requirements.txt
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Settings and Data
         run: python3 vlm/setup_clickhouse_test_data.py clickhouse 8123 clickhouse_test_user clickhouse_test_password
@@ -57,5 +58,5 @@ jobs:
           export CLICKHOUSE_VLM_PASSWORD=vlm_test_password
           export CLICKHOUSE_DATABASE=test_seqr
           coverage run --source="./vlm" --omit="./vlm/__main__.py","./vlm/setup_clickhouse_test_data.py" -m pytest vlm/
-          coverage report --fail-under=95
+          coverage report -m --fail-under=95
 

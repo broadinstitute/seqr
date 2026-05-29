@@ -1,0 +1,88 @@
+[{
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+       "project_guid": "R0001_1kg",
+      "family_guid": "F000002_2",
+      "sample_type": "WGS",
+      "xpos": 1248367227,
+      "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": true,
+      "geneId_ids": [6, 48],
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["HG00733", 1, 99, 0.6530612111091614, 49],
+        ["HG00731", 0, 48, 1, 16]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.keylookupsnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "variant_id": "1-248367227-TC-T"
+    }
+}, {
+    "model": "clickhouse_search.variantssnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": [],
+      "sorted_transcript_consequences": []
+    }
+},{
+    "model": "clickhouse_search.variantdetailssnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "variant_id": "1-248367227-TC-T",
+      "rsid": null,
+      "caid": "CA1501729",
+      "lifted_over_chrom": "1",
+      "lifted_over_pos": null,
+      "transcripts": [],
+      "sorted_motif_feature_consequences": [],
+      "sorted_regulatory_feature_consequences": []
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "project_guid": "R0004_non_analyst_project",
+      "family_guid": "F000014_14",
+      "sample_type": "WGS",
+      "xpos": 1248367227,
+      "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA21234", 2, 99, 0, 49]
+      ]
+    }
+}, {
+    "model": "clickhouse_search.entriessnvindel",
+    "pk": 100,
+    "fields": {
+      "key": 100,
+      "project_guid": "R0003_test",
+      "family_guid": "F000012_12",
+      "sample_type": "WGS",
+      "xpos": 1248367227,
+      "is_gnomad_gt_5_percent": false,
+      "is_annotated_in_any_gene": false,
+      "geneId_ids": [],
+      "filters": [],
+      "sign": 1,
+      "calls": [
+        ["NA20889", 1, 99, 0.0, 71],
+        ["NA20888", 1, 99, 0.5555556, 9]
+      ]
+    }
+}
+]

@@ -13,9 +13,12 @@ METADATA_JSON = {
     'family_samples': {
         'F000011_11': ['NA20885'],
         'F000012_12': ['NA20888', 'NA20889'],
-        'F000014_14': ['NA21234'],
     },
-    'failed_family_samples': {},
+    'failed_family_samples': {
+        'relatedness_check': {
+            'F000014_14': {'reasons': ['NA21234 failed']},
+        },
+    },
     'relatedness_check_file_path': '',
     'sample_qc': {
         'NA20885': {

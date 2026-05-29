@@ -14,32 +14,17 @@ class TooManyRequestsError(Exception):
     pass
 
 
-def _extract_ensembl_id_from_json(raw_gene_json):
-    ensembl_genes_json = raw_gene_json.get('gene_data', {}).get('ensembl_genes')
-    if ensembl_genes_json and isinstance(ensembl_genes_json, dict):
-        return ensembl_genes_json \
-            .get('GRch38', {}) \
-            .get('90', {}) \
-            .get('ensembl_id')
-    else:
-        return None
-
-
 def get_valid_panel_genes(panel_app_id, panel, panels_api_url, genes_by_panel_id, gene_ids_to_gene):
     if len(genes_by_panel_id[panel_app_id]) != panel['stats']['number_of_genes']:
         panel_genes_url = f'{panels_api_url}/{panel_app_id}/genes'
         _get_all_genes(panel_app_id, panel_genes_url, genes_by_panel_id)
 
-    all_genes_for_panel = genes_by_panel_id[panel_app_id]
-    if not all_genes_for_panel:
-        return {}
-
     panel_genes_by_id = {
-        _extract_ensembl_id_from_json(gene): gene for gene in all_genes_for_panel
-        if _extract_ensembl_id_from_json(gene)
+        gene['gene_data']['ensembl_genes'].get('GRch38', {}).get('90', {}).get('ensembl_id'): gene
+        for gene in genes_by_panel_id[panel_app_id] if isinstance(gene.get('gene_data', {}).get('ensembl_genes'), dict)
     }
     valid_panel_genes = {
-        gene_id: panel_gene for gene_id, panel_gene in panel_genes_by_id.items() if gene_id in gene_ids_to_gene
+        gene_id: panel_gene for gene_id, panel_gene in panel_genes_by_id.items() if gene_id and gene_id in gene_ids_to_gene
     }
     if len(panel_genes_by_id) > len(valid_panel_genes):
         invalid_items = sorted(set(panel_genes_by_id.keys()) - set(valid_panel_genes.keys()))

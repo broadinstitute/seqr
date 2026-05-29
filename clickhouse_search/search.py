@@ -1,4 +1,4 @@
-from clickhouse_backend.models import ArrayField, StringField
+from clickhouse_backend.models import ArrayField, BoolField, StringField, UInt32Field
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
@@ -14,6 +14,7 @@ from clickhouse_search.backend.functions import Array, ArrayFilter, ArrayInterse
     ArrayMap, Modulo
 from clickhouse_search.managers import InvalidDatasetTypeException, InvalidSearchException
 from clickhouse_search.models.gt_stats_models import PROJECT_GT_STATS_VIEW_CLASS_MAP
+from clickhouse_search.models.postgres_dicts import SexDict, AffectedDict, IndividualMetadataDict, ExcludedVariantDict
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, EntriesSnvIndel,  \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
@@ -323,7 +324,7 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
             exclude_key_pairs=exclude_key_pairs.get(f'{Dataset.DATASET_TYPE_VARIANT_CALLS},{sv_dataset_type}'),
         )
         dataset_results = _evaluate_results(result_q, is_comp_het=True)
-        if not sv_sample_data['samples']:
+        if not (sv_sample_data['samples'] and type_snv_indel_sample_data['samples']):
             _add_individual_guids(dataset_results)
         results += dataset_results
         searched_dataset_types.add(sv_dataset_type)
@@ -469,7 +470,7 @@ def _set_individual_guids(result, sample_map):
         for genotype in genotypes:
             individual_guid = sample_map[(family_guid, genotype['sampleId'])]
             individual_genotypes[individual_guid].append({**genotype, 'individualGuid': individual_guid})
-    result['genotypes'] = {k: v[0] if len(v) == 1 else v for k, v in individual_genotypes.items()}
+    result['genotypes'] = {k: v[0] if len(v) == 1 else sorted(v, key=lambda g: g.get('sampleType')) for k, v in individual_genotypes.items()}
 
 
 def get_sorted_search_results(results, sort, families):
@@ -482,20 +483,12 @@ def get_sorted_search_results(results, sort, families):
 
 
 def format_clickhouse_export_results(results):
+    details_by_key = _get_details_by_key(results, lambda detail_qs: detail_qs.values(
+        'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
+        **detail_qs.split_variant_id_annotations(),
+    ))
+
     formatted_results = [variant for result in results for variant in (result if isinstance(result, list) else [result])]
-    if not formatted_results:
-        return []
-
-    genome_version = formatted_results[0]['genomeVersion']
-    keys_with_no_details = {result['key'] for result in formatted_results if not 'transcripts' in result}
-    detail_qs = get_variant_details_queryset(genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details)
-    details_by_key = {
-        detail['key']: detail for detail in detail_qs.values(
-            'key', 'rsid', mainTranscript=F('transcripts__0'), variantId=F('variant_id'),
-            **detail_qs.split_variant_id_annotations(),
-        )
-    }
-
     gene_ids = set()
     for result in formatted_results:
         if 'transcripts' in result:
@@ -513,18 +506,23 @@ def format_clickhouse_export_results(results):
     return formatted_results
 
 
-def format_clickhouse_results(results):
+def _get_details_by_key(results, format_details):
     if not results:
-        return []
+        return {}
 
     genome_version = (results[0] if isinstance(results[0], list) else results)[0]['genomeVersion']
     keys_with_no_details = {
-        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if not 'transcripts' in variant
+        variant['key'] for result in results for variant in (result if isinstance(result, list) else [result]) if
+        not 'transcripts' in variant
     }
-    details_by_key = {
+    return {
         detail['key']: detail for detail in
-        get_variant_details_queryset(genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details).result_values()
+        format_details(get_variant_details_queryset(genome_version, Dataset.DATASET_TYPE_VARIANT_CALLS, keys_with_no_details))
     }
+
+
+def format_clickhouse_results(results):
+    details_by_key = _get_details_by_key(results, lambda detail_qs: detail_qs.result_values())
 
     formatted_results = []
     for variant in results:
@@ -699,7 +697,7 @@ def _add_missing_multi_type_samples(individuals, data):
 
 def _no_affected_male_families(sample_data, user):
     sample_type_families = {
-        sample_type: families - set(sample_data['affected_male_family_guids'])
+        sample_type: set(families) - set(sample_data['affected_male_family_guids'])
         for sample_type, families in sample_data['sample_type_families'].items()
     }
     num_families = len(set().union(*sample_type_families.values()))
@@ -715,7 +713,7 @@ def _affected_male_families(sample_data, affected_male_family_guids):
     if len(affected_male_family_guids) == sample_data['num_families']:
         return sample_data
     sample_type_families = {
-        sample_type: families.intersection(affected_male_family_guids)
+        sample_type: set(families).intersection(affected_male_family_guids)
         for sample_type, families in sample_data['sample_type_families'].items()
     }
     return {
@@ -831,7 +829,7 @@ SORT_EXPRESSIONS = {
     'alphamissense': [
         lambda x: -max(t.get('alphamissensePathogenicity') or MIN_SORT_RANK for t in x[TRANSCRIPT_CONSEQUENCES_FIELD]) if x.get(TRANSCRIPT_CONSEQUENCES_FIELD) else MIN_SORT_RANK,
     ] + _subfield_sort(SELECTED_TRANSCRIPT_FIELD, 'alphamissensePathogenicity', reverse=True, default=MIN_SORT_RANK),
-    'callset_af': _subfield_sort('populations', ('seqr', 'sv_callset'), 'ac'),
+    'seqr_ac': _subfield_sort('populations', ('seqr', 'sv_callset'), 'ac'),
     'family_guid': [lambda x: sorted(x.get('familyGuids', ['z']))[0]],
     'gnomad': _subfield_sort('populations', ('gnomad_genomes', 'gnomad_mito', 'gnomad_svs'), 'af'),
     'gnomad_exomes': _subfield_sort('populations', 'gnomad_exomes', 'af'),
@@ -877,16 +875,28 @@ def _get_sort_key(sort, gene_metadata):
     return lambda x: tuple(expr(x[0] if isinstance(x, list) else x) for expr in [*sort_expressions, lambda x: x[XPOS_SORT_KEY]])
 
 
-def _clickhouse_variant_lookup(entries, genome_version, data_type, affected_only=False, hom_only=False):
+def _clickhouse_variants_lookup(entries, genome_version, data_type, format_results, affected_only=False, hom_only=False):
     variants_cls = VARIANTS_CLASS_MAP[genome_version][data_type]
 
     entries = _filter_lookup_entries(entries, affected_only, hom_only)
-    entries = entries.result_values()
+    entries = entries.result_values(additional_expressions=_lookup_genotype_expressions())
     results = variants_cls.objects.subquery_join(entries)
+
+    return format_results(results).result_values(additional_values={
+        'excludedTagFamilies': ExcludedVariantDict.dict_get_expression('key', dataset_type=data_type),
+    })
+
+def _add_results_override_annotations(results):
     if hasattr(results, 'add_genotype_override_annotations'):
         results = results.add_genotype_override_annotations(results)
+    return results
 
-    variant = results.result_values().first()
+def _clickhouse_variant_lookup(entries, genome_version, data_type, **kwargs):
+    results = _clickhouse_variants_lookup(
+        entries, genome_version, data_type, format_results=_add_results_override_annotations, **kwargs,
+    )
+
+    variant = results.first()
     if variant:
         variant = format_clickhouse_results([variant])[0]
     return variant
@@ -897,6 +907,25 @@ def _filter_lookup_entries(entries, affected_only, hom_only):
     if hom_only:
         entries = entries.filter(calls__array_exists={'gt': (2,)})
     return entries
+
+def _lookup_genotype_expressions():
+    affected_expr = AffectedDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['affected'], default='U')
+    sex_expr = SexDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['sex'], default='U')
+    metadata_expr = IndividualMetadataDict.dict_get_sql(
+        key='(family_guid, x.sampleId)', fields=['restrict_sharing', 'is_solved', 'omim_id', 'mondo_id', 'features', 'vlm_contact_email'],
+    )
+    return {
+        f'tupleConcat(({affected_expr}, {sex_expr}), {metadata_expr})': ('metadata', NamedTupleField([
+            ('affected', StringField()),
+            ('sex', StringField()),
+            ('restrict_sharing', BoolField()),
+            ('isSolved', BoolField()),
+            ('omim_id', UInt32Field()),
+            ('mondo_id', StringField()),
+            ('features', StringField()),
+            ('vlmContactEmail', StringField()),
+        ])),
+    }
 
 def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, affected_only, hom_only):
     data_type = entry_qs = None
@@ -947,17 +976,19 @@ def clickhouse_variant_lookup(user, variant_id, sample_type, genome_version, aff
             (dt, cls) for dt, cls in ENTRY_CLASS_MAP[genome_version].items()
             if dt != data_type and dt.startswith(Dataset.DATASET_TYPE_SV_CALLS)
         )
-        other_variants_cls = VARIANTS_CLASS_MAP[genome_version][other_sample_type]
 
         padding = int((variant['end'] - variant['pos']) * 0.2)
+        def format_results(results):
+            return results.search(
+                padded_interval_end=(variant['end'], padding), **results.get_parsed_annotations_filters(
+                    annotations={'structural': [variant['svType'], f"gCNV_{variant['svType']}"]},
+                ),
+            )
+
         entries = other_entry_class.objects.search_padded_interval(variant['chrom'], variant['pos'], padding)
-        entries = _filter_lookup_entries(entries, affected_only, hom_only)
-        results = other_variants_cls.objects.subquery_join(entries).search(
-            padded_interval_end=(variant['end'], padding), **other_variants_cls.objects.get_parsed_annotations_filters(
-                annotations={'structural': [variant['svType'], f"gCNV_{variant['svType']}"]},
-            ),
-        )
-        variants += list(results.result_values())
+        variants += list(_clickhouse_variants_lookup(
+            entries, genome_version, other_sample_type, format_results, affected_only=affected_only, hom_only=hom_only,
+        ))
 
     return variants
 
@@ -969,11 +1000,15 @@ def _add_liftover_genotypes(variant, data_type, affected_only, hom_only):
     lifted_id = f"{variant['liftedOverChrom']}-{variant['liftedOverPos']}-{variant['ref']}-{variant['alt']}"
     lifted_entries = lifted_entry_cls.objects.filter_locus(raw_variant_items=lifted_id)
     lifted_entries = _filter_lookup_entries(lifted_entries, affected_only, hom_only)
-    gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression()
-    lifted_entry_data = lifted_entries.values('key').annotate(**{gt_field: GroupArrayArray(gt_expr)})
+    gt_field, gt_expr = lifted_entry_cls.objects.genotype_expression(additional_expressions=_lookup_genotype_expressions())
+    lifted_entry_data = lifted_entries.values('key').annotate(
+        excludedTagFamilies=ExcludedVariantDict.dict_get_expression('key', dataset_type=data_type),
+        **{gt_field: GroupArrayArray(gt_expr)},
+    )
     if lifted_entry_data:
         variant['familyGenotypes'].update(lifted_entry_data[0]['familyGenotypes'])
         variant['liftedFamilyGuids'] = sorted(lifted_entry_data[0]['familyGenotypes'].keys())
+        variant['excludedTagFamilies'] += lifted_entry_data[0]['excludedTagFamilies']
 
 
 def get_clickhouse_genotypes(project_guid, family_guids, genome_version, dataset_type, keys, additional_fields=None):
@@ -1020,14 +1055,6 @@ def get_clickhouse_key_lookup(genome_version, dataset_type, variants_ids):
     return lookup
 
 
-def _main_transcript(selected_transcript_id, sorted_transcripts):
-    if not sorted_transcripts:
-        return {}
-    if selected_transcript_id:
-        return next((t for t in sorted_transcripts if t['transcriptId'] == selected_transcript_id), {})
-    return sorted_transcripts[0]
-
-
 def delete_clickhouse_project(project, dataset_type, sample_type=None):
     if dataset_type == Dataset.DATASET_TYPE_SV_CALLS and sample_type == Dataset.SAMPLE_TYPE_WES:
         dataset_type = 'GCNV'
@@ -1061,22 +1088,16 @@ PYLIFTOVER_BUILD_LOOKUP = {
     GENOME_VERSION_GRCh38: ('hg19', 'hg38'),
     GENOME_VERSION_GRCh37: ('hg38', 'hg19'),
 }
-def _get_liftover(genome_version):
+
+def _run_liftover(genome_version, chrom, pos):
     if not LIFTOVERS[genome_version]:
         try:
             LIFTOVERS[genome_version] = LiftOver(*PYLIFTOVER_BUILD_LOOKUP[genome_version])
         except Exception as e:
             logger.error('ERROR: Unable to set up liftover. {}'.format(e), user=None)
-    return LIFTOVERS[genome_version]
+            return None
 
-
-def _run_liftover(genome_version, chrom, pos):
-    liftover = _get_liftover(genome_version)
-    if not liftover:
-        return None
-    lifted_coord = liftover.convert_coordinate(
+    lifted_coord = LIFTOVERS[genome_version].convert_coordinate(
         'chr{}'.format(chrom.lstrip('chr')), int(pos)
     )
-    if lifted_coord and lifted_coord[0]:
-        return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1])
-    return None
+    return (lifted_coord[0][0].lstrip('chr'), lifted_coord[0][1]) if lifted_coord and lifted_coord[0] else None

@@ -11,7 +11,7 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
     IntDiv, Modulo, SplitByString, ArrayIndex, Multiply, IndexOf
-from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, DiscoveryVariantDict
 from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
@@ -197,9 +197,9 @@ class SearchQuerySet(QuerySet):
             if field.db_column and field.name != field.db_column and field.db_column
         }
 
-    def result_values(self, additional_fields=None, **kwargs):
+    def result_values(self, additional_fields=None, additional_values=None, **kwargs):
         fields = [*self.annotation_fields] + (additional_fields or [])
-        values = {**self.annotation_values}
+        values = {**self.annotation_values, **(additional_values or {})}
         values.update(self.conditional_selects(self, **kwargs))
 
         override_model_annotations = set(values).intersection(fields)
@@ -303,11 +303,6 @@ class BaseVariantsQuerySet(SearchQuerySet):
     def gt_stats_dict_rel(self):
         return getattr(self.entry_model, 'gt_stats', None)
 
-    @property
-    def genome_version(self):
-        return self.model.ANNOTATION_CONSTANTS['genomeVersion']
-
-
     def subquery_join(self, subquery, join_key='key'):
         join_field = next(field for field in subquery.model._meta.fields if field.name == join_key)
 
@@ -404,13 +399,6 @@ class BaseVariantsQuerySet(SearchQuerySet):
         return {
             field: F(field) for field in [self.SELECTED_GENE_FIELD, 'clinvar', 'family_carriers', 'carriers', 'has_hom_alt', 'no_hom_alt_families', 'familyGenotypes'] + self.ENTRY_FIELDS
             if field in query.query.annotations
-        }
-
-    @property
-    def populations(self):
-        return {
-            population: {subfield for subfield, _ in field.base_fields}
-            for population, field in self.model.POPULATION_FIELDS
         }
 
     def _filter_frequency(self, results, **kwargs):
@@ -548,6 +536,9 @@ class VariantsQuerySet(BaseVariantsQuerySet):
 
         if self.has_annotation('mitomapPathogenic'):
             annotations['mitomapPathogenic'] = F('mitomapPathogenic')
+
+        if not self.variant_detail_field:
+            annotations['discoveryFamilies'] = DiscoveryVariantDict.dict_get_expression('key', dataset_type='MITO')
 
         return annotations
 
@@ -764,6 +755,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
     def annotation_values(self):
         annotations = super().annotation_values
         annotations['transcripts'] = annotations.pop(self.model.sorted_gene_consequences.field.db_column)
+        annotations['discoveryFamilies'] = DiscoveryVariantDict.dict_get_expression('key', dataset_type=f'SV_{self.entry_model.SAMPLE_TYPE}')
         return annotations
 
     @staticmethod
@@ -875,25 +867,22 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
 
         return super()._parse_in_silico_qs(results, in_silico, require_score, in_silico_qs, in_silico_missing_qs)
 
-    def _filter_frequency(self, results, freqs=None, pathogenicity=None, **kwargs):
+    def _filter_frequency(self, results, freqs=None, **kwargs):
         for population, pop_filter in (freqs or {}).items():
-            pop_subfields = self.populations.get(population)
-            if not pop_subfields:
+            pop_field = dict(self.model.POPULATION_FIELDS).get(population)
+            if not pop_field:
                 continue
 
             if pop_filter.get('af') is not None and pop_filter['af'] < 1:
                 results = results.filter(**{f'populations__{population}__af__lte': pop_filter['af']})
             elif pop_filter.get('ac') is not None:
-                if 'ac' in pop_subfields:
+                if any(subfield == 'ac' for subfield, _ in pop_field.base_fields):
                     ac_field = f'populations__{population}__ac'
                 else:
                     ac_field =  f'ac_{population}'
                     results = results.annotate(**{ac_field: F(f'populations__{population}__het') + (F(f'populations__{population}__hom') * 2)})
 
                 results = results.filter(**{f'{ac_field}__lte': pop_filter['ac']})
-
-            if pop_filter.get('hh') is not None:
-                results = results.filter(**{f'populations__{population}__hom__lte': pop_filter['hh']})
 
         return results
 
@@ -921,6 +910,7 @@ class VariantDetailsQuerySet(VariantsQuerySet):
         annotations = {
             **super().annotation_values,
             **self.split_variant_id_annotations(),
+            'discoveryFamilies': DiscoveryVariantDict.dict_get_expression('key', dataset_type='SNV_INDEL'),
         }
         if self.has_annotation('hgmd_join'):
             annotations.update({
@@ -1016,10 +1006,6 @@ class BaseEntriesManager(SearchQuerySet):
         return getattr(self.model, 'gt_stats', None)
 
     @property
-    def genome_version(self):
-        return self.annotations_model.ANNOTATION_CONSTANTS['genomeVersion']
-
-    @property
     def filtered_chrom(self):
         return self.annotations_model.ANNOTATION_CONSTANTS.get('chrom')
 
@@ -1055,7 +1041,7 @@ class BaseEntriesManager(SearchQuerySet):
 
     def result_values(self, *args, sample_data=None, **kwargs):
         entries = self._join_annotations(self)
-        return self._search_call_data(entries, sample_data)
+        return self._search_call_data(entries, sample_data, **kwargs)
 
     def _filter_project_families(self, entries, sample_data):
        project_guids = sample_data['project_guids']
@@ -1312,7 +1298,7 @@ class BaseEntriesManager(SearchQuerySet):
             fields.append('seqrPop')
         return fields
 
-    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, override_annotations=None, **kwargs):
+    def _annotate_calls(self, entries, sample_data=None, annotate_hom_alts=False, multi_sample_type_families=None, skip_entry_fields=False, override_annotations=None, additional_expressions=None, **kwargs):
         if annotate_hom_alts:
             entries = entries.annotate(has_hom_alt=Q(calls__array_exists={'gt': (2,)}))
 
@@ -1323,7 +1309,7 @@ class BaseEntriesManager(SearchQuerySet):
             if skip_entry_fields:
                 entries = entries.annotate(numFamilies=Count('family_guid'))
             else:
-                gt_field, gt_expression = self.genotype_expression(sample_data)
+                gt_field, gt_expression = self.genotype_expression(sample_data, additional_expressions)
                 entries = entries.annotate(
                     familyGuids=ArraySort(ArrayDistinct(GroupArray('family_guid'))),
                     **{gt_field: GroupArrayArray(gt_expression)},
@@ -1363,7 +1349,7 @@ class BaseEntriesManager(SearchQuerySet):
 
         return entries
 
-    def genotype_expression(self, sample_data=None):
+    def genotype_expression(self, sample_data=None, additional_expressions=None):
         family_samples = defaultdict(list)
         samples = (sample_data or {}).get('samples') or []
         for s in samples:
@@ -1378,6 +1364,9 @@ class BaseEntriesManager(SearchQuerySet):
             genotype_expressions.insert(0, f"map({', '.join(sample_map)})[family_guid][x.sampleId]")
             output_base_fields.insert(0, ('individualGuid', models.StringField()))
             output_field_kwargs = {'group_by_key': 'individualGuid', 'flatten_groups': True}
+        if additional_expressions:
+            genotype_expressions += list(additional_expressions.keys())
+            output_base_fields += list(additional_expressions.values())
         return 'genotypes' if samples else 'familyGenotypes', ArrayFilter(
             ArrayMap(
                 'calls',
@@ -1435,7 +1424,7 @@ class BaseEntriesManager(SearchQuerySet):
             mapped_expression='x.1', output_field=models.ArrayField(models.StringField()),
         )
 
-    def filter_locus(self, exclude_intervals=None, require_gene_filter=False, intervals=None, genes=None, variant_ids=None, inheritance_mode=None, **kwargs):
+    def filter_locus(self, exclude_intervals=None, intervals=None, genes=None, variant_ids=None, inheritance_mode=None, **kwargs):
         entries = self
 
         if variant_ids:
@@ -1452,7 +1441,7 @@ class BaseEntriesManager(SearchQuerySet):
                 raise InvalidDatasetTypeException
 
         if genes or intervals:
-            entries = entries.filter(self._filter_locations_q(intervals, genes, require_gene_filter))
+            entries = entries.filter(self._filter_locations_q(intervals, genes))
         elif exclude_intervals:
             entries = entries.exclude(self._filter_locations_q(exclude_intervals))
 
@@ -1466,13 +1455,13 @@ class BaseEntriesManager(SearchQuerySet):
             parsed_variant_ids[variant_id] = parse_variant_id(variant_id)
         return parsed_variant_ids
 
-    def _filter_locations_q(self, intervals, genes=None, require_gene_filter=False):
+    def _filter_locations_q(self, intervals, genes=None):
         locus_q = None
         if genes:
             should_filter_interval = self._can_filter_gene_interval(genes)
             if should_filter_interval:
                 intervals = list((genes or {}).values()) + (intervals or [])
-            if require_gene_filter or (not should_filter_interval):
+            if not should_filter_interval:
                 locus_q = Q(geneId_ids__bitmap_has_any=[gene['id'] for gene in genes.values()])
 
         if intervals:
@@ -1481,8 +1470,6 @@ class BaseEntriesManager(SearchQuerySet):
                 interval_q |= self._interval_query(**interval)
             if locus_q is None:
                 locus_q = interval_q
-            elif require_gene_filter:
-                locus_q &= interval_q
             else:
                 locus_q |= interval_q
 
@@ -1493,7 +1480,7 @@ class BaseEntriesManager(SearchQuerySet):
 
     def search_padded_interval(self, chrom, pos, padding):
         interval_q = self._interval_query(chrom, start=max(pos - padding, MIN_POS), end=min(pos + padding, MAX_POS))
-        return self.filter(interval_q).result_values()
+        return self.filter(interval_q)
 
     @staticmethod
     def _interval_query(chrom, start, end, **kwargs):

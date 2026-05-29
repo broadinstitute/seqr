@@ -2,10 +2,10 @@
 
 import PropTypes from 'prop-types'
 import React from 'react'
-import { Header, Segment, List, Icon } from 'semantic-ui-react'
+import { Header, Segment, List, Icon, Accordion } from 'semantic-ui-react'
 
 import { WORKSPACE_REQUIREMENTS } from 'shared/components/panel/LoadWorkspaceDataForm'
-import { ActiveDisabledNavLink } from 'shared/components/StyledComponents'
+import { ActiveDisabledNavLink, InlineHeader } from 'shared/components/StyledComponents'
 import { VCF_DOCUMENTATION_URL } from 'shared/utils/constants'
 import { SeqrAvailability } from './LandingPage'
 
@@ -521,6 +521,33 @@ const FAQS = [
     },
   }, {
     [ENGLISH]: {
+      header: 'Q. Can I get assistance with processing my data?',
+      content: (
+        <div>
+          Yes - If you need support processing your data for seqr, such as generating a joint-called VCF from CRAM files
+          or reprocessing data using DRAGEN, the Broad Institute’s Data Science Services group offers fee-for-service
+          support. These services are designed to help prepare your data for successful ingestion into seqr and are
+          available to both internal Broad cohorts and external research groups. To discuss project scope, timelines,
+          and pricing, please reach out to <a href="mailto:bclservices@broadinstitute.org">bclservices@broadinstitute.org</a>.
+        </div>
+      ),
+    },
+    [SPANISH]: {
+      header: 'P. ¿Puedo recibir asistencia para procesar mis datos?',
+      content: (
+        <div>
+          Sí. Si necesita asistencia para el procesamiento de sus datos destinados a seqr - como la generación de un
+          archivo VCF de llamada conjunta a partir de archivos CRAM, o el reprocesamiento de datos mediante DRAGEN - el
+          grupo de Servicios de Ciencia de Datos del Broad Institute ofrece soporte bajo la modalidad de pago por
+          servicio. Estos servicios están diseñados para ayudarle a preparar sus datos y asegurar su correcta ingesta en
+          seqr, y se encuentran a disposición tanto de las cohortes internas del Broad como de grupos de investigación
+          externos. Para conversar sobre el alcance del proyecto, los plazos y las tarifas, por favor póngase en
+          contacto con <a href="mailto:bclservices@broadinstitute.org">bclservices@broadinstitute.org</a>.
+        </div>
+      ),
+    },
+  }, {
+    [ENGLISH]: {
       header: 'Q. Who has access to my data in seqr?',
       content: (
         <div>
@@ -608,6 +635,15 @@ const FAQS = [
   },
 ]
 
+const LANGUAGE_PANELS = [ENGLISH, SPANISH].reduce((acc, language) => ({
+  ...acc,
+  [language]: FAQS.map(faq => ({
+    key: faq[language].header,
+    title: { content: <InlineHeader content={faq[language].header} size="medium" /> },
+    content: { content: <Segment basic>{faq[language].content}</Segment> },
+  })),
+}), {})
+
 const LANGUAGES = [{ path: '', text: 'English' }, { path: SPANISH, text: 'Español' }]
 
 const FaqPages = ({ match }) => (
@@ -620,13 +656,7 @@ const FaqPages = ({ match }) => (
         <ActiveDisabledNavLink key={path} exact padded activeColor="black" to={`/faq/${path}`}>{text}</ActiveDisabledNavLink>
       ))}
     />
-    {FAQS.map((config) => {
-      const { header, content } = config[match.params.language || ENGLISH]
-      return [
-        <Header content={header} size="medium" />,
-        content,
-      ]
-    })}
+    <Accordion panels={LANGUAGE_PANELS[match.params.language || ENGLISH]} />
   </Segment>
 )
 

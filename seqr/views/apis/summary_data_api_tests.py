@@ -132,7 +132,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'projectGuid': 'R0004_non_analyst_project',
     'internal_project_id': 'Non-Analyst Project',
     'affected_status': 'Affected',
-    'analysisStatus': 'Rncc',
+    'analysisStatus': 'S_ng',
     'ancestry': '',
     'consanguinity': 'Unknown',
     'data_type': 'WGS',
@@ -154,7 +154,7 @@ EXPECTED_NO_GENE_SAMPLE_METADATA_ROW = {
     'proband_relationship': 'Self',
     'sex': 'Female',
     'sex_detail': None,
-    'solve_status': 'Unsolved',
+    'solve_status': 'Solved',
     'alt-1': 'T',
     'chrom-1': '1',
     'gene_known_for_phenotype-1': 'Candidate',
@@ -616,6 +616,11 @@ class SummaryDataAPITest(AirtableTest):
             {'4': {'name': 'De-Novo', 'date': '2023-12-05'}, 'support': {'name': 'High in Silico Scores', 'date': '2023-12-05'}},
         )
 
+        # Test reloading skips unchanged tags
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'info': ['Loaded 0 new and 1 updated AIP tags for 2 families (skipped 2 unchanged tags)']})
+
         self.check_no_analyst_no_access(url)
 
     def _assert_expected_new_saved_variant(self, new_saved_variant):
@@ -836,7 +841,7 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     def test_saved_variants_page(self):
         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
         assert_has_expected_calls(self, [
-            self.no_access_user, self.manager_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
+            self.no_access_user, self.manager_user, self.manager_user, self.manager_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
         ], skip_group_call_idxs=[2])
         self.mock_get_ws_access_level.assert_called_with(
             self.analyst_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde')

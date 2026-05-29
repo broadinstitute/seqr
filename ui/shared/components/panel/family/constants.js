@@ -80,7 +80,7 @@ export const IGV_OPTIONS = {
 const REFERENCE_URLS = [
   {
     key: 'fastaURL',
-    baseUrl: 'https://igv-genepattern-org.s3.amazonaws.com/genomes/seq',
+    baseUrl: 'https://s3.amazonaws.com/igv.broadinstitute.org/genomes/seq',
     path: {
       37: 'hg19/hg19.fasta',
       38: 'hg38/hg38.fa',
@@ -96,10 +96,10 @@ const REFERENCE_URLS = [
   },
   {
     key: 'aliasURL',
-    baseUrl: undefined,
+    baseUrl: 'https://igv.org/genomes/data',
     path: {
-      37: 'https://igv.org/genomes/data/hg19/hg19_alias.tab',
-      38: 'https://igv-genepattern-org.s3.amazonaws.com/genomes/hg38/hg38_alias.tab',
+      37: 'hg19/hg19_alias.tab',
+      38: 'hg38/hg38_alias.tab',
     },
   },
 ]

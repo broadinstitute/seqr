@@ -18,7 +18,10 @@ After installation, run `psql -l` and if there is no user named `postgres`, run 
 - [clickhouse](https://clickhouse.com/docs/install)
 - [redis](https://redis.io/topics/quickstart)
 
-- [node/npm <14](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).  Note: more recent versions of `node` may not function are not officially supported.
+- [node/npm <14](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+  - Note: more recent versions of `node` may not function are not officially supported.
+For certain npm installations on mac, you may run into issues running this version of npm in your terminal - 
+see [this post](https://stackoverflow.com/a/67254340) for a workaround.
 
 Additionally, you will need to install all the infrastructure components required for the 
 [helm deployment](https://github.com/broadinstitute/seqr-helm?tab=readme-ov-file#instructions-for-initial-deployment)

@@ -19,7 +19,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         variant_ids = SavedVariant.objects.filter(
             key__isnull=True, family__project__genome_version=GENOME_VERSION_GRCh38,
-            saved_variant_json__populations__isnull=False, # Omit manual variants
         ).values_list('variant_id', flat=True).distinct()
         ids_by_dataset_type = {
             Dataset.DATASET_TYPE_VARIANT_CALLS: [], Dataset.DATASET_TYPE_MITO_CALLS: [], Dataset.DATASET_TYPE_SV_CALLS: [],
@@ -59,11 +58,6 @@ class Command(BaseCommand):
         if no_keys_37:
             self._resolve_missing_variants(no_keys_37, GENOME_VERSION_GRCh37)
 
-        num_updated = SavedVariant.objects.filter(key__isnull=False).exclude(saved_variant_json={}).update(
-            saved_variant_json={},
-        )
-        logger.info(f'Cleared saved json for {num_updated} variants with keys')
-
         logger.info('Done')
 
     @staticmethod
@@ -98,32 +92,32 @@ class Command(BaseCommand):
         return no_key
 
     @classmethod
-    def _query_missing_variants(cls, variant_ids, variant_fields, genome_version=GENOME_VERSION_GRCh38):
+    def _query_missing_variants(cls, variant_ids, variant_fields=None, genome_version=GENOME_VERSION_GRCh38):
         missing_variants = SavedVariant.objects.filter(
             variant_id__in=variant_ids, family__project__genome_version=genome_version,
         )
         num_missing = missing_variants.count()
         missing_with_data_qs = missing_variants.filter(family__individual__active_datasets__isnull=False).distinct()
         missing_with_search_data = missing_with_data_qs.values(
-            'variant_id', *variant_fields,
+            'variant_id', *(variant_fields or []),
         ).annotate(family_ids=ArrayAgg('family__family_id', distinct=True)).order_by('variant_id')
         return missing_with_search_data, num_missing
 
     @classmethod
     def _resolve_missing_variants(cls, variant_ids, genome_version):
         missing_with_search_data, num_missing = cls._query_missing_variants(
-            variant_ids, ['saved_variant_json__populations__seqr__ac'], genome_version,
+            variant_ids, genome_version=genome_version,
         )
         num_data= len(missing_with_search_data)
-        in_backend = [
-            f"{var['variant_id']} - {'; '.join(var['family_ids'])}"
-            for var in missing_with_search_data if var['saved_variant_json__populations__seqr__ac']
-        ]
+
         logger.info(
-            f'{num_missing} variants have no key, {num_missing - num_data} of which have no search data, {num_data - len(in_backend)} of which are absent from the hail backend.'
+            f'{num_missing} variants have no key, {num_missing - num_data} of which have no search data.'
         )
-        if in_backend:
-            logger.info(f'{len(in_backend)} remaining variants: {", ".join(in_backend)}')
+        if missing_with_search_data:
+            summary = [
+                f"{var['variant_id']} - {'; '.join(var['family_ids'])}" for var in missing_with_search_data
+            ]
+            logger.info(f'{len(missing_with_search_data)} remaining variants: {", ".join(summary)}')
 
     @classmethod
     def _resolve_reloaded_svs(cls, variant_ids):

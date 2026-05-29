@@ -14,12 +14,12 @@ from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Dataset, RnaSample, VariantTag, VariantTagType
 from seqr.utils.gene_utils import get_genes_for_variants
-from seqr.utils.xpos_utils import parse_variant_id
+from seqr.utils.xpos_utils import parse_variant_id, get_chrom_pos
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
-from seqr.views.utils.orm_to_json_utils import get_json_for_discovery_tags, get_json_for_locus_lists, \
-    get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, \
+from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_child_entities, get_json_for_locus_lists, \
+    get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, _get_json_for_families, \
     get_json_for_matchmaker_submissions
-from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst
+from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst, get_project_guids_user_can_view
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 
@@ -59,7 +59,6 @@ def parse_saved_variant_json(variant_json, family_id):
         'dataset_type': variant_json.get('dataset_type') or variant_dataset_type(variant_json),
         'gene_ids': gene_ids,
         'main_transcript': main_transcript,
-        'saved_variant_json': variant_json.get('saved_variant_json', {}),
     }
 
 
@@ -233,10 +232,6 @@ def reset_cached_search_results(project, reset_index_metadata=False):
         logger.error("Unable to reset cached search results: {}".format(e))
 
 
-def get_variant_key(xpos=None, ref=None, alt=None, genomeVersion=None, **kwargs):
-    return '{}-{}-{}_{}'.format(xpos, ref, alt, genomeVersion)
-
-
 def _requires_transcript_metadata(variant):
     if isinstance(variant, list):
         return _requires_transcript_metadata(variant[0])
@@ -355,13 +350,51 @@ def _get_family_has_rna_tpm(family_genes, gene_ids, sample_family_map):
     return family_tpms
 
 
-def _add_discovery_tags(variants, discovery_tags):
-    for variant in variants:
-        tags = discovery_tags.get(get_variant_key(**variant))
-        if tags:
-            if not variant.get('discoveryTags'):
-                variant['discoveryTags'] = []
-            variant['discoveryTags'] += [tag for tag in tags if tag['savedVariant']['familyGuid'] not in variant['familyGuids']]
+def _parse_discovery_tags(variants_by_id, family_guids, user):
+    discovery_variant_ids = set()
+    discovery_family_guids = set()
+    for variant_id, variant in variants_by_id.items():
+        if not variant['key']:
+            continue
+        discovery_families = set(variant.pop('discoveryFamilies')) - set(variant.get('familyGuids', []))
+        if discovery_families:
+            discovery_variant_ids.add(variant_id)
+            discovery_family_guids.update(discovery_families)
+            variant['discoveryTags'] = []
+            variant['noAccessDiscoveryFamilies'] = len(discovery_families)
+
+    discovery_families_by_guid = {
+        f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(
+            guid__in=discovery_family_guids, project__guid__in=get_project_guids_user_can_view(user),
+        ).exclude(guid__in=family_guids))
+    }
+    if not discovery_families_by_guid:
+        return {}
+
+    saved_variants_by_guid = {
+        sv['variantGuid']: sv for sv in SavedVariant.objects.filter(
+            variant_id__in=discovery_variant_ids, family__guid__in=discovery_families_by_guid,
+        ).values('id', 'variant_id', variantGuid=F('guid'), familyGuid=F('family__guid'), projectGuid=F('family__project__guid'))
+    }
+
+    saved_variant_id_map = {sv.pop('id'): guid for guid, sv in saved_variants_by_guid.items()}
+    discovery_tag_json, variant_tag_map = get_json_for_saved_variants_child_entities(
+        VariantTag, saved_variant_id_map, tag_filter={'variant_tag_type__category': 'CMG Discovery Tags'})
+
+    tags_by_guid = {}
+    for tag in discovery_tag_json:
+        del tag['variantGuids']
+        tags_by_guid[tag['tagGuid']] = tag
+
+    for variant_guid, tag_guids in variant_tag_map.items():
+        variant = saved_variants_by_guid[variant_guid]
+        variant_id = variant.pop('variant_id')
+        variants_by_id[variant_id]['discoveryTags'] += [
+            {'savedVariant': variant, **tags_by_guid[tag_guid]} for tag_guid in tag_guids
+        ]
+        variants_by_id[variant_id]['noAccessDiscoveryFamilies'] -= 1
+
+    return {'familiesByGuid': discovery_families_by_guid}
 
 
 def _add_pa_detail(locus_list_gene, locus_list_guid, gene_json):
@@ -382,7 +415,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
                           add_locus_list_detail=False, include_individual_gene_scores=True, include_project_name=False, genome_version=None):
     additional_model_fields = []
     if response_variants is None:
-        additional_model_fields = ['dataset_type', 'saved_variant_json']
+        additional_model_fields = ['dataset_type', 'main_transcript', 'xpos_end']
         if not genome_version:
             additional_model_fields.append('family__project__genome_version')
     response = get_json_for_saved_variants_with_tags(saved_variants, additional_model_fields=additional_model_fields) \
@@ -406,17 +439,10 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
         variants, genome_versions={genome_version} if genome_version else {p.genome_version for p in projects}, get_family_genes=include_individual_gene_scores,
     ))
 
-    discovery_tags = None
-    is_analyst = user_is_analyst(request.user)
-    if is_analyst:
-        discovery_tags, discovery_response = get_json_for_discovery_tags(variants, request.user)
-        response.update(discovery_response)
+    response.update(_parse_discovery_tags(variants_by_id, family_guids, request.user))
 
     response['locusListsByGuid'] = _add_locus_lists(
         projects, response['genesById'], add_list_detail=add_locus_list_detail, user=request.user)
-
-    if discovery_tags:
-        _add_discovery_tags(variants, discovery_tags)
 
     response['mmeSubmissionsByGuid'] = _mme_response_context(response['savedVariantsByGuid'])
 
@@ -434,7 +460,7 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
     if add_all_context or request.GET.get(LOAD_FAMILY_CONTEXT_PARAM) == 'true':
         families = Family.objects.filter(guid__in=family_guids)
         add_families_context(
-            response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=is_analyst,
+            response, families, project_guid=project.guid if project else None, user=request.user, is_analyst=user_is_analyst(request.user),
             has_case_review_perm=bool(project) and has_case_review_permissions(project, request.user), include_igv=include_igv,
         )
 
@@ -454,9 +480,9 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
     for variant in variants:
         dataset_type = variant.pop('datasetType')
         gv = genome_version or variant.pop('familyProjectGenomeVersion')
-        variant_json = variant.pop('savedVariantJson')
+        main_transcript = variant.pop('mainTranscript')
+        xpos_end = variant.pop('xposEnd')
         variants_by_id[variant['variantId']] = {
-            **variant_json,
             **variants_by_id[variant['variantId']],
             **variant,
             'familyGuids': variant['familyGuids'] + variants_by_id[variant['variantId']].get('familyGuids', []),
@@ -464,6 +490,24 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
         }
         if variant['key']:
             variant_keys_by_genome_version_dataset_type[gv][dataset_type].add(variant['key'])
+        else:
+            chrom, pos = get_chrom_pos(variant['xpos'])
+            transcripts = {gene_id: [{'geneId': gene_id}] for gene_id in variant['geneIds']}
+            if main_transcript:
+                main_gene_id = main_transcript.get('geneId') or variant['geneIds'][0]
+                transcripts[main_gene_id] = [main_transcript]
+            variants_by_id[variant['variantId']].update({
+                'chrom': chrom,
+                'pos': pos,
+                'genomeVersion': gv,
+                'transcripts': transcripts,
+                'mainTranscriptId': main_transcript.get('transcriptId'),
+            })
+            if variant['svType']:
+                end_chrom, end = get_chrom_pos(xpos_end)
+                variants_by_id[variant['variantId']]['end'] = end
+                if end_chrom != chrom:
+                    variants_by_id[variant['variantId']]['endChrom'] = end_chrom
 
     for gv, gv_keys in variant_keys_by_genome_version_dataset_type.items():
         for dataset_type, keys in gv_keys.items():

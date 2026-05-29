@@ -4,7 +4,7 @@ import mock
 import responses
 from settings import AIRTABLE_URL
 
-from seqr.models import Project, SavedVariant, RnaSample
+from seqr.models import Project, RnaSample
 from seqr.views.apis.report_api import seqr_stats, anvil_export, gregor_export, family_metadata, variant_metadata
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 
@@ -824,7 +824,7 @@ class ReportAPITest(AirtableTest):
             match=[responses.matchers.query_param_matcher({'fields[]': 'SMID'}, strict_match=False)]
         )
         responses.add(
-            responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
+            responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json={'records': AIRTABLE_GREGOR_RECORDS['records'][:2]+AIRTABLE_GREGOR_RECORDS['records'][3:]},
             status=200)
 
         responses.add(responses.GET, MOCK_DATA_MODEL_URL, status=404)
@@ -856,7 +856,7 @@ class ReportAPITest(AirtableTest):
 
         recommended_warnings = [
             'The following entries are missing RNA airtable data: NA19675',
-            'The following entries are missing WES airtable data: NA19675, NA19679',
+            'The following entries are missing WES airtable data: NA19675',
             'The following entries have WGS airtable data but do not have equivalent loaded data in seqr, so airtable data is omitted: NA19675, NA20888, VCGS_FAM203_621',
             'The following entries are missing recommended "recontactable" in the "participant" table: Broad_HG00731, Broad_HG00732, Broad_HG00733, Broad_NA19678, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881',
             'The following entries are missing recommended "reported_race" in the "participant" table: Broad_HG00733, Broad_NA19678, Broad_NA19679, Broad_NA20870, Broad_NA20872, Broad_NA20874, Broad_NA20875, Broad_NA20876, Broad_NA20881, Broad_NA20888',
@@ -875,6 +875,7 @@ class ReportAPITest(AirtableTest):
             f'No data model found for "{file}" table' for file in reversed(EXPECTED_GREGOR_FILES) if file not in INVALID_MODEL_TABLES
         ] + [
             missing_participant_error,
+            'The following entries are missing airtable metadata: NA19679',
             'The following tables are required in the data model but absent from the reports: subject, dna_read_data_set',
         ] + [
             'The following entries are missing required "prior_testing" in the "participant" table: Broad_HG00731, Broad_HG00732',
@@ -885,17 +886,23 @@ class ReportAPITest(AirtableTest):
             'The following entries are missing required "mean_coverage" (from Airtable) in the "aligned_dna_short_read" table: Broad_exome_VCGS_FAM203_621_D2_1',
             'The following entries have non-unique values for "alignment_software" (from Airtable) in the "aligned_dna_short_read" table: BWA-MEM-2.3 (Broad_exome_NA20888_1, Broad_exome_VCGS_FAM203_621_D2_1)',
             'The following entries have invalid values for "analysis_details" (from Airtable) in the "aligned_dna_short_read" table. Allowed values are a google bucket path starting with gs://. Invalid values: Broad_exome_VCGS_FAM203_621_D2_1 (DOI:10.5281/zenodo.4469317)',
-            'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)',
             'The following entries are missing required "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_NA19675_1_21_3343353',
             'The following entries have non-unique values for "experiment_id" (from Airtable) in the "genetic_findings" table: Broad_exome_VCGS_FAM203_621_D2 (Broad_HG00731_19_1912632, Broad_HG00731_1_248367227)',
         ]
         self.assertListEqual(response.json()['errors'], validation_errors)
 
+        responses.replace(
+            responses.GET, '{}/app3Y97xtbbaOopVR/GREGoR Data Model'.format(AIRTABLE_URL), json=AIRTABLE_GREGOR_RECORDS,
+        )
         mock_open.reset_mock()
         response = self.client.post(
             url, content_type='application/json', data=json.dumps({**body, 'overrideValidation': True})
         )
         self.assertEqual(response.status_code, 200)
+        validation_errors.pop(8)
+        validation_errors.insert(17, 'The following entries have invalid values for "date_data_generation" (from Airtable) in the "experiment_rna_short_read" table. Allowed values have data type float. Invalid values: NA19679 (2023-02-11)')
+        recommended_warnings[1] += ', NA19679'
+        validation_warnings[4] = recommended_warnings[1]
         expected_response = {
             'info': ['Successfully validated and uploaded Gregor Report for 9 families'],
             'warnings': validation_errors + validation_warnings,
@@ -962,11 +969,6 @@ class ReportAPITest(AirtableTest):
         project = Project.objects.get(id=3)
         project.consent_code = 'H'
         project.save()
-
-        # For SV variant, test reports in gene associated with OMIM condition even if not annotated
-        variant = SavedVariant.objects.get(id=7)
-        variant.saved_variant_json['transcripts'] = {'ENSG00000135953': []}
-        variant.save()
 
         responses.calls.reset()
         responses.add(responses.GET, 'https://monarchinitiative.org/v3/api/entity/MONDO:0008788', status=200, json={
