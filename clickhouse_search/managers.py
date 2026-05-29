@@ -11,7 +11,7 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
     ArrayIntersect, ArrayJoin, ArrayMap, ArraySort, ArraySymmetricDifference, CrossJoin, GroupArray, GroupArrayArray, \
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
     IntDiv, Modulo, SplitByString, ArrayIndex, Multiply, IndexOf
-from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, DiscoveryVariantDict
 from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
@@ -197,9 +197,9 @@ class SearchQuerySet(QuerySet):
             if field.db_column and field.name != field.db_column and field.db_column
         }
 
-    def result_values(self, additional_fields=None, **kwargs):
+    def result_values(self, additional_fields=None, additional_values=None, **kwargs):
         fields = [*self.annotation_fields] + (additional_fields or [])
-        values = {**self.annotation_values}
+        values = {**self.annotation_values, **(additional_values or {})}
         values.update(self.conditional_selects(self, **kwargs))
 
         override_model_annotations = set(values).intersection(fields)
@@ -537,6 +537,9 @@ class VariantsQuerySet(BaseVariantsQuerySet):
         if self.has_annotation('mitomapPathogenic'):
             annotations['mitomapPathogenic'] = F('mitomapPathogenic')
 
+        if not self.variant_detail_field:
+            annotations['discoveryFamilies'] = DiscoveryVariantDict.dict_get_expression('key', dataset_type='MITO')
+
         return annotations
 
     @staticmethod
@@ -752,6 +755,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
     def annotation_values(self):
         annotations = super().annotation_values
         annotations['transcripts'] = annotations.pop(self.model.sorted_gene_consequences.field.db_column)
+        annotations['discoveryFamilies'] = DiscoveryVariantDict.dict_get_expression('key', dataset_type=f'SV_{self.entry_model.SAMPLE_TYPE}')
         return annotations
 
     @staticmethod
@@ -906,6 +910,7 @@ class VariantDetailsQuerySet(VariantsQuerySet):
         annotations = {
             **super().annotation_values,
             **self.split_variant_id_annotations(),
+            'discoveryFamilies': DiscoveryVariantDict.dict_get_expression('key', dataset_type='SNV_INDEL'),
         }
         if self.has_annotation('hgmd_join'):
             annotations.update({
@@ -1473,9 +1478,9 @@ class BaseEntriesManager(SearchQuerySet):
     def _can_filter_gene_interval(self, genes):
         return (not hasattr(self.model, 'geneId_ids')) or len(genes) < self.MAX_XPOS_FILTER_INTERVALS or self.filtered_chrom
 
-    def search_padded_interval(self, chrom, pos, padding, **kwargs):
+    def search_padded_interval(self, chrom, pos, padding):
         interval_q = self._interval_query(chrom, start=max(pos - padding, MIN_POS), end=min(pos + padding, MAX_POS))
-        return self.filter(interval_q).result_values(**kwargs)
+        return self.filter(interval_q)
 
     @staticmethod
     def _interval_query(chrom, start, end, **kwargs):

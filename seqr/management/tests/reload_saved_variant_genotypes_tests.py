@@ -5,7 +5,7 @@ from seqr.models import SavedVariant, Dataset
 
 
 class ReloadSavedVariantGenotypesTest(AnvilAuthenticationTestCase):
-    fixtures = ['users', '1kg_project', 'report_variants', 'clickhouse_saved_variants']
+    fixtures = ['users', '1kg_project', 'report_variants', 'clickhouse_saved_variants', 'clickhouse_discovery_variants']
 
     def test_command(self):
         # Update fixture data

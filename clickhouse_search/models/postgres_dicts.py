@@ -56,10 +56,22 @@ class IndividualMetadataDict(Dictionary):
         postgres_query = "select f.guid as family_guid, i.individual_id as sampleId, p.restrict_sharing as restrict_sharing, i.features as features, f.post_discovery_omim_numbers[1] as omim_id, f.post_discovery_mondo_id as mondo_id, f.analysis_status in (''S'', ''S_kgfp'', ''S_kgdp'', ''S_ng'', ''ES'') as is_solved, p.vlm_contact_email as vlm_contact_email FROM seqr_individual i INNER JOIN seqr_family f ON i.family_id = f.id INNER JOIN seqr_project p ON f.project_id = p.id"
 
 
-class DiscoveryVariantDict(Dictionary):
+class VariantFamiliesDict(Dictionary):
     key = models.UInt32Field(primary_key=True)
     dataset_type = models.StringField()
     family_guids = models.ArrayField(models.StringField())
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def dict_get_expression(cls, *expressions, dataset_type=None, **kwargs):
+        return super().dict_get_expression(
+            *expressions, key_template=f"(%(expressions)s, '{dataset_type}')", field_names=['family_guids'], **kwargs,
+        )
+
+
+class DiscoveryVariantDict(VariantFamiliesDict):
 
     class Meta:
         db_table = 'seqrdb_discovery_variant_dict'
@@ -68,10 +80,7 @@ class DiscoveryVariantDict(Dictionary):
         postgres_query = "SELECT sv.key as key, sv.dataset_type as dataset_type, array_agg(distinct f.guid) as family_guids FROM seqr_savedvariant sv INNER JOIN seqr_family f ON sv.family_id = f.id WHERE sv.id IN (SELECT savedvariant_id FROM seqr_varianttag_saved_variants vts LEFT JOIN seqr_varianttag vt ON vts.varianttag_id = vt.id LEFT JOIN seqr_varianttagtype vtt ON vt.variant_tag_type_id = vtt.id WHERE vtt.category = ''CMG Discovery Tags'') GROUP BY sv.key, sv.dataset_type"
 
 
-class ExcludedVariantDict(Dictionary):
-    key = models.UInt32Field(primary_key=True)
-    dataset_type = models.StringField()
-    family_guids = models.ArrayField(models.StringField())
+class ExcludedVariantDict(VariantFamiliesDict):
 
     class Meta:
         db_table = 'seqrdb_excluded_variant_dict'
