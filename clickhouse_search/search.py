@@ -1,4 +1,4 @@
-from clickhouse_backend.models import ArrayField, BoolField, StringField
+from clickhouse_backend.models import ArrayField, BoolField, StringField, UInt32Field
 from collections import defaultdict
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import ObjectDoesNotExist
@@ -900,13 +900,16 @@ def _lookup_genotype_expressions():
     affected_expr = AffectedDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['affected'], default='U')
     sex_expr = SexDict.dict_get_sql(key='(family_guid, x.sampleId)', fields=['sex'], default='U')
     metadata_expr = IndividualMetadataDict.dict_get_sql(
-        key='(family_guid, x.sampleId)', fields=['restrict_sharing', 'features', 'vlm_contact_email'],
+        key='(family_guid, x.sampleId)', fields=['restrict_sharing', 'is_solved', 'omim_id', 'mondo_id', 'features', 'vlm_contact_email'],
     )
     return {
         f'tupleConcat(({affected_expr}, {sex_expr}), {metadata_expr})': ('metadata', NamedTupleField([
             ('affected', StringField()),
             ('sex', StringField()),
             ('restrict_sharing', BoolField()),
+            ('isSolved', BoolField()),
+            ('omim_id', UInt32Field()),
+            ('mondo_id', StringField()),
             ('features', StringField()),
             ('vlmContactEmail', StringField()),
         ])),

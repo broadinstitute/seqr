@@ -466,14 +466,31 @@ Genotype.propTypes = {
   genesById: PropTypes.object,
 }
 
-const INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_FEATURES]
+const INDIVIDUAL_FIELD_IS_SOLVED = 'isSolved'
+const INDIVIDUAL_FIELD_DISEASE = 'disease'
+const INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_DISEASE, INDIVIDUAL_FIELD_IS_SOLVED, INDIVIDUAL_FIELD_FEATURES]
 const VARIANT_INDIVIDUAL_DETAIL_FIELDS = [
   INDIVIDUAL_FIELD_FILTER_FLAGS, INDIVIDUAL_FIELD_POP_FILTERS, ...INDIVIDUAL_DETAIL_FIELDS,
 ]
 const SV_INDIVIDUAL_DETAIL_FIELDS = [INDIVIDUAL_FIELD_SV_FLAGS, ...INDIVIDUAL_DETAIL_FIELDS]
 
+const VARIANT_INDIVIDUAL_FIELD_LOOKUP = {
+  ...INDIVIDUAL_FIELD_LOOKUP,
+  [INDIVIDUAL_FIELD_IS_SOLVED]: {
+    fieldDisplay: isSolved => (isSolved ? <Label color="olive" size="small" content="Solved" /> : null),
+  },
+  [INDIVIDUAL_FIELD_DISEASE]: {
+    fieldDisplay: disease => (
+      <div>
+        <b>Disease:&nbsp;</b>
+        {disease}
+      </div>
+    ),
+  },
+}
+
 const IndividualDetailField = ({ field, individual }) => {
-  const { individualFields, ...fieldProps } = INDIVIDUAL_FIELD_LOOKUP[field]
+  const { individualFields, ...fieldProps } = VARIANT_INDIVIDUAL_FIELD_LOOKUP[field]
   const individualProps = individualFields ? individualFields(individual) : {}
   return (
     <BaseFieldView
