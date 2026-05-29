@@ -1522,10 +1522,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         'I000016_na20888': {
             'affected': 'A', 'features': '', 'restrict_sharing': True, 'sex': 'M',
             'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+            'omim_id': 616126, 'mondo_id': '0008788', 'isSolved': False,
         },
         'I000017_na20889': {
             'affected': 'A', 'features': '[{"id": "HP:0011675"}, {"id": "HP:0001509"}]', 'restrict_sharing': True,
             'sex': 'F', 'vlmContactEmail': 'seqr-test@gmail.com,test@broadinstitute.org',
+            'omim_id': 616126, 'mondo_id': '0008788', 'isSolved': False,
         },
         'I000018_na21234': {
             'affected': 'A', 'features': '', 'restrict_sharing': False, 'sex': 'F', 'isSolved': True,
