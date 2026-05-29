@@ -42,7 +42,8 @@ class VlmTestCase(AioHTTPTestCase):
         jwt_body = {'iss': 'https://vlm-auth.us.auth0.com/', 'azp': REQUESTER_CLIENT_ID}
         headers = {'Authorization': f'Bearer {jwt.encode(jwt_body, "")}'}
 
-        async with self.client.request('GET', '/vlm/match?assemblyId=GRCh38&referenceName=1&start=38724419&referenceBases=T&alternateBases=G', headers=headers) as resp:
+        self.maxDiff = None
+        async with self.client.request('GET', '/vlm/match?assemblyId=GRCh38&referenceName=1&start=10439&referenceBases=AC&alternateBases=A', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
         self.assertDictEqual(resp_json, {
@@ -52,7 +53,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'id': 'TestVLM',
                         'label': 'TestVLM browser',
                     },
-                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=1-38724419-T-G',
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=1-10439-AC-A',
                     'email': None,
                 }
             ],
@@ -76,14 +77,14 @@ class VlmTestCase(AioHTTPTestCase):
                         'exists': True,
                         'id': 'TestVLM Homozygous',
                         'results': [],
-                        'resultsCount': 7,
+                        'resultsCount': 3,
                         'setType': 'genomicVariant'
                     },
                     {
                         'exists': True,
                         'id': 'TestVLM Heterozygous',
                         'results': [],
-                        'resultsCount': 23,
+                        'resultsCount': 2,
                         'setType': 'genomicVariant'
                     },
                     {
@@ -113,7 +114,7 @@ class VlmTestCase(AioHTTPTestCase):
             headers={'Authorization': 'Bearer test_token'},
         )
         self.assertIn(
-            'Received match request from Test Node: assemblyId=GRCh38&referenceName=1&start=38724419&referenceBases=T&alternateBases=G',
+            'Received match request from Test Node: assemblyId=GRCh38&referenceName=1&start=10439&referenceBases=AC&alternateBases=A',
             self._caplog.messages,
         )
 
