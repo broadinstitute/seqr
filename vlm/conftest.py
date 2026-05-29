@@ -1,8 +1,5 @@
 import pytest
 
-@pytest.fixture(autouse=True)
-def enable_db_access_for_all_tests(db):
-    pass
 
 @pytest.fixture(scope='session')
 def django_db_setup(request, django_db_blocker,django_db_keepdb):
