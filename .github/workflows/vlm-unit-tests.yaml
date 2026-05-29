@@ -56,12 +56,12 @@ jobs:
           POSTGRES_PASSWORD: pgtest
 
     steps:
+      - uses: actions/checkout@v2
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11
           cache: 'pip'
-      - uses: actions/checkout@v2
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip wheel
