@@ -1,7 +1,7 @@
 import pytest
 
-@pytest.fixture(scope='session')
-def django_db_blocker(django_db_blocker, db):
+@pytest.fixture
+def _django_db_marker(_django_db_marker, db):
     pass
 
 @pytest.fixture(scope='session')
