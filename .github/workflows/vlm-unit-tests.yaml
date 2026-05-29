@@ -102,8 +102,6 @@ jobs:
           '
       - name: Set up Test Databases
         run: | 
-          docker exec postgres createdb -U postgres reference_data_db
-          docker exec clickhouse clickhouse-client --query "CREATE DATABASE seqr"
           python3 -m venv .venv
           source .venv/bin/activate
           pip install -r vlm/requirements.txt
@@ -116,7 +114,6 @@ jobs:
           export CLICKHOUSE_SERVICE_HOSTNAME=localhost
           export POSTGRES_SERVICE_HOSTNAME=localhost
           python3 -m pytest --setup-only --create-db --reuse-db --ds=settings -vv
-          python3 -u manage.py loaddata clickhouse_search --database=clickhouse_write
       - name: Set up Clickhouse test user
         run: |
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.`GRCh37/SNV_INDEL/key_lookup` TO vlm_test_user"
