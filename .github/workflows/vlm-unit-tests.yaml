@@ -69,7 +69,7 @@ jobs:
           pip install -r vlm/requirements-test.txt
       - name: Set up Clickhouse Settings
         run: |
-          cat <<EOF > test_user_config.xml
+          cat <<EOF > test_config.xml
           <clickhouse>
             <users>
               <clickhouse_test_user>
@@ -78,27 +78,13 @@ jobs:
             </users>
           </clickhouse>
           EOF
-          docker cp ${{ github.workspace }}/test_user_config.xml clickhouse:/etc/clickhouse-server/users.d/users.xml
+          docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/users.d/users.xml
           docker exec clickhouse clickhouse-client --query "CREATE USER vlm_test_user IDENTIFIED WITH plaintext_password BY 'vlm_test_password'"
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
           docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS flatten_nested=0, join_use_nulls=1, stop_refreshable_materialized_views_on_startup=1, allow_materialized_view_with_bad_select=1, enable_join_runtime_filters=0 TO vlm_test_user, clickhouse_test_user"
           docker exec clickhouse clickhouse-client --query "CREATE NAMED COLLECTION seqr_postgres_named_collection AS user='postgres', password='pgtest', host='postgres', port='5432'"
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
-          cat <<EOF > test_config.xml
-          <clickhouse>
-            <user_files_path>/</user_files_path>
-          </clickhouse>
-          EOF
-          docker cp ${{ github.workspace }}/test_config.xml clickhouse:/etc/clickhouse-server/config.d/config.xml
-          docker restart clickhouse
-      - name: Wait for service restart
-        run: |
-          timeout 50s sh -c '
-          until curl --fail http://localhost:8123/ping; do
-            sleep 5
-          done
-          '
-      - name: Set up Test Databases
+      - name: Set up Clickhouse Test Database
         run: | 
           python3 -m venv .venv
           source .venv/bin/activate
