@@ -20,12 +20,10 @@ BEACON_HANDOVER_TYPE = {
 BEACON_META = {
     'apiVersion': 'v1.0',
     'beaconId': 'com.gnx.beacon.v2',
-    'returnedSchemas': [
-        {
-            'entityType': 'genomicVariant',
-            'schema': 'ga4gh-beacon-variant-v2.0.0'
-        }
-    ]
+}
+VARIANT_SCHEMA = {
+    'entityType': 'genomicVariant',
+    'schema': 'ga4gh-beacon-variant-v2.0.0'
 }
 
 QUERY_PARAMS = ['assemblyId', 'referenceName', 'start', 'referenceBases', 'alternateBases']
@@ -61,8 +59,8 @@ def _get_variant_match(query: dict, get_match: Callable, get_results: Callable) 
     url = _get_contact_url(
         chrom, pos, ref, alt, genome_build, liftover if lift_match and not match else None,
     )
-    total, results_set = get_results(match, lift_match)
-    return _format_results(total, results_set, url)
+    total, results_set, schema = get_results(match, lift_match)
+    return _format_results(total, results_set, url, schema)
 
 
 def _get_contact_url(chrom: str, pos: int, ref: str, alt: str, genome_build: str, liftover: Optional[Tuple[str, int, str]]) -> str:
@@ -109,25 +107,16 @@ def _get_match_results(match: Optional[Tuple[int, int]], lift_match: Optional[Tu
     ac = build_ac + lift_ac
     hom = build_hom + lift_hom
     total = ac - hom  # Homozygotes count twice toward the total AC
-    results = [
-        ('Homozygous', hom),
-        ('Heterozygous', total - hom),
-        ('Hemizygous', 0),
-        ('Unknown', 0),
-    ]
     result_sets = [
-        {
-            'exists': bool(count),
-            'id': f'{NODE_ID} {label}',
-            'results': [],
-            'resultsCount': count,
-            'setType': 'genomicVariant'
-        } for label, count in results
+        ('Homozygous', hom, []),
+        ('Heterozygous', total - hom, []),
+        ('Hemizygous', 0, []),
+        ('Unknown', 0, []),
     ]
-    return total, result_sets
+    return total, result_sets, VARIANT_SCHEMA
 
 
-def _format_results(total: int, result_sets: list[dict], url: str) -> dict:
+def _format_results(total: int, result_sets: list[dict], url: str, schema: dict) -> dict:
     return {
         'beaconHandovers': [
             {
@@ -136,13 +125,24 @@ def _format_results(total: int, result_sets: list[dict], url: str) -> dict:
                 'email': VLM_DEFAULT_CONTACT_EMAIL,
             }
         ],
-        'meta': BEACON_META,
+        'meta': {
+            **BEACON_META,
+            'returnedSchemas': [schema],
+        },
         'responseSummary': {
             'exists': bool(total),
             'total': total
         },
         'response': {
-            'resultSets': result_sets,
+            'resultSets': [
+                {
+                    'exists': bool(count),
+                    'id': f'{NODE_ID} {label}',
+                    'results': results,
+                    'resultsCount': count,
+                    'setType': schema['entityType'],
+                } for label, count, results in result_sets
+            ],
         }
     }
 
