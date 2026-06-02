@@ -5,7 +5,7 @@ from pyliftover.liftover import LiftOver
 import re
 from typing import Optional, Tuple
 
-from vlm.clickhouse_utils import get_clickhouse_variant_counts, get_clickhouse_variant_details
+from vlm.clickhouse_utils import get_clickhouse_variant_counts, get_clickhouse_variant_details, CHROMOSOMES
 
 SEQR_BASE_URL = os.environ.get('SEQR_BASE_URL')
 VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL')
@@ -41,10 +41,6 @@ ASSEMBLY_LOOKUP = {
     'hg19': GENOME_VERSION_GRCh37,
 }
 
-CHROMOSOMES = {
-    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
-    '20', '21', '22', 'X', 'Y', 'M',
-}
 MIN_POS = 1
 MAX_POS = 300_000_000
 

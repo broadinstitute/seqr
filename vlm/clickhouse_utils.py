@@ -11,6 +11,11 @@ CLICKHOUSE_CONNECTION_PARAMS = {
     'database': os.environ.get('CLICKHOUSE_DATABASE', 'seqr'),
 }
 
+CHROMOSOMES = [
+    '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19',
+    '20', '21', '22', 'X', 'Y', 'M',
+]
+
 
 def get_clickhouse_variant_counts(chrom: str, pos: int, genome_build: str, ref: str, alt: str) -> Optional[Tuple[int, int]]:
     query = "SELECT plus(gt_stats.1, gt_stats.2), plus(gt_stats.3, gt_stats.4) FROM (SELECT dictGet(%(gt_stats_dict)s, ('ac_wes', 'ac_wgs', 'hom_wes', 'hom_wgs'), key) AS gt_stats FROM %(key_lookup_table)s WHERE variantId=%(variant_id)s)"
@@ -20,9 +25,25 @@ def get_clickhouse_variant_counts(chrom: str, pos: int, genome_build: str, ref: 
 
 
 def get_clickhouse_variant_details(chrom: str, pos: int, genome_build: str, ref: str, alt: str) -> list[tuple]:
-    # TODO real query
-    query = "SELECT family_guid, calls FROM %(entries_table_name)s WHERE key in SELECT key"
-    params = {'entries_table_name': f'{genome_build}/SNV_INDEL/entries'}
+    query = """SELECT arrayMap(
+      x -> tupleConcat((
+        x.gt, 
+        dictGetOrDefault(seqrdb_affected_status_dict, 'affected', (family_guid, x.sampleId), 'U'), 
+        dictGetOrDefault(seqrdb_sex_dict, 'sex', (family_guid, x.sampleId), 'U')), 
+        dictGet(seqrdb_individual_metadata_dict, ('restrict_sharing', 'features', 'omim_id', 'mondo_id', 'is_solved', 'vlm_contact_email'), (family_guid, x.sampleId))
+    ), calls), 
+    has(discovery_families, family_guid), 
+    has(excluded_families, family_guid) 
+    FROM (
+        SELECT key, 
+        dictGet(seqrdb_discovery_variant_dict, 'family_guids', (key, 'SNV_INDEL')) AS discovery_families, 
+        dictGet(seqrdb_excluded_variant_dict, 'family_guids', (key, 'SNV_INDEL')) AS excluded_families 
+        FROM %(key_lookup_table)s WHERE variantId=%(variant_id)s
+    ) AS lookup INNER JOIN %(entries_table)s entries ON entries.key = lookup.key WHERE xpos=%(xpos)s"""
+    params = {
+        'entries_table': f'{genome_build}/SNV_INDEL/entries',
+        'xpos': ((1 + CHROMOSOMES.index(chrom))*int(1e9)) + pos,
+    }
     return _get_clickhouse_variant_query_result(chrom, pos, genome_build, ref, alt, query, params)
 
 
