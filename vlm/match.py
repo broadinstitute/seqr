@@ -25,6 +25,10 @@ VARIANT_SCHEMA = {
     'entityType': 'genomicVariant',
     'schema': 'ga4gh-beacon-variant-v2.0.0'
 }
+PHENOPACKET_SCHEMA = {
+    'entityType': 'Family',
+    'schema': 'phenopacket-2.0',
+}
 
 QUERY_PARAMS = ['assemblyId', 'referenceName', 'start', 'referenceBases', 'alternateBases']
 
