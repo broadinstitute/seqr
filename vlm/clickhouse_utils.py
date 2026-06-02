@@ -1,5 +1,4 @@
 import clickhouse_connect
-from collections.abc import Callable
 import os
 from typing import Optional, Tuple
 
