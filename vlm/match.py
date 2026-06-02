@@ -1,5 +1,6 @@
 from aiohttp.web import HTTPBadRequest
 from collections.abc import Callable
+import json
 import os
 from pyliftover.liftover import LiftOver
 import re
@@ -120,17 +121,119 @@ def _get_match_results(match: Optional[Tuple[int, int]], lift_match: Optional[Tu
     return total, result_sets, VARIANT_SCHEMA
 
 
+SEX_LOOKUP = {'M': 'MALE', 'F': 'FEMALE', 'U': 'UNKNOWN_SEX'}
+AFFECTED_LOOKUP = {'A': 'AFFECTED', 'N': 'UNAFFECTED', 'U': 'MISSING'}
+GT_LOOKUP = {
+    'HET': {'id': 'GENO:0000135', 'label': 'heterozygous'},
+    'HOM': {'id': 'GENO:0000136', 'label': 'homozygous'},
+}
+
+GENO_RESOURCE = {
+    'id': 'geno',
+    'name': 'GENO ontology',
+    'url': 'http://purl.obolibrary.org/obo/geno.owl',
+    'version': '2026-02-02',
+    'namespacePrefix': 'GENO',
+    'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+}
+HPO_RESOURCE = {
+    'id': 'hp',
+    'name': 'Human Phenotype Ontology',
+    'url': 'http://purl.obolibrary.org/obo/hp.owl',
+    'version': '2018-03-08',  # TODO real version
+    'namespacePrefix': 'HP',
+    'iriPrefix': 'http://purl.obolibrary.org/obo/HP_',
+}
+OMIM_RESOURCE = {
+    'id': 'omim',
+    'name': 'Online Mendelian Inheritance in Man',
+    'url': 'https://www.omim.org',
+    'version': '2018-03-08',  # TODO real version
+    'namespacePrefix': 'OMIM',
+    'iriPrefix': 'https://www.omim.org/entry/',
+}
+MONDO_RESOURCE = {
+    'id': 'mondo',
+    'name': 'Mondo Disease Ontology',
+    'url': 'http://purl.obolibrary.org/obo/mondo.owl',
+    'version': '2018-03-08',  # TODO real version
+    'namespacePrefix': 'MONDO',
+    'iriPrefix': 'http://purl.obolibrary.org/obo/MONDO_',
+}
+
+
 def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple]) -> Tuple[int, list[dict]]:
-    # TODO real formatting
     results = []
-    for samples, has_discovery, has_excluded in match + lift_match:
+    for f_i, (samples, has_discovery, has_excluded) in enumerate(match + lift_match):
+        family_id = f'F_{f_i}'
+        proband = None
+        relatives = []
+        pedigree = []
+        for s_i, (gt, affected, sex, restrict_sharing, features, omim_id, mondo_id, is_solved, vlm_contact_email) in enumerate(samples):
+            individual_id = f'I_{f_i}_{s_i}'
+            sex = SEX_LOOKUP.get(sex, 'OTHER_SEX')
+            pedigree.append({
+                'family_id': family_id,
+                'individual_id': individual_id,
+                'paternal_id': '0',
+                'maternal_id': '0',
+                'sex': sex,
+                'affected_status': AFFECTED_LOOKUP[affected],
+            })
+            if restrict_sharing:
+                features = None
+                omim_id = None
+                mondo_id = None
+                is_solved = False
+            resources = [GENO_RESOURCE]
+            phenotypic_features = []
+            if features:
+                phenotypic_features = [
+                    {'id': feature['id'], 'label': None} for feature in json.loads(features) # TODO labels
+                ]
+                resources.append(HPO_RESOURCE)
+            interpretation = {
+                'subject_or_biosample_id': individual_id,
+                'interpretation_status': 'CANDIDATE' if has_discovery else ('REJECTED' if has_excluded else 'UNKNOWN_STATUS'),
+                'call': {'variation_descriptor': {'allelic_state': GT_LOOKUP[gt]}},
+            }
+            diagnosis = {'genomic_interpretations': [interpretation]}
+            if omim_id:
+                diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None} # TODO label
+                resources.append(OMIM_RESOURCE)
+            elif mondo_id:
+                diagnosis['disease'] = {'id': mondo_id, 'label': label}
+                resources.append(MONDO_RESOURCE)
+            phenopacket = {
+                'id': individual_id,
+                'subject': {'id': individual_id, 'sex': sex},
+                'phenotypic_features': phenotypic_features,
+                'interpretations': [{
+                    'id': individual_id,
+                    'progress_status': 'SOLVED' if is_solved else 'UNKNOWN_PROGRESS',
+                    'diagnosis': diagnosis,
+                }],
+                'meta_data': {
+                    'phenopacket_schema_version': '2.0',
+                    'submitted_by': vlm_contact_email,
+                    'resources': resources,
+                },
+            }
+            if affected == 'A' and proband is None:
+                proband = phenopacket
+            else:
+                relatives.append(phenopacket)
+
+        if not proband:
+            proband = relatives[0]
+            relatives = relatives[1:]
+
         results.append({
-            'has_discovery': has_discovery,
-            'has_excluded': has_excluded,
-            'samples': [{
-                'gt': gt, 'affected': affected, 'sex': sex, 'restrict_sharing': restrict_sharing, 'features': features,
-                'omim_id': omim_id, 'mondo_id': mondo_id, 'is_solved': is_solved, 'vlm_contact_email': vlm_contact_email
-            } for gt, affected, sex, restrict_sharing, features, omim_id, mondo_id, is_solved, vlm_contact_email in samples],
+            'id': family_id,
+            'proband': proband,
+            'relatives': relatives,
+            'pedigree': {'persons': pedigree},
+            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
         })
 
     result_sets = [
