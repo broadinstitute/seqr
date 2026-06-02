@@ -20,4 +20,4 @@ def get_clickhouse_variant_counts(chrom: str, pos: int, genome_build: str, ref: 
             'dict_name': f'{genome_build}/SNV_INDEL/gt_stats_dict',
         },
     ).result_set
-    return results[0] if results else (0, 0)
+    return results[0] if results else None
