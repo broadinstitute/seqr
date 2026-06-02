@@ -22,7 +22,7 @@ def get_clickhouse_variant_counts(chrom: str, pos: int, genome_build: str, ref: 
 def _get_clickhouse_variant_query(chrom: str, pos: int, genome_build: str, ref: str, alt: str, query: str, params: dict) -> Optional[Tuple]:
     client = clickhouse_connect.get_client(**CLICKHOUSE_CONNECTION_PARAMS)
     results = client.query(
-         query + ' FROM %(table_name)s WHERE variantId=%(variant_id)s)',
+        query + ' FROM %(table_name)s WHERE variantId=%(variant_id)s)',
         parameters={
             'variant_id': f'{chrom}-{pos}-{ref}-{alt}',
             'table_name': f'{genome_build}/SNV_INDEL/key_lookup',
