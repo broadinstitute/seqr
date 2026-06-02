@@ -122,9 +122,19 @@ def _get_match_results(match: Optional[Tuple[int, int]], lift_match: Optional[Tu
 
 def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple]) -> Tuple[int, list[dict]]:
     # TODO real formatting
+    results = []
+    for samples, has_discovery, has_excluded in match + lift_match:
+        results.append({
+            'has_discovery': has_discovery,
+            'has_excluded': has_excluded,
+            'samples': [{
+                'gt': gt, 'affected': affected, 'sex': sex, 'restrict_sharing': restrict_sharing, 'features': features,
+                'omim_id': omim_id, 'mondo_id': mondo_id, 'is_solved': is_solved, 'vlm_contact_email': vlm_contact_email
+            } for gt, affected, sex, restrict_sharing, features, omim_id, mondo_id, is_solved, vlm_contact_email in samples],
+        })
+
     result_sets = [
-        ('match', 0, [match]),
-        ('lift_match', 0, [lift_match]),
+        (None, len(results), results),
     ]
     return 0, result_sets, PHENOPACKET_SCHEMA
 
@@ -150,7 +160,7 @@ def _format_results(total: int, result_sets: list[dict], url: str, schema: dict)
             'resultSets': [
                 {
                     'exists': bool(count),
-                    'id': f'{NODE_ID} {label}',
+                    'id': f'{NODE_ID} {label}' if label else NODE_ID,
                     'results': results,
                     'resultsCount': count,
                     'setType': schema['entityType'],
