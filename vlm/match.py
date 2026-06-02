@@ -5,7 +5,7 @@ from pyliftover.liftover import LiftOver
 import re
 from typing import Optional, Tuple
 
-from vlm.clickhouse_utils import get_clickhouse_variant_counts
+from vlm.clickhouse_utils import get_clickhouse_variant_counts, get_clickhouse_variant_details
 
 SEQR_BASE_URL = os.environ.get('SEQR_BASE_URL')
 VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL')
@@ -51,6 +51,10 @@ MAX_POS = 300_000_000
 
 def get_variant_match(query: dict) -> dict:
     return _get_variant_match(query, get_match=get_clickhouse_variant_counts, get_results=_get_match_results)
+
+
+def get_variant_match_details(query: dict) -> dict:
+    return _get_variant_match(query, get_match=get_clickhouse_variant_details, get_results=_get_match_detail_results)
 
 
 def _get_variant_match(query: dict, get_match: Callable, get_results: Callable) -> dict:
@@ -118,6 +122,15 @@ def _get_match_results(match: Optional[Tuple[int, int]], lift_match: Optional[Tu
         ('Unknown', 0, []),
     ]
     return total, result_sets, VARIANT_SCHEMA
+
+
+def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple]) -> Tuple[int, list[dict]]:
+    # TODO real formatting
+    result_sets = [
+        ('match', 0, [match]),
+        ('lift_match', 0, [lift_match]),
+    ]
+    return 0, result_sets, PHENOPACKET_SCHEMA
 
 
 def _format_results(total: int, result_sets: list[dict], url: str, schema: dict) -> dict:

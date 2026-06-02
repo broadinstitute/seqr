@@ -15,10 +15,17 @@ CLICKHOUSE_CONNECTION_PARAMS = {
 def get_clickhouse_variant_counts(chrom: str, pos: int, genome_build: str, ref: str, alt: str) -> Optional[Tuple[int, int]]:
     query = "SELECT plus(gt_stats.1, gt_stats.2), plus(gt_stats.3, gt_stats.4) FROM (SELECT dictGet(%(dict_name)s, ('ac_wes', 'ac_wgs', 'hom_wes', 'hom_wgs'), key) AS gt_stats"
     params = {'dict_name': f'{genome_build}/SNV_INDEL/gt_stats_dict'}
-    return _get_clickhouse_variant_query(chrom, pos, genome_build, ref, alt, query, params)
+    return _get_clickhouse_variant_query_result(chrom, pos, genome_build, ref, alt, query, params)
 
 
-def _get_clickhouse_variant_query(chrom: str, pos: int, genome_build: str, ref: str, alt: str, query: str, params: dict) -> Optional[Tuple]:
+def get_clickhouse_variant_details(chrom: str, pos: int, genome_build: str, ref: str, alt: str) -> Optional[Tuple[int, int]]:
+    # TODO real query
+    query = "SELECT plus(gt_stats.1, gt_stats.2), plus(gt_stats.3, gt_stats.4) FROM (SELECT dictGet(%(dict_name)s, ('ac_wes', 'ac_wgs', 'hom_wes', 'hom_wgs'), key) AS gt_stats"
+    params = {'dict_name': f'{genome_build}/SNV_INDEL/gt_stats_dict'}
+    return _get_clickhouse_variant_query_result(chrom, pos, genome_build, ref, alt, query, params)
+
+
+def _get_clickhouse_variant_query_result(chrom: str, pos: int, genome_build: str, ref: str, alt: str, query: str, params: dict) -> Optional[Tuple]:
     client = clickhouse_connect.get_client(**CLICKHOUSE_CONNECTION_PARAMS)
     results = client.query(
         query + ' FROM %(table_name)s WHERE variantId=%(variant_id)s)',

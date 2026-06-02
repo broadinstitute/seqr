@@ -3,7 +3,7 @@ import logging
 import traceback
 
 from vlm.auth import authenticate
-from vlm.match import get_variant_match
+from vlm.match import get_variant_match, get_variant_match_details
 
 logger = logging.getLogger(__name__)
 
@@ -33,10 +33,16 @@ async def match(request: web.Request) -> web.Response:
     return web.json_response(get_variant_match(request.query))
 
 
+async def match_details(request: web.Request) -> web.Response:
+    await authenticate(request)
+    return web.json_response(get_variant_match_details(request.query))
+
+
 async def init_web_app():
     app = web.Application(middlewares=[error_middleware], client_max_size=(1024 ** 2) * 10)
     app.add_routes([
         web.get('/vlm/match', match),
+        web.get('/vlm/match_details', match_details),
         web.get('/vlm/status', status),
     ])
     return app
