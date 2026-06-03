@@ -3,6 +3,7 @@ import json
 
 from django.db.models import Q
 
+from clickhouse_search.models.postgres_dicts import DiscoveryVariantDict, ExcludedVariantDict
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
     Family, GeneNote, Project, Dataset
 from seqr.utils.xpos_utils import get_xpos
@@ -13,7 +14,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_
     get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, STRUCTURED_METADATA_TAG_TYPES
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     login_and_policies_required
-from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json
+from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
 
 
 logger = logging.getLogger(__name__)
@@ -274,9 +275,9 @@ def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_t
 
     tag_type = tag_key.lower().rstrip('s')
     updated_data = request_json.get(tag_key, [])
-    deleted_guids = _delete_removed_tags(saved_variants, all_variant_guids, updated_data, request.user, tag_type, protected_tag_types)
+    deleted_guids, has_discovery_update, has_excluded_update = _delete_removed_tags(saved_variants, all_variant_guids, updated_data, request.user, tag_type, protected_tag_types)
 
-    _update_tags(saved_variants, request_json, request.user, tag_key, model_cls, get_tag_create_data)
+    _update_tags(saved_variants, request_json, request.user, tag_key, model_cls, get_tag_create_data, has_discovery_update=has_discovery_update, has_excluded_update=has_excluded_update)
 
     saved_variant_id_map = {sv.id: sv.guid for sv in saved_variants}
     tags, variant_tag_map = get_json_for_saved_variants_child_entities(model_cls, saved_variant_id_map)
@@ -311,15 +312,18 @@ def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, t
     remove_tags = tag_set.exclude(guid__in=existing_tag_guids)
     if protected_tag_types:
         remove_tags = remove_tags.exclude(variant_tag_type__name__in=protected_tag_types)
+    track_updates = tag_type == 'tag'
+    has_discovery_update = remove_tags.filter(variant_tag_type__category=DISCOVERY_CATEGORY).exists() if track_updates else False
+    has_excluded_update = remove_tags.filter(variant_tag_type__name='Excluded').exists() if track_updates else False
     for tag in remove_tags:
         tag_variant_guids = {sv.guid for sv in tag.saved_variants.all()}
         if tag_variant_guids == all_variant_guids:
             deleted_tag_guids.append(tag.guid)
             tag.delete_model(user, user_can_delete=True)
-    return deleted_tag_guids
+    return deleted_tag_guids, has_discovery_update, has_excluded_update
 
 
-def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=VariantTag, get_tag_create_data=_get_tag_type_create_data):
+def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=VariantTag, get_tag_create_data=_get_tag_type_create_data, has_discovery_update=False, has_excluded_update=False):
     tags = tags_json.get(tag_key, [])
     for tag in tags:
         if tag.get('tagGuid'):
@@ -327,12 +331,22 @@ def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=Vari
             update_model_from_json(model, tag, user=user, allow_unknown_keys=True)
         else:
             create_data = get_tag_create_data(tag, saved_variants=saved_variants)
+            if 'variant_tag_type' in create_data:
+                if create_data['variant_tag_type'].category == DISCOVERY_CATEGORY:
+                    has_discovery_update = True
+                elif create_data['variant_tag_type'].name == 'Excluded':
+                    has_excluded_update = True
             create_data.update({
                 'metadata': tag.get('metadata'),
                 'search_hash': tags_json.get('searchHash'),
             })
             model = create_model_from_json(model_cls, create_data, user)
             model.saved_variants.set(saved_variants)
+
+    if has_discovery_update:
+        DiscoveryVariantDict.reload()
+    if has_excluded_update:
+        ExcludedVariantDict.reload()
 
 
 @login_and_policies_required
