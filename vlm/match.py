@@ -202,7 +202,7 @@ def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple
                 diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None} # TODO label
                 resources.append(OMIM_RESOURCE)
             elif mondo_id:
-                diagnosis['disease'] = {'id': mondo_id, 'label': label}
+                diagnosis['disease'] = {'id': mondo_id, 'label': None} # TODO label
                 resources.append(MONDO_RESOURCE)
             phenopacket = {
                 'id': individual_id,
