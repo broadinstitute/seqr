@@ -5,7 +5,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Count, Max, Q, F
 from django.db.models.fields.files import ImageFieldFile
 
-from clickhouse_search.models.postgres_dicts import IndividualMetadataDict
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, IndividualMetadataDict
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import Omim
 from seqr.utils.gene_utils import get_genes_for_variant_display
@@ -211,6 +211,8 @@ def delete_families_handler(request, project_guid):
     # delete families
     Family.bulk_delete(request.user, project=project, guid__in=family_guids_to_delete)
 
+    AffectedDict.reload(request.user)
+    SexDict.reload(request.user)
     IndividualMetadataDict.reload(request.user)
 
     # send response

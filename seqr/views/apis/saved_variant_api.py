@@ -313,11 +313,16 @@ def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, t
     if protected_tag_types:
         remove_tags = remove_tags.exclude(variant_tag_type__name__in=protected_tag_types)
     track_updates = tag_type == 'tag'
-    has_discovery_update = remove_tags.filter(variant_tag_type__category=DISCOVERY_CATEGORY).exists() if track_updates else False
-    has_excluded_update = remove_tags.filter(variant_tag_type__name='Excluded').exists() if track_updates else False
+    has_discovery_update = False
+    has_excluded_update = False
     for tag in remove_tags:
         tag_variant_guids = {sv.guid for sv in tag.saved_variants.all()}
         if tag_variant_guids == all_variant_guids:
+            if track_updates:
+                if tag.variant_tag_type.category == DISCOVERY_CATEGORY:
+                    has_discovery_update = True
+                elif tag.variant_tag_type.name == 'Excluded':
+                    has_excluded_update = True
             deleted_tag_guids.append(tag.guid)
             tag.delete_model(user, user_can_delete=True)
     return deleted_tag_guids, has_discovery_update, has_excluded_update
