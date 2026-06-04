@@ -344,9 +344,9 @@ def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=Vari
             model.saved_variants.set(saved_variants)
 
     if has_discovery_update:
-        DiscoveryVariantDict.reload()
+        DiscoveryVariantDict.reload(user)
     if has_excluded_update:
-        ExcludedVariantDict.reload()
+        ExcludedVariantDict.reload(user)
 
 
 @login_and_policies_required

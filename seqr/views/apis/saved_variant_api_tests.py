@@ -949,6 +949,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         update_variant_tags_url = reverse(update_variant_tags_handler, args=[VARIANT_GUID])
         self.check_collaborator_login(update_variant_tags_url, request_data={'familyGuid': 'F000001_1'})
 
+        self.reset_logs()
         review_guid = 'VT1708633_2103343353_r0390_100'
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'tags': [
@@ -971,8 +972,19 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         self.assertSetEqual(
             {"Review", "Excluded"}, {vt.variant_tag_type.name for vt in
                                      VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)})
+        self.assert_json_logs(self.collaborator_user, [
+            ('delete VariantTag VT1726961_2103343353_r0390_100', {'dbUpdate': mock.ANY}),
+            ('update VariantTag VT1708633_2103343353_r0390_100', {'dbUpdate': mock.ANY}),
+            (mock.ANY, {'dbUpdate': {'dbEntity': 'VariantTag', 'entityId': mock.ANY, 'updateType': 'create', 'updateFields': [
+                'metadata', 'search_hash', 'variant_tag_type',
+            ]}}),
+            ('Reloading dictionary seqrdb_discovery_variant_dict', None),
+            ('Reloading dictionary seqrdb_excluded_variant_dict', None),
+            (None, {'httpRequest': mock.ANY, 'requestBody': mock.ANY}),
+        ])
 
         # test delete all - with MME submission
+        self.reset_logs()
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'tags': [],
             'familyGuid': 'F000001_1'
@@ -984,6 +996,12 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         })
         self.assertEqual(VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID).count(), 0)
         self.assertEqual(SavedVariant.objects.filter(guid=VARIANT_GUID).count(), 1)
+        self.assert_json_logs(self.collaborator_user, [
+            ('delete VariantTag VT1708633_2103343353_r0390_100', {'dbUpdate': mock.ANY}),
+            (mock.ANY, {'dbUpdate': {'dbEntity': 'VariantTag', 'entityId': mock.ANY, 'updateType': 'delete'}}),
+            ('Reloading dictionary seqrdb_excluded_variant_dict', None),
+            (None, {'httpRequest': mock.ANY, 'requestBody': mock.ANY}),
+        ])
 
         # test delete all - no MME submission
         update_no_submission_variant_tags_url = reverse(update_variant_tags_handler, args=[COMPOUND_HET_1_GUID])
@@ -1048,6 +1066,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
             update_variant_tags_handler, args=[','.join([COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])])
         self.check_collaborator_login(update_variant_tags_url, request_data={'familyGuid': 'F000001_1'})
 
+        self.reset_logs()
         response = self.client.post(update_variant_tags_url, content_type='application/json', data=json.dumps({
             'tags': [{'name': 'Review'}, {'name': 'Excluded'}],
             'familyGuid': 'F000001_1'
@@ -1071,6 +1090,17 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
             {"Review", "Excluded"},
             {vt.variant_tag_type.name for vt in VariantTag.objects.filter(
                 saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])})
+
+        self.assert_json_logs(self.collaborator_user, [
+            (mock.ANY, {'dbUpdate': {'dbEntity': 'VariantTag', 'entityId': mock.ANY, 'updateType': 'create', 'updateFields': [
+                 'metadata', 'search_hash', 'variant_tag_type',
+             ]}}),
+            (mock.ANY, {'dbUpdate': {'dbEntity': 'VariantTag', 'entityId': mock.ANY, 'updateType': 'create', 'updateFields': [
+                 'metadata', 'search_hash', 'variant_tag_type',
+             ]}}),
+            ('Reloading dictionary seqrdb_excluded_variant_dict', None),
+            (None, {'httpRequest': mock.ANY, 'requestBody': mock.ANY}),
+        ])
 
         invalid_url = reverse(update_variant_tags_handler, args=['not_variant,{}'.format(COMPOUND_HET_1_GUID)])
         response = self.client.post(invalid_url, content_type='application/json', data=json.dumps({
