@@ -150,6 +150,7 @@ class IndividualAPITest(object):
         edit_individuals_url = reverse(update_individual_hpo_terms, args=[INDIVIDUAL_UPDATE_GUID])
         self.check_manager_login(edit_individuals_url)
 
+        self.reset_logs()
         response = self.client.post(edit_individuals_url, content_type='application/json',
                                     data=json.dumps(INDIVIDUAL_UPDATE_DATA))
 
@@ -174,6 +175,11 @@ class IndividualAPITest(object):
         self.assertListEqual(Individual.objects.get(guid=INDIVIDUAL_UPDATE_GUID).features, [
             {'id': 'HP:0002011', 'qualifiers': [{'type': 'onset', 'label': 'congenital'}]},
             {'id': 'HP:0011675', 'notes': 'A new term'},
+        ])
+
+        self.assert_json_logs(self.manager_user, [
+            ('update Individual I000007_na20870', {'dbUpdate': mock.ANY}),
+            ('Reloading dictionary seqrdb_individual_metadata_dict', None),
         ])
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP')
@@ -378,6 +384,7 @@ class IndividualAPITest(object):
             dataset.active_individuals.set(set())
 
         # send valid requests
+        self.reset_logs()
         response = self.client.post(individuals_url, content_type='application/json', data=json.dumps({
             'individuals': [INDIVIDUAL_IDS_UPDATE_DATA]
         }))
@@ -392,6 +399,14 @@ class IndividualAPITest(object):
         self.assertFalse('I000002_na19678' in response_json['familiesByGuid']['F000001_1']['individualGuids'])
         self.assertIsNone(response_json['familiesByGuid']['F000001_1']['pedigreeImage'])
         self.assertFalse(Dataset.objects.filter(guid='S000130_na19678').exists())
+        self.assert_json_logs(self.manager_user, [
+            ('delete Dataset S000130_na19678', {'dbUpdate': mock.ANY}),
+            ('delete 1 Individuals', {'dbUpdate': mock.ANY}),
+            ('update 1 Familys', {'dbUpdate': mock.ANY}),
+            ('Reloading dictionary seqrdb_affected_status_dict', None),
+            ('Reloading dictionary seqrdb_sex_dict', None),
+            ('Reloading dictionary seqrdb_individual_metadata_dict', None),
+        ])
 
         # Test PM permission
         pm_required_delete_individuals_url = reverse(delete_individuals_handler, args=[PM_REQUIRED_PROJECT_GUID])
@@ -577,6 +592,7 @@ class IndividualAPITest(object):
 
         url = reverse(save_individuals_table_handler, args=[PROJECT_GUID, response_json['uploadedFileId']])
 
+        self.reset_logs()
         response = self.client.post(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
@@ -611,6 +627,33 @@ class IndividualAPITest(object):
         self.assertEqual(response_json['individualsByGuid']['I000008_na20872']['individualId'], 'NA20872_update')
 
         self._assert_expected_reload_calls(PROJECT_GUID)
+        self.assert_json_logs(self.manager_user, [
+            (mock.ANY, {'dbUpdate': {
+                'dbEntity': 'Family', 'entityId': mock.ANY, 'updateFields': ['family_id', 'project'], 'updateType': 'create',
+            }}),
+            ('update Individual I000001_na19675', {'dbUpdate': mock.ANY}),
+            ('update Individual I000002_na19678', {'dbUpdate': mock.ANY}),
+            ('update Individual I000008_na20872', {'dbUpdate': mock.ANY}),
+            (mock.ANY, {'dbUpdate': {
+                'dbEntity': 'Individual', 'entityId': mock.ANY, 'updateType': 'create', 'updateFields': [
+                    'affected', 'case_review_status', 'family', 'individual_id',
+                ],
+            }}),
+            (mock.ANY, {'dbUpdate': {
+                'dbEntity': 'FamilyNote', 'entityId': mock.ANY, 'updateType': 'create', 'updateFields': [
+                    'family', 'note', 'note_type',
+                ],
+            }}),
+            (mock.ANY, {'dbUpdate': {
+                'dbEntity': 'Individual', 'entityId': mock.ANY, 'updateType': 'update', 'updateFields': ['sex'],
+            }}),
+            ('update 3 Familys', {'dbUpdate': mock.ANY}),
+            ('Reloading dictionary seqrdb_affected_status_dict', None),
+            ('Triggering rebuild_gt_stats for R0001_1kg', None),
+            ('Triggered Rebuild Gt Stats', {'detail': {'project_guids': ['R0001_1kg']}}),
+            ('Reloading dictionary seqrdb_sex_dict', None),
+            ('Reloading dictionary seqrdb_individual_metadata_dict', None),
+        ])
 
         # Test PM permission
         receive_url = reverse(receive_individuals_table_handler, args=[PM_REQUIRED_PROJECT_GUID])
@@ -1044,6 +1087,7 @@ class IndividualAPITest(object):
             ]})
 
         # send valid request
+        self.reset_logs()
         header = f'family_id,{header}'
         rows[0] = '1,NA19678,,,,,false,,,,,'
         rows[1] = f'1,{rows[1]}'
@@ -1052,6 +1096,12 @@ class IndividualAPITest(object):
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response, expected_families=True, has_non_hpo_update=True)
+        self.assert_json_logs(self.collaborator_user, [
+            (None, {'httpRequest': mock.ANY}),
+            ('update Individual I000002_na19678', {'dbUpdate': mock.ANY}),
+            ('update Individual I000001_na19675', {'dbUpdate': mock.ANY}),
+            ('Reloading dictionary seqrdb_individual_metadata_dict', None),
+        ])
 
     def test_individuals_metadata_hpo_term_number_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
