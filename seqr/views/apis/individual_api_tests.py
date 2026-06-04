@@ -627,6 +627,8 @@ class IndividualAPITest(object):
         self.assertEqual(response_json['individualsByGuid']['I000008_na20872']['individualId'], 'NA20872_update')
 
         self._assert_expected_reload_calls(PROJECT_GUID)
+        read_tmp_table_logs = self._read_tmp_table_logs('ffa788c23360f0908f3de16dca799fe1')
+        self.assert_json_logs(None, read_tmp_table_logs)
         self.assert_json_logs(self.manager_user, [
             (mock.ANY, {'dbUpdate': {
                 'dbEntity': 'Family', 'entityId': mock.ANY, 'updateFields': ['family_id', 'project'], 'updateType': 'create',
@@ -653,7 +655,7 @@ class IndividualAPITest(object):
             ('Triggered Rebuild Gt Stats', {'detail': {'project_guids': ['R0001_1kg']}}),
             ('Reloading dictionary seqrdb_sex_dict', None),
             ('Reloading dictionary seqrdb_individual_metadata_dict', None),
-        ])
+        ], offset=len(read_tmp_table_logs))
 
         # Test PM permission
         receive_url = reverse(receive_individuals_table_handler, args=[PM_REQUIRED_PROJECT_GUID])
@@ -675,6 +677,10 @@ class IndividualAPITest(object):
     def _assert_expected_reload_calls(self, project_guid):
         self.assertEqual(len(responses.calls), 1)
         self.assertDictEqual(json.loads(responses.calls[0].request.body), {'project_guids': [project_guid]})
+
+    @staticmethod
+    def _read_tmp_table_logs(file_name):
+        return []
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     @mock.patch('seqr.views.utils.pedigree_info_utils.NO_VALIDATE_MANIFEST_PROJECT_CATEGORIES')
@@ -1096,12 +1102,15 @@ class IndividualAPITest(object):
         f = SimpleUploadedFile('updates.csv', "{}\n{}".format(header, '\n'.join(rows)).encode('utf-8'))
         response = self.client.post(url, data={'f': f})
         self._is_expected_individuals_metadata_upload(response, expected_families=True, has_non_hpo_update=True)
+
+        read_tmp_table_logs = self._read_tmp_table_logs('6aea3d1f1bfc295340aa504370102fd5')
+        offset = 2 if read_tmp_table_logs else 1
+        self.assert_json_logs(None, read_tmp_table_logs, offset=offset)
         self.assert_json_logs(self.collaborator_user, [
-            (None, {'httpRequest': mock.ANY}),
             ('update Individual I000002_na19678', {'dbUpdate': mock.ANY}),
             ('update Individual I000001_na19675', {'dbUpdate': mock.ANY}),
             ('Reloading dictionary seqrdb_individual_metadata_dict', None),
-        ])
+        ], offset=offset+len(read_tmp_table_logs))
 
     def test_individuals_metadata_hpo_term_number_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
@@ -1518,3 +1527,10 @@ class AnvilIndividualAPITest(AnvilAuthenticationTestCase, IndividualAPITest):
         else:
             self.mock_subprocess.stdout.__iter__.return_value = self.gs_files[file_name]
         return self.mock_subprocess
+
+    @staticmethod
+    def _read_tmp_table_logs(file_name):
+        return [
+            (f'==> gsutil ls gs://seqr-scratch-temp/temp_upload_{file_name}.json.gz', None),
+            (f'==> gsutil cat gs://seqr-scratch-temp/temp_upload_{file_name}.json.gz | gunzip -c -q - ', None),
+        ]

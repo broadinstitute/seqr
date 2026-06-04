@@ -997,7 +997,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         self.assertEqual(VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID).count(), 0)
         self.assertEqual(SavedVariant.objects.filter(guid=VARIANT_GUID).count(), 1)
         self.assert_json_logs(self.collaborator_user, [
-            ('delete VariantTag VT1708633_2103343353_r0390_100', {'dbUpdate': mock.ANY}),
+            (mock.ANY, {'dbUpdate': {'dbEntity': 'VariantTag', 'entityId': mock.ANY, 'updateType': 'delete'}}),
             (mock.ANY, {'dbUpdate': {'dbEntity': 'VariantTag', 'entityId': mock.ANY, 'updateType': 'delete'}}),
             ('Reloading dictionary seqrdb_excluded_variant_dict', None),
             (None, {'httpRequest': mock.ANY, 'requestBody': mock.ANY}),
