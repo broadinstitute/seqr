@@ -3,15 +3,15 @@ import mock
 
 from django.urls.base import reverse
 
-from clickhouse_search.models.reference_data_models import DbnsfpGRCh37SnvIndelMv, DbnsfpGRCh37SnvIndelDict
+from clickhouse_search.all_search_tests import ClickhouseSearchTestCase
 from seqr.models import SavedVariant, VariantNote, VariantTag, VariantFunctionalData, Project
 from seqr.views.apis.saved_variant_api import saved_variant_data, create_variant_note_handler, create_saved_variant_handler, \
     update_variant_note_handler, delete_variant_note_handler, update_variant_tags_handler, create_manual_saved_variant_handler, \
     update_variant_main_transcript, update_variant_functional_data_handler, update_variant_acmg_classification_handler
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants
-from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_DETAIL_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
+from seqr.views.utils.test_utils import SAVED_VARIANT_DETAIL_FIELDS, TAG_FIELDS, GENE_VARIANT_FIELDS, \
     TAG_TYPE_FIELDS, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, FAMILY_FIELDS, INDIVIDUAL_FIELDS, IGV_SAMPLE_FIELDS, \
-    FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_FIELDS, AnvilAuthenticationTestCase
+    FAMILY_NOTE_FIELDS, MATCHMAKER_SUBMISSION_FIELDS, SAVED_VARIANT_FIELDS
 
 
 PROJECT_GUID = 'R0001_1kg'
@@ -144,10 +144,13 @@ CREATE_VARIANT_JSON = {
 }
 
 
-class SavedVariantAPITest(object):
+class SavedVariantAPITest(ClickhouseSearchTestCase):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_discovery_variants', 'clickhouse_saved_variants']
 
     @mock.patch('seqr.views.utils.variant_utils.OMIM_GENOME_VERSION', '37')
     def test_saved_variant_data(self):
+        Project.objects.filter(guid__in=[PROJECT_GUID, 'R0003_test']).update(genome_version='37')
+
         url = reverse(saved_variant_data, args=[PROJECT_GUID])
         self.check_collaborator_login(url)
 
@@ -378,6 +381,17 @@ class SavedVariantAPITest(object):
             *variant_fields, *SAVED_VARIANT_DETAIL_FIELDS, 'discoveryTags', 'noAccessDiscoveryFamilies', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
         })
 
+        self.mock_list_workspaces.assert_called_with(self.analyst_user)
+        self.mock_get_ws_access_level.assert_any_call(
+            mock.ANY, 'ext-data', 'empty')
+        self.mock_get_ws_access_level.assert_called_with(
+            mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 15)
+        self.mock_get_groups.assert_called_with(self.collaborator_user)
+        self.assertEqual(self.mock_get_groups.call_count, 1)
+        self.mock_get_ws_acl.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
+
     def test_create_saved_variant(self):
         create_saved_variant_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000001_1'})
@@ -429,6 +443,8 @@ class SavedVariantAPITest(object):
             create_variant_request_body))
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(list(response.json()['savedVariantsByGuid'].keys()), [variant_guid])
+
+        self.assert_no_list_ws_has_al(3)
 
     def _assert_created_variant(self, saved_variant, variant_json, gene_ids=None, dataset_type='SNV_INDEL', sv_type=None, main_transcript=None):
         for field in ['xpos', 'ref', 'alt', 'key']:
@@ -511,6 +527,8 @@ class SavedVariantAPITest(object):
         self.assertDictEqual(response_json['variantTagsByGuid'], {})
         self.assertDictEqual(response_json['variantFunctionalDataByGuid'], {})
 
+        self.assert_no_list_ws_has_al(2)
+
     def test_create_saved_compound_hets(self):
         create_saved_compound_hets_url = reverse(create_saved_variant_handler)
         self.check_collaborator_login(create_saved_compound_hets_url, request_data={'familyGuid': 'F000001_1'})
@@ -568,6 +586,8 @@ class SavedVariantAPITest(object):
             saved_variants__guid__contains=new_compound_het_3_guid)])
         self.assertListEqual(["Review"], [vt.variant_tag_type.name for vt in VariantTag.objects.filter(
             saved_variants__guid__contains=new_compound_het_4_guid)])
+
+        self.assert_no_list_ws_has_al(2)
 
     def test_create_manual_variant(self):
         create_saved_variant_url = reverse(create_manual_saved_variant_handler, args=['F000001_1'])
@@ -766,6 +786,8 @@ class SavedVariantAPITest(object):
         new_variant_note = VariantNote.objects.filter(guid=updated_note_response['noteGuid'])
         self.assertEqual(len(new_variant_note), 0)
 
+        self.assert_no_list_ws_has_al(8)
+
     def test_create_partially_saved_compound_het_variant_note(self):
         # compound het 5 is not saved, whereas compound het 1 is saved
         create_saved_variant_url = reverse(create_saved_variant_handler)
@@ -811,6 +833,8 @@ class SavedVariantAPITest(object):
         self.assertEqual(
             'one_saved_one_not_saved_compount_hets_note', response_json['variantNotesByGuid'][note_guids[0]]['note'],
         )
+
+        self.assert_no_list_ws_has_al(2)
 
     def test_create_update_and_delete_compound_hets_variant_note(self):
         # send valid request to create variant_note for compound hets
@@ -916,6 +940,8 @@ class SavedVariantAPITest(object):
         variants = SavedVariant.objects.filter(guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
         self.assertEqual(len(variants), 0)
 
+        self.assert_no_list_ws_has_al(7)
+
     def test_update_variant_tags(self):
         variant_tags = VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual({"Review", "Tier 1 - Novel gene and phenotype"}, {vt.variant_tag_type.name for vt in variant_tags})
@@ -972,6 +998,8 @@ class SavedVariantAPITest(object):
         self.assertEqual(VariantTag.objects.filter(saved_variants__guid__contains=COMPOUND_HET_1_GUID).count(), 0)
         self.assertEqual(SavedVariant.objects.filter(guid=COMPOUND_HET_1_GUID).count(), 0)
 
+        self.assert_no_list_ws_has_al(4)
+
     def test_update_variant_functional_data(self):
         variant_functional_data = VariantFunctionalData.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
         self.assertSetEqual(
@@ -1009,6 +1037,8 @@ class SavedVariantAPITest(object):
             {"Biochemical Function", "Bonferroni corrected p-value"},
             {vt.functional_data_tag for vt in variant_functional_data})
         self.assertSetEqual({"An updated note", "0.05"}, {vt.metadata for vt in variant_functional_data})
+
+        self.assert_no_list_ws_has_al(2)
 
     def test_update_compound_hets_variant_tags(self):
         variant_tags = VariantTag.objects.filter(saved_variants__guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
@@ -1049,6 +1079,8 @@ class SavedVariantAPITest(object):
         }))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
+
+        self.assert_no_list_ws_has_al(3)
 
     def test_update_compound_hets_variant_functional_data(self):
         variant_functional_data = VariantFunctionalData.objects.filter(
@@ -1095,6 +1127,8 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Unable to find the following variant(s): not_variant'})
 
+        self.assert_no_list_ws_has_al(3)
+
     def test_update_variant_main_transcript(self):
         transcript_id = 'ENST00000438943'
         update_main_transcript_url = reverse(update_variant_main_transcript, args=[VARIANT_GUID, transcript_id])
@@ -1110,6 +1144,8 @@ class SavedVariantAPITest(object):
         self.assertEqual(saved_variants.first().selected_main_transcript_id, transcript_id)
         self.assertDictEqual(saved_variants.first().main_transcript, transcript)
         self.assertEqual(get_json_for_saved_variants(saved_variants)[0]['selectedMainTranscriptId'], transcript_id)
+
+        self.assert_no_list_ws_has_al(2)
 
     def test_update_variant_acmg_classification(self):
         update_variant_acmg_classification_url = reverse(update_variant_acmg_classification_handler, args=[VARIANT_GUID])
@@ -1129,87 +1165,11 @@ class SavedVariantAPITest(object):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'savedVariantsByGuid': {VARIANT_GUID: {'acmgClassification': variant['variant']['acmgClassification']}}})
 
+        self.assert_no_list_ws_has_al(2)
 
-# Tests for AnVIL access disabled
-class LocalSavedVariantAPITest(AuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_discovery_variants', 'clickhouse_saved_variants']
-
-
-def assert_no_list_ws_has_al(self, acl_call_count):
-    self.mock_list_workspaces.assert_not_called()
-    self.mock_get_ws_access_level.assert_called_with(mock.ANY,
-        'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-    self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
-    self.assert_no_extra_anvil_calls()
-
-
-# Test for permissions from AnVIL only
-class AnvilSavedVariantAPITest(AnvilAuthenticationTestCase, SavedVariantAPITest):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_discovery_variants', 'clickhouse_saved_variants']
-
-    @classmethod
-    def setUpTestData(cls):
-        super().setUpTestData()
-        DbnsfpGRCh37SnvIndelMv.refresh()
-        DbnsfpGRCh37SnvIndelDict.reload()
-
-    def test_saved_variant_data(self, *args):
-        super(AnvilSavedVariantAPITest, self).test_saved_variant_data(*args)
-        self.mock_list_workspaces.assert_called_with(self.analyst_user)
-        self.mock_get_ws_access_level.assert_any_call(
-            mock.ANY, 'ext-data', 'empty')
-        self.mock_get_ws_access_level.assert_called_with(
-            mock.ANY, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 15)
-        self.mock_get_groups.assert_called_with(self.collaborator_user)
-        self.assertEqual(self.mock_get_groups.call_count, 1)
-        self.mock_get_ws_acl.assert_not_called()
-        self.mock_get_group_members.assert_not_called()
-
-    def test_create_saved_variant(self):
-        super(AnvilSavedVariantAPITest, self).test_create_saved_variant()
-        assert_no_list_ws_has_al(self, 3)
-
-    def test_create_saved_sv_variant(self):
-        super(AnvilSavedVariantAPITest, self).test_create_saved_sv_variant()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_create_saved_compound_hets(self):
-        super(AnvilSavedVariantAPITest, self).test_create_saved_compound_hets()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_create_update_and_delete_variant_note(self):
-        super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_variant_note()
-        assert_no_list_ws_has_al(self, 8)
-
-    def test_create_partially_saved_compound_het_variant_note(self):
-        super(AnvilSavedVariantAPITest, self).test_create_partially_saved_compound_het_variant_note()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_create_update_and_delete_compound_hets_variant_note(self):
-        super(AnvilSavedVariantAPITest, self).test_create_update_and_delete_compound_hets_variant_note()
-        assert_no_list_ws_has_al(self, 7)
-
-    def test_update_variant_tags(self):
-        super(AnvilSavedVariantAPITest, self).test_update_variant_tags()
-        assert_no_list_ws_has_al(self, 4)
-
-    def test_update_variant_functional_data(self):
-        super(AnvilSavedVariantAPITest, self).test_update_variant_functional_data()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_update_compound_hets_variant_tags(self):
-        super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_tags()
-        assert_no_list_ws_has_al(self, 3)
-
-    def test_update_compound_hets_variant_functional_data(self):
-        super(AnvilSavedVariantAPITest, self).test_update_compound_hets_variant_functional_data()
-        assert_no_list_ws_has_al(self, 3)
-
-    def test_update_variant_main_transcript(self):
-        super(AnvilSavedVariantAPITest, self).test_update_variant_main_transcript()
-        assert_no_list_ws_has_al(self, 2)
-
-    def test_update_variant_acmg_classification(self):
-        super(AnvilSavedVariantAPITest, self).test_update_variant_acmg_classification()
-        assert_no_list_ws_has_al(self, 2)
+    def assert_no_list_ws_has_al(self, acl_call_count):
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_ws_access_level.assert_called_with(mock.ANY,
+            'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
+        self.assertEqual(self.mock_get_ws_access_level.call_count, acl_call_count)
+        self.assert_no_extra_anvil_calls()
