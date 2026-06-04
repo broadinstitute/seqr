@@ -94,7 +94,7 @@ def update_individual_hpo_terms(request, individual_guid):
         for key in feature_fields
     }
     update_individual_from_json(individual, update_json, user=request.user, allow_features_update=True)
-    IndividualMetadataDict.reload()
+    IndividualMetadataDict.reload(request.user)
 
     individual_json = {k: getattr(individual, _to_snake_case(k)) for k in feature_fields}
     add_individual_hpo_details([individual_json])
@@ -220,9 +220,9 @@ def delete_individuals_handler(request, project_guid):
 
     # delete the individuals
     families_with_deleted_individuals = delete_individuals(project, individual_guids_to_delete, request.user)
-    AffectedDict.reload()
-    SexDict.reload()
-    IndividualMetadataDict.reload()
+    AffectedDict.reload(request.user)
+    SexDict.reload(request.user)
+    IndividualMetadataDict.reload(request.user)
 
     deleted_individuals_by_guid = {
         individual_guid: None for individual_guid in individual_guids_to_delete
@@ -671,7 +671,7 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
             family_assigned_analysts[record[ASSIGNED_ANALYST_COL]].append(individual.family.id)
 
     if any(FEATURES_COL in record for record in json_records):
-        IndividualMetadataDict.reload()
+        IndividualMetadataDict.reload(request.user)
 
     response = {
         'individualsByGuid': {

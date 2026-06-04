@@ -211,7 +211,7 @@ def delete_families_handler(request, project_guid):
     # delete families
     Family.bulk_delete(request.user, project=project, guid__in=family_guids_to_delete)
 
-    IndividualMetadataDict.reload()
+    IndividualMetadataDict.reload(request.user)
 
     # send response
     return create_json_response({
@@ -238,7 +238,7 @@ def update_family_fields_handler(request, family_guid):
         'display_name',
     ] + immutable_keys, updated_fields=updated_fields)
     if updated_fields.intersection({'post_discovery_omim_numbers', 'post_discovery_mondo_id', 'analysis_status'}):
-        IndividualMetadataDict.reload()
+        IndividualMetadataDict.reload(request.user)
 
     return create_json_response({
         family.guid: _get_json_for_model(family, user=request.user, process_result=_set_display_name)

@@ -7,7 +7,7 @@ from django.db.models.functions import JSONObject, TruncDate
 from django.utils import timezone
 from notifications.models import Notification
 
-from clickhouse_search.models.postgres_dicts import IndividualMetadataDict
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, IndividualMetadataDict
 from matchmaker.models import MatchmakerSubmission
 from seqr.models import Project, Family, Individual, Dataset, RnaSample, FamilyNote, PhenotypePrioritization, CAN_EDIT
 from seqr.utils.file_utils import file_iter
@@ -60,7 +60,7 @@ def create_project_handler(request):
         project_args['is_mme_enabled'] = False
 
     project = create_model_from_json(Project, project_args, user=request.user)
-    IndividualMetadataDict.reload()
+    IndividualMetadataDict.reload(request.user)
 
     return create_json_response({
         'projectsByGuid': {
@@ -92,7 +92,7 @@ def update_project_handler(request, project_guid):
 
     update_project_from_json(project, request_json, request.user, allow_unknown_keys=True, updated_fields=updated_fields)
     if 'restrict_sharing' in updated_fields or 'vlm_contact_email' in updated_fields:
-        IndividualMetadataDict.reload()
+        IndividualMetadataDict.reload(request.user)
 
     return create_json_response({
         'projectsByGuid': {
@@ -382,7 +382,9 @@ def _delete_project(project_guid, user):
 
     project.delete_model(user, user_can_delete=True)
 
-    IndividualMetadataDict.reload()
+    AffectedDict.reload(user)
+    SexDict.reload(user)
+    IndividualMetadataDict.reload(user)
 
     if anvil_enabled() and not is_internal_anvil_project(project):
         AirtableSession(user, base=AirtableSession.ANVIL_BASE).safe_patch_records(
