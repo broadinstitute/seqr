@@ -82,7 +82,7 @@ def update_project_handler(request, project_guid):
     check_project_permissions(project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
-    updated_fields = None
+    updated_fields = set()
     consent_code = request_json.get('consentCode')
     if consent_code and consent_code != project.consent_code:
         if not user_is_pm(request.user):
