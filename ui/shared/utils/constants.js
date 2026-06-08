@@ -1574,7 +1574,11 @@ export const ORDERED_PREDICTOR_FIELDS = [
     fieldTitle: 'gnomAD Constraint',
     displayOnly: true,
     thresholds: [undefined, undefined, 2.18, 4, undefined],
-    citation: CLINGEN_CITATION,
+    citation: {
+      name: '2022 recommendations from the gnomAD team',
+      linkText: 'Blog',
+      href: 'https://gnomad.broadinstitute.org/news/2022-10-the-addition-of-a-genomic-constraint-metric-to-gnomad/',
+    },
   },
   { field: 'haplogroup_defining', indicatorMap: { true: { color: 'green', value: '' } } },
   { field: 'mitotip', indicatorMap: MITOTIP_MAP, fieldTitle: 'MitoTIP' },
@@ -1645,8 +1649,10 @@ export const predictorColorRanges = (thresholds, { citation, reverseThresholds, 
     })}
     {citation && (
       <small>
-        {`Based on ${citation.name} (PMID: `}
-        <a href={`https://pubmed.ncbi.nlm.nih.gov/${citation.pmid}`} target="_blank" rel="noreferrer">{citation.pmid}</a>
+        {`Based on ${citation.name} (${citation.pmid ? 'PMID: ' : ''}`}
+        <a href={citation.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${citation.pmid}` : citation.href} target="_blank" rel="noreferrer">
+          {citation.pmid || citation.linkText}
+        </a>
         )
       </small>
     )}
