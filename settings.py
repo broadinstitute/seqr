@@ -245,13 +245,15 @@ CLICKHOUSE_DB_CONFIG = {
         }
     }
 }
+CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
+CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
 DATABASES = {
     'default': dict(NAME='seqrdb', **POSTGRES_DB_CONFIG),
     'reference_data': dict(NAME='reference_data_db', **POSTGRES_DB_CONFIG),
     'clickhouse_write': {
         **CLICKHOUSE_DB_CONFIG,
-        'USER': os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse'),
-        'PASSWORD': os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test'),
+        'USER': CLICKHOUSE_WRITER_USER,
+        'PASSWORD': CLICKHOUSE_WRITER_PASSWORD,
     },
     'clickhouse': {
         **CLICKHOUSE_DB_CONFIG,
