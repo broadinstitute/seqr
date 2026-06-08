@@ -234,36 +234,35 @@ POSTGRES_DB_CONFIG = {
     'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
     'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'pgtest'),
 }
+CLICKHOUSE_DB_CONFIG = {
+    'ENGINE': 'clickhouse_search.backend',
+    'NAME': 'seqr',
+    'HOST': os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME', 'localhost'),
+    'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
+    'OPTIONS': {
+        'settings': {
+            'use_client_time_zone': False,
+        }
+    }
+}
 DATABASES = {
     'default': dict(NAME='seqrdb', **POSTGRES_DB_CONFIG),
     'reference_data': dict(NAME='reference_data_db', **POSTGRES_DB_CONFIG),
+    'clickhouse_write': {
+        **CLICKHOUSE_DB_CONFIG,
+        'USER': os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse'),
+        'PASSWORD': os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test'),
+    },
+    'clickhouse': {
+        **CLICKHOUSE_DB_CONFIG,
+        'USER': os.environ.get('CLICKHOUSE_READER_USER', 'clickhouse'),
+        'PASSWORD': os.environ.get('CLICKHOUSE_READER_PASSWORD', 'clickhouse_test'),
+    },
 }
 DATABASE_ROUTERS = ['reference_data.models.ReferenceDataRouter', 'clickhouse_search.models.ClickHouseRouter']
 
 CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/in-memory-dir')
 CLICKHOUSE_DATA_DIR = os.getenv('CLICKHOUSE_DATA_DIR', '/var/seqr/clickhouse-data')
-CLICKHOUSE_SERVICE_HOSTNAME =  os.environ.get('CLICKHOUSE_SERVICE_HOSTNAME')
-CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'clickhouse')
-CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'clickhouse_test')
-if CLICKHOUSE_SERVICE_HOSTNAME:
-    DATABASES['clickhouse_write'] = {
-        'ENGINE': 'clickhouse_search.backend',
-        'NAME': 'seqr',
-        'HOST': CLICKHOUSE_SERVICE_HOSTNAME,
-        'PORT': int(os.environ.get('CLICKHOUSE_SERVICE_PORT', '9000')),
-        'USER': CLICKHOUSE_WRITER_USER,
-        'PASSWORD': CLICKHOUSE_WRITER_PASSWORD,
-        'OPTIONS': {
-            'settings': {
-                'use_client_time_zone': False,
-            }
-        },
-    }
-    DATABASES['clickhouse'] = {
-        **DATABASES['clickhouse_write'],
-        'USER': os.environ.get('CLICKHOUSE_READER_USER', 'clickhouse'),
-        'PASSWORD': os.environ.get('CLICKHOUSE_READER_PASSWORD', 'clickhouse_test'),
-    }
 
 TEST_RUNNER = "seqr.testrunner.OrderedDatabaseDeletionRunner"
 
