@@ -151,7 +151,6 @@ OMIM_RESOURCE = {
     'id': 'omim',
     'name': 'Online Mendelian Inheritance in Man',
     'url': 'https://www.omim.org',
-    'version': '2018-03-08',  # TODO real version
     'namespacePrefix': 'OMIM',
     'iriPrefix': 'https://www.omim.org/entry/',
 }
@@ -208,7 +207,7 @@ def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple
             diagnosis = {'genomic_interpretations': [interpretation]}
             if omim_id:
                 diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None} # TODO label
-                resources.append(OMIM_RESOURCE)
+                resources.append({**OMIM_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
             elif mondo_id:
                 if mondo_id not in mondo_label_map:
                     resp = http.request('GET', f'{ONTOLOGY_API_URL}/mondo/terms/{mondo_id}')
