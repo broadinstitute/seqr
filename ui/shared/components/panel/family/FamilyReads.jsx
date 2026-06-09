@@ -296,7 +296,13 @@ class FamilyReads extends React.PureComponent {
   }
 
   updateReads = (familyGuid, locus, sampleTypes, tissueType) => {
-    this.setState({ openFamily: familyGuid, sampleTypes, locus, rnaReferences: TISSUE_REFERENCES_LOOKUP[tissueType] })
+    const project = familyGuid && this.getProjectForFamily(familyGuid)
+    this.setState({
+      openFamily: familyGuid,
+      sampleTypes,
+      locus,
+      rnaReferences: project?.genomeVersion === GENOME_VERSION_38 ? TISSUE_REFERENCES_LOOKUP[tissueType] : [],
+    })
   }
 
   getProjectForFamily = (familyGuid) => {
@@ -414,6 +420,7 @@ class FamilyReads extends React.PureComponent {
     const dnaTrackOptions = DNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const rnaTrackOptions = RNA_TRACK_TYPE_OPTIONS.filter(({ value }) => igvSampleIndividuals[value])
     const project = openFamily && this.getProjectForFamily(openFamily)
+    const isGrch38 = project?.genomeVersion === GENOME_VERSION_38
     const geneLocus = project && variant && getGeneLocus(variant, genesById, project)
     const locusOptions = [
       { text: 'Variant', value: geneLocus && getVariantLocus(variant) },
@@ -463,15 +470,17 @@ class FamilyReads extends React.PureComponent {
               <div>
                 {sampleTypes.some(sampleType => RNA_TRACK_TYPE_LOOKUP.has(sampleType)) && (
                   <div>
-                    <Divider horizontal>Reference Tracks</Divider>
-                    {this.gtexSelector('Normalized', NORM_GTEX_TRACK_OPTIONS)}
-                    {this.gtexSelector('Aggregate', AGG_GTEX_TRACK_OPTIONS)}
-                    <CheckboxGroup
-                      groupLabel="Mappability Tracks"
-                      value={rnaReferences}
-                      options={MAPPABILITY_TRACK_OPTIONS}
-                      onChange={this.updateRnaReferences}
-                    />
+                    {isGrch38 && <Divider horizontal>Reference Tracks</Divider>}
+                    {isGrch38 && this.gtexSelector('Normalized', NORM_GTEX_TRACK_OPTIONS)}
+                    {isGrch38 && this.gtexSelector('Aggregate', AGG_GTEX_TRACK_OPTIONS)}
+                    {isGrch38 && (
+                      <CheckboxGroup
+                        groupLabel="Mappability Tracks"
+                        value={rnaReferences}
+                        options={MAPPABILITY_TRACK_OPTIONS}
+                        onChange={this.updateRnaReferences}
+                      />
+                    )}
                     <Divider horizontal>Junction Filters</Divider>
                     <StateChangeForm
                       fields={JUNCTION_TRACK_FIELDS}
