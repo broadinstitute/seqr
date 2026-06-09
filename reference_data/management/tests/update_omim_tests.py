@@ -90,7 +90,7 @@ class UpdateOmimTest(ReferenceDataCommandTestCase):
     def _test_update_omim_command(self, additional_logs=None, **kwargs):
         self._test_update_command(
             'Omim', LAST_MODIFIED, existing_records=3, created_records=4, skipped_records=0,
-            additional_logs=[(6, 'Reloading dictionary seqrdb_omim', None), *(additional_logs or [])],
+            additional_logs=[(4, 'Reloading dictionary seqrdb_omim', None), *(additional_logs or [])],
             head_response=HEAD_RESPONSE, **kwargs,
         )
         self._assert_has_expected_omim_records()
