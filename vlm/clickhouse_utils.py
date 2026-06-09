@@ -39,7 +39,7 @@ def get_clickhouse_variant_details(chrom: str, pos: int, genome_build: str, ref:
         dictGet(seqrdb_discovery_variant_dict, 'family_guids', (key, 'SNV_INDEL')) AS discovery_families, 
         dictGet(seqrdb_excluded_variant_dict, 'family_guids', (key, 'SNV_INDEL')) AS excluded_families 
         FROM %(key_lookup_table)s WHERE variantId=%(variant_id)s
-    ) AS lookup INNER JOIN %(entries_table)s entries ON entries.key = lookup.key WHERE xpos=%(xpos)s"""
+    ) AS lookup INNER JOIN %(entries_table)s entries ON entries.key = lookup.key WHERE xpos=%(xpos)s ORDER BY entries.family_guid"""
     params = {
         'entries_table': f'{genome_build}/SNV_INDEL/entries',
         'xpos': ((1 + CHROMOSOMES.index(chrom))*int(1e9)) + pos,
