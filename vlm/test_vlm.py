@@ -208,8 +208,417 @@ class VlmTestCase(AioHTTPTestCase):
 
     @aioresponses(passthrough=['http://127.0.0.1'])
     async def test_match_details(self, mocked_responses):
+        response = {
+            'beaconHandovers': [
+                {
+                    'handoverType': {
+                        'id': 'TestVLM',
+                        'label': 'TestVLM browser',
+                    },
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=1-38724419-T-G',
+                    'email': None,
+                }
+            ],
+            'meta': {
+                'apiVersion': 'v1.0',
+                'beaconId': 'com.gnx.beacon.v2',
+                'returnedSchemas': [
+                    {
+                        'entityType': 'Family',
+                        'schema': 'phenopacket-2.0',
+                    }
+                ]
+            },
+            'responseSummary': {
+                'exists': True,
+                'total': 5,
+            },
+            'response': {
+                'resultSets': [
+                    {
+                        'exists': True,
+                        'id': 'TestVLM',
+                        'setType': 'Family',
+                        'resultsCount': 5,
+                        'results': [{
+                            'id': 'F_0',
+                            'pedigree': {
+                                 'persons': [{
+                                     'affected_status': 'UNAFFECTED',
+                                     'family_id': 'F_0',
+                                     'individual_id': 'I_0_0',
+                                     'maternal_id': '0',
+                                     'paternal_id': '0',
+                                     'sex': 'MALE',
+                                 }, {
+                                     'affected_status': 'AFFECTED',
+                                     'family_id': 'F_0',
+                                     'individual_id': 'I_0_1',
+                                     'maternal_id': '0',
+                                     'paternal_id': '0',
+                                     'sex': 'OTHER_SEX',
+                                 }],
+                            },
+                            'proband': {
+                                'id': 'I_0_1',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'disease': {'id': 'OMIM:615123', 'label': None},
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000136', 'label': 'homozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'UNKNOWN_STATUS',
+                                            'subject_or_biosample_id': 'I_0_1',
+                                        }],
+                                    },
+                                    'id': 'I_0_1',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [
+                                    {'id': 'HP:0002011', 'label': 'Morphological central nervous system abnormality'}, # TODO mock requests
+                                    {'id': 'HP:0011675', 'label': 'Arrhythmia'},
+                                ],
+                                'subject': {
+                                    'id': 'I_0_1',
+                                    'sex': 'OTHER_SEX',
+                                },
+                                'meta_data': {
+                                    'submitted_by': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }, {
+                                        'id': 'hp',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/HP_',
+                                        'name': 'Human Phenotype Ontology',
+                                        'namespacePrefix': 'HP',
+                                        'url': 'http://purl.obolibrary.org/obo/hp.owl',
+                                        'version': '2026-06-09',  # TODO mock date
+                                    }, {
+                                        'id': 'omim',
+                                        'iriPrefix': 'https://www.omim.org/entry/',
+                                        'name': 'Online Mendelian Inheritance in Man',
+                                        'namespacePrefix': 'OMIM',
+                                        'url': 'https://www.omim.org',
+                                        'version': '2026-06-09',
+                                    }],
+                                },
+                            },
+                            'relatives': [{
+                                'id': 'I_0_0',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'disease': {'id': 'OMIM:615123', 'label': None},
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000135', 'label': 'heterozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'UNKNOWN_STATUS',
+                                            'subject_or_biosample_id': 'I_0_0',
+                                        }],
+                                    },
+                                    'id': 'I_0_0',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [],
+                                'subject': {
+                                    'id': 'I_0_0',
+                                    'sex': 'MALE',
+                                },
+                                'meta_data': {
+                                    'submitted_by': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }, {
+                                        'id': 'omim',
+                                        'iriPrefix': 'https://www.omim.org/entry/',
+                                        'name': 'Online Mendelian Inheritance in Man',
+                                        'namespacePrefix': 'OMIM',
+                                        'url': 'https://www.omim.org',
+                                        'version': '2026-06-09',
+                                    }],
+                                },
+                            }],
+                            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
+                        }, {
+                            'id': 'F_1',
+                            'pedigree': {
+                                'persons': [{
+                                    'affected_status': 'AFFECTED',
+                                    'family_id': 'F_1',
+                                    'individual_id': 'I_1_0',
+                                    'maternal_id': '0',
+                                    'paternal_id': '0',
+                                    'sex': 'OTHER_SEX',
+                                }],
+                            },
+                            'proband': {
+                                'id': 'I_1_0',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'disease': {'id': 'OMIM:615123', 'label': None},
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000136', 'label': 'homozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'UNKNOWN_STATUS',
+                                            'subject_or_biosample_id': 'I_1_0',
+                                        }],
+                                    },
+                                    'id': 'I_1_0',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [
+                                    {'id': 'HP:0002011', 'label': 'Morphological central nervous system abnormality'},
+                                    {'id': 'HP:0011675', 'label': 'Arrhythmia'},
+                                ],
+                                'subject': {
+                                    'id': 'I_1_0',
+                                    'sex': 'OTHER_SEX',
+                                },
+                                'meta_data': {
+                                    'submitted_by': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }, {
+                                        'id': 'hp',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/HP_',
+                                        'name': 'Human Phenotype Ontology',
+                                        'namespacePrefix': 'HP',
+                                        'url': 'http://purl.obolibrary.org/obo/hp.owl',
+                                        'version': '2026-06-09',
+                                    }, {
+                                        'id': 'omim',
+                                        'iriPrefix': 'https://www.omim.org/entry/',
+                                        'name': 'Online Mendelian Inheritance in Man',
+                                        'namespacePrefix': 'OMIM',
+                                        'url': 'https://www.omim.org',
+                                        'version': '2026-06-09',
+                                    }],
+                                },
+                            },
+                            'relatives': [],
+                            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
+                        }, {
+                            'id': 'F_2',
+                            'pedigree': {
+                                'persons': [{
+                                    'affected_status': 'MISSING',
+                                    'family_id': 'F_2',
+                                    'individual_id': 'I_2_0',
+                                    'maternal_id': '0',
+                                    'paternal_id': '0',
+                                    'sex': 'UNKNOWN_SEX',
+                                }, {
+                                    'affected_status': 'MISSING',
+                                    'family_id': 'F_2',
+                                    'individual_id': 'I_2_1',
+                                    'maternal_id': '0',
+                                    'paternal_id': '0',
+                                    'sex': 'UNKNOWN_SEX',
+                                }],
+                            },
+                            'proband': {
+                                'id': 'I_2_0',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000135', 'label': 'heterozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'UNKNOWN_STATUS',
+                                            'subject_or_biosample_id': 'I_2_0',
+                                        }],
+                                    },
+                                    'id': 'I_2_0',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [],
+                                'subject': {
+                                    'id': 'I_2_0',
+                                    'sex': 'UNKNOWN_SEX',
+                                },
+                                'meta_data': {
+                                    'submitted_by': '',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }],
+                                },
+                            },
+                            'relatives': [{
+                                'id': 'I_2_1',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000136', 'label': 'homozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'UNKNOWN_STATUS',
+                                            'subject_or_biosample_id': 'I_2_1',
+                                        }],
+                                    },
+                                    'id': 'I_2_1',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [],
+                                'subject': {
+                                    'id': 'I_2_1',
+                                    'sex': 'UNKNOWN_SEX',
+                                },
+                                'meta_data': {
+                                    'submitted_by': '',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }],
+                                },
+                            }],
+                            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
+                        }, {
+                            'id': 'F_3',
+                            'pedigree': {
+                                'persons': [{
+                                    'affected_status': 'AFFECTED',
+                                    'family_id': 'F_3',
+                                    'individual_id': 'I_3_0',
+                                    'maternal_id': '0',
+                                    'paternal_id': '0',
+                                    'sex': 'MALE',
+                                }],
+                            },
+                            'proband': {
+                                'id': 'I_3_0',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {
+                                                        'id': 'GENO:0000135', 'label': 'heterozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'UNKNOWN_STATUS',
+                                            'subject_or_biosample_id': 'I_3_0',
+                                        }],
+                                    },
+                                    'id': 'I_3_0',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [],
+                                'subject': {
+                                    'id': 'I_3_0',
+                                    'sex': 'MALE',
+                                },
+                                'meta_data': {
+                                    'submitted_by': 'seqr-test@gmail.com,test@broadinstitute.org',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }],
+                                },
+                            },
+                            'relatives': [],
+                            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
+                        }, {
+                            'id': 'F_4',
+                            'pedigree': {
+                                'persons': [{
+                                    'affected_status': 'AFFECTED',
+                                    'family_id': 'F_4',
+                                    'individual_id': 'I_4_0',
+                                    'maternal_id': '0',
+                                    'paternal_id': '0',
+                                    'sex': 'MALE',
+                                }],
+                            },
+                            'proband': {
+                                'id': 'I_4_0',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000135', 'label': 'heterozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'UNKNOWN_STATUS',
+                                            'subject_or_biosample_id': 'I_4_0',
+                                        }],
+                                    },
+                                    'id': 'I_4_0',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [],
+                                'subject': {
+                                    'id': 'I_4_0',
+                                    'sex': 'MALE',
+                                },
+                                'meta_data': {
+                                    'submitted_by': 'seqr-test@gmail.com,test@broadinstitute.org',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }],
+                                },
+                            },
+                            'relatives': [],
+                            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
+                        }],
+                    },
+                ],
+            }
+        }
         self.maxDiff = None # TODO
-        await self._test_match_endpoint('match_details', mocked_responses, {}, {}, {})
+        await self._test_match_endpoint('match_details', mocked_responses, response, {}, {})
 
     async def _test_match_endpoint(self, path, mocked_responses, response, only_37_response, empty_response):
 

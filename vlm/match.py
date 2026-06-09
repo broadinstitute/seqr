@@ -249,7 +249,7 @@ def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple
     result_sets = [
         (None, len(results), results),
     ]
-    return 0, result_sets, PHENOPACKET_SCHEMA
+    return len(results), result_sets, PHENOPACKET_SCHEMA
 
 
 def _format_results(total: int, result_sets: list[dict], url: str, schema: dict) -> dict:
