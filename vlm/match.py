@@ -5,8 +5,8 @@ import json
 import os
 from pyliftover.liftover import LiftOver
 import re
-import requests
 from typing import Optional, Tuple
+import urllib3
 
 from vlm.clickhouse_utils import get_clickhouse_variant_counts, get_clickhouse_variant_details, CHROMOSOMES
 
@@ -168,6 +168,7 @@ def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple
     results = []
     hpo_label_map = {}
     mondo_label_map = {}
+    http = urllib3.PoolManager(cert_reqs='CERT_NONE')
     for f_i, (samples, has_discovery, has_excluded) in enumerate(match + lift_match):
         family_id = f'F_{f_i}'
         proband = None
@@ -195,7 +196,7 @@ def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple
                 for feature in json.loads(features):
                     hpo_id = feature['id']
                     if hpo_id not in hpo_label_map:
-                        resp = requests.get(f'{ONTOLOGY_API_URL}/hp/terms/{hpo_id}')
+                        resp = http.request('GET', f'{ONTOLOGY_API_URL}/hp/terms/{hpo_id}')
                         hpo_label_map[hpo_id] = resp.json()['name']
                     phenotypic_features.append({'id': hpo_id, 'label': hpo_label_map[hpo_id]})
                 resources.append({**HPO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
@@ -210,7 +211,7 @@ def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple
                 resources.append(OMIM_RESOURCE)
             elif mondo_id:
                 if mondo_id not in mondo_label_map:
-                    resp = requests.get(f'{ONTOLOGY_API_URL}/mondo/terms/{mondo_id}')
+                    resp = http.request('GET', f'{ONTOLOGY_API_URL}/mondo/terms/{mondo_id}')
                     mondo_label_map[mondo_id] = resp.json()['name']
                 diagnosis['disease'] = {'id': mondo_id, 'label': mondo_label_map[mondo_id]}
                 resources.append({**MONDO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
