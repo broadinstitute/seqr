@@ -1,9 +1,11 @@
 from aiohttp.web import HTTPBadRequest
 from collections.abc import Callable
+from datetime import datetime
 import json
 import os
 from pyliftover.liftover import LiftOver
 import re
+import requests
 from typing import Optional, Tuple
 
 from vlm.clickhouse_utils import get_clickhouse_variant_counts, get_clickhouse_variant_details, CHROMOSOMES
@@ -12,6 +14,8 @@ SEQR_BASE_URL = os.environ.get('SEQR_BASE_URL')
 VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL')
 NODE_ID = os.environ.get('NODE_ID')
 LIFTOVER_DIR = f'{os.path.dirname(os.path.abspath(__file__))}/liftover_references'
+
+ONTOLOGY_API_URL = 'https://ontology.jax.org/api'
 
 BEACON_HANDOVER_TYPE = {
     'id': NODE_ID,
@@ -140,7 +144,6 @@ HPO_RESOURCE = {
     'id': 'hp',
     'name': 'Human Phenotype Ontology',
     'url': 'http://purl.obolibrary.org/obo/hp.owl',
-    'version': '2018-03-08',  # TODO real version
     'namespacePrefix': 'HP',
     'iriPrefix': 'http://purl.obolibrary.org/obo/HP_',
 }
@@ -156,7 +159,6 @@ MONDO_RESOURCE = {
     'id': 'mondo',
     'name': 'Mondo Disease Ontology',
     'url': 'http://purl.obolibrary.org/obo/mondo.owl',
-    'version': '2018-03-08',  # TODO real version
     'namespacePrefix': 'MONDO',
     'iriPrefix': 'http://purl.obolibrary.org/obo/MONDO_',
 }
@@ -164,6 +166,8 @@ MONDO_RESOURCE = {
 
 def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple]) -> Tuple[int, list[dict]]:
     results = []
+    hpo_label_map = {}
+    mondo_label_map = {}
     for f_i, (samples, has_discovery, has_excluded) in enumerate(match + lift_match):
         family_id = f'F_{f_i}'
         proband = None
@@ -188,10 +192,13 @@ def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple
             resources = [GENO_RESOURCE]
             phenotypic_features = []
             if features:
-                phenotypic_features = [
-                    {'id': feature['id'], 'label': None} for feature in json.loads(features) # TODO labels
-                ]
-                resources.append(HPO_RESOURCE)
+                for feature in json.loads(features):
+                    hpo_id = feature['id']
+                    if hpo_id not in hpo_label_map:
+                        resp = requests.get(f'{ONTOLOGY_API_URL}/hp/terms/{hpo_id}')
+                        hpo_label_map[hpo_id] = resp.json()['name']
+                    phenotypic_features.append({'id': hpo_id, 'label': hpo_label_map[hpo_id]})
+                resources.append({**HPO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
             interpretation = {
                 'subject_or_biosample_id': individual_id,
                 'interpretation_status': 'CANDIDATE' if has_discovery else ('REJECTED' if has_excluded else 'UNKNOWN_STATUS'),
@@ -202,8 +209,11 @@ def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple
                 diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None} # TODO label
                 resources.append(OMIM_RESOURCE)
             elif mondo_id:
-                diagnosis['disease'] = {'id': mondo_id, 'label': None} # TODO label
-                resources.append(MONDO_RESOURCE)
+                if mondo_id not in mondo_label_map:
+                    resp = requests.get(f'{ONTOLOGY_API_URL}/mondo/terms/{mondo_id}')
+                    mondo_label_map[mondo_id] = resp.json()['name']
+                diagnosis['disease'] = {'id': mondo_id, 'label': mondo_label_map[mondo_id]}
+                resources.append({**MONDO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
             phenopacket = {
                 'id': individual_id,
                 'subject': {'id': individual_id, 'sex': sex},
