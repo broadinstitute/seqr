@@ -39,6 +39,18 @@ class GeneIdDict(Dictionary):
         postgres_query = 'SELECT gene_id, id FROM reference_data_geneinfo'
 
 
+class OmimDict(Dictionary):
+    mim_number = models.UInt32Field(primary_key=True)
+    phenotype_description = models.StringField()
+
+    class Meta:
+        db_table = 'seqrdb_omim'
+        engine = models.MergeTree(primary_key='mim_number')
+        layout = 'HASHED()'
+        postgres_db = 'reference_data'
+        postgres_query = 'SELECT phenotype_mim_number, phenotype_description FROM reference_data_omim where phenotype_mim_number is not null'
+
+
 class IndividualMetadataDict(Dictionary):
     family_guid = models.StringField(primary_key=True)
     sampleId = models.StringField()
