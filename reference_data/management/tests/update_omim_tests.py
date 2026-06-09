@@ -80,18 +80,17 @@ class UpdateOmimTest(ReferenceDataCommandTestCase):
 
         self._test_update_omim_command(
             command_args=['--omim-key=test_key'],
-            additional_log=('==> gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', None),
-            additional_log_offset=3,
+            additional_logs=[(3, '==> gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', None)],
         )
 
         mock_subprocess.assert_called_with('gsutil mv /mock/tmp/* gs://seqr-reference-data/omim/', stdout=-1, stderr=-2, shell=True)  # nosec
         mock_open.assert_called_with('/mock/tmp/parsed_omim_records__latest.txt', 'w')
         self.assertEqual(mock_open.return_value.__enter__.return_value.write.call_args.args[0], CACHED_OMIM_DATA)
 
-    def _test_update_omim_command(self, **kwargs):
+    def _test_update_omim_command(self, additional_logs=None, **kwargs):
         self._test_update_command(
             'Omim', LAST_MODIFIED, existing_records=3, created_records=4, skipped_records=0,
-            additional_log_offset=5, additional_log=('Reloading dictionary seqrdb_omim', None),
+            additional_logs=[(4, 'Reloading dictionary seqrdb_omim', None), *(additional_logs or [])],
             head_response=HEAD_RESPONSE, **kwargs,
         )
         self._assert_has_expected_omim_records()
