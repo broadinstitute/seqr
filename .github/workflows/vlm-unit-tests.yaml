@@ -13,12 +13,14 @@ on:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
       - 'clickhouse_search/fixtures/clickhouse_search.json'
+      - 'seqr/fixtures/1kg_project.json'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
       - 'clickhouse_search/fixtures/clickhouse_search.json'
+      - 'seqr/fixtures/1kg_project.json'
 
 jobs:
   vlm_clickhouse:
