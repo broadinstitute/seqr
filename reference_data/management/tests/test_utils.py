@@ -75,6 +75,7 @@ class ReferenceDataCommandTestCase(AuthenticationTestCase):
             (f'Parsing file {tmp_file}', None),
             deleted_log,
             (f'Created {created_records} {model_name} records', None),
+            ('Reloading dictionary seqrdb_omim', None),
             ('Done', None),
             (f'Loaded {created_records} {model_name} records', None),
         ]

@@ -79,6 +79,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
         self.mock_slack.assert_not_called()
         self.assert_json_logs(user=None, expected=[
+            ('Reloading dictionary seqrdb_omim', None),
             ('unable to update PrimateAI: Primate_AI failed', {
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
@@ -148,6 +149,7 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
             }),
+            ('Reloading dictionary seqrdb_omim', None),
             ('Done', None),
             ('Updated: Omim, dbNSFPGene, GenCC', None),
         ])
