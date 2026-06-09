@@ -25,7 +25,8 @@ LAST_MODIFIED = 'Fri, 21 Mar 2025 10:02:00 GMT'
 HEAD_RESPONSE = {'headers': {'Content-Length': '1024', 'Last-Modified': LAST_MODIFIED}}
 
 class UpdateOmimTest(ReferenceDataCommandTestCase):
-
+    databases = '__all__'
+    
     URL = 'https://data.omim.org/downloads/test_key/genemap2.txt'
     DATA = OMIM_DATA
 

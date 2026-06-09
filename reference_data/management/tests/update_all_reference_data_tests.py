@@ -42,6 +42,7 @@ class BaseUpdateAllReferenceDataTest(ReferenceDataCommandTestCase):
 
 
 class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
+    databases = '__all__'
     fixtures = ['users']
 
     def test_empty_db_update_all_reference_data_command(self):
@@ -108,6 +109,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
 
 class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
+    databases = '__all__'
 
     def test_all_loaded_update_reference_data_command(self):
         call_command('update_all_reference_data')
