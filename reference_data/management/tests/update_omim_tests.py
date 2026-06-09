@@ -26,7 +26,7 @@ HEAD_RESPONSE = {'headers': {'Content-Length': '1024', 'Last-Modified': LAST_MOD
 
 class UpdateOmimTest(ReferenceDataCommandTestCase):
     databases = '__all__'
-    
+
     URL = 'https://data.omim.org/downloads/test_key/genemap2.txt'
     DATA = OMIM_DATA
 
