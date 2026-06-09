@@ -208,6 +208,7 @@ class VlmTestCase(AioHTTPTestCase):
 
     @aioresponses(passthrough=['http://127.0.0.1'])
     async def test_match_details(self, mocked_responses):
+        self.maxDiff = None # TODO
         await self._test_match_endpoint('match_details', mocked_responses, {}, {}, {})
 
     async def _test_match_endpoint(self, path, mocked_responses, response, only_37_response, empty_response):
