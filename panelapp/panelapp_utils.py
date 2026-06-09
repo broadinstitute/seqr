@@ -14,13 +14,22 @@ class TooManyRequestsError(Exception):
     pass
 
 
+def _get_latest_ensembl_id(grch38_versions):
+    if not grch38_versions:
+        return None
+    def sort_key(k):
+        return (int(k), k) if k.isdigit() else (-1, k)
+    latest_key = max(grch38_versions.keys(), key=sort_key)
+    return grch38_versions[latest_key].get('ensembl_id')
+
+
 def get_valid_panel_genes(panel_app_id, panel, panels_api_url, genes_by_panel_id, gene_ids_to_gene):
     if len(genes_by_panel_id[panel_app_id]) != panel['stats']['number_of_genes']:
         panel_genes_url = f'{panels_api_url}/{panel_app_id}/genes'
         _get_all_genes(panel_app_id, panel_genes_url, genes_by_panel_id)
 
     panel_genes_by_id = {
-        gene['gene_data']['ensembl_genes'].get('GRch38', {}).get('90', {}).get('ensembl_id'): gene
+        _get_latest_ensembl_id(gene['gene_data']['ensembl_genes'].get('GRch38', {})): gene
         for gene in genes_by_panel_id[panel_app_id] if isinstance(gene.get('gene_data', {}).get('ensembl_genes'), dict)
     }
     valid_panel_genes = {
