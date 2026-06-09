@@ -163,7 +163,7 @@ MONDO_RESOURCE = {
 }
 
 
-def _get_match_detail_results(match: Optional[Tuple], lift_match: Optional[Tuple]) -> Tuple[int, list[dict]]:
+def _get_match_detail_results(match: list[tuple], lift_match: list[tuple]) -> Tuple[int, list[dict]]:
     results = []
     hpo_label_map = {}
     mondo_label_map = {}
