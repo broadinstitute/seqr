@@ -42,6 +42,7 @@ class BaseUpdateAllReferenceDataTest(ReferenceDataCommandTestCase):
 
 
 class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
+    databases = '__all__'
     fixtures = ['users']
 
     def test_empty_db_update_all_reference_data_command(self):
@@ -78,6 +79,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
         self.mock_slack.assert_not_called()
         self.assert_json_logs(user=None, expected=[
+            ('Reloading dictionary seqrdb_gene_ids', None),
             ('unable to update PrimateAI: Primate_AI failed', {
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
