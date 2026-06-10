@@ -456,12 +456,19 @@ class FamilyAPITest(object):
                                     data=json.dumps({'successStoryTypes': ['O', 'D']}))
         self.assertEqual(response.status_code, 403)
 
+        self.reset_logs()
         self.login_analyst_user()
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'successStoryTypes': ['O', 'D']}))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(response_json[FAMILY_GUID]['successStoryTypes'], ['O', 'D'])
+        self.assert_json_logs(self.analyst_user, [
+            ('update Family F000001_1', {'dbUpdate': {
+                'dbEntity': 'Family', 'entityId': 'F000001_1', 'updateType': 'update', 'updateFields': ['success_story_types'],
+            }}),
+            (None, {'httpRequest': mock.ANY, 'requestBody': mock.ANY}),
+        ])
 
         self.check_no_analyst_no_access(url, get_response=lambda: self.client.post(
             url, content_type='application/json', data=json.dumps({'successStoryTypes': []})))
@@ -471,6 +478,7 @@ class FamilyAPITest(object):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
         self.check_collaborator_login(url)
 
+        self.reset_logs()
         body = {FAMILY_ID_FIELD: 'new_id', 'description': 'Updated description', 'analysis_status': 'C'}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
@@ -481,6 +489,14 @@ class FamilyAPITest(object):
         self.assertEqual(response_json[FAMILY_GUID]['analysisStatus'], 'C')
         self.assertEqual(response_json[FAMILY_GUID]['analysisStatusLastModifiedBy'], 'Test Collaborator User')
         self.assertEqual(response_json[FAMILY_GUID]['analysisStatusLastModifiedDate'], '2020-01-01T00:00:00')
+        self.assert_json_logs(self.collaborator_user, [
+            ('update Family F000001_1', {'dbUpdate': {
+                'dbEntity': 'Family', 'entityId': 'F000001_1', 'updateType': 'update',
+                'updateFields': ['analysis_status', 'analysis_status_last_modified_by', 'analysis_status_last_modified_date', 'description'],
+            }}),
+            ('Reloading dictionary seqrdb_individual_metadata_dict', None),
+            (None, {'httpRequest': mock.ANY, 'requestBody': body}),
+        ])
 
         # Do not update audit fields if value does not change
         self.login_manager()

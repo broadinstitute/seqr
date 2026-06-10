@@ -79,6 +79,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
         self.mock_slack.assert_not_called()
         self.assert_json_logs(user=None, expected=[
+            ('Reloading dictionary seqrdb_gene_ids', None),
             ('Reloading dictionary seqrdb_omim', None),
             ('unable to update PrimateAI: Primate_AI failed', {
                 'severity': 'ERROR',

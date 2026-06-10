@@ -1331,9 +1331,17 @@ class ReportAPITest(AirtableTest):
             self.assertListEqual(
                 sorted([r['familyGuid'] for r in response.json()['rows']]), expected_families + self.ADDITIONAL_FAMILIES)
 
+    @responses.activate
     def test_variant_metadata(self):
         url = reverse(variant_metadata, args=[PROJECT_GUID])
         self.check_analyst_login(url)
+
+        responses.add(responses.GET, 'https://monarchinitiative.org/v3/api/entity/MONDO:0044970', status=200, json={
+            'id': 'MONDO:0044970',
+            'category': 'biolink:Disease',
+            'name': 'mitochondrial disease',
+            'inheritance': {},
+        })
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
