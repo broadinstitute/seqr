@@ -204,6 +204,7 @@ class ProjectAPITest(object):
         self.assertEqual(project.genome_version, '37')
         self.assertEqual(project.consent_code, 'H')
 
+        self.reset_logs()
         response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
             {'description': 'updated project description', 'restrictSharing': True, 'genomeVersion': '38', 'workspaceName': 'test update name'}
         ))
@@ -218,6 +219,14 @@ class ProjectAPITest(object):
         self.assertEqual(updated_project.description, 'updated project description')
         self.assertEqual(updated_project.genome_version, '37')
         self.assertEqual(updated_project.workspace_name, expected_workspace_name)
+        self.assert_json_logs(self.manager_user, [
+            ('update Project R0001_1kg', {'dbUpdate': {
+                'dbEntity': 'Project', 'entityId': 'R0001_1kg', 'updateType': 'update',
+                'updateFields': ['description', 'restrict_sharing'],
+            }}),
+            ('Reloading dictionary seqrdb_individual_metadata_dict', None),
+            (None, {'httpRequest': mock.ANY, 'requestBody': mock.ANY}),
+        ])
 
         # test consent code
         response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
@@ -225,12 +234,19 @@ class ProjectAPITest(object):
         ))
         self.assertEqual(response.status_code, 403)
         self.login_pm_user()
+        self.reset_logs()
         response = self.client.post(update_project_url, content_type='application/json', data=json.dumps(
             {'consentCode': 'G'}
         ))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['projectsByGuid'][PROJECT_GUID]['consentCode'], 'G')
         self.assertEqual(Project.objects.get(guid=PROJECT_GUID).consent_code, 'G')
+        self.assert_json_logs(self.pm_user, [
+            ('update Project R0001_1kg', {'dbUpdate': {
+                'dbEntity': 'Project', 'entityId': 'R0001_1kg', 'updateType': 'update', 'updateFields': ['consent_code'],
+            }}),
+            (None, {'httpRequest': mock.ANY, 'requestBody': mock.ANY}),
+        ])
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', None)
     def test_create_project_no_pm(self):

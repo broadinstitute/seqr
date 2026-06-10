@@ -5,6 +5,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Count, Max, Q, F
 from django.db.models.fields.files import ImageFieldFile
 
+from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, IndividualMetadataDict
 from matchmaker.models import MatchmakerSubmission
 from reference_data.models import Omim
 from seqr.utils.gene_utils import get_genes_for_variant_display
@@ -210,6 +211,10 @@ def delete_families_handler(request, project_guid):
     # delete families
     Family.bulk_delete(request.user, project=project, guid__in=family_guids_to_delete)
 
+    AffectedDict.reload(request.user)
+    SexDict.reload(request.user)
+    IndividualMetadataDict.reload(request.user)
+
     # send response
     return create_json_response({
         'individualsByGuid': {
@@ -230,9 +235,12 @@ def update_family_fields_handler(request, family_guid):
 
     request_json = json.loads(request.body)
     immutable_keys = [] if external_anvil_project_can_edit(family.project, request.user) else ['family_id']
+    updated_fields = set()
     update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True, immutable_keys=[
         'display_name',
-    ] + immutable_keys)
+    ] + immutable_keys, updated_fields=updated_fields)
+    if updated_fields.intersection({'post_discovery_omim_numbers', 'post_discovery_mondo_id', 'analysis_status'}):
+        IndividualMetadataDict.reload(request.user)
 
     return create_json_response({
         family.guid: _get_json_for_model(family, user=request.user, process_result=_set_display_name)

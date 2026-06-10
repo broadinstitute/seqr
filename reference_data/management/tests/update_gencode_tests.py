@@ -54,6 +54,8 @@ REFSEQ_DATA = [
 
 class UpdateGencodeTest(ReferenceDataCommandTestCase):
 
+    databases = '__all__'
+
     def setUp(self):
         super().setUp()
 
@@ -202,6 +204,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             ('Loaded 3 RefseqTranscript records', None),
             ('Skipped 1 records with unrecognized or duplicated transcripts', None),
             ('Updated GeneInfo reference data from version "31" to version "39"', None),
+            ('Reloading dictionary seqrdb_gene_ids', None),
             ('Done', None),
             ('Updated: GeneInfo', None),
         ])
