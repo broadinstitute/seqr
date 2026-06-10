@@ -68,7 +68,7 @@ class VlmTestCase(AioHTTPTestCase):
             },
             'responseSummary': {
                 'exists': True,
-                'total': 30,
+                'total': 7,
             },
             'response': {
                 'resultSets': [
@@ -76,14 +76,14 @@ class VlmTestCase(AioHTTPTestCase):
                         'exists': True,
                         'id': 'TestVLM Homozygous',
                         'results': [],
-                        'resultsCount': 7,
+                        'resultsCount': 3,
                         'setType': 'genomicVariant'
                     },
                     {
                         'exists': True,
                         'id': 'TestVLM Heterozygous',
                         'results': [],
-                        'resultsCount': 23,
+                        'resultsCount': 4,
                         'setType': 'genomicVariant'
                     },
                     {
@@ -140,7 +140,7 @@ class VlmTestCase(AioHTTPTestCase):
             },
             'responseSummary': {
                 'exists': True,
-                'total': 3203,
+                'total': 1,
             },
             'response': {
                 'resultSets': [
@@ -148,14 +148,14 @@ class VlmTestCase(AioHTTPTestCase):
                         'exists': True,
                         'id': 'TestVLM Homozygous',
                         'results': [],
-                        'resultsCount': 1508,
+                        'resultsCount': 1,
                         'setType': 'genomicVariant'
                     },
                     {
-                        'exists': True,
+                        'exists': False,
                         'id': 'TestVLM Heterozygous',
                         'results': [],
-                        'resultsCount': 1695,
+                        'resultsCount': 0,
                         'setType': 'genomicVariant'
                     },
                     {
