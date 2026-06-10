@@ -1,5 +1,6 @@
 from aiohttp.test_utils import AioHTTPTestCase
 from aioresponses import aioresponses
+from datetime import datetime
 import jwt
 import logging
 import pytest
@@ -301,14 +302,14 @@ class VlmTestCase(AioHTTPTestCase):
                                         'name': 'Human Phenotype Ontology',
                                         'namespacePrefix': 'HP',
                                         'url': 'http://purl.obolibrary.org/obo/hp.owl',
-                                        'version': '2026-06-09',  # TODO mock date
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
                                     }, {
                                         'id': 'omim',
                                         'iriPrefix': 'https://www.omim.org/entry/',
                                         'name': 'Online Mendelian Inheritance in Man',
                                         'namespacePrefix': 'OMIM',
                                         'url': 'https://www.omim.org',
-                                        'version': '2026-06-09',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
                                     }],
                                 },
                             },
@@ -351,7 +352,7 @@ class VlmTestCase(AioHTTPTestCase):
                                         'name': 'Online Mendelian Inheritance in Man',
                                         'namespacePrefix': 'OMIM',
                                         'url': 'https://www.omim.org',
-                                        'version': '2026-06-09',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
                                     }],
                                 },
                             }],
@@ -410,14 +411,14 @@ class VlmTestCase(AioHTTPTestCase):
                                         'name': 'Human Phenotype Ontology',
                                         'namespacePrefix': 'HP',
                                         'url': 'http://purl.obolibrary.org/obo/hp.owl',
-                                        'version': '2026-06-09',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
                                     }, {
                                         'id': 'omim',
                                         'iriPrefix': 'https://www.omim.org/entry/',
                                         'name': 'Online Mendelian Inheritance in Man',
                                         'namespacePrefix': 'OMIM',
                                         'url': 'https://www.omim.org',
-                                        'version': '2026-06-09',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
                                     }],
                                 },
                             },
