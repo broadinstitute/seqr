@@ -44,7 +44,7 @@ def get_clickhouse_variant_details(chrom: str, pos: int, genome_build: str, ref:
         'entries_table': f'{genome_build}/SNV_INDEL/entries',
         'xpos': ((1 + CHROMOSOMES.index(chrom))*int(1e9)) + pos,
     }
-    return _get_clickhouse_variant_query_result(chrom, pos, genome_build, ref, alt, query, params) or []
+    return _get_clickhouse_variant_query_result(chrom, pos, genome_build, ref, alt, query, params)
 
 
 def _get_clickhouse_variant_query_result(chrom: str, pos: int, genome_build: str, ref: str, alt: str, query: str, params: dict) -> list[tuple]:

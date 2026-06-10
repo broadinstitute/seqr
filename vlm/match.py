@@ -168,7 +168,7 @@ def _get_match_detail_results(match: list[tuple], lift_match: list[tuple]) -> Tu
     hpo_label_map = {}
     mondo_label_map = {}
     http = urllib3.PoolManager(cert_reqs='CERT_NONE')
-    for f_i, (samples, has_discovery, has_excluded) in enumerate(match + lift_match):
+    for f_i, (samples, has_discovery, has_excluded) in enumerate(match + (lift_match or [])):
         family_id = f'F_{f_i}'
         proband = None
         relatives = []
