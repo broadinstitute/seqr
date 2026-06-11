@@ -722,8 +722,45 @@ class VlmTestCase(AioHTTPTestCase):
                 ],
             }
         }
+        empty_response = {
+            'beaconHandovers': [
+                {
+                    'handoverType': {
+                        'id': 'TestVLM',
+                        'label': 'TestVLM browser',
+                    },
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=7-143270172-A-G',
+                    'email': None,
+                }
+            ],
+            'meta': {
+                'apiVersion': 'v1.0',
+                'beaconId': 'com.gnx.beacon.v2',
+                'returnedSchemas': [
+                    {
+                        'entityType': 'Family',
+                        'schema': 'phenopacket-2.0',
+                    }
+                ]
+            },
+            'responseSummary': {
+                'exists': False,
+                'total': 0,
+            },
+            'response': {
+                'resultSets': [
+                    {
+                        'exists': False,
+                        'id': 'TestVLM',
+                        'results': [],
+                        'resultsCount': 0,
+                        'setType': 'Family'
+                    },
+                ],
+            }
+        }
         self.maxDiff = None # TODO
-        await self._test_match_endpoint('match_details', mocked_responses, response, only_37_response, {})
+        await self._test_match_endpoint('match_details', mocked_responses, response, only_37_response, empty_response)
 
     async def _test_match_endpoint(self, path, mocked_responses, response, only_37_response, empty_response):
 
