@@ -186,7 +186,7 @@ async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple])
                 })
 
                 phenopacket = await _format_phenopacket(
-                    hpo_label_map, mondo_label_map, session, individual_id, sex, *sample,
+                    hpo_label_map, mondo_label_map, session, individual_id, has_discovery, has_excluded, sex, *sample,
                 )
                 if affected == 'A' and proband is None:
                     proband = phenopacket
@@ -211,7 +211,10 @@ async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple])
     return len(results), result_sets, PHENOPACKET_SCHEMA
 
 
-async def _format_phenopacket(hpo_label_map, mondo_label_map, session, individual_id, sex, gt, features, omim_id, mondo_id, is_solved, vlm_contact_email):
+async def _format_phenopacket(
+    hpo_label_map, mondo_label_map, session, individual_id, has_discovery, has_excluded, sex, gt, restrict_sharing,
+    features, omim_id, mondo_id, is_solved, vlm_contact_email,
+):
     if restrict_sharing:
         features = None
         omim_id = None
