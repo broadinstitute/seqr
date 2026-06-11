@@ -674,7 +674,7 @@ class VlmTestCase(AioHTTPTestCase):
                                                 },
                                             },
                                             'interpretation_status': 'UNKNOWN_STATUS',
-                                            'subject_or_biosample_id': 'I_0_1',
+                                            'subject_or_biosample_id': 'I_0_0',
                                         }],
                                     },
                                     'id': 'I_0_0',
