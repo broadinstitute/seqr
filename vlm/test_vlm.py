@@ -224,7 +224,7 @@ class VlmTestCase(AioHTTPTestCase):
             'name': 'mitochondrial disease',
             'definition': '',
         })
-        
+
         response = {
             'beaconHandovers': [
                 {
