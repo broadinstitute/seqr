@@ -41,7 +41,7 @@
     "fields": {
         "guid": "VT0000200_1038724419_r0390_100",
         "saved_variants": [200],
-        "variant_tag_type": 1
+        "variant_tag_type": 3
     }
 },
 {
@@ -64,6 +64,6 @@
     "fields": {
         "guid": "VT0000201_1038724419_r0390_100",
         "saved_variants": [201],
-        "variant_tag_type": 3
+        "variant_tag_type": 1
     }
 }]

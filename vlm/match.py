@@ -201,14 +201,14 @@ def _get_match_detail_results(match: list[tuple], lift_match: list[tuple]) -> Tu
                 resources.append({**HPO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
             interpretation = {
                 'subject_or_biosample_id': individual_id,
-                'interpretation_status': 'CANDIDATE' if has_discovery else ('REJECTED' if has_excluded else 'UNKNOWN_STATUS'), # TODO test has_discovery and has_excluded
+                'interpretation_status': 'CANDIDATE' if has_discovery else ('REJECTED' if has_excluded else 'UNKNOWN_STATUS'),
                 'call': {'variation_descriptor': {'allelic_state': GT_LOOKUP[gt]}},
             }
             diagnosis = {'genomic_interpretations': [interpretation]}
             if omim_id:
                 diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None} # TODO label
                 resources.append({**OMIM_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
-            elif mondo_id:  # TODO test
+            elif mondo_id:
                 if mondo_id not in mondo_label_map:
                     resp = http.request('GET', f'{ONTOLOGY_API_URL}/mondo/terms/{mondo_id}')
                     mondo_label_map[mondo_id] = resp.json()['name']
@@ -220,7 +220,7 @@ def _get_match_detail_results(match: list[tuple], lift_match: list[tuple]) -> Tu
                 'phenotypic_features': phenotypic_features,
                 'interpretations': [{
                     'id': individual_id,
-                    'progress_status': 'SOLVED' if is_solved else 'UNKNOWN_PROGRESS', # TODO test SOLVED
+                    'progress_status': 'SOLVED' if is_solved else 'UNKNOWN_PROGRESS',
                     'diagnosis': diagnosis,
                 }],
                 'meta_data': {
