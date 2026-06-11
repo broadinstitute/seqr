@@ -22,6 +22,7 @@ def django_db_setup(request, django_db_blocker,django_db_keepdb):
         )
         call_command('loaddata', 'clickhouse_search', '--database=clickhouse_write')
         call_command('loaddata', 'users', '1kg_project', 'vlm/fixtures/vlm_data.json')
+        call_command('loaddata', 'vlm/fixtures/vlm_data.json', '--database=reference_data')
         AffectedDict.reload()
         ProjectsToGtStatsGRCh37SnvIndel.refresh()
         ProjectsToGtStatsSnvIndel.refresh()

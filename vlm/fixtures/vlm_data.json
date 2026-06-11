@@ -66,4 +66,16 @@
         "saved_variants": [201],
         "variant_tag_type": 1
     }
+},
+{
+  "model": "reference_data.omim",
+  "pk": 200,
+  "fields": {
+      "mim_number": 147571,
+      "phenotype_mim_number": 615123,
+      "phenotype_description": "Immunodeficiency 38",
+      "chrom": "1",
+      "start": 11869,
+      "end": 14409
+  }
 }]

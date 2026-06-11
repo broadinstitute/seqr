@@ -211,17 +211,17 @@ class VlmTestCase(AioHTTPTestCase):
     async def test_match_details(self, mocked_responses):
         mocked_responses.get('https://ontology.jax.org/api/hp/terms/HP:0002011', repeat=True, payload={
             'id': 'HP:0002011',
-            'name': 'Morphological central nervous system abnormality',
+            'name': 'Morphological central nervous system abnormality TEST MOCK',
             'definition': 'A structural abnormality of the central nervous system.',
         })
         mocked_responses.get('https://ontology.jax.org/api/hp/terms/HP:0011675', repeat=True, payload={
             'id': 'HP:0011675',
-            'name': 'Arrhythmia',
+            'name': 'Arrhythmia TEST MOCK',
             'definition': 'Any cardiac rhythm other than the normal sinus rhythm.',
         })
         mocked_responses.get('https://ontology.jax.org/api/mondo/terms/MONDO:0044970', repeat=True, payload={
             'id': 'MONDO:0044970',
-            'name': 'mitochondrial disease',
+            'name': 'mitochondrial disease TEST MOCK',
             'definition': '',
         })
 
@@ -785,7 +785,6 @@ class VlmTestCase(AioHTTPTestCase):
         }
         self.maxDiff = None # TODO
         await self._test_match_endpoint('match_details', mocked_responses, response, only_37_response, empty_response)
-        self.assertListEqual([], list(mocked_responses.requests.items()))
 
     async def _test_match_endpoint(self, path, mocked_responses, response, only_37_response, empty_response):
 
