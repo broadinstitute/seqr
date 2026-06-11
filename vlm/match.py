@@ -15,7 +15,7 @@ VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL')
 NODE_ID = os.environ.get('NODE_ID')
 LIFTOVER_DIR = f'{os.path.dirname(os.path.abspath(__file__))}/liftover_references'
 
-ONTOLOGY_API_URL = 'https://ontology.jax.org/api/'
+ONTOLOGY_API_URL = 'https://ontology.jax.org/'
 
 BEACON_HANDOVER_TYPE = {
     'id': NODE_ID,
@@ -227,7 +227,7 @@ async def _format_phenopacket(
         for feature in json.loads(features):
             hpo_id = feature['id']
             if hpo_id not in hpo_label_map:
-                async with session.get(f'/hp/terms/{hpo_id}') as resp:
+                async with session.get(f'/api/hp/terms/{hpo_id}') as resp:
                     hpo_label_map[hpo_id] = (await resp.json())['name']
             phenotypic_features.append({'id': hpo_id, 'label': hpo_label_map[hpo_id]})
         resources.append({**HPO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
@@ -242,7 +242,7 @@ async def _format_phenopacket(
         resources.append({**OMIM_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
     elif mondo_id:
         if mondo_id not in mondo_label_map:
-            async with session.get(f'/mondo/terms/{mondo_id}') as resp:
+            async with session.get(f'/api/mondo/terms/{mondo_id}') as resp:
                 mondo_label_map[mondo_id] = (await resp.json())['name']
         diagnosis['disease'] = {'id': mondo_id, 'label': mondo_label_map[mondo_id]}
         resources.append({**MONDO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})

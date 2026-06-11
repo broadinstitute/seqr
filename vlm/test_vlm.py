@@ -211,17 +211,17 @@ class VlmTestCase(AioHTTPTestCase):
     async def test_match_details(self, mocked_responses):
         mocked_responses.get('https://ontology.jax.org/api/hp/terms/HP:0002011', repeat=True, payload={
             'id': 'HP:0002011',
-            'name': 'Morphological central nervous system abnormality TEST MOCK',
+            'name': 'Morphological central nervous system abnormality',
             'definition': 'A structural abnormality of the central nervous system.',
         })
         mocked_responses.get('https://ontology.jax.org/api/hp/terms/HP:0011675', repeat=True, payload={
             'id': 'HP:0011675',
-            'name': 'Arrhythmia TEST MOCK',
+            'name': 'Arrhythmia',
             'definition': 'Any cardiac rhythm other than the normal sinus rhythm.',
         })
         mocked_responses.get('https://ontology.jax.org/api/mondo/terms/MONDO:0044970', repeat=True, payload={
             'id': 'MONDO:0044970',
-            'name': 'mitochondrial disease TEST MOCK',
+            'name': 'mitochondrial disease',
             'definition': '',
         })
 
