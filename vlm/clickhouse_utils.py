@@ -27,9 +27,9 @@ def get_clickhouse_variant_counts(chrom: str, pos: int, genome_build: str, ref: 
 def get_clickhouse_variant_details(chrom: str, pos: int, genome_build: str, ref: str, alt: str) -> list[tuple]:
     query = """SELECT arrayMap(
       x -> tupleConcat((
-        x.gt, 
         dictGetOrDefault(seqrdb_affected_status_dict, 'affected', (family_guid, x.sampleId), 'U'), 
         dictGetOrDefault(seqrdb_sex_dict, 'sex', (family_guid, x.sampleId), 'U')), 
+        x.gt, 
         dictGet(seqrdb_individual_metadata_dict, ('restrict_sharing', 'features', 'omim_id', 'mondo_id', 'is_solved', 'vlm_contact_email'), (family_guid, x.sampleId))
     ), arrayFilter(c -> c.gt > 0, calls)), 
     has(discovery_families, family_guid), 

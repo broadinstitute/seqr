@@ -15,7 +15,7 @@ VLM_DEFAULT_CONTACT_EMAIL = os.environ.get('VLM_DEFAULT_CONTACT_EMAIL')
 NODE_ID = os.environ.get('NODE_ID')
 LIFTOVER_DIR = f'{os.path.dirname(os.path.abspath(__file__))}/liftover_references'
 
-ONTOLOGY_API_URL = 'https://ontology.jax.org/api'
+ONTOLOGY_API_URL = 'https://ontology.jax.org/api/'
 
 BEACON_HANDOVER_TYPE = {
     'id': NODE_ID,
@@ -173,7 +173,7 @@ async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple])
             proband = None
             relatives = []
             pedigree = []
-            for s_i, (gt, affected, sex, restrict_sharing, features, omim_id, mondo_id, is_solved, vlm_contact_email) in enumerate(samples):
+            for s_i, (affected, sex, *sample) in enumerate(samples):
                 individual_id = f'I_{f_i}_{s_i}'
                 sex = SEX_LOOKUP.get(sex, 'OTHER_SEX')
                 pedigree.append({
@@ -184,51 +184,10 @@ async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple])
                     'sex': sex,
                     'affected_status': AFFECTED_LOOKUP[affected],
                 })
-                if restrict_sharing:
-                    features = None
-                    omim_id = None
-                    mondo_id = None
-                    is_solved = False
-                resources = [GENO_RESOURCE]
-                phenotypic_features = []
-                if features:
-                    for feature in json.loads(features):
-                        hpo_id = feature['id']
-                        if hpo_id not in hpo_label_map:
-                            async with session.get(f'/hp/terms/{hpo_id}') as resp:
-                                hpo_label_map[hpo_id] = (await resp.json())['name']
-                        phenotypic_features.append({'id': hpo_id, 'label': hpo_label_map[hpo_id]})
-                    resources.append({**HPO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
-                interpretation = {
-                    'subject_or_biosample_id': individual_id,
-                    'interpretation_status': 'CANDIDATE' if has_discovery else ('REJECTED' if has_excluded else 'UNKNOWN_STATUS'),
-                    'call': {'variation_descriptor': {'allelic_state': GT_LOOKUP[gt]}},
-                }
-                diagnosis = {'genomic_interpretations': [interpretation]}
-                if omim_id:
-                    diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None} # TODO label
-                    resources.append({**OMIM_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
-                elif mondo_id:
-                    if mondo_id not in mondo_label_map:
-                        async with session.get(f'/mondo/terms/{mondo_id}') as resp:
-                            mondo_label_map[mondo_id] = (await resp.json())['name']
-                    diagnosis['disease'] = {'id': mondo_id, 'label': mondo_label_map[mondo_id]}
-                    resources.append({**MONDO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
-                phenopacket = {
-                    'id': individual_id,
-                    'subject': {'id': individual_id, 'sex': sex},
-                    'phenotypic_features': phenotypic_features,
-                    'interpretations': [{
-                        'id': individual_id,
-                        'progress_status': 'SOLVED' if is_solved else 'UNKNOWN_PROGRESS',
-                        'diagnosis': diagnosis,
-                    }],
-                    'meta_data': {
-                        'phenopacket_schema_version': '2.0',
-                        'submitted_by': vlm_contact_email,
-                        'resources': resources,
-                    },
-                }
+
+                phenopacket = await _format_phenopacket(
+                    hpo_label_map, mondo_label_map, session, individual_id, sex, *sample,
+                )
                 if affected == 'A' and proband is None:
                     proband = phenopacket
                 else:
@@ -250,6 +209,56 @@ async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple])
         (None, len(results), results),
     ]
     return len(results), result_sets, PHENOPACKET_SCHEMA
+
+
+async def _format_phenopacket(hpo_label_map, mondo_label_map, session, individual_id, sex, gt, features, omim_id, mondo_id, is_solved, vlm_contact_email):
+    if restrict_sharing:
+        features = None
+        omim_id = None
+        mondo_id = None
+        is_solved = False
+
+    resources = [GENO_RESOURCE]
+    phenotypic_features = []
+    if features:
+        for feature in json.loads(features):
+            hpo_id = feature['id']
+            if hpo_id not in hpo_label_map:
+                async with session.get(f'/hp/terms/{hpo_id}') as resp:
+                    hpo_label_map[hpo_id] = (await resp.json())['name']
+            phenotypic_features.append({'id': hpo_id, 'label': hpo_label_map[hpo_id]})
+        resources.append({**HPO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
+    interpretation = {
+        'subject_or_biosample_id': individual_id,
+        'interpretation_status': 'CANDIDATE' if has_discovery else ('REJECTED' if has_excluded else 'UNKNOWN_STATUS'),
+        'call': {'variation_descriptor': {'allelic_state': GT_LOOKUP[gt]}},
+    }
+    diagnosis = {'genomic_interpretations': [interpretation]}
+    if omim_id:
+        diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None}  # TODO label
+        resources.append({**OMIM_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
+    elif mondo_id:
+        if mondo_id not in mondo_label_map:
+            async with session.get(f'/mondo/terms/{mondo_id}') as resp:
+                mondo_label_map[mondo_id] = (await resp.json())['name']
+        diagnosis['disease'] = {'id': mondo_id, 'label': mondo_label_map[mondo_id]}
+        resources.append({**MONDO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
+
+    return {
+        'id': individual_id,
+        'subject': {'id': individual_id, 'sex': sex},
+        'phenotypic_features': phenotypic_features,
+        'interpretations': [{
+            'id': individual_id,
+            'progress_status': 'SOLVED' if is_solved else 'UNKNOWN_PROGRESS',
+            'diagnosis': diagnosis,
+        }],
+        'meta_data': {
+            'phenopacket_schema_version': '2.0',
+            'submitted_by': vlm_contact_email,
+            'resources': resources,
+        },
+    }
 
 
 def _format_results(total: int, result_sets: list[dict], url: str, schema: dict) -> dict:
