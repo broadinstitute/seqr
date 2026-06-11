@@ -30,12 +30,12 @@ async def status(request: web.Request) -> web.Response:
 
 async def match(request: web.Request) -> web.Response:
     await authenticate(request)
-    return web.json_response(get_variant_match(request.query))
+    return web.json_response(await get_variant_match(request.query))
 
 
 async def match_details(request: web.Request) -> web.Response:
     await authenticate(request)
-    return web.json_response(get_variant_match_details(request.query))
+    return web.json_response(await get_variant_match_details(request.query))
 
 
 async def init_web_app():

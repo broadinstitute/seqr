@@ -41,9 +41,7 @@ pytz==2026.2
 typing-extensions==4.15.0
     # via aiosignal
 urllib3==2.7.0
-    # via
-    #   -r vlm/requirements.in
-    #   clickhouse-connect
+    # via clickhouse-connect
 yarl==1.24.2
     # via aiohttp
 zstandard==0.25.0

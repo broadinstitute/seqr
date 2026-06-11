@@ -1,3 +1,4 @@
+from aiohttp import ClientSession
 from aiohttp.web import HTTPBadRequest
 from collections.abc import Callable
 from datetime import datetime
@@ -6,7 +7,6 @@ import os
 from pyliftover.liftover import LiftOver
 import re
 from typing import Optional, Tuple
-import urllib3
 
 from vlm.clickhouse_utils import get_clickhouse_variant_counts, get_clickhouse_variant_details, CHROMOSOMES
 
@@ -50,15 +50,15 @@ MIN_POS = 1
 MAX_POS = 300_000_000
 
 
-def get_variant_match(query: dict) -> dict:
-    return _get_variant_match(query, get_match=get_clickhouse_variant_counts, get_results=_get_match_results)
+async def get_variant_match(query: dict) -> dict:
+    return await _get_variant_match(query, get_match=get_clickhouse_variant_counts, get_results=_get_match_results)
 
 
-def get_variant_match_details(query: dict) -> dict:
-    return _get_variant_match(query, get_match=get_clickhouse_variant_details, get_results=_get_match_detail_results)
+async  def get_variant_match_details(query: dict) -> dict:
+    return await _get_variant_match(query, get_match=get_clickhouse_variant_details, get_results=_get_match_detail_results)
 
 
-def _get_variant_match(query: dict, get_match: Callable, get_results: Callable) -> dict:
+async def _get_variant_match(query: dict, get_match: Callable, get_results: Callable) -> dict:
     chrom, pos, ref, alt, genome_build = _parse_match_query(query)
 
     match = get_match(chrom, pos, genome_build, ref, alt)
@@ -68,7 +68,7 @@ def _get_variant_match(query: dict, get_match: Callable, get_results: Callable) 
     url = _get_contact_url(
         chrom, pos, ref, alt, genome_build, liftover if lift_match and not match else None,
     )
-    total, results_set, schema = get_results(match, lift_match)
+    total, results_set, schema = await get_results(match, lift_match)
     return _format_results(total, results_set, url, schema)
 
 
@@ -110,7 +110,7 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
     return chrom, start, query['referenceBases'], query['alternateBases'], genome_build
 
 
-def _get_match_results(match: Optional[Tuple[int, int]], lift_match: Optional[Tuple[int, int]]) -> Tuple[int, list[dict]]:
+async def _get_match_results(match: Optional[Tuple[int, int]], lift_match: Optional[Tuple[int, int]]) -> Tuple[int, list[dict]]:
     build_ac, build_hom = match or (0, 0)
     lift_ac, lift_hom = lift_match or (0, 0)
     ac = build_ac + lift_ac
@@ -163,88 +163,88 @@ MONDO_RESOURCE = {
 }
 
 
-def _get_match_detail_results(match: list[tuple], lift_match: list[tuple]) -> Tuple[int, list[dict]]:
+async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple]) -> Tuple[int, list[dict]]:
     results = []
     hpo_label_map = {}
     mondo_label_map = {}
-    http = urllib3.PoolManager(cert_reqs='CERT_NONE')
-    for f_i, (samples, has_discovery, has_excluded) in enumerate(match + (lift_match or [])):
-        family_id = f'F_{f_i}'
-        proband = None
-        relatives = []
-        pedigree = []
-        for s_i, (gt, affected, sex, restrict_sharing, features, omim_id, mondo_id, is_solved, vlm_contact_email) in enumerate(samples):
-            individual_id = f'I_{f_i}_{s_i}'
-            sex = SEX_LOOKUP.get(sex, 'OTHER_SEX')
-            pedigree.append({
-                'family_id': family_id,
-                'individual_id': individual_id,
-                'paternal_id': '0',
-                'maternal_id': '0',
-                'sex': sex,
-                'affected_status': AFFECTED_LOOKUP[affected],
-            })
-            if restrict_sharing:
-                features = None
-                omim_id = None
-                mondo_id = None
-                is_solved = False
-            resources = [GENO_RESOURCE]
-            phenotypic_features = []
-            if features:
-                for feature in json.loads(features):
-                    hpo_id = feature['id']
-                    if hpo_id not in hpo_label_map:
-                        resp = http.request('GET', f'{ONTOLOGY_API_URL}/hp/terms/{hpo_id}')
-                        hpo_label_map[hpo_id] = resp.json()['name']
-                    phenotypic_features.append({'id': hpo_id, 'label': hpo_label_map[hpo_id]})
-                resources.append({**HPO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
-            interpretation = {
-                'subject_or_biosample_id': individual_id,
-                'interpretation_status': 'CANDIDATE' if has_discovery else ('REJECTED' if has_excluded else 'UNKNOWN_STATUS'),
-                'call': {'variation_descriptor': {'allelic_state': GT_LOOKUP[gt]}},
-            }
-            diagnosis = {'genomic_interpretations': [interpretation]}
-            if omim_id:
-                diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None} # TODO label
-                resources.append({**OMIM_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
-            elif mondo_id:
-                if mondo_id not in mondo_label_map:
-                    resp = http.request('GET', f'{ONTOLOGY_API_URL}/mondo/terms/{mondo_id}')
-                    mondo_label_map[mondo_id] = resp.json()['name']
-                diagnosis['disease'] = {'id': mondo_id, 'label': mondo_label_map[mondo_id]}
-                resources.append({**MONDO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
-            phenopacket = {
-                'id': individual_id,
-                'subject': {'id': individual_id, 'sex': sex},
-                'phenotypic_features': phenotypic_features,
-                'interpretations': [{
+    async with ClientSession(ONTOLOGY_API_URL) as session:
+        for f_i, (samples, has_discovery, has_excluded) in enumerate(match + (lift_match or [])):
+            family_id = f'F_{f_i}'
+            proband = None
+            relatives = []
+            pedigree = []
+            for s_i, (gt, affected, sex, restrict_sharing, features, omim_id, mondo_id, is_solved, vlm_contact_email) in enumerate(samples):
+                individual_id = f'I_{f_i}_{s_i}'
+                sex = SEX_LOOKUP.get(sex, 'OTHER_SEX')
+                pedigree.append({
+                    'family_id': family_id,
+                    'individual_id': individual_id,
+                    'paternal_id': '0',
+                    'maternal_id': '0',
+                    'sex': sex,
+                    'affected_status': AFFECTED_LOOKUP[affected],
+                })
+                if restrict_sharing:
+                    features = None
+                    omim_id = None
+                    mondo_id = None
+                    is_solved = False
+                resources = [GENO_RESOURCE]
+                phenotypic_features = []
+                if features:
+                    for feature in json.loads(features):
+                        hpo_id = feature['id']
+                        if hpo_id not in hpo_label_map:
+                            async with session.get(f'/hp/terms/{hpo_id}') as resp:
+                                hpo_label_map[hpo_id] = (await resp.json())['name']
+                        phenotypic_features.append({'id': hpo_id, 'label': hpo_label_map[hpo_id]})
+                    resources.append({**HPO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
+                interpretation = {
+                    'subject_or_biosample_id': individual_id,
+                    'interpretation_status': 'CANDIDATE' if has_discovery else ('REJECTED' if has_excluded else 'UNKNOWN_STATUS'),
+                    'call': {'variation_descriptor': {'allelic_state': GT_LOOKUP[gt]}},
+                }
+                diagnosis = {'genomic_interpretations': [interpretation]}
+                if omim_id:
+                    diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None} # TODO label
+                    resources.append({**OMIM_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
+                elif mondo_id:
+                    if mondo_id not in mondo_label_map:
+                        async with session.get(f'/mondo/terms/{mondo_id}') as resp:
+                            mondo_label_map[mondo_id] = (await resp.json())['name']
+                    diagnosis['disease'] = {'id': mondo_id, 'label': mondo_label_map[mondo_id]}
+                    resources.append({**MONDO_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
+                phenopacket = {
                     'id': individual_id,
-                    'progress_status': 'SOLVED' if is_solved else 'UNKNOWN_PROGRESS',
-                    'diagnosis': diagnosis,
-                }],
-                'meta_data': {
-                    'phenopacket_schema_version': '2.0',
-                    'submitted_by': vlm_contact_email,
-                    'resources': resources,
-                },
-            }
-            if affected == 'A' and proband is None:
-                proband = phenopacket
-            else:
-                relatives.append(phenopacket)
+                    'subject': {'id': individual_id, 'sex': sex},
+                    'phenotypic_features': phenotypic_features,
+                    'interpretations': [{
+                        'id': individual_id,
+                        'progress_status': 'SOLVED' if is_solved else 'UNKNOWN_PROGRESS',
+                        'diagnosis': diagnosis,
+                    }],
+                    'meta_data': {
+                        'phenopacket_schema_version': '2.0',
+                        'submitted_by': vlm_contact_email,
+                        'resources': resources,
+                    },
+                }
+                if affected == 'A' and proband is None:
+                    proband = phenopacket
+                else:
+                    relatives.append(phenopacket)
 
-        if not proband:
-            proband = relatives[0]
-            relatives = relatives[1:]
+            if not proband:
+                proband = relatives[0]
+                relatives = relatives[1:]
 
-        results.append({
-            'id': family_id,
-            'proband': proband,
-            'relatives': relatives,
-            'pedigree': {'persons': pedigree},
-            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
-        })
+            results.append({
+                'id': family_id,
+                'proband': proband,
+                'relatives': relatives,
+                'pedigree': {'persons': pedigree},
+                'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
+            })
 
     result_sets = [
         (None, len(results), results),
