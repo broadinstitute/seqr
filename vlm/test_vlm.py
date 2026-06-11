@@ -761,6 +761,7 @@ class VlmTestCase(AioHTTPTestCase):
         }
         self.maxDiff = None # TODO
         await self._test_match_endpoint('match_details', mocked_responses, response, only_37_response, empty_response)
+        self.assertListEqual([], list(mocked_responses.requests.items()))
 
     async def _test_match_endpoint(self, path, mocked_responses, response, only_37_response, empty_response):
 
