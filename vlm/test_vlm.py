@@ -501,7 +501,7 @@ class VlmTestCase(AioHTTPTestCase):
                                         }],
                                     },
                                     'id': 'I_2_0',
-                                    'progress_status': 'SOLVED',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
                                 }],
                                 'phenotypic_features': [],
                                 'subject': {
