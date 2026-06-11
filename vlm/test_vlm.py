@@ -618,8 +618,112 @@ class VlmTestCase(AioHTTPTestCase):
                 ],
             }
         }
+        only_37_response = {
+            'beaconHandovers': [
+                {
+                    'handoverType': {
+                        'id': 'TestVLM',
+                        'label': 'TestVLM browser',
+                    },
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=37&variantId=7-143270172-A-G',
+                    'email': None,
+                }
+            ],
+            'meta': {
+                'apiVersion': 'v1.0',
+                'beaconId': 'com.gnx.beacon.v2',
+                'returnedSchemas': [
+                    {
+                        'entityType': 'Family',
+                        'schema': 'phenopacket-2.0',
+                    }
+                ]
+            },
+            'responseSummary': {
+                'exists': True,
+                'total': 1,
+            },
+            'response': {
+                'resultSets': [
+                    {
+                        'exists': True,
+                        'id': 'TestVLM',
+                        'setType': 'Family',
+                        'resultsCount': 1,
+                        'results': [{
+                            'id': 'F_0',
+                            'pedigree': {
+                                 'persons': [{
+                                     'affected_status': 'AFFECTED',
+                                     'family_id': 'F_0',
+                                     'individual_id': 'I_0_0',
+                                     'maternal_id': '0',
+                                     'paternal_id': '0',
+                                     'sex': 'OTHER_SEX',
+                                 }],
+                            },
+                            'proband': {
+                                'id': 'I_0_0',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'disease': {'id': 'OMIM:615123', 'label': None},
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000136', 'label': 'homozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'UNKNOWN_STATUS',
+                                            'subject_or_biosample_id': 'I_0_1',
+                                        }],
+                                    },
+                                    'id': 'I_0_0',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [
+                                    {'id': 'HP:0002011', 'label': 'Morphological central nervous system abnormality'},
+                                    {'id': 'HP:0011675', 'label': 'Arrhythmia'},
+                                ],
+                                'subject': {
+                                    'id': 'I_0_0',
+                                    'sex': 'OTHER_SEX',
+                                },
+                                'meta_data': {
+                                    'submitted_by': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }, {
+                                        'id': 'hp',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/HP_',
+                                        'name': 'Human Phenotype Ontology',
+                                        'namespacePrefix': 'HP',
+                                        'url': 'http://purl.obolibrary.org/obo/hp.owl',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
+                                    }, {
+                                        'id': 'omim',
+                                        'iriPrefix': 'https://www.omim.org/entry/',
+                                        'name': 'Online Mendelian Inheritance in Man',
+                                        'namespacePrefix': 'OMIM',
+                                        'url': 'https://www.omim.org',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
+                                    }],
+                                },
+                            },
+                            'relatives': [],
+                            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
+                        }],
+                    },
+                ],
+            }
+        }
         self.maxDiff = None # TODO
-        await self._test_match_endpoint('match_details', mocked_responses, response, {}, {})
+        await self._test_match_endpoint('match_details', mocked_responses, response, only_37_response, {})
 
     async def _test_match_endpoint(self, path, mocked_responses, response, only_37_response, empty_response):
 
