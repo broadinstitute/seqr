@@ -194,7 +194,6 @@ async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple])
                     relatives.append(phenopacket)
 
             if not proband:
-                # TODO test
                 proband = relatives[0]
                 relatives = relatives[1:]
 
