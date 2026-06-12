@@ -29,8 +29,9 @@ def get_clickhouse_variant_details(chrom: str, pos: int, genome_build: str, ref:
       x -> tupleConcat((
         dictGetOrDefault(seqrdb_affected_status_dict, 'affected', (family_guid, x.sampleId), 'U'), 
         dictGetOrDefault(seqrdb_sex_dict, 'sex', (family_guid, x.sampleId), 'U'), 
-        x.gt), 
-        dictGet(seqrdb_individual_metadata_dict, ('restrict_sharing', 'features', 'omim_id', 'mondo_id', 'is_solved', 'vlm_contact_email'), (family_guid, x.sampleId))
+        x.gt,
+        dictGet(seqrdb_omim, 'phenotype_description', dictGet(seqrdb_individual_metadata_dict, 'omim_id', (family_guid, x.sampleId)))), 
+        dictGet(seqrdb_individual_metadata_dict, ('omim_id', 'mondo_id', 'features',  'is_solved', 'vlm_contact_email', 'restrict_sharing'), (family_guid, x.sampleId))
     ), arrayFilter(c -> c.gt > 0, calls)), 
     has(discovery_families, family_guid), 
     has(excluded_families, family_guid) 

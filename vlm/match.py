@@ -213,8 +213,8 @@ async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple])
 
 
 async def _format_phenopacket(
-    hpo_label_map, mondo_label_map, session, individual_id, has_discovery, has_excluded, sex, gt, restrict_sharing,
-    features, omim_id, mondo_id, is_solved, vlm_contact_email,
+    hpo_label_map, mondo_label_map, session, individual_id, has_discovery, has_excluded, sex, gt, omim_label, omim_id,
+    mondo_id, features, is_solved, vlm_contact_email, restrict_sharing,
 ):
     if restrict_sharing:
         features = None
@@ -239,7 +239,7 @@ async def _format_phenopacket(
     }
     diagnosis = {'genomic_interpretations': [interpretation]}
     if omim_id:
-        diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': None}  # TODO label
+        diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': omim_label}  # TODO label
         resources.append({**OMIM_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
     elif mondo_id:
         if mondo_id not in mondo_label_map:
