@@ -497,8 +497,8 @@ class VlmTestCase(AioHTTPTestCase):
                             'relatives': [{
                                 'id': 'I_2_1',
                                 'interpretations': [{
-                                    'disease': {'id': 'MONDO:0044970', 'label': 'mitochondrial disease'},
                                     'diagnosis': {
+                                        'disease': {'id': 'MONDO:0044970', 'label': 'mitochondrial disease'},
                                         'genomic_interpretations': [{
                                             'call': {
                                                 'variation_descriptor': {
