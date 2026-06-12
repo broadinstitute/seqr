@@ -213,9 +213,10 @@ async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple])
 
 
 async def _format_phenopacket(
-    hpo_label_map, mondo_label_map, session, individual_id, has_discovery, has_excluded, sex, gt, omim_label, omim_id,
-    mondo_id, features, is_solved, vlm_contact_email, restrict_sharing,
-):
+    hpo_label_map: dict[str, str], mondo_label_map: dict[str, str], session: ClientSession, individual_id: str,
+    has_discovery: bool, has_excluded: bool, sex: str, gt: str, omim_label: str, omim_id: int, mondo_id: str,
+    features: str, is_solved: bool, vlm_contact_email: str, restrict_sharing: bool,
+) -> dict:
     if restrict_sharing:
         features = None
         omim_id = None
