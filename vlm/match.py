@@ -54,7 +54,7 @@ async def get_variant_match(query: dict) -> dict:
     return await _get_variant_match(query, get_match=get_clickhouse_variant_counts, get_results=_get_match_results)
 
 
-async  def get_variant_match_details(query: dict) -> dict:
+async def get_variant_match_details(query: dict) -> dict:
     return await _get_variant_match(query, get_match=get_clickhouse_variant_details, get_results=_get_match_detail_results)
 
 
@@ -110,7 +110,7 @@ def _parse_match_query(query: dict) -> tuple[str, int, str, str, str]:
     return chrom, start, query['referenceBases'], query['alternateBases'], genome_build
 
 
-async def _get_match_results(match: Optional[Tuple[int, int]], lift_match: Optional[Tuple[int, int]]) -> Tuple[int, list[dict]]:
+async def _get_match_results(match: Optional[Tuple[int, int]], lift_match: Optional[Tuple[int, int]]) -> tuple[int, list[tuple[str, int, list[dict]]], dict]:
     build_ac, build_hom = match or (0, 0)
     lift_ac, lift_hom = lift_match or (0, 0)
     ac = build_ac + lift_ac
@@ -163,7 +163,7 @@ MONDO_RESOURCE = {
 }
 
 
-async def _get_match_detail_results(match: list[tuple], lift_match: list[tuple]) -> Tuple[int, list[dict]]:
+async def _get_match_detail_results(match: list[tuple], lift_match: Optional[list[tuple]]) -> tuple[int, list[tuple[Optional[str], int, list[dict]]], dict]:
     results = []
     hpo_label_map = {}
     mondo_label_map = {}
@@ -265,7 +265,7 @@ async def _format_phenopacket(
     }
 
 
-def _format_results(total: int, result_sets: list[dict], url: str, schema: dict) -> dict:
+def _format_results(total: int, result_sets: list[tuple[Optional[str], int, list[dict]]], url: str, schema: dict) -> dict:
     return {
         'beaconHandovers': [
             {
