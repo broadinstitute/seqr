@@ -280,7 +280,7 @@ class VlmTestCase(AioHTTPTestCase):
                                 'id': 'I_0_1',
                                 'interpretations': [{
                                     'diagnosis': {
-                                        'disease': {'id': 'OMIM:615123', 'label': None},
+                                        'disease': {'id': 'OMIM:615123', 'label': 'Immunodeficiency 38'},
                                         'genomic_interpretations': [{
                                             'call': {
                                                 'variation_descriptor': {
@@ -333,7 +333,7 @@ class VlmTestCase(AioHTTPTestCase):
                                 'id': 'I_0_0',
                                 'interpretations': [{
                                     'diagnosis': {
-                                        'disease': {'id': 'OMIM:615123', 'label': None},
+                                        'disease': {'id': 'OMIM:615123', 'label': 'Immunodeficiency 38'},
                                         'genomic_interpretations': [{
                                             'call': {
                                                 'variation_descriptor': {
@@ -389,7 +389,7 @@ class VlmTestCase(AioHTTPTestCase):
                                 'id': 'I_1_0',
                                 'interpretations': [{
                                     'diagnosis': {
-                                        'disease': {'id': 'OMIM:615123', 'label': None},
+                                        'disease': {'id': 'OMIM:615123', 'label': 'Immunodeficiency 38'},
                                         'genomic_interpretations': [{
                                             'call': {
                                                 'variation_descriptor': {
@@ -463,7 +463,6 @@ class VlmTestCase(AioHTTPTestCase):
                                 'id': 'I_2_0',
                                 'interpretations': [{
                                     'diagnosis': {
-                                        'disease': {'id': 'MONDO:0044970', 'label': 'mitochondrial disease'},
                                         'genomic_interpretations': [{
                                             'call': {
                                                 'variation_descriptor': {
@@ -498,6 +497,7 @@ class VlmTestCase(AioHTTPTestCase):
                             'relatives': [{
                                 'id': 'I_2_1',
                                 'interpretations': [{
+                                    'disease': {'id': 'MONDO:0044970', 'label': 'mitochondrial disease'},
                                     'diagnosis': {
                                         'genomic_interpretations': [{
                                             'call': {
@@ -533,7 +533,7 @@ class VlmTestCase(AioHTTPTestCase):
                                         'name': 'Mondo Disease Ontology',
                                         'namespacePrefix': 'MONDO',
                                         'url': 'http://purl.obolibrary.org/obo/mondo.owl',
-                                        'version': '2026-06-11',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
                                     }],
                                 },
                             }],
@@ -690,7 +690,7 @@ class VlmTestCase(AioHTTPTestCase):
                                 'id': 'I_0_0',
                                 'interpretations': [{
                                     'diagnosis': {
-                                        'disease': {'id': 'OMIM:615123', 'label': None},
+                                        'disease': {'id': 'OMIM:615123', 'label': 'Immunodeficiency 38'},
                                         'genomic_interpretations': [{
                                             'call': {
                                                 'variation_descriptor': {

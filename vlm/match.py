@@ -239,7 +239,7 @@ async def _format_phenopacket(
     }
     diagnosis = {'genomic_interpretations': [interpretation]}
     if omim_id:
-        diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': omim_label}  # TODO label
+        diagnosis['disease'] = {'id': f'OMIM:{omim_id}', 'label': omim_label}
         resources.append({**OMIM_RESOURCE, 'version': datetime.now().strftime('%Y-%m-%d')})
     elif mondo_id:
         if mondo_id not in mondo_label_map:
