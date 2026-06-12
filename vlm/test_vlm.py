@@ -451,7 +451,7 @@ class VlmTestCase(AioHTTPTestCase):
                                     'paternal_id': '0',
                                     'sex': 'UNKNOWN_SEX',
                                 }, {
-                                    'affected_status': 'AFFECTED',
+                                    'affected_status': 'MISSING',
                                     'family_id': 'F_2',
                                     'individual_id': 'I_2_1',
                                     'maternal_id': '0',
@@ -460,10 +460,45 @@ class VlmTestCase(AioHTTPTestCase):
                                 }],
                             },
                             'proband': {
-                                'id': 'I_2_1',
+                                'id': 'I_2_0',
                                 'interpretations': [{
                                     'diagnosis': {
                                         'disease': {'id': 'MONDO:0044970', 'label': 'mitochondrial disease'},
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000135', 'label': 'heterozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'CANDIDATE',
+                                            'subject_or_biosample_id': 'I_2_0',
+                                        }],
+                                    },
+                                    'id': 'I_2_0',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [],
+                                'subject': {
+                                    'id': 'I_2_0',
+                                    'sex': 'UNKNOWN_SEX',
+                                },
+                                'meta_data': {
+                                    'submitted_by': '',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }],
+                                },
+                            },
+                            'relatives': [{
+                                'id': 'I_2_1',
+                                'interpretations': [{
+                                    'diagnosis': {
                                         'genomic_interpretations': [{
                                             'call': {
                                                 'variation_descriptor': {
@@ -499,41 +534,6 @@ class VlmTestCase(AioHTTPTestCase):
                                         'namespacePrefix': 'MONDO',
                                         'url': 'http://purl.obolibrary.org/obo/mondo.owl',
                                         'version': '2026-06-11',
-                                    }],
-                                },
-                            },
-                            'relatives': [{
-                                'id': 'I_2_0',
-                                'interpretations': [{
-                                    'diagnosis': {
-                                        'genomic_interpretations': [{
-                                            'call': {
-                                                'variation_descriptor': {
-                                                    'allelic_state': {'id': 'GENO:0000135', 'label': 'heterozygous'},
-                                                },
-                                            },
-                                            'interpretation_status': 'CANDIDATE',
-                                            'subject_or_biosample_id': 'I_2_0',
-                                        }],
-                                    },
-                                    'id': 'I_2_0',
-                                    'progress_status': 'UNKNOWN_PROGRESS',
-                                }],
-                                'phenotypic_features': [],
-                                'subject': {
-                                    'id': 'I_2_0',
-                                    'sex': 'UNKNOWN_SEX',
-                                },
-                                'meta_data': {
-                                    'submitted_by': '',
-                                    'phenopacket_schema_version': '2.0',
-                                    'resources': [{
-                                        'id': 'geno',
-                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
-                                        'name': 'GENO ontology',
-                                        'namespacePrefix': 'GENO',
-                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
-                                        'version': '2026-02-02',
                                     }],
                                 },
                             }],
