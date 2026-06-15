@@ -58,7 +58,7 @@ PHO_DATA = [
     'xref: SNOMEDCT_US:204962002\n',
     'xref: SNOMEDCT_US:82525005\n',
     'xref: UMLS:C3714581\n',
-    'is_a: HP:0000001 ! Renal cyst\n',
+    'is_a: HP:0000001 {xref="PMID:31677808"} ! Renal cyst\n',
     '\n',
     '[Term]\n', # no is_a
     'id: HP:0000005\n',
