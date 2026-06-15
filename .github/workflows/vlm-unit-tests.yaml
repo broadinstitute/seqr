@@ -13,12 +13,14 @@ on:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
       - 'clickhouse_search/fixtures/clickhouse_search.json'
+      - 'seqr/fixtures/1kg_project.json'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
       - 'clickhouse_search/fixtures/clickhouse_search.json'
+      - 'seqr/fixtures/1kg_project.json'
 
 jobs:
   vlm_clickhouse:
@@ -119,6 +121,14 @@ jobs:
           docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.\`GRCh38/SNV_INDEL/key_lookup\` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.\`GRCh37/SNV_INDEL/gt_stats_dict\` TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.\`GRCh38/SNV_INDEL/gt_stats_dict\` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.\`GRCh37/SNV_INDEL/entries\` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT SELECT ON test_seqr.\`GRCh38/SNV_INDEL/entries\` TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.seqrdb_affected_status_dict TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.seqrdb_sex_dict TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.seqrdb_individual_metadata_dict TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.seqrdb_discovery_variant_dict TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.seqrdb_excluded_variant_dict TO vlm_test_user"
+          docker exec clickhouse clickhouse-client --query "GRANT dictGet ON test_seqr.seqrdb_omim TO vlm_test_user"
           docker exec clickhouse clickhouse-client --query "SYSTEM RELOAD USERS"
       - name: Run coverage tests
         run: |

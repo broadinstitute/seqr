@@ -2,7 +2,7 @@ import logging
 from collections import OrderedDict
 from django.core.management.base import BaseCommand, CommandError
 
-from clickhouse_search.models.postgres_dicts import GeneIdDict
+from clickhouse_search.models.postgres_dicts import GeneIdDict, OmimDict
 from panelapp.models import PanelAppAU, PanelAppUK
 from reference_data.utils.gene_utils import get_genes_by_id_and_symbol
 from reference_data.models import GeneInfo, TranscriptInfo, HumanPhenotypeOntology, RefseqTranscript, GeneConstraint, \
@@ -70,6 +70,8 @@ class Command(BaseCommand):
                     kwargs['omim_key'] = options['omim_key']
                 data_cls.update_records(**kwargs)
                 self._track_success_updates(data_model_name, latest_version, current_versions, updated)
+                if data_cls == Omim:
+                    OmimDict.reload()
             except Exception as e:
                 logger.error("unable to update {}: {}".format(data_model_name, e))
                 update_failed.append(data_model_name)
