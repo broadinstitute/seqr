@@ -1216,7 +1216,7 @@ class DataManagerAPITest(AirtableTest):
         }
         if self.SKIP_TDR:
             body['skip_expect_tdr_metrics'] = True
-        if skip_check_sex_and_relatedness:
+        if skip_check_sex_and_relatedness or self.SKIP_TDR:
             body['skip_check_sex_and_relatedness'] = True
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), body)
 
