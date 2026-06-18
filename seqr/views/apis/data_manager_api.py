@@ -306,7 +306,7 @@ def load_data(request):
 
     loading_kwargs = {
         'skip_check_sex_and_relatedness': request_json.get('skipSRChecks', False),
-        'skip_expect_tdr_metrics': False,
+        'skip_expect_tdr_metrics': request_json.get('skipTDR', False),
         'vcf_sample_id_map': vcf_sample_id_map,
         'success_message': f'*{request.user.email}* triggered loading internal {sample_type} {dataset_type} data for {len(individual_ids)} samples in {len(projects)} projects ({"; ".join(sorted(project_counts))})',
         'error_message': f'ERROR triggering internal {sample_type} {dataset_type} loading',
@@ -314,7 +314,8 @@ def load_data(request):
 
     success = trigger_data_loading(
         projects_by_guid.values(), individual_ids, sample_type, dataset_type, request_json['genomeVersion'],
-        _callset_path(request_json), user=request.user, **loading_kwargs,
+        _callset_path(request_json), user=request.user, validations_to_skip=request_json.get('validationsToSkip'),
+        **loading_kwargs,
     )
 
     return create_json_response({'success': success})

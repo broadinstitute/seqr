@@ -161,6 +161,7 @@ CORE_REQUEST_BODY = {
     'filePath': '/callset.vcf',
     'sampleType': 'WES',
     'genomeVersion': '38',
+    'validationsToSkip': ['validate_sample_type', 'validate_no_duplicate_variants']
 }
 
 AIRTABLE_SAMPLE_RECORDS = {
@@ -1117,7 +1118,7 @@ class DataManagerAPITest(AirtableTest):
         mock_temp_dir.return_value.__enter__.return_value = '/mock/tmp'
         body = {**self.REQUEST_BODY, 'projects': [
             json.dumps(option) for option in self.PROJECT_OPTIONS + [{'projectGuid': 'R0005_not_project'}]
-        ], 'vcfSamples': self.VCF_SAMPLES, 'skipSRChecks': True}
+        ], 'vcfSamples': self.VCF_SAMPLES}
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'The following projects are invalid: R0005_not_project'})
@@ -1133,7 +1134,7 @@ class DataManagerAPITest(AirtableTest):
         )
         self.assertDictEqual(response.json(), {'success': True})
 
-        self._assert_expected_load_data_requests(sample_type='WES', skip_check_sex_and_relatedness=True)
+        self._assert_expected_load_data_requests(sample_type='WES', skip_check_sex_and_relatedness=True, validations_to_skip=['validate_sample_type', 'validate_no_duplicate_variants'])
         self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_remap=bool(self.MOCK_AIRTABLE_KEY))
 
         variables = {
@@ -1146,9 +1147,9 @@ class DataManagerAPITest(AirtableTest):
             'callset_path': f'{self.TRIGGER_CALLSET_DIR}/callset.vcf',
             'sample_type': 'WES',
             'skip_check_sex_and_relatedness': True,
+            'skip_expect_tdr_metrics': True,
+            'validations_to_skip': ['validate_sample_type', 'validate_no_duplicate_variants'],
         }
-        if self.SKIP_TDR:
-            variables['skip_expect_tdr_metrics'] = True
         self._assert_success_notification(variables)
 
         # Test loading trigger error
@@ -1159,8 +1160,13 @@ class DataManagerAPITest(AirtableTest):
         responses.calls.reset()
         self.reset_logs()
 
-        del body['skipSRChecks']
+        body.pop('skipSRChecks', None)
+        body.pop('skipTDR', None)
+        del body['validationsToSkip']
         del variables['skip_check_sex_and_relatedness']
+        del variables['validations_to_skip']
+        if not self.SKIP_TDR:
+            del variables['skip_expect_tdr_metrics']
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
         self._trigger_error(url, body, variables, mock_open, mock_gzip_open, mock_mkdir)
 
@@ -1203,7 +1209,7 @@ class DataManagerAPITest(AirtableTest):
         })
         self.assertEqual(len(responses.calls), 0)
 
-    def _assert_expected_load_data_requests(self, dataset_type='SNV_INDEL', sample_type='WGS', trigger_error=False, skip_project=False, skip_check_sex_and_relatedness=False):
+    def _assert_expected_load_data_requests(self, dataset_type='SNV_INDEL', sample_type='WGS', trigger_error=False, skip_project=False, skip_check_sex_and_relatedness=False, validations_to_skip=None):
         projects = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
         if skip_project:
             projects = projects[1:]
@@ -1214,9 +1220,10 @@ class DataManagerAPITest(AirtableTest):
             'dataset_type': dataset_type,
             'reference_genome': 'GRCh38',
         }
-        if self.SKIP_TDR:
-            body['skip_expect_tdr_metrics'] = True
+        if validations_to_skip:
+            body['validations_to_skip'] = validations_to_skip
         if skip_check_sex_and_relatedness or self.SKIP_TDR:
+            body['skip_expect_tdr_metrics'] = True
             body['skip_check_sex_and_relatedness'] = True
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), body)
 
@@ -1474,6 +1481,8 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         **CORE_REQUEST_BODY,
         'filePath': CALLSET_DIR + CORE_REQUEST_BODY['filePath'],
         'datasetType': 'SNV_INDEL',
+        'skipSRChecks': True,
+        'skipTDR': True
     }
     VCF_SAMPLES = [s for s in VCF_SAMPLES if s != 'NA21234']
 
