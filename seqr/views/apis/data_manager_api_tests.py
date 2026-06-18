@@ -1147,9 +1147,10 @@ class DataManagerAPITest(AirtableTest):
             'callset_path': f'{self.TRIGGER_CALLSET_DIR}/callset.vcf',
             'sample_type': 'WES',
             'skip_check_sex_and_relatedness': True,
-            'skip_expect_tdr_metrics': True,
             'validations_to_skip': ['validate_sample_type', 'validate_no_duplicate_variants'],
         }
+        if self.SKIP_TDR:
+            variables['skip_expect_tdr_metrics'] = True
         self._assert_success_notification(variables)
 
         # Test loading trigger error
@@ -1161,12 +1162,11 @@ class DataManagerAPITest(AirtableTest):
         self.reset_logs()
 
         body.pop('skipSRChecks', None)
-        body.pop('skipTDR', None)
         del body['validationsToSkip']
+        body['skipTDR'] = True
         del variables['skip_check_sex_and_relatedness']
         del variables['validations_to_skip']
-        if not self.SKIP_TDR:
-            del variables['skip_expect_tdr_metrics']
+        variables['skip_expect_tdr_metrics'] = True
         body.update({'datasetType': 'SV', 'filePath': f'{self.CALLSET_DIR}/sv_callset.vcf'})
         self._trigger_error(url, body, variables, mock_open, mock_gzip_open, mock_mkdir)
 
@@ -1177,6 +1177,7 @@ class DataManagerAPITest(AirtableTest):
         mock_mkdir.reset_mock()
         body.update({'sampleType': 'WGS', 'projects': [json.dumps(self.PROJECT_OPTION)], 'vcfSamples': VCF_SAMPLES})
         del body['datasetType']
+        del body['skipTDR']
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self._test_load_single_project(mock_open, mock_gzip_open, mock_mkdir, response, url=url, body=body)
 
@@ -1209,7 +1210,7 @@ class DataManagerAPITest(AirtableTest):
         })
         self.assertEqual(len(responses.calls), 0)
 
-    def _assert_expected_load_data_requests(self, dataset_type='SNV_INDEL', sample_type='WGS', trigger_error=False, skip_project=False, skip_check_sex_and_relatedness=False, validations_to_skip=None):
+    def _assert_expected_load_data_requests(self, dataset_type='SNV_INDEL', sample_type='WGS', trigger_error=False, skip_project=False, skip_check_sex_and_relatedness=False, skip_tdr=False, validations_to_skip=None):
         projects = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
         if skip_project:
             projects = projects[1:]
@@ -1222,15 +1223,16 @@ class DataManagerAPITest(AirtableTest):
         }
         if validations_to_skip:
             body['validations_to_skip'] = validations_to_skip
-        if skip_check_sex_and_relatedness or self.SKIP_TDR:
+        if skip_tdr or self.SKIP_TDR:
             body['skip_expect_tdr_metrics'] = True
+        if skip_check_sex_and_relatedness or self.SKIP_TDR:
             body['skip_check_sex_and_relatedness'] = True
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), body)
 
     def _trigger_error(self, url, body, variables, mock_open, mock_gzip_open, mock_mkdir):
         responses.add(responses.POST, PIPELINE_RUNNER_URL, status=400)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES')
+        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES', skip_tdr=True)
         self._assert_trigger_error(response, body, variables, response_body={
             'error': f'400 Client Error: Bad Request for url: {PIPELINE_RUNNER_URL}'
         })
@@ -1482,7 +1484,6 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         'filePath': CALLSET_DIR + CORE_REQUEST_BODY['filePath'],
         'datasetType': 'SNV_INDEL',
         'skipSRChecks': True,
-        'skipTDR': True
     }
     VCF_SAMPLES = [s for s in VCF_SAMPLES if s != 'NA21234']
 
