@@ -80,6 +80,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
         self.mock_slack.assert_not_called()
         self.assert_json_logs(user=None, expected=[
             ('Reloading dictionary seqrdb_gene_ids', None),
+            ('Reloading dictionary seqrdb_omim', None),
             ('unable to update PrimateAI: Primate_AI failed', {
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
@@ -110,6 +111,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
 
 
 class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
+    databases = '__all__'
 
     def test_all_loaded_update_reference_data_command(self):
         call_command('update_all_reference_data')
@@ -148,6 +150,7 @@ class UpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
                 'severity': 'ERROR',
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
             }),
+            ('Reloading dictionary seqrdb_omim', None),
             ('Done', None),
             ('Updated: Omim, dbNSFPGene, GenCC', None),
         ])

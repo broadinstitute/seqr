@@ -60,7 +60,7 @@ class ReferenceDataCommandTestCase(AuthenticationTestCase):
         call_command('update_all_reference_data', *(command_args or []))
 
 
-    def _test_update_command(self, model_name, expected_version, existing_records=1, created_records=1, skipped_records=1, head_response=None, command_args=None, additional_log=None, additional_log_offset=0, version_check_download=False):
+    def _test_update_command(self, model_name, expected_version, existing_records=1, created_records=1, skipped_records=1, head_response=None, command_args=None, additional_logs=None, version_check_download=False):
         DataVersions.objects.filter(data_model_name=model_name).delete()
 
         # test without a file_path parameter
@@ -80,7 +80,7 @@ class ReferenceDataCommandTestCase(AuthenticationTestCase):
         ]
         if version_check_download:
             log_calls.insert(0, download_log)
-        if additional_log:
+        for additional_log_offset, *additional_log in (additional_logs or []):
             log_calls.insert(additional_log_offset, additional_log)
         if skipped_records:
             log_calls.append((f'Skipped {skipped_records} records with unrecognized genes.', None))

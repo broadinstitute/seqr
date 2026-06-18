@@ -1,0 +1,81 @@
+[
+{
+    "model": "seqr.family",
+    "pk": 200,
+    "fields": {
+        "guid": "F000002_2_x",
+        "project": 1,
+        "family_id": "2_x",
+        "analysis_status": "ES",
+        "post_discovery_mondo_id": "MONDO:0044970"
+    }
+},
+{
+    "model": "seqr.individual",
+    "pk": 200,
+    "fields": {
+        "guid": "I000200_hg00731",
+        "family": 200,
+        "individual_id": "HG00731",
+        "sex": "F",
+        "affected": "U"
+    }
+},
+{
+    "model": "seqr.savedvariant",
+    "pk": 200,
+    "fields": {
+        "guid": "SV0000200_1038724419_r0390_100",
+        "xpos": 1038724419,
+        "ref": "T",
+        "alt": "G",
+        "variant_id": "1-38724419-T-G",
+        "key": 2,
+        "dataset_type": "SNV_INDEL",
+        "family": 2
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 200,
+    "fields": {
+        "guid": "VT0000200_1038724419_r0390_100",
+        "saved_variants": [200],
+        "variant_tag_type": 3
+    }
+},
+{
+    "model": "seqr.savedvariant",
+    "pk": 201,
+    "fields": {
+        "guid": "SV0000201_1038724419_r0390_100",
+        "xpos": 1038724419,
+        "ref": "T",
+        "alt": "G",
+        "variant_id": "1-38724419-T-G",
+        "key": 2,
+        "dataset_type": "SNV_INDEL",
+        "family": 200
+    }
+},
+{
+    "model": "seqr.varianttag",
+    "pk": 201,
+    "fields": {
+        "guid": "VT0000201_1038724419_r0390_100",
+        "saved_variants": [201],
+        "variant_tag_type": 1
+    }
+},
+{
+  "model": "reference_data.omim",
+  "pk": 200,
+  "fields": {
+      "mim_number": 147571,
+      "phenotype_mim_number": 615123,
+      "phenotype_description": "Immunodeficiency 38",
+      "chrom": "1",
+      "start": 11869,
+      "end": 14409
+  }
+}]

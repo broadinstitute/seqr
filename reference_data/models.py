@@ -188,7 +188,7 @@ class HumanPhenotypeOntology(LoadableModel):
                     'is_category': False,
                 }
             elif line.startswith('is_a: '):
-                is_a = value.split(' ! ')[0]
+                is_a = value.split(' ')[0]
                 if is_a == 'HP:0000118':
                     record['is_category'] = True
                 record['parent_id'] = is_a
