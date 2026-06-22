@@ -102,7 +102,7 @@ def trigger_data_loading(projects: list[Project], individual_ids: list[int], sam
     conditional_variables = {
         'skip_check_sex_and_relatedness': skip_check_sex_and_relatedness,
         'skip_expect_tdr_metrics': skip_expect_tdr_metrics,
-        'validations_to_skip': validations_to_skip,
+        'validations_to_skip': _valid_validation_to_skip(validations_to_skip, user),
     }
     variables.update({k: v for k, v in conditional_variables.items() if v})
     file_path = _get_pedigree_path(genome_version, sample_type, dataset_type)
@@ -125,6 +125,16 @@ def trigger_data_loading(projects: list[Project], individual_ids: list[int], sam
         ]))
 
     return success
+
+
+def _valid_validation_to_skip(validations_to_skip: list[str], user: User) -> list[str]:
+    invalid_validations = [validation for validation in (validations_to_skip or []) if validation not in {
+        'validate_expected_contig_frequency', 'validate_sample_type', 'validate_no_duplicate_variants',
+    }]
+    if invalid_validations:
+        validations_to_skip = [validation for validation in validations_to_skip if validation not in invalid_validations]
+        logger.error(f'Omitted invalid skip validations from loading request: {", ".join(invalid_validations)}', user)
+    return validations_to_skip
 
 
 def _enqueue_pipeline_request(name: str, variables: dict, user: User, raise_error: bool = True, log_error: bool = True):
@@ -186,7 +196,7 @@ def _upload_data_loading_files(individual_ids: list[int], vcf_sample_id_map: dic
 
 def _write_gene_id_file(user):
     file_name = 'db_id_to_gene_id'
-    if does_file_exist(f'{LOADING_DATASETS_DIR}/{file_name}.csv.gz'):
+    if does_file_exist(f'{LOADING_DATASETS_DIR}/{file_name}.csv.gz', user):
         return
 
     gene_data_loaded = (GeneInfo.objects.filter(gencode_release=int(GeneInfo.CURRENT_VERSION)).exists() and

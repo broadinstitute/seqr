@@ -161,7 +161,7 @@ CORE_REQUEST_BODY = {
     'filePath': '/callset.vcf',
     'sampleType': 'WES',
     'genomeVersion': '38',
-    'validationsToSkip': ['validate_sample_type', 'validate_no_duplicate_variants']
+    'validationsToSkip': ['validate_sample_type', 'validate_no_duplicate_variants', 'validate_something_else']
 }
 
 AIRTABLE_SAMPLE_RECORDS = {
@@ -1134,8 +1134,8 @@ class DataManagerAPITest(AirtableTest):
         )
         self.assertDictEqual(response.json(), {'success': True})
 
-        self._assert_expected_load_data_requests(sample_type='WES', skip_check_sex_and_relatedness=True, validations_to_skip=['validate_sample_type', 'validate_no_duplicate_variants'])
-        self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_remap=bool(self.MOCK_AIRTABLE_KEY))
+        load_data_logs = self._assert_expected_load_data_requests(sample_type='WES', skip_check_sex_and_relatedness=True, validations_to_skip=['validate_sample_type', 'validate_no_duplicate_variants'])
+        ped_file_logs = self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'SNV_INDEL', sample_type='WES', has_remap=bool(self.MOCK_AIRTABLE_KEY))
 
         variables = {
             'projects_to_run': [
@@ -1152,6 +1152,15 @@ class DataManagerAPITest(AirtableTest):
         if self.SKIP_TDR:
             variables['skip_expect_tdr_metrics'] = True
         self._assert_success_notification(variables)
+
+        self.assert_json_logs(self.data_manager_user if load_data_logs else self.pm_user, [
+            (log, None) for log in load_data_logs
+        ] + [
+            ('Omitted invalid skip validations from loading request: validate_something_else', {
+                'severity': 'ERROR',
+                '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
+            }),
+        ] + ped_file_logs + [('Triggered Loading Pipeline', {'detail': variables})])
 
         # Test loading trigger error
         self._set_file_not_found(has_mv_commands=True)
@@ -1228,6 +1237,7 @@ class DataManagerAPITest(AirtableTest):
         if skip_check_sex_and_relatedness or self.SKIP_TDR:
             body['skip_check_sex_and_relatedness'] = True
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), body)
+        return []
 
     def _trigger_error(self, url, body, variables, mock_open, mock_gzip_open, mock_mkdir):
         responses.add(responses.POST, PIPELINE_RUNNER_URL, status=400)
@@ -1284,6 +1294,7 @@ class DataManagerAPITest(AirtableTest):
             ['R0004_non_analyst_project', 'F000014_14', 'fam14', 'NA21234', '', '', 'F'] + (['ABC123'] if has_remap else []),
             ['R0004_non_analyst_project', 'F000014_14', 'fam14', 'NA21987', '', '', 'M'] + ([''] if has_remap else []),
         ])
+        return []
 
     def _test_load_single_project(self, mock_open, mock_gzip_open, mock_mkdir, response, *args, **kwargs):
         self.assertEqual(response.status_code, 200)
@@ -1397,23 +1408,23 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
 
     def _assert_expected_load_data_requests(self, *args, **kwargs):
         self.assertEqual(len(responses.calls), 1)
-        super()._assert_expected_load_data_requests(*args, **kwargs)
+        return super()._assert_expected_load_data_requests(*args, **kwargs)
 
     @staticmethod
     def _local_pedigree_path(dataset_type, sample_type):
         return f'/local_datasets/GRCh38/{dataset_type}/pedigrees/{sample_type}'
 
     def _has_expected_ped_files(self, mock_open, mock_gzip_open, mock_mkdir, dataset_type, *args, sample_type='WGS', has_gene_id_file=False, **kwargs):
-        super()._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, dataset_type,  *args, sample_type, has_gene_id_file=has_gene_id_file, **kwargs)
+        logs = super()._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, dataset_type,  *args, sample_type, has_gene_id_file=has_gene_id_file, **kwargs)
         call_paths = [self._local_pedigree_path(dataset_type, sample_type)]
         if not has_gene_id_file:
             call_paths.append(self.LOCAL_WRITE_DIR)
         self.assertEqual(mock_mkdir.call_count, len(call_paths))
         mock_mkdir.assert_has_calls([mock.call(call_path, exist_ok=True) for call_path in call_paths])
+        return logs
 
     def _assert_success_notification(self, variables):
-        self.maxDiff = None
-        self.assert_json_logs(self.pm_user, [('Triggered Loading Pipeline', {'detail': variables})])
+        pass
 
     def _trigger_error(self, url, body, variables, mock_open, mock_gzip_open, mock_mkdir):
         super()._trigger_error(url, body, variables, mock_open, mock_gzip_open, mock_mkdir)
@@ -1567,6 +1578,7 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         self.assert_json_logs(self.pm_user, [
             ('PermissionDenied: Error: To access RDG airtable user must login with Broad email.', {'severity': 'WARNING'})
         ])
+        self.reset_logs()
         self.login_data_manager_user()
         return super()._assert_expected_pm_access(get_response, *args, **kwargs)
 
@@ -1574,15 +1586,19 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         num_calls = 1
         is_gcnv = dataset_type == 'GCNV'
         required_sample_field = 'gCNV_CallsetPath' if is_gcnv else None
+        logs = []
         if not skip_project:
             self._assert_expected_airtable_call(required_sample_field, 'R0001_1kg')
             num_calls += 1
+            logs += ['Fetching Samples records 0-2 from airtable', 'Fetched 6 Samples records from airtable']
         if (not is_gcnv) and (not skip_project):
             self._assert_expected_airtable_vcf_id_call(required_sample_field, call_index=1)
             num_calls += 1
+            logs += ['Fetching Samples records 0-4 from airtable', 'Fetched 6 Samples records from airtable']
 
         self.assertEqual(len(responses.calls), num_calls)
         super()._assert_expected_load_data_requests(*args, dataset_type=dataset_type, skip_project=skip_project, **kwargs)
+        return logs
 
     def _assert_expected_airtable_call(self, required_sample_field, project_guid, call_index=0, additional_filter=None, additional_pdo_statuses='', additional_fields=None):
         airtable_filters = [
@@ -1707,19 +1723,22 @@ Loading pipeline should be triggered with:
         super()._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, dataset_type, sample_type, has_gene_id_file=has_gene_id_file, **kwargs)
 
         mock_mkdir.assert_not_called()
-        expected_calls = [mock.call(
+        expected_calls = [
             f'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/GRCh38/{dataset_type}/pedigrees/{sample_type}/',
-            stdout=-1, stderr=-2, shell=True,  # nosec
-        ), mock.call(
-            'gsutil ls gs://seqr-loading-temp/v3.1/db_id_to_gene_id.csv.gz', stdout=-1, stderr=-2, shell=True, # nosec
-        )]
+            'gsutil ls gs://seqr-loading-temp/v3.1/db_id_to_gene_id.csv.gz',
+        ]
         if not has_gene_id_file:
-            expected_calls.append(mock.call(
-                'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/', stdout=-1, stderr=-2, shell=True, # nosec
-            ))
+            expected_calls.append(
+                'gsutil mv /mock/tmp/* gs://seqr-loading-temp/v3.1/',
+            )
         self.assertEqual(self.mock_subprocess.call_count, len(expected_calls))
-        self.mock_subprocess.assert_has_calls(expected_calls)
+        self.mock_subprocess.assert_has_calls([
+            mock.call(call, stdout=-1, stderr=-2, shell=True) for call in expected_calls # nosec
+        ])
         self.mock_subprocess.reset_mock()
+        logs = [(f'==> {call}', None) for call in expected_calls]
+        logs.insert(2, ('CommandException: One or more URLs matched no objects', {'severity': 'WARNING'}))
+        return logs
 
     def _assert_write_pedigree_error(self, response):
         self.assertEqual(response.status_code, 200)
