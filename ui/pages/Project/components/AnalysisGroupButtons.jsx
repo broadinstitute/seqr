@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import { withRouter } from 'react-router-dom'
 import { connect } from 'react-redux'
 
+import { getUser } from 'redux/selectors'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import DeleteButton from 'shared/components/buttons/DeleteButton'
 import { Multiselect } from 'shared/components/form/Inputs'
@@ -16,6 +17,8 @@ import {
   FAMILY_FIELD_DESCRIPTION,
   CATEGORY_FAMILY_FILTERS,
   FAMILY_FIELD_NAME_LOOKUP,
+  ANVIL_FIELDS,
+  GREGOR_FINDING_TAG_NAME,
 } from 'shared/utils/constants'
 
 import { updateAnalysisGroup } from '../reducers'
@@ -101,6 +104,16 @@ const FORM_FIELDS = [
   },
 ]
 
+const ANVIL_FORM_FIELDS = [
+  ...FORM_FIELDS.slice(0, 2),
+  ...ANVIL_FIELDS.map(({ validate, ...field }) => ({
+    ...field,
+    labelHelp: `Add an AnVIL workspace to control access for this subset of families. Accounts with access to this 
+    workspace will gain access  to thes families even if they have no access t the rest of the project.`,
+  })),
+  ...FORM_FIELDS.slice(2),
+]
+
 const DYNAMIC_FORM_FIELDS = [
   NAME_FIELD,
   ...Object.entries(CATEGORY_FAMILY_FILTERS).map(([category, options], i) => ({
@@ -125,17 +138,29 @@ const DECORATORS = [
   }),
 ]
 
-const canUpdateGroup = (project, analysisGroup) => (
-  project.canEdit && (!analysisGroup?.analysisGroupGuid || analysisGroup.projectGuid)
+const canUpdateGroup = (project, analysisGroup, user) => (
+  project.canEdit && (!analysisGroup?.analysisGroupGuid || analysisGroup.projectGuid) && (
+    !analysisGroup?.workspaceNamespace || user?.isPm
+  )
 )
 
-export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, iconOnly, createDynamic }) => {
-  if (!canUpdateGroup(project, analysisGroup)) {
+export const UpdateAnalysisGroup = React.memo(({ project, user, analysisGroup, onSubmit, iconOnly, createDynamic }) => {
+  if (!canUpdateGroup(project, analysisGroup, user)) {
     return null
   }
   const isDynamic = !!analysisGroup?.criteria || createDynamic
   const title = `${analysisGroup ? 'Edit' : 'Create New'} ${isDynamic ? 'Dynamic ' : ''}Analysis Group`
   const entityName = `${isDynamic ? 'Dynamic' : ''}AnalysisGroup`
+
+  let formFields = FORM_FIELDS
+  if (isDynamic) {
+    formFields = DYNAMIC_FORM_FIELDS
+  } else if (user.isPm && (project.isAnalystProject || project.variantTagTypes?.some(
+    ({ name }) => name === GREGOR_FINDING_TAG_NAME,
+  ))) {
+    formFields = ANVIL_FORM_FIELDS
+  }
+
   return (
     <UpdateButton
       modalTitle={title}
@@ -146,7 +171,7 @@ export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmi
       editIconName={analysisGroup ? null : 'plus'}
       buttonText={iconOnly ? null : title}
       onSubmit={onSubmit}
-      formFields={isDynamic ? DYNAMIC_FORM_FIELDS : FORM_FIELDS}
+      formFields={formFields}
       showErrorPanel
       initialValues={analysisGroup}
       decorators={isDynamic ? null : DECORATORS}
@@ -156,6 +181,7 @@ export const UpdateAnalysisGroup = React.memo(({ project, analysisGroup, onSubmi
 
 UpdateAnalysisGroup.propTypes = {
   project: PropTypes.object,
+  user: PropTypes.object,
   analysisGroup: PropTypes.object,
   iconOnly: PropTypes.bool,
   createDynamic: PropTypes.bool,
@@ -164,6 +190,7 @@ UpdateAnalysisGroup.propTypes = {
 
 const mapUpdateStateToProps = state => ({
   project: getCurrentProject(state),
+  user: getUser(state),
 })
 
 const mapDispatchToProps = {
