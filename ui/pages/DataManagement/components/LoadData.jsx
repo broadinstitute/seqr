@@ -6,7 +6,7 @@ import { FormSpy } from 'react-final-form'
 import { getUser } from 'redux/selectors'
 import { validators } from 'shared/components/form/FormHelpers'
 import FormWizard from 'shared/components/form/FormWizard'
-import { ButtonRadioGroup, InlineToggle } from 'shared/components/form/Inputs'
+import { ButtonRadioGroup, CheckboxGroup, InlineToggle } from 'shared/components/form/Inputs'
 import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
 import {
   SAMPLE_TYPE_EXOME,
@@ -55,16 +55,48 @@ const FILE_PATH_FIELD = {
 
 const CALLSET_PAGE_FIELDS = [
   {
-    ...GENOME_VERSION_FIELD,
-    component: ButtonRadioGroup,
-    validate: validators.required,
-  },
-  {
     name: 'sampleType',
     label: 'Sample Type',
     component: ButtonRadioGroup,
     options: [SAMPLE_TYPE_EXOME, SAMPLE_TYPE_GENOME].map(value => ({ value, text: value })),
     validate: validators.required,
+  },
+  {
+    ...GENOME_VERSION_FIELD,
+    component: ButtonRadioGroup,
+    validate: validators.required,
+  },
+  {
+    name: 'validationsToSkip',
+    label: 'Skip Validations',
+    component: CheckboxGroup,
+    options: [
+      {
+        value: 'validate_expected_contig_frequency',
+        text: 'Chromosome Frequency',
+        description: `By default, VCFs will be checked to ensure they have a reasonable number of variants in each 
+          chromosome, and loading will fail if some chromosomes are missing data. If there is a known reason why some 
+          chromosomes may be missing variants, such as with gene panel data, this validation may be safely skipped.`,
+      },
+      {
+        value: 'validate_sample_type',
+        text: 'Sample Type',
+        description: `By default, VCFs will be checked for a representative sample of coding and non-coding SNPs which 
+          will then be used to assess whether the selected Sample Type aligns with the provided data. If there is a 
+          known reason why this validation would fail, such as WES data that uses broader capture regions, this 
+          validation may be safely skipped.`,
+      },
+      {
+        value: 'validate_no_duplicate_variants',
+        text: 'Duplicate Variants (modifies data before loading)',
+        description: `By default, VCFs will be checked to ensure they have no duplicate variants, as all supported  
+          calling pipelines should have a single row per variant. While there are no well supported reasons why a VCF 
+          with duplicate data should be loaded to seqr, we do provide this option to skip that validation and instead 
+          deduplicate the data before running. NOTE: By selecting this option, variants will be ARBITRARILY DEDUPLICATED. 
+          This means duplicate rows will be dropped at random to leave only one row per variant. If you want a more 
+          deterministic approach to merging/ deduplicating your data, this should be done outside of seqr.`,
+      },
+    ],
   },
 ]
 
@@ -92,13 +124,6 @@ const MULTI_DATA_TYPE_CALLSET_PAGE = {
       ...FILE_PATH_FIELD,
     },
     {
-      name: 'skipSRChecks',
-      label: 'Skip Sex and Relatedness Checks',
-      component: InlineToggle,
-      asFormInput: true,
-    },
-    ...CALLSET_PAGE_FIELDS,
-    {
       name: 'datasetType',
       label: 'Dataset Type',
       component: ButtonRadioGroup,
@@ -108,6 +133,19 @@ const MULTI_DATA_TYPE_CALLSET_PAGE = {
         DATASET_TYPE_MITO_CALLS,
       ].map(value => ({ value, text: value.replace('_', '/') })),
       validate: validators.required,
+    },
+    ...CALLSET_PAGE_FIELDS,
+    {
+      name: 'skipSRChecks',
+      label: 'Skip Sex and Relatedness Checks',
+      component: InlineToggle,
+      asFormInput: true,
+    },
+    {
+      name: 'skipTDR',
+      label: 'Skip TDR Metrics',
+      component: InlineToggle,
+      asFormInput: true,
     },
   ],
 }
