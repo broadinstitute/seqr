@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from datetime import datetime, timedelta
 from django.db.models import Count, Q, F, Value
+from django.db.models.expressions import Case, When
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
@@ -40,37 +41,26 @@ airtable_enabled_analyst_required = active_user_has_policies_and_passes_test(
 
 @pm_or_analyst_required
 def seqr_stats(request):
-    non_demo_projects = Project.objects.filter(is_demo=False)
-
-    project_models = {
-        'demo': Project.objects.filter(is_demo=True),
-    }
-    if anvil_enabled():
-        is_anvil_q = Q(workspace_namespace='') | Q(workspace_namespace__isnull=True)
-        anvil_projects = non_demo_projects.exclude(is_anvil_q)
-        internal_ids = get_internal_projects().values_list('id', flat=True)
-        project_models.update({
-            'internal': anvil_projects.filter(id__in=internal_ids),
-            'external': anvil_projects.exclude(id__in=internal_ids),
-            'no_anvil': non_demo_projects.filter(is_anvil_q),
-        })
-    else:
-        project_models.update({
-            'non_demo': non_demo_projects,
-        })
+    project_qs, *dataset_qs = _get_project_aggregated_qs()
 
     grouped_sample_counts = defaultdict(dict)
-    for project_key, projects in project_models.items():
-        samples_counts = _get_sample_counts(
-            Dataset.objects.filter(active_individuals__family__project__in=projects),
-            count=Count('active_individuals'),
-        )
-        samples_counts.update(_get_sample_counts(
-            RnaSample.objects.filter(individual__family__project__in=projects, is_active=True).annotate(sample_type=Value('RNA')),
-            data_type_key='data_type', count=Count('*'))
-        )
-        for k, v in samples_counts.items():
-            grouped_sample_counts[k][project_key] = v
+    for qs in dataset_qs:
+        for agg in qs.annotate(count=Count('active_individuals')):
+            grouped_sample_counts[f"{agg['sample_type']}__{agg['dataset_type']}"][_agg_key(agg)] = agg['count']
+
+    project_aggs = project_qs.annotate(
+        count=Count('id', distinct=True),
+        family_count=Count('family', distinct=True),
+        individual_count=Count('family__individual', distinct=True),
+    )
+    project_counts = {}
+    families_count = {}
+    individuals_count = {}
+    for agg in project_aggs:
+        key = _agg_key(agg)
+        project_counts[key] = agg['count']
+        families_count[key] = agg['family_count']
+        individuals_count[key] = agg['individual_count']
 
     user_counts = User.objects.filter(is_active=True).aggregate(
         total=Count('id'),
@@ -81,23 +71,44 @@ def seqr_stats(request):
     )
 
     return create_json_response({
-        'projectsCount': {k: projects.count() for k, projects in project_models.items()},
-        'familiesCount': {
-            k: Family.objects.filter(project__in=projects).count() for k, projects in project_models.items()
-        },
-        'individualsCount': {
-            k: Individual.objects.filter(family__project__in=projects).count() for k, projects in project_models.items()
-        },
+        'projectsCount': project_counts,
+        'familiesCount': families_count,
+        'individualsCount': individuals_count,
         'usersCounts': user_counts,
         'sampleCountsByType': grouped_sample_counts,
     })
 
 
-def _get_sample_counts(sample_q, count=None, data_type_key='dataset_type'):
-    samples_agg = sample_q.values('sample_type', data_type_key).annotate(count=count)
-    return {
-        f'{sample_agg["sample_type"]}__{sample_agg[data_type_key]}': sample_agg['count'] for sample_agg in samples_agg
-    }
+def _get_project_aggregated_qs():
+    prefixes = ['', 'active_individuals__family__project__', 'individual__family__project__']
+    agg_fields = [{'demo': F(f'{prefix}is_demo')} for prefix in prefixes]
+    if anvil_enabled():
+        internal_ids = get_internal_projects().values_list('id', flat=True)
+        for i, prefix in enumerate(prefixes):
+            agg_fields[i].update({
+                'no_anvil': Q(**{f'{prefix}workspace_namespace': ''}) | Q(**{f'{prefix}workspace_namespace__isnull': True}),
+                'is_internal': Case(When(**{f'{prefix}id__in': internal_ids, 'then': Value(True)}), default=Value(False)),
+            })
+
+    model_classes = [
+        (Project.objects, []),
+        (Dataset.objects, ['sample_type', 'dataset_type']),
+        (RnaSample.objects.annotate(sample_type=Value('RNA'), dataset_type=F('data_type'), active_individuals=F('individual_id')), ['sample_type', 'dataset_type']),
+    ]
+    return [
+        models.annotate(**agg_fields[i]).filter(demo__isnull=False).values(*agg_fields[i], *values)
+        for i, (models, values) in enumerate(model_classes)
+    ]
+
+
+def _agg_key(agg):
+    if agg['demo']:
+        return 'demo'
+    elif agg.get('no_anvil'):
+        return 'no_anvil'
+    elif 'is_internal' in agg:
+        return 'internal' if agg['is_internal'] else 'external'
+    return 'non_demo'
 
 
 # AnVIL metadata
