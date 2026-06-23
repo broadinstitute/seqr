@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import { Header, Table, Grid } from 'semantic-ui-react'
 
 import { getUser } from 'redux/selectors'
+import ExportTableButton from 'shared/components/buttons/ExportTableButton'
 import DataLoader from 'shared/components/DataLoader'
 import { DATASET_TITLE_LOOKUP } from 'shared/utils/constants'
 import { getSeqrStatsLoading, getSeqrStatsLoadingError, getSeqrStats } from '../selectors'
@@ -29,6 +30,8 @@ const USER_ROWS = [
   { title: 'Logged In Within 365 Days', key: 'lastYear' },
   { title: 'Logged In This Year', key: 'thisYear' },
 ]
+
+const EXPORT_SAMPLES_CONFIG = [{ name: 'Sample History', url: '/api/report/sample_stats_download' }]
 
 const SeqrStats = React.memo(({ stats, error, loading, load, user }) => (
   <div>
@@ -64,6 +67,7 @@ const SeqrStats = React.memo(({ stats, error, loading, load, user }) => (
                 </Table.Row>
               ))}
             </Table>
+            <ExportTableButton downloads={EXPORT_SAMPLES_CONFIG} buttonText="Download Sample Loading History" />
           </Grid.Column>
           <Grid.Column>
             <Table collapsing basic="very" textAlign="right">
