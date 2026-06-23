@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from datetime import datetime, timedelta
 from django.db.models import Count, Q, F, Value
+from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
 import re
@@ -71,6 +72,14 @@ def seqr_stats(request):
         for k, v in samples_counts.items():
             grouped_sample_counts[k][project_key] = v
 
+    user_counts = User.objects.filter(is_active=True).aggregate(
+        total=Count('id'),
+        multipleLogins=Count('id', filter=Q(last_login__isnull=False) & ~Q(last_login=F('date_joined'))),
+        lastMonth=Count('id', filter=Q(last_login__gte=datetime.now() - timedelta(days=30))),
+        lastYear=Count('id', filter=Q(last_login__gte=datetime.now() - timedelta(days=365))),
+        thisYear=Count('id', filter=Q(last_login__gte=datetime(datetime.now().year, 1, 1))),
+    )
+
     return create_json_response({
         'projectsCount': {k: projects.count() for k, projects in project_models.items()},
         'familiesCount': {
@@ -79,6 +88,7 @@ def seqr_stats(request):
         'individualsCount': {
             k: Individual.objects.filter(family__project__in=projects).count() for k, projects in project_models.items()
         },
+        'usersCounts': user_counts,
         'sampleCountsByType': grouped_sample_counts,
     })
 
