@@ -41,10 +41,10 @@ airtable_enabled_analyst_required = active_user_has_policies_and_passes_test(
 
 @pm_or_analyst_required
 def seqr_stats(request):
-    project_qs, dataset_qs = _get_project_aggregated_qs(additional_model=(Project, ''))
+    project_qs, dataset_qs_list = _get_project_aggregated_qs(additional_model=(Project, ''))
 
     grouped_sample_counts = defaultdict(dict)
-    for qs in dataset_qs:
+    for qs in dataset_qs_list:
         for agg in qs:
             grouped_sample_counts[f"{agg['sample_type']}__{agg['dataset_type']}"][_agg_key(agg)] = agg['count']
 
