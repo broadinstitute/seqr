@@ -683,11 +683,14 @@ class ReportAPITest(AirtableTest):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'projectsCount', 'individualsCount', 'familiesCount', 'sampleCountsByType'})
+        self.assertSetEqual(set(response_json.keys()), {'projectsCount', 'individualsCount', 'familiesCount', 'sampleCountsByType', 'usersCounts'})
         self.assertDictEqual(response_json['projectsCount'], self.STATS_DATA['projectsCount'])
         self.assertDictEqual(response_json['individualsCount'], self.STATS_DATA['individualsCount'])
         self.assertDictEqual(response_json['familiesCount'], self.STATS_DATA['familiesCount'])
         self.assertDictEqual(response_json['sampleCountsByType'], self.STATS_DATA['sampleCountsByType'])
+        self.assertDictEqual(response_json['usersCounts'], {
+            'total': 10, 'multipleLogins': 7, 'lastMonth': 5, 'lastYear': 5, 'thisYear': 5,
+        })
 
         self.check_no_analyst_no_access(url, has_override=self.HAS_PM_OVERRIDE)
 
