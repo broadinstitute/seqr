@@ -41,11 +41,11 @@ airtable_enabled_analyst_required = active_user_has_policies_and_passes_test(
 
 @pm_or_analyst_required
 def seqr_stats(request):
-    project_qs, *dataset_qs = _get_project_aggregated_qs()
+    project_qs, dataset_qs = _get_project_aggregated_qs(additional_model=(Project, ''))
 
     grouped_sample_counts = defaultdict(dict)
     for qs in dataset_qs:
-        for agg in qs.annotate(count=Count('active_individuals')):
+        for agg in qs:
             grouped_sample_counts[f"{agg['sample_type']}__{agg['dataset_type']}"][_agg_key(agg)] = agg['count']
 
     project_aggs = project_qs.annotate(
@@ -79,8 +79,10 @@ def seqr_stats(request):
     })
 
 
-def _get_project_aggregated_qs():
-    prefixes = ['', 'active_individuals__family__project__', 'individual__family__project__']
+def _get_project_aggregated_qs(additional_model=None):
+    prefixes = ['active_individuals__family__project__', 'individual__family__project__']
+    if additional_model:
+        prefixes.append(additional_model[1])
     agg_fields = [{'demo': F(f'{prefix}is_demo')} for prefix in prefixes]
     if anvil_enabled():
         internal_ids = get_internal_projects().values_list('id', flat=True)
@@ -90,15 +92,20 @@ def _get_project_aggregated_qs():
                 'is_internal': Case(When(**{f'{prefix}id__in': internal_ids, 'then': Value(True)}), default=Value(False)),
             })
 
-    model_classes = [
-        (Project.objects, []),
-        (Dataset.objects, ['sample_type', 'dataset_type']),
-        (RnaSample.objects.annotate(sample_type=Value('RNA'), dataset_type=F('data_type'), active_individuals=F('individual_id')), ['sample_type', 'dataset_type']),
+    dataset_qs = [
+        models.annotate(**agg_fields[i]).filter(demo__isnull=False).values(
+            'sample_type', 'dataset_type', *agg_fields[i],
+        ).annotate(count=Count('active_individuals')) for i, models in enumerate([
+            Dataset.objects,
+            RnaSample.objects.annotate(sample_type=Value('RNA'), dataset_type=F('data_type'), active_individuals=F('individual_id')),
+        ])
     ]
-    return [
-        models.annotate(**agg_fields[i]).filter(demo__isnull=False).values(*agg_fields[i], *values)
-        for i, (models, values) in enumerate(model_classes)
-    ]
+
+    if additional_model:
+        fields = agg_fields[-1]
+        return additional_model[0].objects.annotate(**fields).values(*fields), dataset_qs
+
+    return dataset_qs
 
 
 def _agg_key(agg):
