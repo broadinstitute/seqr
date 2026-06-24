@@ -130,7 +130,10 @@ DATASET_TYPE_LOOKUP = {
 @pm_or_analyst_required
 def sample_stats_download(request):
     dataset_qs_list = _get_project_aggregated_qs(additional_aggs={'loaded': TruncDate('loaded_date')})
-    rows = sorted([_format_export_row(**item) for qs in dataset_qs_list for item in qs], key=lambda row: row[0])
+    rows = sorted(
+        [_format_export_row(**item) for qs in dataset_qs_list for item in qs],
+        key=lambda row: (row[0], -row[1], *row[2:]),
+    )
 
     header = HEADER
     if anvil_enabled():

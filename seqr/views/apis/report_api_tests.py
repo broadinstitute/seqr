@@ -5,7 +5,7 @@ import responses
 from settings import AIRTABLE_URL
 
 from seqr.models import Project, RnaSample
-from seqr.views.apis.report_api import seqr_stats, anvil_export, gregor_export, family_metadata, variant_metadata
+from seqr.views.apis.report_api import seqr_stats, sample_stats_download, anvil_export, gregor_export, family_metadata, variant_metadata
 from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, AirtableTest
 
 
@@ -691,6 +691,22 @@ class ReportAPITest(AirtableTest):
         self.assertDictEqual(response_json['usersCounts'], {
             'total': 10, 'multipleLogins': 7, 'lastMonth': 5, 'lastYear': 5, 'thisYear': 5,
         })
+
+        self.check_no_analyst_no_access(url, has_override=self.HAS_PM_OVERRIDE)
+
+    def test_sample_stats_download(self):
+        no_access_project = Project.objects.get(id=3)
+        no_access_project.workspace_namespace = None
+        no_access_project.save()
+
+        url = reverse(sample_stats_download)
+        self.check_analyst_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(
+            [line.split('\t') for line in response.content.decode().strip('\n').split('\n')], self.EXPORT_DATA,
+        )
 
         self.check_no_analyst_no_access(url, has_override=self.HAS_PM_OVERRIDE)
 
@@ -1560,6 +1576,17 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
             'RNA__E': {'non_demo': 1},
         },
     }
+    EXPORT_DATA = [
+        ['date_loaded', 'num_samples', 'sample_type', 'dataset_type', 'is_demo'],
+        ['2017-02-05', '7', 'WES', 'Variant', 'False'],
+        ['2017-02-05', '3', 'RNA', 'Splice Outlier', 'False'],
+        ['2017-02-05', '2', 'RNA', 'TPM', 'False'],
+        ['2017-02-05', '1', 'RNA', 'Expression Outlier', 'False'],
+        ['2018-02-05', '3', 'WES', 'SV', 'False'],
+        ['2018-02-05', '3', 'WGS', 'SV', 'False'],
+        ['2020-02-05', '1', 'WGS', 'Variant', 'True'],
+        ['2022-02-05', '1', 'WES', 'Mitochondria', 'False'],
+    ]
 
     def _check_anvil_export_response(self, response, *args):
         self.assertEqual(response.status_code, 403)
@@ -1587,3 +1614,15 @@ class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
             'RNA__E': {'internal': 1},
         },
     }
+    EXPORT_DATA = [
+        ['date_loaded', 'num_samples', 'sample_type', 'dataset_type', 'is_demo', 'anvil_status'],
+        ['2017-02-05', '7', 'WES', 'Variant', 'False', 'Internal'],
+        ['2017-02-05', '2', 'RNA', 'Splice Outlier', 'False', 'Internal'],
+        ['2017-02-05', '2', 'RNA', 'TPM', 'False', 'Internal'],
+        ['2017-02-05', '1', 'RNA', 'Expression Outlier', 'False', 'Internal'],
+        ['2017-02-05', '1', 'RNA', 'Splice Outlier', 'False', 'External'],
+        ['2018-02-05', '3', 'WES', 'SV', 'False', 'Internal'],
+        ['2018-02-05', '3', 'WGS', 'SV', 'False', 'External'],
+        ['2020-02-05', '1', 'WGS', 'Variant', 'True', 'No AnVIL'],
+        ['2022-02-05', '1', 'WES', 'Mitochondria', 'False', 'Internal'],
+    ]
