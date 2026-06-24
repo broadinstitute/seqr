@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from django.db.models import Count, Q, F, Value
 from django.db.models.expressions import Case, When
+from django.db.models.functions import TruncDate
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
@@ -18,7 +19,7 @@ from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, \
     FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, \
     EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, GENE_COLUMN, FAMILY_INDIVIDUAL_FIELDS
-from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files
+from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files, export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 from seqr.views.utils.permissions_utils import user_is_analyst, get_project_and_check_permissions, \
@@ -79,7 +80,7 @@ def seqr_stats(request):
     })
 
 
-def _get_project_aggregated_qs(additional_model=None):
+def _get_project_aggregated_qs(additional_model=None, additional_aggs=None):
     prefixes = ['active_individuals__family__project__', 'individual__family__project__']
     if additional_model:
         prefixes.append(additional_model[1])
@@ -93,11 +94,12 @@ def _get_project_aggregated_qs(additional_model=None):
             })
 
     dataset_qs = [
-        models.annotate(**agg_fields[i]).filter(demo__isnull=False).values(
-            'sample_type', 'dataset_type', *agg_fields[i],
+        models.annotate(**agg_fields[i], **(additional_aggs or {})).filter(demo__isnull=False).values(
+            'sample_type', 'dataset_type', *agg_fields[i], *(additional_aggs or []),
         ).annotate(count=Count('active_individuals')) for i, models in enumerate([
-            Dataset.objects,
-            RnaSample.objects.annotate(sample_type=Value('RNA'), dataset_type=F('data_type'), active_individuals=F('individual_id')),
+            Dataset.objects, RnaSample.objects.annotate(
+                sample_type=Value('RNA'), dataset_type=F('data_type'), active_individuals=F('individual_id'), loaded_date=F('created_date'),
+            ),
         ])
     ]
 
@@ -116,6 +118,35 @@ def _agg_key(agg):
     elif 'is_internal' in agg:
         return 'internal' if agg['is_internal'] else 'external'
     return 'non_demo'
+
+
+HEADER = ['date_loaded', 'num_samples', 'sample_type', 'dataset_type', 'is_demo']
+DATASET_TYPE_LOOKUP = {
+    **RnaSample.DATA_TYPE_LOOKUP,
+    **{k: v.split(' ')[0] for k, v in Dataset.DATASET_TYPE_LOOKUP.items()},
+}
+
+
+@pm_or_analyst_required
+def sample_stats_download(request):
+    dataset_qs_list = _get_project_aggregated_qs(additional_aggs={'loaded': TruncDate('loaded_date')})
+    rows = sorted([_format_export_row(**item) for qs in dataset_qs_list for item in qs], key=lambda row: row[0])
+
+    header = HEADER
+    if anvil_enabled():
+        header = header + ['anvil_status']
+
+    file_format = request.GET.get('file_format', 'tsv')
+    return export_table('seqr_sample_loading', header, rows, file_format)
+
+
+def _format_export_row(loaded, count, sample_type, dataset_type, demo, no_anvil=0, is_internal=0):
+    row = [loaded.strftime('%Y-%m-%d'), count, sample_type, DATASET_TYPE_LOOKUP.get(dataset_type, 'Unknown'), demo]
+    if no_anvil:
+        row.append('No AnVIL')
+    elif is_internal is not 0:
+        row.append('Internal' if is_internal else 'External')
+    return row
 
 
 # AnVIL metadata
