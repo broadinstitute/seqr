@@ -63,12 +63,13 @@ def seqr_stats(request):
         families_count[key] = agg['family_count']
         individuals_count[key] = agg['individual_count']
 
+    now = datetime.now()
     user_counts = User.objects.filter(is_active=True).aggregate(
         total=Count('id'),
         multipleLogins=Count('id', filter=Q(last_login__isnull=False) & ~Q(last_login=F('date_joined'))),
-        lastMonth=Count('id', filter=Q(last_login__gte=datetime.now() - timedelta(days=30))),
-        lastYear=Count('id', filter=Q(last_login__gte=datetime.now() - timedelta(days=365))),
-        thisYear=Count('id', filter=Q(last_login__gte=datetime(datetime.now().year, 1, 1))),
+        lastMonth=Count('id', filter=Q(last_login__gte=now - timedelta(days=30))),
+        lastYear=Count('id', filter=Q(last_login__gte=now - timedelta(days=365))),
+        thisYear=Count('id', filter=Q(last_login__gte=datetime(now.year, 1, 1))),
     )
 
     return create_json_response({
@@ -97,7 +98,7 @@ def _get_project_aggregated_qs(additional_model=None, additional_aggs=None):
         models.annotate(**agg_fields[i], **(additional_aggs or {})).filter(demo__isnull=False).values(
             'sample_type', 'dataset_type', *agg_fields[i], *(additional_aggs or []),
         ).annotate(count=Count('active_individuals')) for i, models in enumerate([
-            Dataset.objects, RnaSample.objects.annotate(
+            Dataset.objects, RnaSample.objects.filter(is_active=True).annotate(
                 sample_type=Value('RNA'), dataset_type=F('data_type'), active_individuals=F('individual_id'), loaded_date=F('created_date'),
             ),
         ])
@@ -143,11 +144,11 @@ def sample_stats_download(request):
     return export_table('seqr_sample_loading', header, rows, file_format)
 
 
-def _format_export_row(loaded, count, sample_type, dataset_type, demo, no_anvil=0, is_internal=0):
+def _format_export_row(loaded, count, sample_type, dataset_type, demo, no_anvil='', is_internal=''):
     row = [loaded.strftime('%Y-%m-%d'), count, sample_type, DATASET_TYPE_LOOKUP.get(dataset_type, 'Unknown'), demo]
     if no_anvil:
         row.append('No AnVIL')
-    elif is_internal is not 0:
+    elif is_internal != '':
         row.append('Internal' if is_internal else 'External')
     return row
 

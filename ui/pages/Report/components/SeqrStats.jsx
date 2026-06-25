@@ -76,13 +76,15 @@ const SeqrStats = React.memo(({ stats, error, loading, load, user }) => (
                   <Table.HeaderCell />
                   <Table.HeaderCell content="Users" />
                 </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {USER_ROWS.map(({ title, key }) => (
                   <Table.Row key={key}>
                     <Table.HeaderCell textAlign="right" content={title} />
                     <Table.Cell content={(stats.usersCounts || {})[key]} />
                   </Table.Row>
                 ))}
-              </Table.Header>
+              </Table.Body>
             </Table>
           </Grid.Column>
         </Grid.Row>
