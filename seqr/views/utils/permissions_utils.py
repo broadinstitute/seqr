@@ -105,7 +105,7 @@ def is_internal_anvil_project(project):
     return anvil_enabled() and project.workspace_namespace in INTERNAL_NAMESPACES
 
 
-def get_internal_projects(): # TODO
+def get_internal_projects():
     if anvil_enabled():
         return Project.objects.filter(workspace_namespace__in=INTERNAL_NAMESPACES)
     return Project.objects.all()
@@ -133,7 +133,7 @@ def check_project_pm_permission(project, user, override_permission_func=None, **
     raise PermissionDenied("{user} does not have sufficient project management permissions for {project}".format(
         user=user, project=project))
 
-def project_has_anvil(project): # TODO
+def project_has_anvil(project):
     return anvil_enabled() and bool(project.workspace_namespace and project.workspace_name)
 
 
