@@ -1082,7 +1082,7 @@ class AnalysisGroup(ModelWithGUID):
     class Meta:
         unique_together = ('project', 'name')
 
-        json_fields = ['guid', 'name', 'description']
+        json_fields = ['guid', 'name', 'description', 'workspace_namespace', 'workspace_name']
 
 
 class DynamicAnalysisGroup(ModelWithGUID):

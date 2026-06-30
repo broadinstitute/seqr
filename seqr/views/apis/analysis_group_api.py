@@ -1,17 +1,18 @@
+from django.core.exceptions import PermissionDenied
 import json
 
 from seqr.models import AnalysisGroup, DynamicAnalysisGroup, Family
-from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, login_and_policies_required
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, login_and_policies_required, user_is_pm
 
 
 REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
 
 
 def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls, required_fields, is_dynamic=False,
-                           validate_body=lambda x: None, post_process_model=lambda x: None):
+                           validate_body=lambda x: None, post_process_model=lambda x: None, pm_fields=None):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
@@ -26,10 +27,13 @@ def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls
     if error:
         return create_json_response({}, status=400, reason=error)
 
+    pm_fields = {field: request_json[field] for field in pm_fields if request_json.get(field)}
     if analysis_group_guid:
         analysis_group = model_cls.objects.get(guid=analysis_group_guid, project=project)
+        _check_pm_field_permissions(pm_fields, request.user, analysis_group)
         update_model_from_json(analysis_group, request_json, user=request.user, allow_unknown_keys=True)
     else:
+        _check_pm_field_permissions(pm_fields, request.user)
         analysis_group, created = get_or_create_model_from_json(model_cls, {
             'project': project,
             'created_by': request.user,
@@ -50,11 +54,20 @@ def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls
     })
 
 
+def _check_pm_field_permissions(pm_fields, user, analysis_group=None):
+    if not pm_fields or user_is_pm(user):
+        return
+    if analysis_group and all(getattr(analysis_group, _to_snake_case(field)) == value for field, value in pm_fields.items()):
+        return
+    raise PermissionDenied(f'{user} does not have permission to edit {",".join(pm_fields)}')
+
+
 @login_and_policies_required
 def update_analysis_group_handler(request, project_guid, analysis_group_guid=None):
     valid_families = set()
+    workspace_fields = ['workspaceName', 'workspaceNamespace']
 
-    def _validate_families(request_json):
+    def _validate_body(request_json):
         request_json.pop('uploadedFamilyIds', None)
         family_guids = request_json.pop('familyGuids')
         families = Family.objects.filter(guid__in=family_guids).only('guid')
@@ -63,9 +76,15 @@ def update_analysis_group_handler(request, project_guid, analysis_group_guid=Non
                     missing_families=', '.join(set(family_guids) - set([family.guid for family in families])))
         valid_families.update(families)
 
+        edit_workspace_fields = [request_json[field] for field in workspace_fields if request_json.get(field)]
+        if len(edit_workspace_fields) == 1:
+            return 'Both Workspace Name and Workspace Namespace are required to add access control'
+        return None
+
     return _update_analysis_group(
-        request, project_guid, analysis_group_guid, AnalysisGroup, REQUIRED_FIELDS, validate_body=_validate_families,
+        request, project_guid, analysis_group_guid, AnalysisGroup, REQUIRED_FIELDS, validate_body=_validate_body,
         post_process_model=lambda analysis_group: analysis_group.families.set(valid_families),
+        pm_fields=workspace_fields,
     )
 
 
@@ -78,13 +97,17 @@ def update_dynamic_analysis_group_handler(request, project_guid, analysis_group_
 
 
 @login_and_policies_required
-def delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=AnalysisGroup):
+def delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=AnalysisGroup, check_workspace=True):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
-    model_cls.objects.get(guid=analysis_group_guid, project=project).delete_model(request.user, user_can_delete=True)
+    analysis_group = model_cls.objects.get(guid=analysis_group_guid, project=project)
+    if check_workspace and (analysis_group.workspace_namespace or analysis_group.workspace_name):
+        return create_json_response({}, status=400, reason='Unable to delete access control group')
+
+    analysis_group.delete_model(request.user, user_can_delete=True)
 
     return create_json_response({'analysisGroupsByGuid': {analysis_group_guid: None}})
 
 
 @login_and_policies_required
 def delete_dynamic_analysis_group_handler(request, project_guid, analysis_group_guid):
-    return delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=DynamicAnalysisGroup)
+    return delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=DynamicAnalysisGroup, check_workspace=False)
