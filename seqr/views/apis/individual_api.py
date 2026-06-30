@@ -24,7 +24,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_fo
     GREGOR_FINDING_TAG_TYPE
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, parse_hpo_terms, \
     get_valid_hpo_terms, JsonConstants, ErrorsWarningsException
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
+from seqr.views.utils.permissions_utils import get_project_and_check_edit_permission, check_project_permissions, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, external_anvil_project_can_edit, \
     pm_or_data_manager_required, check_workspace_perm, check_family_view_permissions
 from seqr.views.utils.project_context_utils import add_project_tag_type_counts
@@ -422,7 +422,7 @@ def receive_individuals_metadata_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     def process_records(json_records, filename=''):
         records, errors, warnings = _process_hpo_records(json_records, filename, project, request.user)
@@ -651,7 +651,7 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
     """
     Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_individuals_metadata_handler
     """
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     json_records, _ = load_uploaded_file(upload_file_id)
 
@@ -698,7 +698,7 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
 def import_gregor_metadata(request, project_guid):
     request_json = json.loads(request.body)
     sample_type = request_json.get('sampleType', 'genome')
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
     workspace_meta = check_workspace_perm(
         request.user, CAN_VIEW, request_json['workspaceNamespace'], request_json['workspaceName'],
         meta_fields=['workspace.bucketName']

@@ -21,7 +21,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants, \
     get_json_for_matchmaker_submission, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_family_view_permissions, analyst_required, \
-    has_project_permissions, login_and_policies_required, get_project_and_check_permissions
+    has_project_permissions, login_and_policies_required, get_project_and_check_edit_permission
 
 from settings import BASE_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL, VLM_SEND_EMAIL
@@ -390,7 +390,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
 
 @login_and_policies_required
 def update_mme_project_contact(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     request_json = json.loads(request.body)
     contact = (request_json.get('contact') or '').strip()

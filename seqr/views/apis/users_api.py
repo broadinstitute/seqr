@@ -15,7 +15,8 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username, get_json_for_project_collaborator_groups, PROJECT_ACCESS_GROUP_NAMES
 from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, get_project_and_check_permissions, \
-    login_and_policies_required, login_active_required, active_user_has_policies_and_passes_test
+    login_and_policies_required, login_active_required, active_user_has_policies_and_passes_test, \
+    get_project_and_check_edit_permission
 from seqr.views.utils.terra_api_utils import oauth_enabled, anvil_enabled
 from settings import BASE_URL, SEQR_TOS_VERSION, SEQR_PRIVACY_VERSION
 
@@ -136,7 +137,7 @@ def update_policies(request):
 
 @require_anvil_disabled
 def create_project_collaborator(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     request_json = json.loads(request.body)
     if not request_json.get('email'):
@@ -185,7 +186,7 @@ def _update_existing_user(user, project, request_json):
 
 @require_anvil_disabled
 def update_project_collaborator(request, project_guid, username):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
     user = User.objects.get(username=username)
 
     request_json = json.loads(request.body)
@@ -194,7 +195,7 @@ def update_project_collaborator(request, project_guid, username):
 
 @require_anvil_disabled
 def delete_project_collaborator(request, project_guid, username):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
     user = User.objects.get(username=username)
 
     project.can_view_group.user_set.remove(user)
@@ -207,7 +208,7 @@ def delete_project_collaborator(request, project_guid, username):
 
 @require_anvil_disabled
 def update_project_collaborator_group(request, project_guid, name):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
     group = Group.objects.get(name=name)
     request_json = json.loads(request.body)
 
@@ -224,7 +225,7 @@ def update_project_collaborator_group(request, project_guid, name):
 
 @require_anvil_disabled
 def delete_project_collaborator_group(request, project_guid, name):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
     group = Group.objects.get(name=name)
 
     remove_perm(user_or_group=group, perm=CAN_VIEW, obj=project)

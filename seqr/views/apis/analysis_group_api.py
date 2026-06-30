@@ -5,7 +5,7 @@ from seqr.models import AnalysisGroup, DynamicAnalysisGroup, Family
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, login_and_policies_required, \
+from seqr.views.utils.permissions_utils import get_project_and_check_edit_permission, login_and_policies_required, \
     user_is_pm, is_valid_anvil_workspace
 
 
@@ -14,7 +14,7 @@ REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
 
 def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls, required_fields, is_dynamic=False,
                            validate_body=lambda x: None, post_process_model=lambda x: None, pm_fields=None):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     request_json = json.loads(request.body)
     missing_fields = [field for field in required_fields.keys() if not request_json.get(field)]
@@ -101,7 +101,7 @@ def update_dynamic_analysis_group_handler(request, project_guid, analysis_group_
 
 @login_and_policies_required
 def delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=AnalysisGroup, check_workspace=True):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
     analysis_group = model_cls.objects.get(guid=analysis_group_guid, project=project)
     if check_workspace and (analysis_group.workspace_namespace or analysis_group.workspace_name):
         return create_json_response({}, status=400, reason='Unable to delete access control group')
