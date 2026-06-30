@@ -44,24 +44,24 @@ airtable_enabled_analyst_required = active_user_has_policies_and_passes_test(
 def seqr_stats(request):
     project_qs, dataset_qs_list = _get_project_aggregated_qs(additional_model=(Project, ''))
 
-    grouped_sample_counts = defaultdict(dict)
+    grouped_sample_counts = defaultdict(lambda: defaultdict(int))
     for qs in dataset_qs_list:
         for agg in qs:
-            grouped_sample_counts[f"{agg['sample_type']}__{agg['dataset_type']}"][_agg_key(agg)] = agg['count']
+            grouped_sample_counts[f"{agg['sample_type']}__{agg['dataset_type']}"][_agg_key(agg)] += agg['count']
 
     project_aggs = project_qs.annotate(
         count=Count('id', distinct=True),
         family_count=Count('family', distinct=True),
         individual_count=Count('family__individual', distinct=True),
     )
-    project_counts = {}
-    families_count = {}
-    individuals_count = {}
+    project_counts = defaultdict(int)
+    families_count = defaultdict(int)
+    individuals_count = defaultdict(int)
     for agg in project_aggs:
         key = _agg_key(agg)
-        project_counts[key] = agg['count']
-        families_count[key] = agg['family_count']
-        individuals_count[key] = agg['individual_count']
+        project_counts[key] += agg['count']
+        families_count[key] += agg['family_count']
+        individuals_count[key] += agg['individual_count']
 
     now = datetime.now()
     user_counts = User.objects.filter(is_active=True).aggregate(
