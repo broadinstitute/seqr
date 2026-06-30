@@ -105,13 +105,13 @@ def is_internal_anvil_project(project):
     return anvil_enabled() and project.workspace_namespace in INTERNAL_NAMESPACES
 
 
-def get_internal_projects():
+def get_internal_projects(): # TODO
     if anvil_enabled():
         return Project.objects.filter(workspace_namespace__in=INTERNAL_NAMESPACES)
     return Project.objects.all()
 
 
-def get_project_and_check_permissions(project_guid, user, **kwargs):
+def get_project_and_check_permissions(project_guid, user, **kwargs): # TODO
     return _get_project_and_check_permissions(project_guid, user, check_project_permissions, **kwargs)
 
 def get_project_and_check_pm_permissions(project_guid, user, override_permission_func=None):
@@ -133,7 +133,7 @@ def check_project_pm_permission(project, user, override_permission_func=None, **
     raise PermissionDenied("{user} does not have sufficient project management permissions for {project}".format(
         user=user, project=project))
 
-def project_has_anvil(project):
+def project_has_anvil(project): # TODO
     return anvil_enabled() and bool(project.workspace_namespace and project.workspace_name)
 
 
@@ -152,7 +152,7 @@ def _map_anvil_seqr_permission(anvil_permission):
 
 
 
-def has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
+def has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None): # TODO
     kwargs = {'meta_fields': meta_fields } if meta_fields else {}
     workspace_permission = user_get_workspace_access_level(user, namespace, name, **kwargs)
     if not workspace_permission:
@@ -165,7 +165,7 @@ def has_workspace_perm(user, permission_level, namespace, name, can_share=False,
     return workspace_permission if meta_fields else True
 
 
-def check_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
+def check_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None): # TODO
     workspace_meta = has_workspace_perm(user, permission_level, namespace, name, can_share, meta_fields)
     if workspace_meta:
         return workspace_meta
@@ -176,7 +176,7 @@ def check_workspace_perm(user, permission_level, namespace, name, can_share=Fals
     raise PermissionDenied(message)
 
 
-def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):
+def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name): # TODO
     workspace_acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
     permission_levels = {}
     for email in workspace_acl.keys():
@@ -186,7 +186,7 @@ def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):
     return permission_levels
 
 
-def has_project_permissions(project, user, can_edit=False):
+def has_project_permissions(project, user, can_edit=False): # TODO
     permission_level = CAN_VIEW
     if can_edit:
         permission_level = CAN_EDIT
@@ -202,7 +202,7 @@ def _user_project_permission(user, permission_level, project):
     return user.has_perm(permission_level, project)
 
 
-def check_project_permissions(project, user, **kwargs):
+def check_project_permissions(project, user, **kwargs): # TODO
     if has_project_permissions(project, user, **kwargs):
         return
 
@@ -224,13 +224,13 @@ def _get_all_can_view_project_guids_set(user):
     return set(get_project_guids_user_can_view(user, limit_data_manager=False))
 
 
-def check_projects_view_permission(projects, user):
+def check_projects_view_permission(projects, user): # TODO
     no_access_projects = set(projects.values_list('guid', flat=True)) - _get_all_can_view_project_guids_set(user)
     if no_access_projects:
         raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_projects)}")
 
 
-def check_locus_list_permissions(locus_list, user):
+def check_locus_list_permissions(locus_list, user): # TODO
     if locus_list.is_public or _is_user_created_object(locus_list, user):
         return
     access_projects = set(locus_list.projects.values_list('guid', flat=True)).intersection(
@@ -240,7 +240,7 @@ def check_locus_list_permissions(locus_list, user):
         raise PermissionDenied(f'{user} does not have view permissions for {locus_list}')
 
 
-def get_project_guids_user_can_view(user, limit_data_manager=True):
+def get_project_guids_user_can_view(user, limit_data_manager=True): # TODO
     if user_is_data_manager(user) and not limit_data_manager:
         return list(Project.objects.values_list('guid', flat=True))
 
@@ -267,7 +267,7 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
     return project_guids
 
 
-def check_mme_permissions(submission, user):
+def check_mme_permissions(submission, user): # TODO
     project = submission.individual.family.project
     check_project_permissions(project, user)
     if not (project.is_mme_enabled and not project.is_demo):
