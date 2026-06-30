@@ -24,9 +24,9 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_fo
     GREGOR_FINDING_TAG_TYPE
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table, validate_fam_file_records, parse_hpo_terms, \
     get_valid_hpo_terms, JsonConstants, ErrorsWarningsException
-from seqr.views.utils.permissions_utils import get_project_and_check_edit_permission, check_project_permissions, \
+from seqr.views.utils.permissions_utils import get_project_and_check_edit_permission, check_project_edit_permission, \
     get_project_and_check_pm_permissions, login_and_policies_required, has_project_permissions, external_anvil_project_can_edit, \
-    pm_or_data_manager_required, check_workspace_perm, check_family_view_permissions
+    pm_or_data_manager_required, check_workspace_perm, check_family_view_permission
 from seqr.views.utils.project_context_utils import add_project_tag_type_counts
 from seqr.views.utils.individual_utils import delete_individuals, add_or_update_individuals_and_families
 from seqr.views.utils.variant_utils import bulk_create_tagged_variants, get_saved_variant_annotations
@@ -59,7 +59,7 @@ def update_individual_handler(request, individual_guid):
 
     family = individual.family
 
-    check_family_view_permissions(family, request.user)
+    check_family_view_permission(family, request.user)
     can_edit = has_project_permissions(family.project, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
@@ -84,7 +84,7 @@ def update_individual_hpo_terms(request, individual_guid):
 
     project = individual.family.project
 
-    check_project_permissions(project, request.user, can_edit=True)
+    check_project_edit_permission(project, request.user)
 
     request_json = json.loads(request.body)
 
@@ -884,7 +884,7 @@ def _parse_participant_val(column, value, participant_sample_lookup):
 def get_individual_rna_seq_data(request, individual_guid):
     individual = Individual.objects.get(guid=individual_guid)
     family = individual.family
-    check_family_view_permissions(family, request.user)
+    check_family_view_permission(family, request.user)
 
     filters = {'sample__individual': individual}
     outlier_data = get_json_for_rna_seq_outliers(filters, significant_only=False, individual_guid=individual_guid)

@@ -28,7 +28,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches, FAMILY_ADDITIONAL_VALUES
-from seqr.views.utils.permissions_utils import check_family_view_permissions, get_project_guids_user_can_view, \
+from seqr.views.utils.permissions_utils import check_family_view_permission, get_project_guids_user_can_view, \
     login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission, user_is_analyst
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variants_response, variant_dataset_type
@@ -173,7 +173,7 @@ def _get_exclude_keys(search_hash, user):
 def query_single_variant_handler(request, variant_id):
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
     family = families.first()
-    check_family_view_permissions(family, request.user)
+    check_family_view_permission(family, request.user)
 
     variants = get_clickhouse_variants(families, request.user, raw_variant_items=variant_id, variant_ids=[variant_id])
     if not variants:
