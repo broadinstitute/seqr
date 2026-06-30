@@ -144,7 +144,7 @@ const canUpdateGroup = (project, analysisGroup, user) => (
   )
 )
 
-export const UpdateAnalysisGroup = React.memo(({ project, user, analysisGroup, onSubmit, iconOnly, createDynamic }) => {
+const UpdateAnalysisGroup = React.memo(({ project, user, analysisGroup, onSubmit, iconOnly, createDynamic }) => {
   if (!canUpdateGroup(project, analysisGroup, user)) {
     return null
   }
@@ -201,7 +201,7 @@ export const UpdateAnalysisGroupButton = connect(mapUpdateStateToProps, mapDispa
 
 const navigateProjectPage = (history, projectGuid) => () => history.push(`/project/${projectGuid}/project_page`)
 
-export const DeleteAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
+const DeleteAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
   canUpdateGroup(project, analysisGroup) ? (
     <DeleteButton
       initialValues={analysisGroup}
