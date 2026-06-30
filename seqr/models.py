@@ -1071,6 +1071,9 @@ class AnalysisGroup(ModelWithGUID):
     project = models.ForeignKey('Project', on_delete=models.CASCADE)
     families = models.ManyToManyField(Family)
 
+    workspace_namespace = models.TextField(null=True, blank=True)
+    workspace_name = models.TextField(null=True, blank=True)
+
     def __unicode__(self):
         return self.name.strip()
 
