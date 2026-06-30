@@ -110,9 +110,11 @@ def get_internal_projects():
         return Project.objects.filter(workspace_namespace__in=INTERNAL_NAMESPACES)
     return Project.objects.all()
 
+def get_project_and_check_edit_permission(project_guid, user):
+    return _get_project_and_check_permissions(project_guid, user, check_project_permissions, can_edit=True)
 
-def get_project_and_check_permissions(project_guid, user, **kwargs):
-    return _get_project_and_check_permissions(project_guid, user, check_project_permissions, **kwargs)
+def get_project_and_check_permissions(project_guid, user):
+    return _get_project_and_check_permissions(project_guid, user, check_project_permissions)
 
 def get_project_and_check_pm_permissions(project_guid, user, override_permission_func=None):
     return _get_project_and_check_permissions(project_guid, user, check_project_pm_permission,
@@ -202,7 +204,7 @@ def _user_project_permission(user, permission_level, project):
     return user.has_perm(permission_level, project)
 
 
-def check_project_permissions(project, user, **kwargs):
+def check_project_permissions(project, user, **kwargs): # TODO edit/view split helper
     if has_project_permissions(project, user, **kwargs):
         return
 

@@ -15,7 +15,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_sample
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, external_anvil_project_can_edit, \
     login_and_policies_required, pm_or_data_manager_required, get_project_guids_user_can_view, user_is_data_manager, \
-    user_is_pm
+    user_is_pm, get_project_and_check_edit_permission
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
@@ -92,7 +92,7 @@ def _process_igv_table_handler(parse_uploaded_file, get_valid_matched_individual
 
 @pm_or_data_manager_required
 def receive_igv_table_handler(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     def _get_valid_matched_individuals(individual_dataset_mapping):
         matched_individuals = Individual.objects.filter(
