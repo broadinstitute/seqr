@@ -207,7 +207,7 @@ def _user_project_permission(user, permission_level, project):
     return user.has_perm(permission_level, project)
 
 
-def check_project_permissions(project, user, **kwargs): # TODO
+def check_project_permissions(project, user, **kwargs):
     if has_project_permissions(project, user, **kwargs):
         return
 

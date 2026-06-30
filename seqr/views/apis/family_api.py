@@ -23,7 +23,7 @@ from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Datase
     PhenotypePrioritization, Project, RnaSample
 from seqr.views.utils.permissions_utils import check_project_permissions, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions, external_anvil_project_can_edit, \
-    get_internal_projects, get_project_guids_user_can_view
+    get_internal_projects, get_project_guids_user_can_view, check_family_view_permissions
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import get_phenotype_prioritization, get_omim_intervals_query, DISCOVERY_CATEGORY
 from seqr.utils.xpos_utils import get_chrom_pos
@@ -39,7 +39,7 @@ def family_page_data(request, family_guid):
     families = Family.objects.filter(guid=family_guid)
     family = families.get(guid=family_guid)
     project = family.project
-    check_project_permissions(project, request.user)
+    check_family_view_permissions(family, request.user)
     is_analyst = user_is_analyst(request.user)
     has_case_review_perm = has_case_review_permissions(project, request.user)
 
@@ -122,8 +122,7 @@ def _add_parsed_omims(omims, omim_map, intervals=None):
 @login_and_policies_required
 def family_variant_tag_summary(request, family_guid):
     family = Family.objects.get(guid=family_guid)
-    project = family.project
-    check_project_permissions(project, request.user)
+    check_family_view_permissions(family, request.user)
 
     response = families_discovery_tags([{'familyGuid': family_guid}])
 
@@ -135,6 +134,7 @@ def family_variant_tag_summary(request, family_guid):
     response['familyTagTypeCounts'][family_guid][MME_TAG_NAME] = tags.filter(
         saved_variants__matchmakersubmissiongenes__isnull=False).values('saved_variants__guid').distinct().count()
 
+    project = family.project
     response['projectsByGuid'] = {project.guid: {}}
     add_project_tag_types(response['projectsByGuid'], project=project)
 
@@ -230,8 +230,8 @@ def delete_families_handler(request, project_guid):
 def update_family_fields_handler(request, family_guid):
     family = Family.objects.get(guid=family_guid)
 
-    # check permission - can be edited by anyone with access to the project
-    check_project_permissions(family.project, request.user)
+    # check permission - can be edited by anyone with access to the family
+    check_family_view_permissions(family, request.user)
 
     request_json = json.loads(request.body)
     immutable_keys = [] if external_anvil_project_can_edit(family.project, request.user) else ['family_id']
@@ -254,8 +254,8 @@ def _set_display_name(family_json, family_model):
 @login_and_policies_required
 def update_family_assigned_analyst(request, family_guid):
     family = Family.objects.get(guid=family_guid)
-    # assigned_analyst can be edited by anyone with access to the project
-    check_project_permissions(family.project, request.user, can_edit=False)
+    # assigned_analyst can be edited by anyone with access to the family
+    check_family_view_permissions(family, request.user, can_edit=False)
 
     request_json = json.loads(request.body)
     assigned_analyst_username = request_json.get('assigned_analyst_username')
@@ -281,8 +281,8 @@ def update_family_assigned_analyst(request, family_guid):
 @login_and_policies_required
 def update_family_analysed_by(request, family_guid):
     family = Family.objects.get(guid=family_guid)
-    # analysed_by can be edited by anyone with access to the project
-    check_project_permissions(family.project, request.user, can_edit=False)
+    # analysed_by can be edited by anyone with access to the family
+    check_family_view_permissions(family, request.user)
 
     request_json = json.loads(request.body)
     create_model_from_json(FamilyAnalysedBy, {'family': family, 'data_type': request_json['dataType']}, request.user)
@@ -430,7 +430,7 @@ def _get_family_column_map(record):
 @login_and_policies_required
 def create_family_note(request, family_guid):
     family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    check_family_view_permissions(family, request.user)
 
     return create_note_handler(
         request, FamilyNote, parent_fields={'family': family}, additional_note_fields=['noteType'],
@@ -456,7 +456,7 @@ def delete_family_note(request, family_guid, note_guid):
 @login_and_policies_required
 def get_family_rna_seq_data(request, family_guid, gene_id):
     family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    check_family_view_permissions(family, request.user)
 
     response = defaultdict(lambda:  defaultdict(lambda: {'individualData': {}}))
     tpm_data = RnaSeqTpm.objects.filter(
@@ -483,12 +483,12 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
 
 @login_and_policies_required
 def get_family_phenotype_gene_scores(request, family_guid):
-    project = Project.objects.get(family__guid=family_guid)
-    check_project_permissions(project, request.user)
+    family = Family.objects.get(guid=family_guid)
+    check_family_view_permissions(family, request.user)
 
     phenotype_prioritization = get_phenotype_prioritization([family_guid])
     gene_ids = {gene_id for indiv in phenotype_prioritization.values() for gene_id in indiv.keys()}
     return create_json_response({
         'phenotypeGeneScores': phenotype_prioritization,
-        'genesById': get_genes_for_variant_display(gene_ids, project.genome_version),
+        'genesById': get_genes_for_variant_display(gene_ids, family.project.genome_version),
     })

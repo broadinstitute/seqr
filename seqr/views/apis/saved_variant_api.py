@@ -13,7 +13,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, STRUCTURED_METADATA_TAG_TYPES
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
-    login_and_policies_required
+    login_and_policies_required, check_family_view_permissions
 from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
 
 
@@ -51,7 +51,7 @@ def saved_variant_data(request, project_guid, variant_guids=None):
 @login_and_policies_required
 def create_manual_saved_variant_handler(request, family_guid):
     family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    check_family_view_permissions(family, request.user)
 
     variant_json = json.loads(request.body)
     tags = variant_json.pop('tags', [])
@@ -98,7 +98,7 @@ def create_saved_variant_handler(request):
     family_guid = variant_json['familyGuid']
 
     family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    check_family_view_permissions(family, request.user)
 
     variants_json = variant_json['variant']
     if not isinstance(variant_json['variant'], list):
@@ -130,7 +130,7 @@ def create_variant_note_handler(request, variant_guids):
 
     family_guid = request_json.pop('familyGuid')
     family = Family.objects.get(guid=family_guid)
-    check_project_permissions(family.project, request.user)
+    check_family_view_permissions(family, request.user)
 
     all_variant_guids = variant_guids.split(',')
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
@@ -180,9 +180,9 @@ def _create_variant_note(saved_variants, note_json, user):
 @login_and_policies_required
 def update_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
-    projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
-    for project in projects:
-        check_project_permissions(project, request.user)
+    families = {saved_variant.family for saved_variant in note.saved_variants.all()}
+    for family in families:
+        check_family_view_permissions(family, request.user)
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, user=request.user, allow_unknown_keys=True)
 
@@ -198,9 +198,9 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 def delete_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
     note = VariantNote.objects.get(guid=note_guid)
-    projects = {saved_variant.family.project for saved_variant in note.saved_variants.all()}
-    for project in projects:
-        check_project_permissions(project, request.user)
+    families = {saved_variant.family for saved_variant in note.saved_variants.all()}
+    for family in families:
+        check_family_view_permissions(family, request.user)
     note.delete_model(request.user, user_can_delete=True)
 
     saved_variants_by_guid = {}
@@ -238,7 +238,7 @@ def update_variant_acmg_classification_handler(request, variant_guid):
 
 def _update_variant_acmg_classification(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_project_permissions(saved_variant.family.project, request.user)
+    check_family_view_permissions(saved_variant.family, request.user)
 
     request_json = json.loads(request.body)
     variant = request_json.get('variant')
@@ -263,8 +263,8 @@ def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_t
     request_json = json.loads(request.body)
 
     family_guid = request_json.pop('familyGuid')
-    project = Project.objects.get(family__guid=family_guid)
-    check_project_permissions(project, request.user)
+    family = Family.objects.get(guid=family_guid)
+    check_family_view_permissions(family, request.user)
 
     all_variant_guids = set(variant_guids.split(','))
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
