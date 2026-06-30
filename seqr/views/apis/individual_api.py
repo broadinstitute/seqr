@@ -57,7 +57,7 @@ def update_individual_handler(request, individual_guid):
 
     individual = Individual.objects.get(guid=individual_guid)
 
-    family = individual.family.project
+    family = individual.family
 
     check_family_view_permissions(family, request.user)
     can_edit = has_project_permissions(family.project, request.user, can_edit=True)
@@ -422,7 +422,7 @@ def receive_individuals_metadata_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     def process_records(json_records, filename=''):
         records, errors, warnings = _process_hpo_records(json_records, filename, project, request.user)
@@ -651,7 +651,7 @@ def save_individuals_metadata_table_handler(request, project_guid, upload_file_i
     """
     Handler for 'save' requests to apply HPO terms tables previously uploaded through receive_individuals_metadata_handler
     """
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     json_records, _ = load_uploaded_file(upload_file_id)
 
