@@ -2,6 +2,9 @@ from collections import defaultdict
 
 from datetime import datetime, timedelta
 from django.db.models import Count, Q, F, Value
+from django.db.models.expressions import Case, When
+from django.db.models.functions import TruncDate
+from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 import json
 import re
@@ -16,7 +19,7 @@ from seqr.views.utils.airtable_utils import AirtableSession
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, \
     FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, SAMPLE_ROW_TYPE, DISCOVERY_ROW_TYPE, PARTICIPANT_TABLE, PHENOTYPE_TABLE, \
     EXPERIMENT_TABLE, EXPERIMENT_LOOKUP_TABLE, FINDINGS_TABLE, GENE_COLUMN, FAMILY_INDIVIDUAL_FIELDS
-from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files
+from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files, export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
 from seqr.views.utils.permissions_utils import user_is_analyst, get_project_and_check_permissions, \
@@ -39,55 +42,115 @@ airtable_enabled_analyst_required = active_user_has_policies_and_passes_test(
 
 @pm_or_analyst_required
 def seqr_stats(request):
-    non_demo_projects = Project.objects.filter(is_demo=False)
+    project_qs, dataset_qs_list = _get_project_aggregated_qs(additional_model=(Project, ''))
 
-    project_models = {
-        'demo': Project.objects.filter(is_demo=True),
-    }
-    if anvil_enabled():
-        is_anvil_q = Q(workspace_namespace='') | Q(workspace_namespace__isnull=True)
-        anvil_projects = non_demo_projects.exclude(is_anvil_q)
-        internal_ids = get_internal_projects().values_list('id', flat=True)
-        project_models.update({
-            'internal': anvil_projects.filter(id__in=internal_ids),
-            'external': anvil_projects.exclude(id__in=internal_ids),
-            'no_anvil': non_demo_projects.filter(is_anvil_q),
-        })
-    else:
-        project_models.update({
-            'non_demo': non_demo_projects,
-        })
+    grouped_sample_counts = defaultdict(lambda: defaultdict(int))
+    for qs in dataset_qs_list:
+        for agg in qs:
+            grouped_sample_counts[f"{agg['sample_type']}__{agg['dataset_type']}"][_agg_key(agg)] += agg['count']
 
-    grouped_sample_counts = defaultdict(dict)
-    for project_key, projects in project_models.items():
-        samples_counts = _get_sample_counts(
-            Dataset.objects.filter(active_individuals__family__project__in=projects),
-            count=Count('active_individuals'),
-        )
-        samples_counts.update(_get_sample_counts(
-            RnaSample.objects.filter(individual__family__project__in=projects, is_active=True).annotate(sample_type=Value('RNA')),
-            data_type_key='data_type', count=Count('*'))
-        )
-        for k, v in samples_counts.items():
-            grouped_sample_counts[k][project_key] = v
+    project_aggs = project_qs.annotate(
+        count=Count('id', distinct=True),
+        family_count=Count('family', distinct=True),
+        individual_count=Count('family__individual', distinct=True),
+    )
+    project_counts = defaultdict(int)
+    families_count = defaultdict(int)
+    individuals_count = defaultdict(int)
+    for agg in project_aggs:
+        key = _agg_key(agg)
+        project_counts[key] += agg['count']
+        families_count[key] += agg['family_count']
+        individuals_count[key] += agg['individual_count']
+
+    now = datetime.now()
+    user_counts = User.objects.filter(is_active=True).aggregate(
+        total=Count('id'),
+        multipleLogins=Count('id', filter=Q(last_login__isnull=False) & ~Q(last_login=F('date_joined'))),
+        lastMonth=Count('id', filter=Q(last_login__gte=now - timedelta(days=30))),
+        lastYear=Count('id', filter=Q(last_login__gte=now - timedelta(days=365))),
+        thisYear=Count('id', filter=Q(last_login__gte=datetime(now.year, 1, 1))),
+    )
 
     return create_json_response({
-        'projectsCount': {k: projects.count() for k, projects in project_models.items()},
-        'familiesCount': {
-            k: Family.objects.filter(project__in=projects).count() for k, projects in project_models.items()
-        },
-        'individualsCount': {
-            k: Individual.objects.filter(family__project__in=projects).count() for k, projects in project_models.items()
-        },
+        'projectsCount': project_counts,
+        'familiesCount': families_count,
+        'individualsCount': individuals_count,
+        'usersCounts': user_counts,
         'sampleCountsByType': grouped_sample_counts,
     })
 
 
-def _get_sample_counts(sample_q, count=None, data_type_key='dataset_type'):
-    samples_agg = sample_q.values('sample_type', data_type_key).annotate(count=count)
-    return {
-        f'{sample_agg["sample_type"]}__{sample_agg[data_type_key]}': sample_agg['count'] for sample_agg in samples_agg
-    }
+def _get_project_aggregated_qs(additional_model=None, additional_aggs=None):
+    prefixes = ['active_individuals__family__project__', 'individual__family__project__']
+    if additional_model:
+        prefixes.append(additional_model[1])
+    agg_fields = [{'demo': F(f'{prefix}is_demo')} for prefix in prefixes]
+    if anvil_enabled():
+        internal_ids = get_internal_projects().values_list('id', flat=True)
+        for i, prefix in enumerate(prefixes):
+            agg_fields[i].update({
+                'no_anvil': Q(**{f'{prefix}workspace_namespace': ''}) | Q(**{f'{prefix}workspace_namespace__isnull': True}),
+                'is_internal': Case(When(**{f'{prefix}id__in': internal_ids, 'then': Value(True)}), default=Value(False)),
+            })
+
+    dataset_qs = [
+        models.annotate(**agg_fields[i], **(additional_aggs or {})).filter(demo__isnull=False).values(
+            'sample_type', 'dataset_type', *agg_fields[i], *(additional_aggs or []),
+        ).annotate(count=Count('active_individuals')) for i, models in enumerate([
+            Dataset.objects, RnaSample.objects.filter(is_active=True).annotate(
+                sample_type=Value('RNA'), dataset_type=F('data_type'), active_individuals=F('individual_id'), loaded_date=F('created_date'),
+            ),
+        ])
+    ]
+
+    if additional_model:
+        fields = agg_fields[-1]
+        return additional_model[0].objects.annotate(**fields).values(*fields), dataset_qs
+
+    return dataset_qs
+
+
+def _agg_key(agg):
+    if agg['demo']:
+        return 'demo'
+    elif agg.get('no_anvil'):
+        return 'no_anvil'
+    elif 'is_internal' in agg:
+        return 'internal' if agg['is_internal'] else 'external'
+    return 'non_demo'
+
+
+HEADER = ['date_loaded', 'num_samples', 'sample_type', 'dataset_type', 'is_demo']
+DATASET_TYPE_LOOKUP = {
+    **RnaSample.DATA_TYPE_LOOKUP,
+    **{k: v.split(' ')[0] for k, v in Dataset.DATASET_TYPE_LOOKUP.items()},
+}
+
+
+@pm_or_analyst_required
+def sample_stats_download(request):
+    dataset_qs_list = _get_project_aggregated_qs(additional_aggs={'loaded': TruncDate('loaded_date')})
+    rows = sorted(
+        [_format_export_row(**item) for qs in dataset_qs_list for item in qs],
+        key=lambda row: (row[0], -row[1], *row[2:]),
+    )
+
+    header = HEADER
+    if anvil_enabled():
+        header = header + ['anvil_status']
+
+    file_format = request.GET.get('file_format', 'tsv')
+    return export_table('seqr_sample_loading', header, rows, file_format)
+
+
+def _format_export_row(loaded, count, sample_type, dataset_type, demo, no_anvil='', is_internal=''):
+    row = [loaded.strftime('%Y-%m-%d'), count, sample_type, DATASET_TYPE_LOOKUP.get(dataset_type, 'Unknown'), demo]
+    if no_anvil:
+        row.append('No AnVIL')
+    elif is_internal != '':
+        row.append('Internal' if is_internal else 'External')
+    return row
 
 
 # AnVIL metadata
