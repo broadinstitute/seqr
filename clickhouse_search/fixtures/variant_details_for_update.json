@@ -83,7 +83,7 @@
         "key": 6,
         "variant_id": "1-94818-T-C",
         "rsid": null,
-        "caid": null,
+        "caid": "CA16717153",
         "lifted_over_chrom": "1",
         "lifted_over_pos": 94818,
         "sorted_regulatory_feature_consequences": [],
