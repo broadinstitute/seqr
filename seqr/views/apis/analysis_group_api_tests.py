@@ -6,12 +6,12 @@ from django.urls.base import reverse
 from seqr.models import AnalysisGroup, DynamicAnalysisGroup
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler, \
     update_dynamic_analysis_group_handler, delete_dynamic_analysis_group_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 
 
-class AnalysisGroupAPITest(AuthenticationTestCase):
+class AnalysisGroupAPITest(AnvilAuthenticationTestCase):
     fixtures = ['users', '1kg_project']
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -96,6 +96,10 @@ class AnalysisGroupAPITest(AuthenticationTestCase):
 
         self.login_pm_user()
         response = self.client.post(update_analysis_group_url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 403)
+
+        body['workspaceName'] = 'anvil-no-project-workspace2'
+        response = self.client.post(update_analysis_group_url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
         updated_analysis_group_response = response.json()
         self.assertEqual(len(updated_analysis_group_response['analysisGroupsByGuid']), 1)
@@ -106,11 +110,11 @@ class AnalysisGroupAPITest(AuthenticationTestCase):
             'projectGuid': PROJECT_GUID,
             'familyGuids': ['F000001_1', 'F000003_3'],
             'workspaceNamespace': 'my-seqr-billing',
-            'workspaceName': 'test',
+            'workspaceName': 'anvil-no-project-workspace2',
         })
         updated_analysis_group_model = AnalysisGroup.objects.get(guid=guid)
         self.assertEqual(updated_analysis_group_model.workspace_namespace, 'my-seqr-billing')
-        self.assertEqual(updated_analysis_group_model.workspace_name, 'test')
+        self.assertEqual(updated_analysis_group_model.workspace_name, 'anvil-no-project-workspace2')
         self.login_manager()
 
         # delete the analysis_group

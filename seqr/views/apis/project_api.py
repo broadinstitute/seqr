@@ -24,7 +24,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     FAMILY_ADDITIONAL_VALUES
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
-    has_workspace_perm, has_case_review_permissions, is_internal_anvil_project, get_project_and_check_pm_permissions, \
+    is_valid_anvil_workspace, has_case_review_permissions, is_internal_anvil_project, get_project_and_check_pm_permissions, \
     check_project_pm_permission, user_is_data_manager, external_anvil_project_can_edit
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
     add_project_tag_type_counts, get_project_analysis_groups, get_project_locus_lists
@@ -48,7 +48,7 @@ def create_project_handler(request):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    if has_anvil and not _is_valid_anvil_workspace(request_json, request.user):
+    if has_anvil and not is_valid_anvil_workspace(request_json, request.user):
         return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
     project_args = {_to_snake_case(field): request_json[field] for field in required_fields}
@@ -67,12 +67,6 @@ def create_project_handler(request):
             project.guid: _get_json_for_project(project, request.user)
         },
     })
-
-
-def _is_valid_anvil_workspace(request_json, user):
-    namespace = request_json.get('workspaceNamespace')
-    name = request_json.get('workspaceName')
-    return bool(name and namespace and has_workspace_perm(user, CAN_EDIT, namespace, name))
 
 
 @login_and_policies_required
@@ -109,7 +103,7 @@ def update_project_workspace(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
 
     request_json = json.loads(request.body)
-    if not _is_valid_anvil_workspace(request_json, request.user):
+    if not is_valid_anvil_workspace(request_json, request.user):
         return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
     update_json = {k: request_json[k] for k in ['workspaceNamespace', 'workspaceName']}

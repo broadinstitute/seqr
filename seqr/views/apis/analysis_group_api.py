@@ -5,7 +5,8 @@ from seqr.models import AnalysisGroup, DynamicAnalysisGroup, Family
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, login_and_policies_required, user_is_pm
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, login_and_policies_required, \
+    user_is_pm, is_valid_anvil_workspace
 
 
 REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
@@ -55,9 +56,11 @@ def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls
 
 
 def _check_pm_field_permissions(pm_fields, user, analysis_group=None):
-    if (not pm_fields) or user_is_pm(user):
+    if not pm_fields:
         return
     if analysis_group and all(getattr(analysis_group, _to_snake_case(field)) == value for field, value in pm_fields.items()):
+        return
+    if user_is_pm(user) and is_valid_anvil_workspace(pm_fields, user):
         return
     raise PermissionDenied(f'{user} does not have permission to edit {",".join(pm_fields)}')
 

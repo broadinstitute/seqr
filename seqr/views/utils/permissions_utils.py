@@ -152,7 +152,7 @@ def _map_anvil_seqr_permission(anvil_permission):
 
 
 
-def has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None): # TODO
+def _has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
     kwargs = {'meta_fields': meta_fields } if meta_fields else {}
     workspace_permission = user_get_workspace_access_level(user, namespace, name, **kwargs)
     if not workspace_permission:
@@ -165,8 +165,14 @@ def has_workspace_perm(user, permission_level, namespace, name, can_share=False,
     return workspace_permission if meta_fields else True
 
 
+def is_valid_anvil_workspace(request_json, user):
+    namespace = request_json.get('workspaceNamespace')
+    name = request_json.get('workspaceName')
+    return bool(name and namespace and _has_workspace_perm(user, CAN_EDIT, namespace, name))
+
+
 def check_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None): # TODO
-    workspace_meta = has_workspace_perm(user, permission_level, namespace, name, can_share, meta_fields)
+    workspace_meta = _has_workspace_perm(user, permission_level, namespace, name, can_share, meta_fields)
     if workspace_meta:
         return workspace_meta
 
@@ -198,7 +204,7 @@ def has_project_permissions(project, user, can_edit=False): # TODO
 
 def _user_project_permission(user, permission_level, project):
     if anvil_enabled():
-        return has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
+        return _has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
     return user.has_perm(permission_level, project)
 
 
