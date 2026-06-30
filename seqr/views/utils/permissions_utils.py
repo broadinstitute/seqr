@@ -151,7 +151,6 @@ def _map_anvil_seqr_permission(anvil_permission):
     return CAN_VIEW if access_level == 'READER' else None
 
 
-
 def _has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
     kwargs = {'meta_fields': meta_fields } if meta_fields else {}
     workspace_permission = user_get_workspace_access_level(user, namespace, name, **kwargs)
@@ -171,7 +170,7 @@ def is_valid_anvil_workspace(request_json, user):
     return bool(name and namespace and _has_workspace_perm(user, CAN_EDIT, namespace, name))
 
 
-def check_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None): # TODO
+def check_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
     workspace_meta = _has_workspace_perm(user, permission_level, namespace, name, can_share, meta_fields)
     if workspace_meta:
         return workspace_meta
