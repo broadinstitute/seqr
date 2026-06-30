@@ -27,7 +27,7 @@ def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls
     if error:
         return create_json_response({}, status=400, reason=error)
 
-    pm_fields = {field: request_json[field] for field in pm_fields if request_json.get(field)}
+    pm_fields = {field: request_json[field] for field in (pm_fields or {}) if request_json.get(field)}
     if analysis_group_guid:
         analysis_group = model_cls.objects.get(guid=analysis_group_guid, project=project)
         _check_pm_field_permissions(pm_fields, request.user, analysis_group)
@@ -55,7 +55,7 @@ def _update_analysis_group(request, project_guid, analysis_group_guid, model_cls
 
 
 def _check_pm_field_permissions(pm_fields, user, analysis_group=None):
-    if not pm_fields or user_is_pm(user):
+    if (not pm_fields) or user_is_pm(user):
         return
     if analysis_group and all(getattr(analysis_group, _to_snake_case(field)) == value for field, value in pm_fields.items()):
         return
