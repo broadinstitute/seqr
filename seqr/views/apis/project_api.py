@@ -22,10 +22,10 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, \
     get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups, \
     FAMILY_ADDITIONAL_VALUES
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, get_project_and_check_edit_permission, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     is_valid_anvil_workspace, has_case_review_permissions, is_internal_anvil_project, get_project_and_check_pm_permissions, \
-    check_project_pm_permission, user_is_data_manager, external_anvil_project_can_edit, get_project_and_check_edit_permission
+    check_project_pm_permission, user_is_data_manager, external_anvil_project_can_edit
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
     add_project_tag_type_counts, get_project_analysis_groups, get_project_locus_lists
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
@@ -71,9 +71,7 @@ def create_project_handler(request):
 
 @login_and_policies_required
 def update_project_handler(request, project_guid):
-    project = Project.objects.get(guid=project_guid)
-
-    check_project_permissions(project, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     request_json = json.loads(request.body)
     updated_fields = set()

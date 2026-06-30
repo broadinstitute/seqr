@@ -111,10 +111,10 @@ def get_internal_projects():
     return Project.objects.all()
 
 def get_project_and_check_edit_permission(project_guid, user):
-    return _get_project_and_check_permissions(project_guid, user, check_project_permissions, can_edit=True)
+    return _get_project_and_check_permissions(project_guid, user, check_project_edit_permission,)
 
 def get_project_and_check_permissions(project_guid, user): # TODO
-    return _get_project_and_check_permissions(project_guid, user, check_project_permissions)
+    return _get_project_and_check_permissions(project_guid, user, _check_project_view_permission)
 
 def get_project_and_check_pm_permissions(project_guid, user, override_permission_func=None):
     return _get_project_and_check_permissions(project_guid, user, check_project_pm_permission,
@@ -209,16 +209,24 @@ def _user_project_permission(user, permission_level, project):
     return user.has_perm(permission_level, project)
 
 
-def check_project_permissions(project, user, **kwargs): # TODO edit/view split helper
-    if has_project_permissions(project, user, **kwargs):
+def check_project_edit_permission(project, user):
+    if has_project_permissions(project, user, can_edit=True):
         return
 
     raise PermissionDenied("{user} does not have sufficient permissions for {project}".format(
         user=user, project=project))
 
 
-def check_family_view_permissions(family, user):
-    check_project_permissions(family.project, user)
+def _check_project_view_permission(project, user):
+    if has_project_permissions(project, user):
+        return
+
+    raise PermissionDenied("{user} does not have sufficient permissions for {project}".format(
+        user=user, project=project))
+
+
+def check_family_view_permission(family, user):
+    _check_project_view_permission(family.project, user)
     # TODO check analysis group perms
 
 
@@ -282,7 +290,7 @@ def get_project_guids_user_can_view(user, limit_data_manager=True): # TODO
 def check_mme_permissions(submission, user):
     family = submission.individual.family
     project = family.project
-    check_family_view_permissions(family, user)
+    check_family_view_permission(family, user)
     if not (project.is_mme_enabled and not project.is_demo):
         raise PermissionDenied('Matchmaker is not enabled')
     return project.genome_version
