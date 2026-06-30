@@ -36,7 +36,7 @@ MAX_SUBMISSION_VARIANTS = 5
 @login_and_policies_required
 def get_individual_mme_matches(request, submission_guid):
     submission = MatchmakerSubmission.objects.get(guid=submission_guid)
-    project = check_mme_permissions(submission, request.user)
+    genome_version = check_mme_permissions(submission, request.user)
 
     results = MatchmakerResult.objects.filter(submission=submission)
 
@@ -51,7 +51,7 @@ def get_individual_mme_matches(request, submission_guid):
 
     variants = get_json_for_saved_variants(
         SavedVariant.objects.filter(guid__in=variant_guids), additional_values={
-            'genomeVersion': Value(project.genome_version),
+            'genomeVersion': Value(genome_version),
             'selectedMainTranscript': F('main_transcript'),
             'xposEnd': F('xpos_end'),
         },

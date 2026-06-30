@@ -215,6 +215,11 @@ def check_project_permissions(project, user, **kwargs): # TODO
         user=user, project=project))
 
 
+def check_family_view_permissions(family, user):
+    check_project_permissions(family.project, user)
+    # TODO check analysis group perms
+
+
 def _is_user_created_object(obj, user):
     return obj.created_by == user
 
@@ -272,12 +277,13 @@ def get_project_guids_user_can_view(user, limit_data_manager=True): # TODO
     return project_guids
 
 
-def check_mme_permissions(submission, user): # TODO
-    project = submission.individual.family.project
-    check_project_permissions(project, user)
+def check_mme_permissions(submission, user):
+    family = submission.individual.family
+    project = family.project
+    check_family_view_permissions(family, user)
     if not (project.is_mme_enabled and not project.is_demo):
         raise PermissionDenied('Matchmaker is not enabled')
-    return project
+    return project.genome_version
 
 def has_case_review_permissions(project, user):
     if not project.has_case_review:
