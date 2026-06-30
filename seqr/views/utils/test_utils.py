@@ -644,7 +644,7 @@ PROJECT_FIELDS = {
     'userIsCreator', 'consentCode', 'isAnalystProject', 'vlmContactEmail', 'recoveryEmail', 'restrictSharing',
 }
 
-ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
+ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids', 'workspaceNamespace', 'workspaceName'}
 DYNAMIC_ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'criteria', 'name', 'projectGuid'}
 
 SUMMARY_FAMILY_FIELDS = {
