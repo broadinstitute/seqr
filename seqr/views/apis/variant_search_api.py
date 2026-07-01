@@ -276,7 +276,7 @@ MAX_FAMILIES_PER_ROW = 1000
 @login_and_policies_required
 def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
-    projects = _check_results_permission(results_model, request.user)
+    genome_version = _check_results_permission(results_model, request.user)
 
     results = _get_variants_with_cache(_get_search_cache_key, _query_variants, results_model, request.user)
     flat_variants = [
@@ -292,7 +292,7 @@ def get_variant_gene_breakdown(request, search_hash):
 
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
-        'genesById': get_genes_for_variant_display(list(gene_counts.keys()), projects.first().genome_version),
+        'genesById': get_genes_for_variant_display(list(gene_counts.keys()), genome_version),
     })
 
 
@@ -518,7 +518,7 @@ def _check_results_permission(results_model, user, project_perm_check=None):
         for project in {f.project for f in families.prefetch_related('project')}:
             if not project_perm_check(project):
                 raise PermissionDenied()
-    return projects
+    return families.first().project.genome_version
 
 
 def _get_search_context(results_model):
