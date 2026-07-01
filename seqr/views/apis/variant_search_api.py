@@ -518,7 +518,8 @@ def _check_results_permission(results_model, user, project_perm_check=None):
         for project in {f.project for f in families.prefetch_related('project')}:
             if not project_perm_check(project):
                 raise PermissionDenied()
-    return families.first().project.genome_version
+    family = families.first()
+    return family.project.genome_version if family else None
 
 
 def _get_search_context(results_model):
