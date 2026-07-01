@@ -183,7 +183,7 @@ def check_workspace_perm(user, permission_level, namespace, name, can_share=Fals
     raise PermissionDenied(message)
 
 
-def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name): # TODO
+def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):
     workspace_acl = user_get_workspace_acl(user, workspace_namespace, workspace_name)
     permission_levels = {}
     for email in workspace_acl.keys():
