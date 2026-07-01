@@ -247,8 +247,8 @@ def check_user_created_object_permissions(obj, user):
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
 
-def check_projects_view_permission(projects, user): # TODO
-    no_access_projects = set(projects.values_list('guid', flat=True)) - set(
+def check_families_view_permission(families, user):
+    no_access_projects = set(families.values_list('project__guid', flat=True).distinct()) - set(
         get_project_analysis_group_guids_user_can_view(user, limit_data_manager=False)
     )
     if no_access_projects:
