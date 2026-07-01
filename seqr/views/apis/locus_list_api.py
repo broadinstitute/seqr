@@ -12,7 +12,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_locus_list_permissions, \
+from seqr.views.utils.permissions_utils import get_project_and_check_view_permission, check_locus_list_permissions, \
     check_user_created_object_permissions, login_and_policies_required, get_project_guids_user_can_view, \
     get_project_and_check_edit_permission
 
@@ -136,7 +136,7 @@ def delete_locus_list_handler(request, locus_list_guid):
 
 @login_and_policies_required
 def add_project_locus_lists(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:
