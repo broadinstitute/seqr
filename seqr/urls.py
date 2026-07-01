@@ -238,7 +238,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/upload_igv_dataset': receive_igv_table_handler,
     'project/(?P<project_guid>[^/]+)/update_rna_seq': update_project_rna_seq,
 
-    'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
+    'family/(?P<family_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
     'project/(?P<project_guid>[^/]+)/upload_individuals_metadata_table': receive_individuals_metadata_handler,
     'project/(?P<project_guid>[^/]+)/save_individuals_metadata_table/(?P<upload_file_id>[^/]+)': save_individuals_metadata_table_handler,
 

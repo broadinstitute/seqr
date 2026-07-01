@@ -30,7 +30,7 @@ const IGV = React.lazy(() => import('../../graph/IGV'))
 
 const MIN_LOCUS_RANGE_SIZE = 100
 
-const igvUrl = (sample, field = 'filePath') => `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sample[field])}`
+const igvUrl = (sample, field = 'filePath') => `/api/family/${sample.familyGuid}/igv_track/${encodeURIComponent(sample[field])}`
 
 const getTrackOptions = (type, sample, individual) => {
   const name = ReactDOMServer.renderToString(
