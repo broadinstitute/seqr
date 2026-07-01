@@ -111,9 +111,9 @@ def get_internal_projects():
     return Project.objects.all()
 
 def get_project_and_check_edit_permission(project_guid, user):
-    return _get_project_and_check_permissions(project_guid, user, check_project_edit_permission,)
+    return _get_project_and_check_permissions(project_guid, user, check_project_edit_permission)
 
-def get_project_and_check_permissions(project_guid, user): # TODO
+def get_project_and_check_view_permission(project_guid, user): # TODO
     return _get_project_and_check_permissions(project_guid, user, _check_project_view_permission)
 
 def get_project_and_check_pm_permissions(project_guid, user, override_permission_func=None):
