@@ -415,8 +415,9 @@ def search_context_handler(request):
 
     check_families_view_permission(families, request.user)
 
-    # TODO!
-    projects = Project.objects.filter(family__in=families).distinct()
+    projects = Project.objects.filter(
+        family__in=families, guid__in=get_project_analysis_group_guids_user_can_view(request.user),
+    ).distinct()
     project_guid = projects[0].guid if len(projects) == 1 else None
     response.update(get_projects_child_entities(projects, project_guid, request.user))
 
