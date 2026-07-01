@@ -126,7 +126,7 @@ def _get_project_and_check_permissions(project_guid, user, _check_permission_fun
     return project
 
 def check_project_pm_permission(project, user, override_permission_func=None, **kwargs):
-    if user_is_pm(user) or (project.has_case_review and has_project_permissions(project, user, can_edit=True)):
+    if user_is_pm(user) or (project.has_case_review and has_project_edit_permission(project, user)):
         return
 
     if override_permission_func and override_permission_func(project, user):
@@ -140,7 +140,7 @@ def project_has_anvil(project):
 
 
 def external_anvil_project_can_edit(project, user):
-    return project_has_anvil(project) and has_project_permissions(project, user, can_edit=True) and not \
+    return project_has_anvil(project) and has_project_edit_permission(project, user) and not \
         is_internal_anvil_project(project)
 
 
@@ -193,14 +193,20 @@ def get_workspace_collaborator_perms(user, workspace_namespace, workspace_name):
     return permission_levels
 
 
-def has_project_permissions(project, user, can_edit=False): # TODO
-    permission_level = CAN_VIEW
-    if can_edit:
-        permission_level = CAN_EDIT
+def has_project_edit_permission(project, user):
+    return _has_project_permissions(project, user, CAN_EDIT)
 
-    return user_is_data_manager(user) or \
-           (not can_edit and project.all_user_demo and project.is_demo) or \
-           _user_project_permission(user, permission_level, project)
+def _has_project_view_permission(project, user):
+    if project.all_user_demo and project.is_demo:
+        return True
+    return _has_project_permissions(project, user, CAN_VIEW)
+
+def has_family_view_permission(family, user):
+    # TODO check analysis group perms
+    return _has_project_view_permission(family.project, user)
+
+def _has_project_permissions(project, user, permission_level):
+    return user_is_data_manager(user) or _user_project_permission(user, permission_level, project)
 
 
 def _user_project_permission(user, permission_level, project):
@@ -210,7 +216,7 @@ def _user_project_permission(user, permission_level, project):
 
 
 def check_project_edit_permission(project, user):
-    if has_project_permissions(project, user, can_edit=True):
+    if has_project_edit_permission(project, user):
         return
 
     raise PermissionDenied("{user} does not have sufficient permissions for {project}".format(
@@ -218,16 +224,17 @@ def check_project_edit_permission(project, user):
 
 
 def _check_project_view_permission(project, user):
-    if has_project_permissions(project, user):
+    if _has_project_view_permission(project, user):
         return
 
-    raise PermissionDenied("{user} does not have sufficient permissions for {project}".format(
-        user=user, project=project))
+    raise PermissionDenied(f'{user} does not have sufficient permissions for {project}')
 
 
 def check_family_view_permission(family, user):
-    _check_project_view_permission(family.project, user)
-    # TODO check analysis group perms
+    if has_family_view_permission(family, user):
+        return
+
+    raise PermissionDenied(f'{user} does not have sufficient permissions for {family}')
 
 
 def _is_user_created_object(obj, user):
@@ -298,4 +305,4 @@ def check_mme_permissions(submission, user):
 def has_case_review_permissions(project, user):
     if not project.has_case_review:
         return False
-    return has_project_permissions(project, user, can_edit=True)
+    return has_project_edit_permission(project, user)
