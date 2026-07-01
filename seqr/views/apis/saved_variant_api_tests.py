@@ -786,7 +786,10 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         new_variant_note = VariantNote.objects.filter(guid=updated_note_response['noteGuid'])
         self.assertEqual(len(new_variant_note), 0)
 
-        self.assert_no_list_ws_has_al(8)
+        self.mock_list_workspaces.assert_called_with(self.collaborator_user)
+        self.assertEqual(self.mock_list_workspaces.call_count, 2)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 6)
+        self.assert_no_extra_anvil_calls()
 
     def test_create_partially_saved_compound_het_variant_note(self):
         # compound het 5 is not saved, whereas compound het 1 is saved
@@ -940,7 +943,10 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         variants = SavedVariant.objects.filter(guid__in=[COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID])
         self.assertEqual(len(variants), 0)
 
-        self.assert_no_list_ws_has_al(7)
+        self.mock_list_workspaces.assert_called_with(self.collaborator_user)
+        self.assertEqual(self.mock_list_workspaces.call_count, 3)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
+        self.assert_no_extra_anvil_calls()
 
     def test_update_variant_tags(self):
         variant_tags = VariantTag.objects.filter(saved_variants__guid__contains=VARIANT_GUID)
