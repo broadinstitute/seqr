@@ -20,8 +20,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants, \
     get_json_for_matchmaker_submission, get_json_for_matchmaker_submissions
-from seqr.views.utils.permissions_utils import check_mme_permissions, check_project_permissions, analyst_required, \
-    has_project_permissions, login_and_policies_required, get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import check_mme_permissions, check_family_view_permission, analyst_required, \
+    has_family_view_permission, login_and_policies_required, get_project_and_check_edit_permission
 
 from settings import BASE_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL, VLM_SEND_EMAIL
@@ -36,7 +36,7 @@ MAX_SUBMISSION_VARIANTS = 5
 @login_and_policies_required
 def get_individual_mme_matches(request, submission_guid):
     submission = MatchmakerSubmission.objects.get(guid=submission_guid)
-    project = check_mme_permissions(submission, request.user)
+    genome_version = check_mme_permissions(submission, request.user)
 
     results = MatchmakerResult.objects.filter(submission=submission)
 
@@ -51,7 +51,7 @@ def get_individual_mme_matches(request, submission_guid):
 
     variants = get_json_for_saved_variants(
         SavedVariant.objects.filter(guid__in=variant_guids), additional_values={
-            'genomeVersion': Value(project.genome_version),
+            'genomeVersion': Value(genome_version),
             'selectedMainTranscript': F('main_transcript'),
             'xposEnd': F('xpos_end'),
         },
@@ -273,7 +273,7 @@ def update_mme_submission(request, submission_guid=None):
         if not individual_guid:
             return create_json_response({}, status=400, reason='Individual is required for a new submission')
         individual = Individual.objects.get(guid=individual_guid)
-        check_project_permissions(individual.family.project, request.user)
+        check_family_view_permission(individual.family, request.user)
         submission = create_model_from_json(MatchmakerSubmission, {
             'individual': individual,
             'submission_id': individual.guid,
@@ -390,7 +390,7 @@ def send_mme_contact_email(request, matchmaker_result_guid):
 
 @login_and_policies_required
 def update_mme_project_contact(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     request_json = json.loads(request.body)
     contact = (request_json.get('contact') or '').strip()
@@ -434,7 +434,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         result['matchStatus'] = _get_json_for_model(result_model)
         if result_model.originating_submission:
             originating_family = result_model.originating_submission.individual.family
-            if has_project_permissions(originating_family.project, user):
+            if has_family_view_permission(originating_family, user):
                 result['originatingSubmission'] = {
                     'originatingSubmissionGuid': result_model.originating_submission.guid,
                     'familyGuid': originating_family.guid,

@@ -1060,7 +1060,7 @@ class IndividualAPITest(object):
 
     def test_individuals_metadata_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
-        self.check_collaborator_login(url)
+        self.check_manager_login(url)
 
         # Send invalid requests
         header = 'family_id,indiv_id,hpo_term_yes,hpo_term_no'
@@ -1106,7 +1106,7 @@ class IndividualAPITest(object):
         read_tmp_table_logs = self._read_tmp_table_logs('6aea3d1f1bfc295340aa504370102fd5')
         offset = 2 if read_tmp_table_logs else 1
         self.assert_json_logs(None, read_tmp_table_logs, offset=offset)
-        self.assert_json_logs(self.collaborator_user, [
+        self.assert_json_logs(self.manager_user, [
             ('update Individual I000002_na19678', {'dbUpdate': mock.ANY}),
             ('update Individual I000001_na19675', {'dbUpdate': mock.ANY}),
             ('Reloading dictionary seqrdb_individual_metadata_dict', None),
@@ -1114,7 +1114,7 @@ class IndividualAPITest(object):
 
     def test_individuals_metadata_hpo_term_number_table_handler(self):
         url = reverse(receive_individuals_metadata_handler, args=['R0001_1kg'])
-        self.check_collaborator_login(url)
+        self.check_manager_login(url)
 
         header = 'family_id,individual_id,affected,hpo_number,hpo_number,sex,birth,other affected relatives,onset,expected inheritance,maternal ancestry,candidate genes'
         rows = [

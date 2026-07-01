@@ -28,8 +28,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches, FAMILY_ADDITIONAL_VALUES
-from seqr.views.utils.permissions_utils import check_project_permissions, get_project_guids_user_can_view, \
-    login_and_policies_required, check_user_created_object_permissions, check_projects_view_permission, user_is_analyst
+from seqr.views.utils.permissions_utils import check_family_view_permission, get_project_guids_user_can_view, \
+    login_and_policies_required, check_user_created_object_permissions, check_families_view_permission, user_is_analyst
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variants_response, variant_dataset_type
 from seqr.views.utils.vlm_utils import vlm_lookup
@@ -173,7 +173,7 @@ def _get_exclude_keys(search_hash, user):
 def query_single_variant_handler(request, variant_id):
     families = Family.objects.filter(guid=request.GET.get('familyGuid'))
     family = families.first()
-    check_project_permissions(family.project, request.user)
+    check_family_view_permission(family, request.user)
 
     variants = get_clickhouse_variants(families, request.user, raw_variant_items=variant_id, variant_ids=[variant_id])
     if not variants:
@@ -276,7 +276,7 @@ MAX_FAMILIES_PER_ROW = 1000
 @login_and_policies_required
 def get_variant_gene_breakdown(request, search_hash):
     results_model = VariantSearchResults.objects.get(search_hash=search_hash)
-    projects = _check_results_permission(results_model, request.user)
+    genome_version = _check_results_permission(results_model, request.user)
 
     results = _get_variants_with_cache(_get_search_cache_key, _query_variants, results_model, request.user)
     flat_variants = [
@@ -292,7 +292,7 @@ def get_variant_gene_breakdown(request, search_hash):
 
     return create_json_response({
         'searchGeneBreakdown': {search_hash: gene_counts},
-        'genesById': get_genes_for_variant_display(list(gene_counts.keys()), projects.first().genome_version),
+        'genesById': get_genes_for_variant_display(list(gene_counts.keys()), genome_version),
     })
 
 
@@ -392,29 +392,30 @@ def search_context_handler(request):
     response = _get_saved_searches(request.user)
     context = json.loads(request.body)
 
-    projects = None
+    families = None
     if context.get('projectGuid'):
-        projects = Project.objects.filter(guid=context.get('projectGuid'))
+        families = Family.objects.filter(project__guid=context.get('projectGuid'))
     elif context.get('familyGuid'):
-        projects = Project.objects.filter(family__guid=context.get('familyGuid'))
+        families = Family.objects.filter(guid=context.get('familyGuid'))
     elif context.get('analysisGroupGuid'):
-        projects = Project.objects.filter(analysisgroup__guid=context.get('analysisGroupGuid'))
+        families = Family.objects.filter(analysisgroup__guid=context.get('analysisGroupGuid'))
     elif context.get('projectCategoryGuid'):
-        projects = Project.objects.filter(projectcategory__guid=context.get('projectCategoryGuid'))
+        families = Family.objects.filter(project__projectcategory__guid=context.get('projectCategoryGuid'))
     elif context.get('searchHash'):
         search_context = context.get('searchParams')
         try:
             results_model = _get_or_create_results_model(context['searchHash'], search_context, request.user)
         except Exception as e:
             return create_json_response({'error': str(e)}, status=400, reason=str(e))
-        projects = Project.objects.filter(family__in=results_model.families.all()).distinct()
+        families = results_model.families.all()
 
-    if not projects:
+    if not families:
         error = 'Invalid context params: {}'.format(json.dumps(context))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    check_projects_view_permission(projects, request.user)
+    check_families_view_permission(families, request.user)
 
+    projects = Project.objects.filter(family__in=families).distinct()
     project_guid = projects[0].guid if len(projects) == 1 else None
     response.update(get_projects_child_entities(projects, project_guid, request.user))
 
@@ -511,13 +512,14 @@ def delete_saved_search_handler(request, saved_search_guid):
 
 
 def _check_results_permission(results_model, user, project_perm_check=None):
-    projects = Project.objects.filter(family__variantsearchresults=results_model)
-    check_projects_view_permission(projects, user)
+    families = Family.objects.filter(variantsearchresults=results_model)
+    check_families_view_permission(families, user)
     if project_perm_check:
-        for project in projects:
+        for project in {f.project for f in families.prefetch_related('project')}:
             if not project_perm_check(project):
                 raise PermissionDenied()
-    return projects
+    family = families.first()
+    return family.project.genome_version if family else None
 
 
 def _get_search_context(results_model):
