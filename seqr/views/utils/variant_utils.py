@@ -19,7 +19,7 @@ from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_child_entities, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, _get_json_for_families, \
     get_json_for_matchmaker_submissions
-from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst, get_project_guids_user_can_view
+from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst, get_project_analysis_group_guids_user_can_view
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 
@@ -365,7 +365,7 @@ def _parse_discovery_tags(variants_by_id, family_guids, user):
 
     discovery_families_by_guid = {
         f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(
-            guid__in=discovery_family_guids, project__guid__in=get_project_guids_user_can_view(user),
+            guid__in=discovery_family_guids, project__guid__in=get_project_analysis_group_guids_user_can_view(user),
         ).exclude(guid__in=family_guids))
     }
     if not discovery_families_by_guid:

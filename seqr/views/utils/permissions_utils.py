@@ -113,7 +113,7 @@ def get_internal_projects():
 def get_project_and_check_edit_permission(project_guid, user):
     return _get_project_and_check_permissions(project_guid, user, check_project_edit_permission)
 
-def get_project_and_check_view_permission(project_guid, user):
+def get_project_and_check_view_permission(project_guid, user): # TODO
     return _get_project_and_check_permissions(project_guid, user, _check_project_view_permission)
 
 def get_project_and_check_pm_permissions(project_guid, user, override_permission_func=None):
@@ -153,8 +153,7 @@ def _map_anvil_seqr_permission(anvil_permission):
     return CAN_VIEW if access_level == 'READER' else None
 
 
-
-def has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
+def _has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
     kwargs = {'meta_fields': meta_fields } if meta_fields else {}
     workspace_permission = user_get_workspace_access_level(user, namespace, name, **kwargs)
     if not workspace_permission:
@@ -167,8 +166,14 @@ def has_workspace_perm(user, permission_level, namespace, name, can_share=False,
     return workspace_permission if meta_fields else True
 
 
+def is_valid_anvil_workspace(request_json, user):
+    namespace = request_json.get('workspaceNamespace')
+    name = request_json.get('workspaceName')
+    return bool(name and namespace and _has_workspace_perm(user, CAN_EDIT, namespace, name))
+
+
 def check_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
-    workspace_meta = has_workspace_perm(user, permission_level, namespace, name, can_share, meta_fields)
+    workspace_meta = _has_workspace_perm(user, permission_level, namespace, name, can_share, meta_fields)
     if workspace_meta:
         return workspace_meta
 
@@ -197,6 +202,7 @@ def _has_project_view_permission(project, user):
     return _has_project_permissions(project, user, CAN_VIEW)
 
 def has_family_view_permission(family, user):
+    # TODO check analysis group perms
     return _has_project_view_permission(family.project, user)
 
 def _has_project_permissions(project, user, permission_level):
@@ -205,7 +211,7 @@ def _has_project_permissions(project, user, permission_level):
 
 def _user_project_permission(user, permission_level, project):
     if anvil_enabled():
-        return has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
+        return _has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
     return user.has_perm(permission_level, project)
 
 
@@ -241,12 +247,10 @@ def check_user_created_object_permissions(obj, user):
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
 
-def _get_all_can_view_project_guids_set(user):
-    return set(get_project_guids_user_can_view(user, limit_data_manager=False))
-
-
 def check_families_view_permission(families, user):
-    no_access_projects = set(families.values_list('project__guid', flat=True).distinct()) - _get_all_can_view_project_guids_set(user)
+    no_access_projects = set(families.values_list('project__guid', flat=True).distinct()) - set(
+        get_project_analysis_group_guids_user_can_view(user, limit_data_manager=False)
+    )
     if no_access_projects:
         raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_projects)}")
 
@@ -255,16 +259,26 @@ def check_locus_list_permissions(locus_list, user):
     if locus_list.is_public or _is_user_created_object(locus_list, user):
         return
     access_projects = set(locus_list.projects.values_list('guid', flat=True)).intersection(
-        _get_all_can_view_project_guids_set(user)
+        set(get_project_guids_any_family_user_can_view(user))
     )
     if not access_projects:
         raise PermissionDenied(f'{user} does not have view permissions for {locus_list}')
 
 
-def get_project_guids_user_can_view(user, limit_data_manager=True):
+def get_project_guids_any_family_user_can_view(user):
+    # TODO add projects based on analysis groups
+    return get_project_guids_user_can_view(user)
+
+
+def get_project_analysis_group_guids_user_can_view(user, limit_data_manager=True):
+    # TODO refactor and actually return families or analysis groups here
     if user_is_data_manager(user) and not limit_data_manager:
         return list(Project.objects.values_list('guid', flat=True))
 
+    return get_project_guids_user_can_view(user)
+
+
+def get_project_guids_user_can_view(user):
     cache_key = 'projects__{}'.format(user)
     project_guids = safe_redis_get_json(cache_key)
     if project_guids is not None:

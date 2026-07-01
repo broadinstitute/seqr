@@ -28,7 +28,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_saved_search,\
     get_json_for_saved_searches, FAMILY_ADDITIONAL_VALUES
-from seqr.views.utils.permissions_utils import check_family_view_permission, get_project_guids_user_can_view, \
+from seqr.views.utils.permissions_utils import check_family_view_permission, get_project_analysis_group_guids_user_can_view, \
     login_and_policies_required, check_user_created_object_permissions, check_families_view_permission, user_is_analyst
 from seqr.views.utils.project_context_utils import get_projects_child_entities
 from seqr.views.utils.variant_utils import get_variants_response, variant_dataset_type
@@ -96,7 +96,7 @@ def _all_project_family_search_genome(search_context):
 def _all_genome_version_families(genome_version, user):
     omit_projects = [p.guid for p in Project.objects.filter(is_demo=True).only('guid')]
     project_guids = [
-        project_guid for project_guid in get_project_guids_user_can_view(user, limit_data_manager=True)
+        project_guid for project_guid in get_project_analysis_group_guids_user_can_view(user, limit_data_manager=True)
         if project_guid not in omit_projects
     ]
     return Family.objects.filter(project__guid__in=project_guids, project__genome_version=genome_version)
@@ -415,7 +415,9 @@ def search_context_handler(request):
 
     check_families_view_permission(families, request.user)
 
-    projects = Project.objects.filter(family__in=families).distinct()
+    projects = Project.objects.filter(
+        family__in=families, guid__in=get_project_analysis_group_guids_user_can_view(request.user),
+    ).distinct()
     project_guid = projects[0].guid if len(projects) == 1 else None
     response.update(get_projects_child_entities(projects, project_guid, request.user))
 
@@ -594,7 +596,7 @@ def variant_lookup_handler(request):
 
     family_guids = set(Family.objects.filter(
         guid__in=family_guids,
-        project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=True),
+        project__guid__in=get_project_analysis_group_guids_user_can_view(request.user, limit_data_manager=True),
     ).values_list('guid', flat=True))
     for variant in variants:
         variant['familyGuids'] = family_guids.intersection(variant['familyGenotypes'].keys())

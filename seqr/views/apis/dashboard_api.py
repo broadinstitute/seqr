@@ -5,7 +5,7 @@ from seqr.models import ProjectCategory, Individual, RnaSample, Family, Project
 from seqr.views.utils.individual_utils import check_project_individuals_deletable
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_projects
-from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
+from seqr.views.utils.permissions_utils import get_project_analysis_group_guids_user_can_view, login_and_policies_required
 
 
 @login_and_policies_required
@@ -22,7 +22,7 @@ def dashboard_page_data(request):
 
 
 def _get_projects_json(user):
-    project_guids = get_project_guids_user_can_view(user, limit_data_manager=False)
+    project_guids = get_project_analysis_group_guids_user_can_view(user, limit_data_manager=False)
     if not project_guids:
         return {}
 

@@ -6,15 +6,15 @@ import requests
 from django.core.exceptions import PermissionDenied
 from django.http import StreamingHttpResponse
 
-from seqr.models import Individual, IgvSample
+from seqr.models import Family, Individual, IgvSample
 from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, run_command, get_google_project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_sample
-from seqr.views.utils.permissions_utils import get_project_and_check_view_permission, external_anvil_project_can_edit, \
-    login_and_policies_required, pm_or_data_manager_required, get_project_guids_user_can_view, user_is_data_manager, \
+from seqr.views.utils.permissions_utils import check_family_view_permission, external_anvil_project_can_edit, \
+    login_and_policies_required, pm_or_data_manager_required, get_project_analysis_group_guids_user_can_view, user_is_data_manager, \
     user_is_pm, get_project_and_check_edit_permission
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
@@ -121,7 +121,7 @@ def receive_bulk_igv_table_handler(request):
 
     def _get_valid_matched_individuals(individual_dataset_mapping):
         individuals = Individual.objects.filter(
-            family__project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=False),
+            family__project__guid__in=get_project_analysis_group_guids_user_can_view(request.user, limit_data_manager=False),
             family__project__name__in={k[0] for k in individual_dataset_mapping.keys()},
             individual_id__in={k[1] for k in individual_dataset_mapping.keys()},
         ).select_related('family__project')
@@ -183,9 +183,9 @@ def update_individual_igv_sample(request, individual_guid):
 
 
 @login_and_policies_required
-def fetch_igv_track(request, project_guid, igv_track_path):
+def fetch_igv_track(request, family_guid, igv_track_path):
 
-    get_project_and_check_view_permission(project_guid, request.user)
+    check_family_view_permission(Family.objects.get(guid=family_guid), request.user)
 
     if igv_track_path.endswith('.bam.bai') and not does_file_exist(igv_track_path, user=request.user):
         igv_track_path = igv_track_path.replace('.bam.bai', '.bai')

@@ -23,7 +23,7 @@ from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Datase
     PhenotypePrioritization, RnaSample
 from seqr.views.utils.permissions_utils import check_project_edit_permission, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions, external_anvil_project_can_edit, \
-    get_internal_projects, get_project_guids_user_can_view, check_family_view_permission
+    get_internal_projects, get_project_analysis_group_guids_user_can_view, check_family_view_permission
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import get_phenotype_prioritization, get_omim_intervals_query, DISCOVERY_CATEGORY
 from seqr.utils.xpos_utils import get_chrom_pos
@@ -465,7 +465,7 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
         indiv = tpm.sample.individual
         response[tpm.sample.tissue_type][tpm.sample.sequencing_type]['individualData'][indiv.display_name or indiv.individual_id] = tpm.tpm
 
-    project_guids = get_project_guids_user_can_view(request.user)
+    project_guids = get_project_analysis_group_guids_user_can_view(request.user)
     internal_projects = get_internal_projects() if anvil_enabled() else None
     for tissue in response.keys():
         for sequencing_type in response[tissue].keys():
