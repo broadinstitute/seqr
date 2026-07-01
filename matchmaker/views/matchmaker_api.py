@@ -21,7 +21,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for_saved_variants, \
     get_json_for_matchmaker_submission, get_json_for_matchmaker_submissions
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_family_view_permission, analyst_required, \
-    has_project_permissions, login_and_policies_required, get_project_and_check_edit_permission
+    has_family_view_permission, login_and_policies_required, get_project_and_check_edit_permission
 
 from settings import BASE_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL, VLM_SEND_EMAIL
@@ -434,7 +434,7 @@ def _parse_mme_results(submission, saved_results, user, additional_genes=None, r
         result['matchStatus'] = _get_json_for_model(result_model)
         if result_model.originating_submission:
             originating_family = result_model.originating_submission.individual.family
-            if has_project_permissions(originating_family.project, user):
+            if has_family_view_permission(originating_family, user):
                 result['originatingSubmission'] = {
                     'originatingSubmissionGuid': result_model.originating_submission.guid,
                     'familyGuid': originating_family.guid,

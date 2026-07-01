@@ -12,7 +12,7 @@ from seqr.models import GeneNote, VariantNote, VariantTag, VariantFunctionalData
     get_audit_field_names, RnaSeqOutlier, RnaSeqSpliceOutlier, VariantSearchResults
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.utils.json_utils import _to_camel_case
-from seqr.views.utils.permissions_utils import has_project_permissions, \
+from seqr.views.utils.permissions_utils import has_project_edit_permission, \
     project_has_anvil, get_workspace_collaborator_perms, user_is_analyst, user_is_data_manager, user_is_pm, \
     is_internal_anvil_project, get_anvil_analyst_user_emails
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
@@ -154,7 +154,7 @@ def get_json_for_projects(projects, user=None, is_analyst=None, add_project_cate
             'isAnalystProject': is_internal_anvil_project(project),
         })
         if add_permissions:
-            result['canEdit'] = has_project_permissions(project, user, can_edit=True)
+            result['canEdit'] = has_project_edit_permission(project, user)
         if add_project_category_guids_field:
             result['projectCategoryGuids'] = list(project.projectcategory_set.values_list('guid', flat=True))
 
