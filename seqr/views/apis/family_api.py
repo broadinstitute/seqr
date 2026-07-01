@@ -20,7 +20,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model,  get_json_fo
 from seqr.views.utils.project_context_utils import add_families_context, families_discovery_tags, add_project_tag_types, \
     MME_TAG_NAME
 from seqr.models import Family, FamilyAnalysedBy, Individual, FamilyNote, Dataset, VariantTag, AnalysisGroup, RnaSeqTpm, \
-    PhenotypePrioritization, Project, RnaSample
+    PhenotypePrioritization, RnaSample
 from seqr.views.utils.permissions_utils import check_project_edit_permission, get_project_and_check_pm_permissions, \
     login_and_policies_required, user_is_analyst, has_case_review_permissions, external_anvil_project_can_edit, \
     get_internal_projects, get_project_guids_user_can_view, check_family_view_permission
@@ -255,7 +255,7 @@ def _set_display_name(family_json, family_model):
 def update_family_assigned_analyst(request, family_guid):
     family = Family.objects.get(guid=family_guid)
     # assigned_analyst can be edited by anyone with access to the family
-    check_family_view_permission(family, request.user, can_edit=False)
+    check_family_view_permission(family, request.user)
 
     request_json = json.loads(request.body)
     assigned_analyst_username = request_json.get('assigned_analyst_username')
