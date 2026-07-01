@@ -245,8 +245,8 @@ def _get_all_can_view_project_guids_set(user):
     return set(get_project_guids_user_can_view(user, limit_data_manager=False))
 
 
-def check_projects_view_permission(projects, user):
-    no_access_projects = set(projects.values_list('guid', flat=True)) - _get_all_can_view_project_guids_set(user)
+def check_families_view_permission(families, user):
+    no_access_projects = set(families.values_list('project__guid', flat=True).distinct()) - _get_all_can_view_project_guids_set(user)
     if no_access_projects:
         raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_projects)}")
 

@@ -5,7 +5,7 @@ from django.db.models import Q
 
 from clickhouse_search.models.postgres_dicts import DiscoveryVariantDict, ExcludedVariantDict
 from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote, VariantFunctionalData,\
-    Family, GeneNote, Project, Dataset
+    Family, GeneNote, Dataset
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json, \
     create_model_from_json
@@ -13,7 +13,7 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, STRUCTURED_METADATA_TAG_TYPES
 from seqr.views.utils.permissions_utils import get_project_and_check_view_permission, check_project_edit_permission, \
-    login_and_policies_required, check_family_view_permission, check_projects_view_permission
+    login_and_policies_required, check_family_view_permission, check_families_view_permission
 from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
 
 
@@ -180,8 +180,8 @@ def _create_variant_note(saved_variants, note_json, user):
 @login_and_policies_required
 def update_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
-    projects = Project.objects.filter(family__in=note.saved_variants.values_list('family_id', flat=True)).distinct()
-    check_projects_view_permission(projects, request.user)
+    families = Family.objects.filter(id__in=note.saved_variants.values_list('family_id', flat=True))
+    check_families_view_permission(families, request.user)
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, user=request.user, allow_unknown_keys=True)
 
@@ -197,8 +197,8 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 def delete_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
     note = VariantNote.objects.get(guid=note_guid)
-    projects = Project.objects.filter(family__in=note.saved_variants.values_list('family_id', flat=True)).distinct()
-    check_projects_view_permission(projects, request.user)
+    families = Family.objects.filter(id__in=note.saved_variants.values_list('family_id', flat=True))
+    check_families_view_permission(families, request.user)
     note.delete_model(request.user, user_can_delete=True)
 
     saved_variants_by_guid = {}
