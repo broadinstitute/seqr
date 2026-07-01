@@ -247,30 +247,38 @@ def check_user_created_object_permissions(obj, user):
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
 
-def _get_all_can_view_project_guids_set(user):
-    return set(get_project_guids_user_can_view(user, limit_data_manager=False))
-
-
 def check_projects_view_permission(projects, user): # TODO
-    no_access_projects = set(projects.values_list('guid', flat=True)) - _get_all_can_view_project_guids_set(user)
+    no_access_projects = set(projects.values_list('guid', flat=True)) - set(
+        get_project_analysis_group_guids_user_can_view(user, limit_data_manager=False)
+    )
     if no_access_projects:
         raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_projects)}")
 
 
-def check_locus_list_permissions(locus_list, user): # TODO
+def check_locus_list_permissions(locus_list, user):
     if locus_list.is_public or _is_user_created_object(locus_list, user):
         return
     access_projects = set(locus_list.projects.values_list('guid', flat=True)).intersection(
-        _get_all_can_view_project_guids_set(user)
+        set(get_project_guids_any_family_user_can_view(user))
     )
     if not access_projects:
         raise PermissionDenied(f'{user} does not have view permissions for {locus_list}')
 
 
-def get_project_guids_user_can_view(user, limit_data_manager=True): # TODO
+def get_project_guids_any_family_user_can_view(user):
+    # TODO add projects based on analysis groups
+    return get_project_guids_user_can_view(user)
+
+
+def get_project_analysis_group_guids_user_can_view(user, limit_data_manager=True):
+    # TODO refactor and actually return families or analysis groups here
     if user_is_data_manager(user) and not limit_data_manager:
         return list(Project.objects.values_list('guid', flat=True))
 
+    return get_project_guids_user_can_view(user)
+
+
+def get_project_guids_user_can_view(user):
     cache_key = 'projects__{}'.format(user)
     project_guids = safe_redis_get_json(cache_key)
     if project_guids is not None:

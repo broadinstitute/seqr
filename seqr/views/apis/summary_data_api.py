@@ -22,7 +22,8 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants,\
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
-    login_and_policies_required, get_project_and_check_view_permission, get_internal_projects
+    login_and_policies_required, get_project_and_check_view_permission, get_internal_projects, \
+    get_project_analysis_group_guids_user_can_view
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, bulk_create_tagged_variants, get_saved_variant_annotations, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
@@ -35,7 +36,7 @@ MAX_SAVED_VARIANTS = 10000
 @login_and_policies_required
 def mme_details(request):
     submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True).filter(
-        individual__family__project__guid__in=get_project_guids_user_can_view(request.user))
+        individual__family__project__guid__in=get_project_analysis_group_guids_user_can_view(request.user))
 
     hpo_ids, gene_ids, submission_gene_variants = get_mme_gene_phenotype_ids_for_submissions(
         submissions, get_gene_variants=True)
@@ -108,7 +109,7 @@ def saved_variants_page(request, tag):
         for tt in tag_types:
             saved_variant_models = saved_variant_models.filter(varianttag__variant_tag_type=tt).distinct()
 
-    saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_guids_user_can_view(request.user))
+    saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_analysis_group_guids_user_can_view(request.user))
 
     if gene:
         saved_variant_models = saved_variant_models.filter(gene_ids__overlap=[gene])
@@ -126,7 +127,7 @@ def saved_variants_page(request, tag):
 @login_and_policies_required
 def hpo_summary_data(request, hpo_id):
     data = Individual.objects.filter(
-        family__project__guid__in=get_project_guids_user_can_view(request.user),
+        family__project__guid__in=get_project_analysis_group_guids_user_can_view(request.user),
         features__contains=[{'id': hpo_id}],
     ).order_by('id').values(
         'features', individualGuid=F('guid'), displayName=INDIVIDUAL_DISPLAY_NAME_EXPR, familyId=F('family__family_id'),
@@ -299,7 +300,7 @@ def _get_metadata_projects(request, project_guid):
     include_airtable = 'true' in request.GET.get('includeAirtable', '') and AirtableSession.is_airtable_enabled() and is_analyst and not is_all_projects
     if is_all_projects:
         projects = get_internal_projects() if is_analyst else Project.objects.filter(
-            guid__in=get_project_guids_user_can_view(request.user))
+            guid__in=get_project_analysis_group_guids_user_can_view(request.user))
     elif project_guid == GREGOR_CATEGORY:
         if not is_analyst:
             raise PermissionDenied()

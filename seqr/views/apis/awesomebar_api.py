@@ -6,7 +6,7 @@ from django.views.decorators.http import require_GET
 from reference_data.models import Omim, HumanPhenotypeOntology
 from seqr.utils.gene_utils import get_queried_genes
 from seqr.views.utils.json_utils import create_json_response, _to_title_case
-from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, login_and_policies_required
+from seqr.views.utils.permissions_utils import get_project_analysis_group_guids_user_can_view, login_and_policies_required
 from seqr.models import Project, Family, Individual, AnalysisGroup, ProjectCategory
 
 
@@ -202,7 +202,7 @@ def awesomebar_autocomplete_handler(request):
 
     categories = request.GET.get('categories').split(',') if request.GET.get('categories') else DEFAULT_CATEGORIES
 
-    project_guids = get_project_guids_user_can_view(request.user, limit_data_manager=False) if any(
+    project_guids = get_project_analysis_group_guids_user_can_view(request.user, limit_data_manager=False) if any(
         category for category in categories if category in PROJECT_SPECIFIC_CATEGORY_MAP) else None
 
     results = {
