@@ -56,7 +56,7 @@ const COLUMNS = [
     content: 'Name',
     format: project => (
       <div>
-        <Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link>
+        <Link to={`/project/${project.projectGuid}/${project.analysisGroupGuid ? `analysis_group/${project.analysisGroupGuid}` : 'project_page'}`}>{project.name}</Link>
         <HorizontalSpacer width={10} />
         { project.description }
       </div>

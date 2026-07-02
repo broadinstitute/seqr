@@ -34,14 +34,14 @@ class DashboardPageTest(object):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projectsByGuid': {}, 'projectCategoriesByGuid': {}})
+        self.assertDictEqual(response.json(), {'projectsByGuid': {}, 'projectCategoriesByGuid': {}, 'analysisGroupsByGuid': {}})
 
         self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'projectsByGuid', 'projectCategoriesByGuid'})
+        self.assertSetEqual(set(response_json.keys()), {'projectsByGuid', 'projectCategoriesByGuid', 'analysisGroupsByGuid'})
         self.assertSetEqual(
             set(next(iter(response_json['projectCategoriesByGuid'].values())).keys()),
             {'created_by_id', 'created_date', 'guid', 'id', 'last_modified_date', 'name'}
@@ -53,6 +53,7 @@ class DashboardPageTest(object):
         self.assertSetEqual({p['userIsCreator'] for p in response_json['projectsByGuid'].values()}, {False})
         self.assertFalse(any('userCanDelete' in p for p in response_json['projectsByGuid'].values()))
         self.assertDictEqual(response_json['projectsByGuid']['R0001_1kg'], EXPECTED_DASHBOARD_PROJECT)
+        self.assertDictEqual(response_json['analysisGroupsByGuid'], {})
         mock_get_redis.assert_called_with('projects__test_user_collaborator')
         mock_set_redis.assert_called_with(
             'projects__test_user_collaborator', list(response_json['projectsByGuid'].keys()), expire=300)
