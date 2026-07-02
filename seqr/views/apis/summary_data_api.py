@@ -304,25 +304,30 @@ ALL_PROJECTS = 'all'
 GREGOR_CATEGORY = 'gregor'
 
 
-def _get_metadata_projects(request, project_guid):
+def _get_metadata_context(request, project_guid):
     is_analyst = user_is_analyst(request.user)
     is_all_projects = project_guid == ALL_PROJECTS
     include_airtable = 'true' in request.GET.get('includeAirtable', '') and AirtableSession.is_airtable_enabled() and is_analyst and not is_all_projects
     if is_all_projects:
-        projects = get_internal_projects() if is_analyst else Project.objects.filter(
-            guid__in=get_project_analysis_group_guids_user_can_view(request.user))
+        if is_analyst:
+            individual_filter = Q(family__project__in=get_internal_projects())
+        else:
+            project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+            individual_filter = Q(family__project__guid__in=project_guids)
+            if analysis_group_guids:
+                individual_filter |= Q(family__analysisgroup__guid__in=analysis_group_guids)
     elif project_guid == GREGOR_CATEGORY:
         if not is_analyst:
             raise PermissionDenied()
-        projects = Project.objects.filter(projectcategory__name__iexact=GREGOR_CATEGORY)
+        individual_filter = Q(family__project__projectcategory__name__iexact=GREGOR_CATEGORY)
     else:
-        projects = [get_project_analysis_groups_and_check_view_permission(project_guid, request.user)]
-    return projects, include_airtable
+        individual_filter = Q(family__project=get_project_analysis_groups_and_check_view_permission(project_guid, request.user))
+    return individual_filter, include_airtable
 
 
 @login_and_policies_required
 def individual_metadata(request, project_guid):
-    projects, include_airtable = _get_metadata_projects(request, project_guid)
+    individual_filter, include_airtable = _get_metadata_context(request, project_guid)
 
     family_rows_by_id = {}
     rows_by_subject_family_id = defaultdict(dict)
@@ -362,10 +367,11 @@ def individual_metadata(request, project_guid):
             rows_by_subject_family_id[(row['participant_id'], family_id)].update(row)
 
     parse_anvil_metadata(
-        projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
+        None, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
         include_family_sample_metadata=True,
         omit_airtable=not include_airtable,
         mme_value=Value('Yes'),
+        individual_filter=individual_filter,
         get_additional_individual_fields=lambda individual, airtable_metadata, has_dbgap_submission, maternal_ids, paternal_ids: {
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
             'individual_guid': individual.guid,
