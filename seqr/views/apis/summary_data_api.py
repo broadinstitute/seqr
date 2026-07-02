@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
-from django.db.models import CharField, F, Value
+from django.db.models import CharField, F, Q, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 
@@ -38,7 +38,7 @@ def mme_details(request):
     project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
     access_filter = Q(individual__family__project__guid__in=project_guids)
     if analysis_group_guids:
-        access_filter |= Q(individual__family__analysisgroup_guid__in=analysis_group_guids)
+        access_filter |= Q(individual__family__analysisgroup__guid__in=analysis_group_guids)
     submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True).filter(access_filter)
 
     hpo_ids, gene_ids, submission_gene_variants = get_mme_gene_phenotype_ids_for_submissions(
@@ -115,7 +115,7 @@ def saved_variants_page(request, tag):
     project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
     access_filter = Q(family__project__guid__in=project_guids)
     if analysis_group_guids:
-        access_filter |= Q(family__analysisgroup_guid__in=analysis_group_guids)
+        access_filter |= Q(family__analysisgroup__guid__in=analysis_group_guids)
     saved_variant_models = saved_variant_models.filter(access_filter)
 
     if gene:
@@ -136,7 +136,7 @@ def hpo_summary_data(request, hpo_id):
     project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
     access_filter = Q(family__project__guid__in=project_guids)
     if analysis_group_guids:
-        access_filter |= Q(family__analysisgroup_guid__in=analysis_group_guids)
+        access_filter |= Q(family__analysisgroup__guid__in=analysis_group_guids)
     data = Individual.objects.filter(access_filter).filter(
         features__contains=[{'id': hpo_id}],
     ).order_by('id').values(
