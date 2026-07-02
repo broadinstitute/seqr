@@ -5,7 +5,7 @@ from django.db.models.functions import Concat
 from django.db.models import Value, TextField
 from guardian.shortcuts import get_objects_for_user
 
-from seqr.models import Project, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, AnalysisGroup, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
@@ -277,9 +277,10 @@ def get_project_guids_any_family_user_can_view(user):
 def get_project_analysis_group_guids_user_can_view(user, limit_data_manager=True):
     # TODO refactor and actually return families or analysis groups here
     if user_is_data_manager(user) and not limit_data_manager:
-        return list(Project.objects.values_list('guid', flat=True))
+        return list(Project.objects.values_list('guid', flat=True)), []
 
-    return get_project_guids_user_can_view(user)
+    project_guids = get_project_guids_user_can_view(user)
+    return project_guids, _get_analysis_group_guids_user_can_view(user, project_guids)
 
 
 def get_project_guids_user_can_view(user):
@@ -304,6 +305,13 @@ def get_project_guids_user_can_view(user):
     safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 
     return project_guids
+
+
+def _get_analysis_group_guids_user_can_view(user, project_guids):
+    # TODO actually use workspace ACLs to check access
+    return list(AnalysisGroup.objects.filter(
+        workspace_namespace__isnull=False,
+    ).exclude(project__guid__in=project_guids).values_list('guid', flat=True))
 
 
 def check_mme_permissions(submission, user):
