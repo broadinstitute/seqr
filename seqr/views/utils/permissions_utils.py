@@ -113,6 +113,10 @@ def get_internal_projects():
 def get_project_and_check_edit_permission(project_guid, user):
     return _get_project_and_check_permissions(project_guid, user, check_project_edit_permission)
 
+def get_project_analysis_groups_and_check_view_permission(project_guid, user):
+    # TODO refactor and actually return families or analysis groups here
+    return _get_project_and_check_permissions(project_guid, user, _check_project_view_permission)
+
 def get_project_and_check_view_permission(project_guid, user): # TODO
     return _get_project_and_check_permissions(project_guid, user, _check_project_view_permission)
 

@@ -7,14 +7,14 @@ from django.core.exceptions import PermissionDenied
 from guardian.shortcuts import assign_perm, remove_perm
 from urllib.parse import unquote
 
-from seqr.models import UserPolicy, Project, CAN_VIEW, CAN_EDIT
+from seqr.models import UserPolicy, Project, Family, CAN_VIEW, CAN_EDIT
 from seqr.utils.communication_utils import send_welcome_email
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_user, get_json_for_project_collaborator_list, \
     get_project_collaborators_by_username, get_json_for_project_collaborator_groups, PROJECT_ACCESS_GROUP_NAMES
-from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, get_project_and_check_view_permission, \
+from seqr.views.utils.permissions_utils import get_project_guids_user_can_view, check_family_view_permission, \
     login_and_policies_required, login_active_required, active_user_has_policies_and_passes_test, \
     get_project_and_check_edit_permission
 from seqr.views.utils.terra_api_utils import oauth_enabled, anvil_enabled
@@ -48,12 +48,15 @@ def get_all_user_group_options(request):
 
 
 @login_and_policies_required
-def get_project_collaborator_options(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+def get_project_collaborator_options(request, family_guid):
+    family = Family.objects.get(guid=family_guid)
+    check_family_view_permission(family)
     user_fields = {'display_name', 'username', 'email'}
+    # TODO
+    from seqr.views.utils.permissions_utils import _has_project_view_permission
     users = get_project_collaborators_by_username(
         request.user, project, fields=user_fields, expand_user_groups=True,
-    )
+    ) if _has_project_view_permission(family.project) else None
     if not users:
         users = {request.user.username: get_json_for_user(request.user, user_fields)}
     return create_json_response(users)
