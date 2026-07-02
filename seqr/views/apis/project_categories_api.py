@@ -1,18 +1,15 @@
 import json
 
-from seqr.models import Project, ProjectCategory
+from seqr.models import ProjectCategory
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
-from seqr.views.utils.permissions_utils import check_project_permissions, login_and_policies_required
+from seqr.views.utils.permissions_utils import get_project_and_check_edit_permission, login_and_policies_required
 
 
 @login_and_policies_required
 def update_project_categories_handler(request, project_guid):
-    project = Project.objects.get(guid=project_guid)
-
-    # check permissions
-    check_project_permissions(project, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     request_json = json.loads(request.body)
 

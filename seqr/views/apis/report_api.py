@@ -22,7 +22,7 @@ from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_ex
 from seqr.views.utils.export_utils import export_multiple_files, write_multiple_files, export_table
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_queryset
-from seqr.views.utils.permissions_utils import user_is_analyst, get_project_and_check_permissions, \
+from seqr.views.utils.permissions_utils import user_is_analyst, get_project_and_check_view_permission, \
     get_project_guids_user_can_view, get_internal_projects, pm_or_analyst_required, active_user_has_policies_and_passes_test
 from seqr.views.utils.terra_api_utils import anvil_enabled
 from seqr.views.utils.variant_utils import DISCOVERY_CATEGORY
@@ -185,7 +185,7 @@ PHENOTYPE_PROJECT_CATEGORIES = [
 
 @airtable_enabled_analyst_required
 def anvil_export(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
 
     parsed_rows = defaultdict(list)
     family_id_map = {}
@@ -1031,7 +1031,7 @@ def _get_metadata_projects(project_guid, user):
         return get_internal_projects().filter(guid__in=get_project_guids_user_can_view(user))
     if project_guid == GREGOR_CATEGORY.lower():
         return Project.objects.filter(projectcategory__name=GREGOR_CATEGORY)
-    return [get_project_and_check_permissions(project_guid, user)]
+    return [get_project_and_check_view_permission(project_guid, user)]
 
 
 ANALYSIS_DATA_TYPE_LOOKUP = dict(FamilyAnalysedBy.DATA_TYPE_CHOICES)
