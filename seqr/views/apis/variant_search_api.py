@@ -593,9 +593,12 @@ def variant_lookup_handler(request):
         family_guids.update(variant['discoveryFamilies'])
         family_guids.update(variant['excludedTagFamilies'])
 
-    family_guids = set(Family.objects.filter(
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user, limit_data_manager=True)
+    access_filter = Q(project__guid__in=project_guids)
+    if analysis_group_guids:
+        access_filter |= Q(analysisgroup_guid__in=analysis_group_guids)
+    family_guids = set(Family.objects.filter(access_filter).filter(
         guid__in=family_guids,
-        project__guid__in=get_project_analysis_group_guids_user_can_view(request.user, limit_data_manager=True),
     ).values_list('guid', flat=True))
     for variant in variants:
         variant['familyGuids'] = family_guids.intersection(variant['familyGenotypes'].keys())
