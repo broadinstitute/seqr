@@ -35,8 +35,11 @@ MAX_SAVED_VARIANTS = 10000
 
 @login_and_policies_required
 def mme_details(request):
-    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True).filter(
-        individual__family__project__guid__in=get_project_analysis_group_guids_user_can_view(request.user))
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+    access_filter = Q(individual__family__project__guid__in=project_guids)
+    if analysis_group_guids:
+        access_filter |= Q(individual__family__analysisgroup_guid__in=analysis_group_guids)
+    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True).filter(access_filter)
 
     hpo_ids, gene_ids, submission_gene_variants = get_mme_gene_phenotype_ids_for_submissions(
         submissions, get_gene_variants=True)
@@ -109,7 +112,11 @@ def saved_variants_page(request, tag):
         for tt in tag_types:
             saved_variant_models = saved_variant_models.filter(varianttag__variant_tag_type=tt).distinct()
 
-    saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_analysis_group_guids_user_can_view(request.user))
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+    access_filter = Q(family__project__guid__in=project_guids)
+    if analysis_group_guids:
+        access_filter |= Q(family__analysisgroup_guid__in=analysis_group_guids)
+    saved_variant_models = saved_variant_models.filter(access_filter)
 
     if gene:
         saved_variant_models = saved_variant_models.filter(gene_ids__overlap=[gene])
@@ -126,8 +133,11 @@ def saved_variants_page(request, tag):
 
 @login_and_policies_required
 def hpo_summary_data(request, hpo_id):
-    data = Individual.objects.filter(
-        family__project__guid__in=get_project_analysis_group_guids_user_can_view(request.user),
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+    access_filter = Q(family__project__guid__in=project_guids)
+    if analysis_group_guids:
+        access_filter |= Q(family__analysisgroup_guid__in=analysis_group_guids)
+    data = Individual.objects.filter(access_filter).filter(
         features__contains=[{'id': hpo_id}],
     ).order_by('id').values(
         'features', individualGuid=F('guid'), displayName=INDIVIDUAL_DISPLAY_NAME_EXPR, familyId=F('family__family_id'),

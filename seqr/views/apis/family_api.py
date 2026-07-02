@@ -465,13 +465,16 @@ def get_family_rna_seq_data(request, family_guid, gene_id):
         indiv = tpm.sample.individual
         response[tpm.sample.tissue_type][tpm.sample.sequencing_type]['individualData'][indiv.display_name or indiv.individual_id] = tpm.tpm
 
-    project_guids = get_project_analysis_group_guids_user_can_view(request.user)
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+    sample_filter = Q(sample__individual__family__project__guid__in=project_guids)
+    if analysis_group_guids:
+        sample_filter |= Q(sample__individual__family__analysisgroup_guid__in=analysis_group_guids)
     internal_projects = get_internal_projects() if anvil_enabled() else None
     for tissue in response.keys():
         for sequencing_type in response[tissue].keys():
             tpms = RnaSeqTpm.objects.filter(sample__tissue_type=tissue, sample__sequencing_type=sequencing_type, gene_id=gene_id)
             response[tissue][sequencing_type]['myData'] = list(tpms.filter(
-                sample__individual__family__project__guid__in=project_guids,
+                sample_filter,
             ).order_by('tpm').values_list('tpm', flat=True))
             if internal_projects is not None:
                 response[tissue][sequencing_type]['rdgData'] = list(tpms.filter(
