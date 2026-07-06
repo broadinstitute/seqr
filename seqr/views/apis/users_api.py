@@ -50,13 +50,13 @@ def get_all_user_group_options(request):
 @login_and_policies_required
 def get_project_collaborator_options(request, family_guid):
     family = Family.objects.get(guid=family_guid)
-    check_family_view_permission(family)
+    check_family_view_permission(family, request.user)
     user_fields = {'display_name', 'username', 'email'}
     # TODO
     from seqr.views.utils.permissions_utils import _has_project_view_permission
     users = get_project_collaborators_by_username(
         request.user, project, fields=user_fields, expand_user_groups=True,
-    ) if _has_project_view_permission(family.project) else None
+    ) if _has_project_view_permission(family.project, request.user) else None
     if not users:
         users = {request.user.username: get_json_for_user(request.user, user_fields)}
     return create_json_response(users)

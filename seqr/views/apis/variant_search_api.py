@@ -413,10 +413,10 @@ def search_context_handler(request):
         return create_json_response({'error': error}, status=400, reason=error)
 
     check_families_view_permission(families, request.user)
-    
+
     family_project_guids = families.values_list('project__guid', flat=True)
     project_guid = family_project_guids[0] if len(family_project_guids) == 1 else None
-    
+
     project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
     full_access_projects = set(family_project_guids).intersection(project_guids)
     partial_access_projects = set(family_project_guids) - set(project_guids)
