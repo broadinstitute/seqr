@@ -365,7 +365,7 @@ def _parse_discovery_tags(variants_by_id, family_guids, user):
 
     discovery_families_by_guid = {
         f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(
-            guid__in=discovery_family_guids, project__guid__in=get_project_analysis_group_guids_user_can_view(user),
+            guid__in=discovery_family_guids, project__guid__in=get_project_analysis_group_guids_user_can_view(user), # TODO
         ).exclude(guid__in=family_guids))
     }
     if not discovery_families_by_guid:

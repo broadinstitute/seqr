@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.exceptions import MultipleObjectsReturned, PermissionDenied
 from django.db.utils import IntegrityError
-from django.db.models import Q, F, Value, Count
+from django.db.models import Q, F, Value, Count, prefetch_related_objects
 from django.db.models.functions import JSONObject
 from django.shortcuts import redirect
 from math import ceil
@@ -94,7 +94,7 @@ def _all_project_family_search_genome(search_context):
 
 
 def _all_genome_version_families(genome_version, user):
-    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user, limit_data_manager=True)
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(user, limit_data_manager=True)
     access_filter = Q(project__guid__in=project_guids)
     if analysis_group_guids:
         access_filter |= Q(analysisgroup_guid__in=analysis_group_guids)
@@ -426,7 +426,7 @@ def search_context_handler(request):
         group_q |= Q(project__guid__in=partial_access_projects, guid__in=analysis_group_guids)
 
     response['analysisGroupsByGuid'] = get_project_analysis_groups(group_q, project_guid)
-    response.update(_get_projects_response_context(family_project_guids, project_guid, request.user))
+    _add_projects_response_context(response, family_project_guids, project_guid, request.user)
 
     response['familiesByGuid'] = {f['familyGuid']: f for f in Family.objects.filter(family_q).values(
         projectGuid=Value(project_guid) if project_guid else F('project__guid'),
@@ -454,16 +454,16 @@ def search_context_handler(request):
     return create_json_response(response)
 
 
-def _get_projects_response_context(project_guids, project_guid, user):
+def _add_projects_response_context(response, project_guids, project_guid, user):
     projects = Project.objects.filter(guid__in=project_guids).distinct()
     projects_by_guid = {p.guid: {'projectGuid': p.guid, 'name': p.name} for p in projects}
 
     locus_list_json, locus_lists_models = get_project_locus_lists(projects, user)
 
-    response = {
+    response.update({
         'projectsByGuid': projects_by_guid,
         'locusListsByGuid': locus_list_json,
-    }
+    })
 
     if project_guid:
         response['projectsByGuid'][project_guid]['locusListGuids'] = list(locus_list_json.keys())
