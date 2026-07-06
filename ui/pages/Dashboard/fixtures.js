@@ -55,6 +55,7 @@ export const STATE1 = {
       ]
     },
   },
+  analysisGroupsByGuid: {}, // TODO add data for tests
   user: {
     date_joined: '2015-02-19T20:22:50.633Z',
     email: 'test@test.org',
