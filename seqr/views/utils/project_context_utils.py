@@ -13,42 +13,11 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json
 logger = SeqrLogger(__name__)
 
 
-def get_projects_child_entities(projects, project_guid, user):
-    projects_by_guid = {p.guid: {'projectGuid': p.guid, 'name': p.name} for p in projects}
-
-    locus_list_json, locus_lists_models = get_project_locus_lists(projects, user)
-
-    response = {
-        'projectsByGuid': projects_by_guid,
-        'locusListsByGuid': locus_list_json,
-        'analysisGroupsByGuid': get_project_analysis_groups(projects, project_guid),
-    }
-
-    if project_guid:
-        response['projectsByGuid'][project_guid]['locusListGuids'] = list(locus_list_json.keys())
-        response['projectsByGuid'][project_guid]['analysisGroupsLoaded'] = True
-    else:
-        project_id_to_guid = {project.id: project.guid for project in projects}
-        for group in response['analysisGroupsByGuid'].values():
-            group['projectGuid'] = project_id_to_guid.get(group.pop('projectId'))
-
-        for project in response['projectsByGuid'].values():
-            project['locusListGuids'] = []
-            project['analysisGroupsLoaded'] = True
-        prefetch_related_objects(locus_lists_models, 'projects')
-        for locus_list in locus_lists_models:
-            for project in locus_list.projects.all():
-                if project.guid in response['projectsByGuid']:
-                    response['projectsByGuid'][project.guid]['locusListGuids'].append(locus_list.guid)
-
-    return response
-
-
-def get_project_analysis_groups(projects, project_guid):
-    analysis_group_models = AnalysisGroup.objects.filter(project__in=projects)
+def get_project_analysis_groups(group_filter, project_guid):
+    analysis_group_models = AnalysisGroup.objects.filter(group_filter)
     get_json_kwargs = dict(project_guid=project_guid, skip_nested=True, is_analyst=False)
     analysis_groups = get_json_for_analysis_groups(analysis_group_models, **get_json_kwargs)
-    dynamic_analysis_group_models = DynamicAnalysisGroup.objects.filter(Q(project__in=projects) | Q(project__isnull=True))
+    dynamic_analysis_group_models = DynamicAnalysisGroup.objects.filter(group_filter | Q(project__isnull=True))
     dynamic_analysis_groups = get_json_for_analysis_groups(dynamic_analysis_group_models, **get_json_kwargs, is_dynamic=True)
     return {ag['analysisGroupGuid']: ag for ag in analysis_groups + dynamic_analysis_groups}
 

@@ -275,7 +275,6 @@ def get_project_guids_any_family_user_can_view(user):
 
 
 def get_project_analysis_group_guids_user_can_view(user, limit_data_manager=True):
-    # TODO fix usages
     if user_is_data_manager(user) and not limit_data_manager:
         return list(Project.objects.values_list('guid', flat=True)), []
 

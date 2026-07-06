@@ -271,7 +271,7 @@ def project_analysis_groups(request, project_guid):
     project = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
 
     return create_json_response({
-        'analysisGroupsByGuid': get_project_analysis_groups([project], project_guid)
+        'analysisGroupsByGuid': get_project_analysis_groups(Q(project=project), project_guid)
     })
 
 
