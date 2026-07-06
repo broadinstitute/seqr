@@ -206,8 +206,9 @@ def _has_project_view_permission(project, user):
     return _has_project_permissions(project, user, CAN_VIEW)
 
 def has_family_view_permission(family, user):
-    # TODO check analysis group perms
-    return _has_project_view_permission(family.project, user)
+    if _has_project_view_permission(family.project, user):
+        return True
+    return family.analysisgroup_set.filter(guid__in=_get_analysis_group_guids_user_can_view(user)).exists()
 
 def _has_project_permissions(project, user, permission_level):
     return user_is_data_manager(user) or _user_project_permission(user, permission_level, project)
@@ -306,11 +307,12 @@ def get_project_guids_user_can_view(user):
     return project_guids
 
 
-def _get_analysis_group_guids_user_can_view(user, project_guids):
-    # TODO actually use workspace ACLs to check access
-    return list(AnalysisGroup.objects.filter(
-        workspace_namespace__isnull=False,
-    ).exclude(project__guid__in=project_guids).values_list('guid', flat=True))
+def _get_analysis_group_guids_user_can_view(user, project_guids=None):
+    # TODO actually use workspace ACLs to check access and cache results
+    analysis_groups = AnalysisGroup.objects.filter(workspace_namespace__isnull=False)
+    if project_guids:
+        analysis_groups = analysis_groups.exclude(project__guid__in=project_guids)
+    return list(analysis_groups.values_list('guid', flat=True))
 
 
 def check_mme_permissions(submission, user):
