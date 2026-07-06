@@ -269,8 +269,9 @@ def check_locus_list_permissions(locus_list, user):
 
 
 def get_project_guids_any_family_user_can_view(user):
-    # TODO add projects based on analysis groups
-    return get_project_guids_user_can_view(user)
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(user)
+    additional_project_guids = AnalysisGroup.objects.filter(guid__in=analysis_group_guids).values_list('project__guid', flat=True)
+    return project_guids + list(additional_project_guids)
 
 
 def get_project_analysis_group_guids_user_can_view(user, limit_data_manager=True):
