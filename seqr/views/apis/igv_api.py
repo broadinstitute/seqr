@@ -121,7 +121,7 @@ def receive_bulk_igv_table_handler(request):
 
     def _get_valid_matched_individuals(individual_dataset_mapping):
         individuals = Individual.objects.filter(
-            family__project__guid__in=get_project_guids_user_can_view(request.user, limit_data_manager=False),
+            family__project__guid__in=get_project_guids_user_can_view(request.user),
             family__project__name__in={k[0] for k in individual_dataset_mapping.keys()},
             individual_id__in={k[1] for k in individual_dataset_mapping.keys()},
         ).select_related('family__project')

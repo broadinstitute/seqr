@@ -39,7 +39,7 @@ class UsersAPITest(object):
 
     @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
     def test_get_project_collaborator_options(self):
-        url = reverse(get_project_collaborator_options, args=[PROJECT_GUID])
+        url = reverse(get_project_collaborator_options, args=['F000001_1'])
         self.check_collaborator_login(url)
 
         if hasattr(self, 'mock_get_ws_acl'):

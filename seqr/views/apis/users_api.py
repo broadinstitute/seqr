@@ -55,7 +55,7 @@ def get_project_collaborator_options(request, family_guid):
     # TODO
     from seqr.views.utils.permissions_utils import _has_project_view_permission
     users = get_project_collaborators_by_username(
-        request.user, project, fields=user_fields, expand_user_groups=True,
+        request.user, family.project, fields=user_fields, expand_user_groups=True,
     ) if _has_project_view_permission(family.project, request.user) else None
     if not users:
         users = {request.user.username: get_json_for_user(request.user, user_fields)}
