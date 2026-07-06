@@ -363,9 +363,13 @@ def _parse_discovery_tags(variants_by_id, family_guids, user):
             variant['discoveryTags'] = []
             variant['noAccessDiscoveryFamilies'] = len(discovery_families)
 
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(user)
+    family_filter = Q(project__guid__in=project_guids)
+    if analysis_group_guids:
+        family_filter |= Q(analysisgroup_guid__in=analysis_group_guids)
     discovery_families_by_guid = {
-        f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(
-            guid__in=discovery_family_guids, project__guid__in=get_project_analysis_group_guids_user_can_view(user), # TODO
+        f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(family_filter).filter(
+            guid__in=discovery_family_guids,
         ).exclude(guid__in=family_guids))
     }
     if not discovery_families_by_guid:
