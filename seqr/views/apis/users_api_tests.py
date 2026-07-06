@@ -432,7 +432,7 @@ class AnvilUsersAPITest(AnvilAuthenticationTestCase, UsersAPITest):
         self.assertEqual(self.mock_get_ws_acl.call_count, 1)
         self.mock_get_ws_acl.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 1)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(
             self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de')
         self.mock_get_groups.assert_not_called()
