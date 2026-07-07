@@ -5,7 +5,7 @@ from django.db.models.functions import Concat
 from django.db.models import Q, Value, TextField
 from guardian.shortcuts import get_objects_for_user
 
-from seqr.models import Project, AnalysisGroup, Family, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, AnalysisGroup, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
@@ -113,16 +113,16 @@ def get_internal_projects():
 def get_project_and_check_edit_permission(project_guid, user):
     return _get_project_and_check_permissions(project_guid, user, check_project_edit_permission)
 
-def get_project_families_and_check_view_permission(project_guid, user):
+def get_project_analysis_groups_and_check_view_permission(project_guid, user):
     project = Project.objects.get(guid=project_guid)
     if _has_project_view_permission(project, user):
         return project, None
 
     analysis_group_guids = _get_analysis_group_guids_user_can_view(user)
     if analysis_group_guids:
-        families = Family.objects.filter(project=project, analysisgroup__guid__in=analysis_group_guids)
-        if families.exists():
-            return project, families
+        analysis_groups = project.analysisgroup_set.filter(guid__in=analysis_group_guids)
+        if analysis_groups.exists():
+            return project, analysis_groups
 
     raise PermissionDenied(f'{user} does not have sufficient permissions for {project}')
 

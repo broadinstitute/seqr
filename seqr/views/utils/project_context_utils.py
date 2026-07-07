@@ -132,12 +132,12 @@ def add_project_tag_types(projects_by_guid, project=None):
         })
 
 
-def add_project_tag_type_counts(project, response_json, project_json=None, families=None):
+def add_project_tag_type_counts(project, response_json, project_json=None, analysis_groups=None):
     project_json = project_json or {}
     response_json['projectsByGuid'] = {project.guid: project_json}
     add_project_tag_types(response_json['projectsByGuid'], project=project)
 
-    family_q = Q(family__in=families) if families else Q(family__project=project)
+    family_q = Q(family__analysisgroup__in=analysis_groups) if analysis_groups else Q(family__project=project)
     saved_variants = SavedVariant.objects.filter(family_q)
     project_tags = VariantTag.objects.filter(saved_variants__in=saved_variants)
     project_notes = VariantNote.saved_variants.through.objects.filter(savedvariant_id__in=saved_variants)
