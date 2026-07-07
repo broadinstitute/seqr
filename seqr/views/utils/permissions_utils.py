@@ -113,9 +113,18 @@ def get_internal_projects():
 def get_project_and_check_edit_permission(project_guid, user):
     return _get_project_and_check_permissions(project_guid, user, check_project_edit_permission)
 
-def get_project_analysis_groups_and_check_view_permission(project_guid, user):
-    # TODO refactor and actually return families or analysis groups here
-    return _get_project_and_check_permissions(project_guid, user, _check_project_view_permission)
+def get_project_families_and_check_view_permission(project_guid, user):
+    project = Project.objects.get(guid=project_guid)
+    if _has_project_view_permission(project, user):
+        return project, None
+
+    analysis_group_guids = _get_analysis_group_guids_user_can_view(user)
+    if analysis_group_guids:
+        families = Family.objects.filter(project=project, analysisgroup__guid__in=analysis_group_guids)
+        if families.exists():
+            return project, families
+
+    raise PermissionDenied(f'{user} does not have sufficient permissions for {project}')
 
 def get_project_and_check_view_permission(project_guid, user):
     return _get_project_and_check_permissions(project_guid, user, _check_project_view_permission)

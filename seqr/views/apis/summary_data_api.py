@@ -22,7 +22,7 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants,\
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
-    login_and_policies_required, get_project_analysis_groups_and_check_view_permission, get_internal_projects, \
+    login_and_policies_required, get_project_families_and_check_view_permission, get_internal_projects, \
     get_project_analysis_group_guids_user_can_view
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, bulk_create_tagged_variants, get_saved_variant_annotations, DISCOVERY_CATEGORY
@@ -321,7 +321,11 @@ def _get_metadata_context(request, project_guid):
             raise PermissionDenied()
         individual_filter = Q(family__project__projectcategory__name__iexact=GREGOR_CATEGORY)
     else:
-        individual_filter = Q(family__project=get_project_analysis_groups_and_check_view_permission(project_guid, request.user))
+        project, families = get_project_families_and_check_view_permission(project_guid, request.user)
+        if families:
+            individual_filter = Q(families__in=families)
+        else:
+            individual_filter = Q(family__project=project)
     return individual_filter, include_airtable
 
 

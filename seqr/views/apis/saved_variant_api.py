@@ -12,7 +12,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, STRUCTURED_METADATA_TAG_TYPES
-from seqr.views.utils.permissions_utils import get_project_analysis_groups_and_check_view_permission, check_project_edit_permission, \
+from seqr.views.utils.permissions_utils import get_project_families_and_check_view_permission, check_project_edit_permission, \
     login_and_policies_required, check_family_view_permission, check_families_view_permission
 from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
 
@@ -23,11 +23,11 @@ INCLUDE_LOCUS_LISTS_PARAM = 'includeLocusLists'
 
 @login_and_policies_required
 def saved_variant_data(request, project_guid, variant_guids=None):
-    project = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
+    project, families = get_project_families_and_check_view_permission(project_guid, request.user)
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
     variant_guids = variant_guids.split(',') if variant_guids else None
 
-    variant_query = SavedVariant.objects.filter(family__project=project)
+    variant_query = SavedVariant.objects.filter(family__in=families) if families else SavedVariant.objects.filter(family__project=project)
     if variant_guids:
         variant_query = variant_query.filter(guid__in=variant_guids)
         if variant_query.count() < 1:
