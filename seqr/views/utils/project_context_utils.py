@@ -13,11 +13,11 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_families, _get_json
 logger = SeqrLogger(__name__)
 
 
-def get_project_analysis_groups(group_filter, project_guid):
-    analysis_group_models = AnalysisGroup.objects.filter(group_filter)
+def get_project_analysis_groups(project_filter, additional_group_filter, project_guid):
+    analysis_group_models = AnalysisGroup.objects.filter(project_filter | additional_group_filter)
     get_json_kwargs = dict(project_guid=project_guid, skip_nested=True, is_analyst=False)
     analysis_groups = get_json_for_analysis_groups(analysis_group_models, **get_json_kwargs)
-    dynamic_analysis_group_models = DynamicAnalysisGroup.objects.filter(group_filter | Q(project__isnull=True))
+    dynamic_analysis_group_models = DynamicAnalysisGroup.objects.filter(project_filter | Q(project__isnull=True))
     dynamic_analysis_groups = get_json_for_analysis_groups(dynamic_analysis_group_models, **get_json_kwargs, is_dynamic=True)
     return {ag['analysisGroupGuid']: ag for ag in analysis_groups + dynamic_analysis_groups}
 

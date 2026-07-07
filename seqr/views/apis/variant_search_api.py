@@ -420,12 +420,13 @@ def search_context_handler(request):
     project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
     full_access_projects = set(family_project_guids).intersection(project_guids)
     partial_access_projects = set(family_project_guids) - set(project_guids)
-    family_q = group_q = Q(project__guid__in=full_access_projects)
+    family_q = group_project_q = Q(project__guid__in=full_access_projects)
+    group_q = None
     if partial_access_projects:
         family_q |= Q(project__guid__in=partial_access_projects, analysisgroup__guid__in=analysis_group_guids)
-        group_q |= Q(project__guid__in=partial_access_projects, guid__in=analysis_group_guids)
+        group_q = Q(project__guid__in=partial_access_projects, guid__in=analysis_group_guids)
 
-    response['analysisGroupsByGuid'] = get_project_analysis_groups(group_q, project_guid)
+    response['analysisGroupsByGuid'] = get_project_analysis_groups(group_project_q, group_q, project_guid)
     _add_projects_response_context(response, family_project_guids, project_guid, request.user)
 
     response['familiesByGuid'] = {f['familyGuid']: f for f in Family.objects.filter(family_q).values(

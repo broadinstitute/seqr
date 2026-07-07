@@ -277,9 +277,14 @@ def project_individuals(request, project_guid):
 def project_analysis_groups(request, project_guid):
     project, families = get_project_families_and_check_view_permission(project_guid, request.user)
 
-    group_q = Q(families__in=families) if families else Q(project=project)
+    project_q = group_q = Q()
+    if families:
+        group_q = Q(families__in=families)
+    else:
+        project_q = Q(project=project)
+
     return create_json_response({
-        'analysisGroupsByGuid': get_project_analysis_groups(group_q, project_guid)
+        'analysisGroupsByGuid': get_project_analysis_groups(project_q, group_q, project_guid)
     })
 
 
