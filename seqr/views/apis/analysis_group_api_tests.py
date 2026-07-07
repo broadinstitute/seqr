@@ -5,14 +5,13 @@ from django.urls.base import reverse
 
 from seqr.models import AnalysisGroup, DynamicAnalysisGroup
 from seqr.views.apis.analysis_group_api import update_analysis_group_handler, delete_analysis_group_handler, \
-    update_dynamic_analysis_group_handler, delete_dynamic_analysis_group_handler
-from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
+    update_dynamic_analysis_group_handler, delete_dynamic_analysis_group_handler, analysis_group_collaborators
+from seqr.views.utils.test_utils import AnvilAuthenticationTestCase, AuthenticationTestCase
 
 PROJECT_GUID = 'R0001_1kg'
 
 
-class AnalysisGroupAPITest(AnvilAuthenticationTestCase):
-    fixtures = ['users', '1kg_project']
+class AnalysisGroupAPITest(object):
 
     @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
     def test_create_update_and_delete_analysis_group(self):
@@ -100,34 +99,16 @@ class AnalysisGroupAPITest(AnvilAuthenticationTestCase):
 
         body['workspaceName'] = 'anvil-no-project-workspace2'
         response = self.client.post(update_analysis_group_url, content_type='application/json', data=json.dumps(body))
-        self.assertEqual(response.status_code, 200)
-        updated_analysis_group_response = response.json()
-        self.assertEqual(len(updated_analysis_group_response['analysisGroupsByGuid']), 1)
-        self.assertDictEqual(next(iter(updated_analysis_group_response['analysisGroupsByGuid'].values())), {
-            'name': 'updated_analysis_group',
-            'description': 'access control group',
-            'analysisGroupGuid': guid,
-            'projectGuid': PROJECT_GUID,
-            'familyGuids': ['F000001_1', 'F000003_3'],
-            'workspaceNamespace': 'my-seqr-billing',
-            'workspaceName': 'anvil-no-project-workspace2',
-        })
-        updated_analysis_group_model = AnalysisGroup.objects.get(guid=guid)
-        self.assertEqual(updated_analysis_group_model.workspace_namespace, 'my-seqr-billing')
-        self.assertEqual(updated_analysis_group_model.workspace_name, 'anvil-no-project-workspace2')
+        self._assert_expected_update_workspace_response(response, guid)
+
         self.login_manager()
 
         # delete the analysis_group
         delete_analysis_group_url = reverse(delete_analysis_group_handler, args=[PROJECT_GUID, guid])
-        response = self.client.post(delete_analysis_group_url, content_type='application/json')
+        self._assert_expected_delete_analysis_group(delete_analysis_group_url, guid)
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.reason_phrase, 'Unable to delete access control group')
 
-        updated_analysis_group_model.workspace_namespace = None
-        updated_analysis_group_model.workspace_name = None
-        updated_analysis_group_model.save()
-
+    def _assert_expected_delete_analysis_group(self, delete_analysis_group_url, guid):
         response = self.client.post(delete_analysis_group_url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'analysisGroupsByGuid': {guid: None}})
@@ -135,6 +116,7 @@ class AnalysisGroupAPITest(AnvilAuthenticationTestCase):
         # check that analysis_group was deleted
         new_analysis_group = AnalysisGroup.objects.filter(guid=guid)
         self.assertEqual(len(new_analysis_group), 0)
+
 
     def test_create_update_and_delete_dynamic_analysis_group(self):
         create_analysis_group_url = reverse(update_dynamic_analysis_group_handler, args=[PROJECT_GUID])
@@ -187,3 +169,44 @@ class AnalysisGroupAPITest(AnvilAuthenticationTestCase):
         # check that analysis_group was deleted
         new_analysis_group = DynamicAnalysisGroup.objects.filter(guid=guid)
         self.assertEqual(len(new_analysis_group), 0)
+
+
+class LocalAnalysisGroupAPITest(AuthenticationTestCase, AnalysisGroupAPITest):
+    fixtures = ['users', '1kg_project']
+
+    def _assert_expected_update_workspace_response(self, response, guid):
+        self.assertEqual(response.status_code, 403)
+
+
+class AnvilAnalysisGroupAPITest(AnvilAuthenticationTestCase, AnalysisGroupAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project']
+
+    def _assert_expected_update_workspace_response(self, response, guid):
+        self.assertEqual(response.status_code, 200)
+        updated_analysis_group_response = response.json()
+        self.assertEqual(len(updated_analysis_group_response['analysisGroupsByGuid']), 1)
+        self.assertDictEqual(next(iter(updated_analysis_group_response['analysisGroupsByGuid'].values())), {
+            'name': 'updated_analysis_group',
+            'description': 'access control group',
+            'analysisGroupGuid': guid,
+            'projectGuid': PROJECT_GUID,
+            'familyGuids': ['F000001_1', 'F000003_3'],
+            'workspaceNamespace': 'my-seqr-billing',
+            'workspaceName': 'anvil-no-project-workspace2',
+        })
+        updated_analysis_group_model = AnalysisGroup.objects.get(guid=guid)
+        self.assertEqual(updated_analysis_group_model.workspace_namespace, 'my-seqr-billing')
+        self.assertEqual(updated_analysis_group_model.workspace_name, 'anvil-no-project-workspace2')
+
+    def _assert_expected_delete_analysis_group(self, delete_analysis_group_url, guid):
+        response = self.client.post(delete_analysis_group_url, content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.reason_phrase, 'Unable to delete access control group')
+
+        updated_analysis_group_model = AnalysisGroup.objects.get(guid=guid)
+        updated_analysis_group_model.workspace_namespace = None
+        updated_analysis_group_model.workspace_name = None
+        updated_analysis_group_model.save()
+
+        super()._assert_expected_delete_analysis_group(delete_analysis_group_url, guid)

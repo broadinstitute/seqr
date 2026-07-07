@@ -9,6 +9,7 @@ from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group, get_
 from seqr.views.utils.permissions_utils import get_project_and_check_edit_permission, login_and_policies_required, \
     user_is_pm, is_valid_anvil_workspace, get_project_analysis_groups_and_check_view_permission, \
     anvil_auth_and_policies_required
+from seqr.views.utils.terra_api_utils import is_anvil_authenticated
 
 
 REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
@@ -62,7 +63,7 @@ def _check_pm_field_permissions(pm_fields, user, analysis_group=None):
         return
     if analysis_group and all(getattr(analysis_group, _to_snake_case(field)) == value for field, value in pm_fields.items()):
         return
-    if user_is_pm(user) and is_valid_anvil_workspace(pm_fields, user):
+    if user_is_pm(user) and is_anvil_authenticated(user) and is_valid_anvil_workspace(pm_fields, user):
         return
     raise PermissionDenied(f'{user} does not have permission to edit {",".join(pm_fields)}')
 
