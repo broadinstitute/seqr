@@ -123,11 +123,14 @@ def delete_project_handler(request, project_guid):
 
 @login_and_policies_required
 def project_page_data(request, project_guid):
-    project, _ = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
     update_project_from_json(project, {'last_accessed_date': timezone.now()}, request.user)
     return create_json_response({
         'projectsByGuid': {
-            project.guid: _get_json_for_project(project, request.user, add_project_category_guids_field=False)
+            project.guid: {
+                'partialAccess': bool(analysis_groups),
+                **_get_json_for_project(project, request.user, add_project_category_guids_field=False),
+            }
         },
     })
 

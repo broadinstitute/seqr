@@ -308,14 +308,14 @@ class ProjectAPITest(object):
 
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), PROJECT_PAGE_RESPONSE_KEYS)
-        project_fields = set()
-        project_fields.update(PROJECT_FIELDS)
+        project_fields = {*PROJECT_FIELDS, 'partialAccess'}
         project_fields.remove('projectCategoryGuids')
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), project_fields)
         self.assertEqual(
             response_json['projectsByGuid'][PROJECT_GUID]['lastAccessedDate'][:10],
             datetime.today().strftime('%Y-%m-%d')
         )
+        self.assertFalse(response_json['projectsByGuid'][PROJECT_GUID]['partialAccess'])
 
         # Test invalid project guid
         invalid_url = reverse(project_page_data, args=['FAKE_GUID'])

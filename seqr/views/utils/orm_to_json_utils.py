@@ -551,7 +551,7 @@ def get_project_collaborators_by_username(user, project, include_permissions=Fal
 
     elif project_has_anvil(project):
         collaborators = get_workspace_collaborators_by_username(
-            user, project.workspace_namespace, workspace_name, include_permissions, expand_user_groups,
+            user, project.workspace_namespace, project.workspace_name, include_permissions, expand_user_groups,
         )
 
     return collaborators
