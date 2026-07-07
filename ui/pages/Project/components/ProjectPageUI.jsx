@@ -105,9 +105,11 @@ const ProjectPageUI = React.memo(({ analysisGroupGuid, load, loading, familiesLo
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
-          <ProjectSection label="Notifications">
-            <ProjectNotifications />
-          </ProjectSection>
+          {!analysisGroupGuid && (
+            <ProjectSection label="Notifications">
+              <ProjectNotifications />
+            </ProjectSection>
+          )}
           <VerticalSpacer height={10} />
           <ProjectSection label="Collaborators">
             <ProjectCollaborators />
