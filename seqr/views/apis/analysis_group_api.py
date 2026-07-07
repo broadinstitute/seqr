@@ -4,9 +4,11 @@ import json
 from seqr.models import AnalysisGroup, DynamicAnalysisGroup, Family
 from seqr.views.utils.json_utils import create_json_response, _to_snake_case
 from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_create_model_from_json
-from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group
+from seqr.views.utils.orm_to_json_utils import get_json_for_analysis_group, get_workspace_collaborators_by_username, \
+    sorted_collaborators_json
 from seqr.views.utils.permissions_utils import get_project_and_check_edit_permission, login_and_policies_required, \
-    user_is_pm, is_valid_anvil_workspace
+    user_is_pm, is_valid_anvil_workspace, get_project_analysis_groups_and_check_view_permission, \
+    anvil_auth_and_policies_required
 
 
 REQUIRED_FIELDS = {'name': 'Name', 'familyGuids': 'Families'}
@@ -116,12 +118,17 @@ def delete_dynamic_analysis_group_handler(request, project_guid, analysis_group_
     return delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=DynamicAnalysisGroup, check_workspace=False)
 
 
-@login_and_policies_required
+@anvil_auth_and_policies_required
 def analysis_group_collaborators(request, project_guid, analysis_group_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
+    analysis_group = analysis_groups.get(guid=analysis_group_guid) \
+        if analysis_groups else AnalysisGroup.objects.get(guid=analysis_group_guid, project=project)
+    collaborators = get_workspace_collaborators_by_username(
+        request.user, analysis_group.workspace_namespace, analysis_group.workspace_name, include_permissions=True,
+    ).values()
 
     return create_json_response({
         'analysisGroupsByGuid': {analysis_group_guid: {
-            'collaborators': get_json_for_project_collaborator_list(request.user, project),
+            'collaborators': sorted_collaborators_json(collaborators),
         }}
     })

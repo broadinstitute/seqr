@@ -52,7 +52,7 @@ def get_project_collaborator_options(request, project_guid):
     project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
     user_fields = {'display_name', 'username', 'email'}
     users = None if analysis_groups else get_project_collaborators_by_username(
-        request.user, project, fields=user_fields, expand_user_groups=True,
+        request.user, project, expand_user_groups=True,
     )
     if not users:
         users = {request.user.username: get_json_for_user(request.user, user_fields)}

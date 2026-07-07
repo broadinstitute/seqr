@@ -524,14 +524,18 @@ def get_json_for_project_collaborator_groups(project):
 def get_json_for_project_collaborator_list(user, project):
     collaborator_list = list(
         get_project_collaborators_by_username(
-            user, project, fields=['username', 'email', 'display_name'], include_permissions=True,
+            user, project, include_permissions=True,
         ).values())
 
+    return sorted_collaborators_json(collaborator_list)
+
+
+def sorted_collaborators_json(collaborator_list):
     return sorted(collaborator_list, key=lambda collaborator: (
         not collaborator['hasEditPermissions'], (collaborator['displayName'] or collaborator['email']).lower()))
 
 
-def get_project_collaborators_by_username(user, project, fields, include_permissions=False, expand_user_groups=False):
+def get_project_collaborators_by_username(user, project, include_permissions=False, expand_user_groups=False):
     collaborators = {}
     if not anvil_enabled():
         if expand_user_groups:
@@ -543,26 +547,36 @@ def get_project_collaborators_by_username(user, project, fields, include_permiss
 
         for collaborator, perms in collaborator_perms.items():
             collaborators[collaborator.username] = _get_collaborator_json(
-                collaborator, fields, include_permissions, can_edit=CAN_EDIT in perms)
+                collaborator, ['username', 'email', 'display_name'], include_permissions, can_edit=CAN_EDIT in perms)
 
     elif project_has_anvil(project):
-        permission_levels = get_workspace_collaborator_perms(user, project.workspace_namespace, project.workspace_name)
-        analyst_email = f'{ANALYST_USER_GROUP}@firecloud.org'.lower()
-        if expand_user_groups and analyst_email in permission_levels:
-            analyst_permission = permission_levels.pop(analyst_email)
-            permission_levels.update({email.lower(): analyst_permission for email in get_anvil_analyst_user_emails(user)})
+        collaborators = get_workspace_collaborators_by_username(
+            user, project.workspace_namespace, workspace_name, include_permissions, expand_user_groups,
+        )
 
-        users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(email_lower__in=permission_levels.keys())}
-        for email, permission in permission_levels.items():
-            if email == SERVICE_ACCOUNT_FOR_ANVIL:
-                continue
-            collaborator = users_by_email.get(email)
-            collaborator_json = _get_collaborator_json(
-                collaborator or email, fields, include_permissions, can_edit=permission == CAN_EDIT,
-                get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
-            username = collaborator.username if collaborator else collaborator_json['username']
-            collaborators[username] = collaborator_json
+    return collaborators
 
+
+def get_workspace_collaborators_by_username(user, workspace_namespace, workspace_name, include_permissions=False, expand_user_groups=False):
+    collaborators = {}
+    permission_levels = get_workspace_collaborator_perms(user, workspace_namespace, workspace_name)
+    analyst_email = f'{ANALYST_USER_GROUP}@firecloud.org'.lower()
+    if expand_user_groups and analyst_email in permission_levels:
+        analyst_permission = permission_levels.pop(analyst_email)
+        permission_levels.update({email.lower(): analyst_permission for email in get_anvil_analyst_user_emails(user)})
+
+    users_by_email = {u.email_lower: u for u in User.objects.annotate(email_lower=Lower('email')).filter(
+        email_lower__in=permission_levels.keys())}
+    for email, permission in permission_levels.items():
+        if email == SERVICE_ACCOUNT_FOR_ANVIL:
+            continue
+        collaborator = users_by_email.get(email)
+        collaborator_json = _get_collaborator_json(
+            collaborator or email, ['username', 'email', 'display_name'], include_permissions,
+            can_edit=permission == CAN_EDIT,
+            get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
+        username = collaborator.username if collaborator else collaborator_json['username']
+        collaborators[username] = collaborator_json
     return collaborators
 
 

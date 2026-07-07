@@ -12,7 +12,8 @@ from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_wo
     anvil_enabled, user_get_workspace_access_level, get_anvil_group_members, user_get_anvil_groups, \
     WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL, PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, INTERNAL_NAMESPACES, \
-    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL, \
+    GOOGLE_LOGIN_REQUIRED_URL
 from typing import Callable, Optional
 
 logger = SeqrLogger(__name__)
@@ -88,6 +89,16 @@ def login_and_policies_required(view_func: Callable, login_url: str = API_LOGIN_
 def active_user_has_policies_and_passes_test(user_permission_test_func: Callable) -> Callable:
     def decorator(view_func):
         return login_and_policies_required(user_passes_test(_require_permission(user_permission_test_func))(view_func))
+    return decorator
+
+
+anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
+
+def anvil_auth_and_policies_required(wrapped_func=None, policy_url=API_POLICY_REQUIRED_URL):
+    def decorator(view_func):
+        return login_and_policies_required(anvil_auth_required(view_func), login_url=GOOGLE_LOGIN_REQUIRED_URL, policy_url=policy_url)
+    if wrapped_func:
+        return decorator(wrapped_func)
     return decorator
 
 
