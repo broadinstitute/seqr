@@ -112,7 +112,7 @@ const ProjectPageUI = React.memo(({ analysisGroupGuid, load, loading, familiesLo
           )}
           <VerticalSpacer height={10} />
           <ProjectSection label="Collaborators">
-            <ProjectCollaborators />
+            <ProjectCollaborators analysisGroupGuid={analysisGroupGuid} />
           </ProjectSection>
         </Grid.Column>
       </Grid.Row>

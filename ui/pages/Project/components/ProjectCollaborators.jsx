@@ -16,8 +16,8 @@ import LoadOptionsSelect from 'shared/components/form/LoadOptionsSelect'
 import { HelpIcon } from 'shared/components/StyledComponents'
 import { USER_NAME_FIELDS } from 'shared/utils/constants'
 
-import { updateCollaborator, updateCollaboratorGroup, loadProjectCollaborators } from '../reducers'
-import { getUserOptions, getCurrentProject, getProjectCollaboratorsIsLoading } from '../selectors'
+import { updateCollaborator, updateCollaboratorGroup, loadProjectAnalysisGroupCollaborators } from '../reducers'
+import { getUserOptions, getCurrentProject, getCurrentAnalysisGroup, getProjectCollaboratorsIsLoading } from '../selectors'
 
 const CollaboratorEmailDropdown = React.memo(({ load, ...props }) => (
   <DataLoader load={load} loading={false} content>
@@ -164,11 +164,12 @@ const groupNameDisplay = ({ name }) => name
 
 const ProjectCollaborators = React.memo(({
   canEdit, workspaceName, collaborators, collaboratorGroups, user, loading, load, onSubmit, onGroupSubmit,
-  addCollaborator,
+  addCollaborator, analysisGroupGuid, groupWorkspace,
 }) => {
   const canEditCollaboratots = canEdit && !user.isAnvil
+  const contentId = groupWorkspace && analysisGroupGuid
   return (
-    <DataLoader load={load} loading={loading} content={collaborators}>
+    <DataLoader load={load} loading={loading} content={collaborators} contentId={contentId} reloadOnIdUpdate>
       <ProjectAccessSection
         title="Collaborator"
         idField="email"
@@ -220,14 +221,20 @@ ProjectCollaborators.propTypes = {
   onSubmit: PropTypes.func,
   onGroupSubmit: PropTypes.func,
   addCollaborator: PropTypes.func,
+  analysisGroupGuid: PropTypes.string,
+  groupWorkspace: PropTypes.string,
 }
 
-const mapStateToProps = (state) => {
+const mapStateToProps = (state, ownProps) => {
   const { canEdit, workspaceName, collaborators, collaboratorGroups } = getCurrentProject(state)
+  const {
+    workspaceName: groupWorkspace, collaborators: groupCollaborators,
+  } = getCurrentAnalysisGroup(state, ownProps) || {}
   return {
     canEdit,
     workspaceName,
-    collaborators,
+    groupWorkspace,
+    collaborators: groupWorkspace ? groupCollaborators : collaborators,
     collaboratorGroups,
     user: getUser(state),
     loading: getProjectCollaboratorsIsLoading(state),
@@ -235,7 +242,7 @@ const mapStateToProps = (state) => {
 }
 
 const mapDispatchToProps = {
-  load: loadProjectCollaborators,
+  load: loadProjectAnalysisGroupCollaborators,
   onSubmit: updateCollaborator,
   onGroupSubmit: updateCollaboratorGroup,
   addCollaborator: updates => updateCollaborator(updates.user),
