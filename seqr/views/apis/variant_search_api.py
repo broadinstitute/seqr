@@ -421,7 +421,7 @@ def search_context_handler(request):
     full_access_projects = set(family_project_guids).intersection(project_guids)
     partial_access_projects = set(family_project_guids) - set(project_guids)
     family_q = group_project_q = Q(project__guid__in=full_access_projects)
-    group_q = None
+    group_q = Q()
     if partial_access_projects:
         family_q |= Q(project__guid__in=partial_access_projects, analysisgroup__guid__in=analysis_group_guids)
         group_q = Q(project__guid__in=partial_access_projects, guid__in=analysis_group_guids)
