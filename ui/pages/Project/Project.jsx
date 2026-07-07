@@ -40,8 +40,8 @@ class Project extends React.PureComponent {
     if (project) {
       return (
         <Switch>
-          <Route path={`${match.url}/project_page`} component={ProjectPageUI} />
-          {project.hasCaseReview && <Route path={`${match.url}/case_review`} component={CaseReview} />}
+          {!project.partialAccess && <Route path={`${match.url}/project_page`} component={ProjectPageUI} />}
+          {project.hasCaseReview && !project.partialAccess && <Route path={`${match.url}/case_review`} component={CaseReview} />}
           <Route path={`${match.url}/analysis_group/:analysisGroupGuid`} component={ProjectPageUI} />
           <Route path={`${match.url}/family_page/:familyGuid/matchmaker_exchange`} component={Matchmaker} />
           <Route path={`${match.url}/family_page/:familyGuid`} component={FamilyPageRouter} />
