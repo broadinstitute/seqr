@@ -51,10 +51,11 @@ export const fetchProjects = () => (dispatch) => {
     e => dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })).get()
 }
 
-export const loadUserOptions = familyGuid => (dispatch) => {
+export const loadUserOptions = familyGuid => (dispatch, getState) => {
   let url = '/api/users/get_options'
   if (familyGuid) {
-    url = `${url}/${familyGuid}`
+    const { projectGuid } = getState().familiesByGuid[familyGuid]
+    url = `${url}/${projectGuid}`
   }
   dispatch({ type: REQUEST_USER_OPTIONS })
   new HttpRequestHelper(url,

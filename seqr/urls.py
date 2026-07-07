@@ -310,7 +310,7 @@ api_endpoints = {
 
     'users/get_options': get_all_collaborator_options,
     'users/get_group_options': get_all_user_group_options,
-    'users/get_options/(?P<family_guid>[^/]+)': get_project_collaborator_options,
+    'users/get_options/(?P<project_guid>[^/]+)': get_project_collaborator_options,
     'project/(?P<project_guid>[^/]+)/collaborators/create': create_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/update': update_project_collaborator,
     'project/(?P<project_guid>[^/]+)/collaborators/(?P<username>[^/]+)/delete': delete_project_collaborator,
