@@ -114,3 +114,14 @@ def delete_analysis_group_handler(request, project_guid, analysis_group_guid, mo
 @login_and_policies_required
 def delete_dynamic_analysis_group_handler(request, project_guid, analysis_group_guid):
     return delete_analysis_group_handler(request, project_guid, analysis_group_guid, model_cls=DynamicAnalysisGroup, check_workspace=False)
+
+
+@login_and_policies_required
+def analysis_group_collaborators(request, project_guid, analysis_group_guid):
+    project = get_project_and_check_view_permission(project_guid, request.user)
+
+    return create_json_response({
+        'analysisGroupsByGuid': {analysis_group_guid: {
+            'collaborators': get_json_for_project_collaborator_list(request.user, project),
+        }}
+    })
