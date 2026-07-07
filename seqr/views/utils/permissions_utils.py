@@ -5,7 +5,7 @@ from django.db.models.functions import Concat
 from django.db.models import Q, Value, TextField
 from guardian.shortcuts import get_objects_for_user
 
-from seqr.models import Project, AnalysisGroup, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, AnalysisGroup, Family, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
