@@ -170,12 +170,22 @@ class AnalysisGroupAPITest(object):
         new_analysis_group = DynamicAnalysisGroup.objects.filter(guid=guid)
         self.assertEqual(len(new_analysis_group), 0)
 
+    def test_analysis_group_collaborators(self):
+        url = reverse(analysis_group_collaborators, args=[PROJECT_GUID, 'AG0000183_test_group'])
+        self.check_require_login(url, login_redirect_url='/login/google-oauth2')
+
+        self._assert_expected_analysis_group_collaborators(url)
+
 
 class LocalAnalysisGroupAPITest(AuthenticationTestCase, AnalysisGroupAPITest):
     fixtures = ['users', '1kg_project']
 
     def _assert_expected_update_workspace_response(self, response, guid):
         self.assertEqual(response.status_code, 403)
+
+    def _assert_expected_analysis_group_collaborators(self, url):
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
 
 
 class AnvilAnalysisGroupAPITest(AnvilAuthenticationTestCase, AnalysisGroupAPITest):
@@ -198,6 +208,17 @@ class AnvilAnalysisGroupAPITest(AnvilAuthenticationTestCase, AnalysisGroupAPITes
         self.assertEqual(updated_analysis_group_model.workspace_namespace, 'my-seqr-billing')
         self.assertEqual(updated_analysis_group_model.workspace_name, 'anvil-no-project-workspace2')
 
+        self.mock_list_workspaces.assert_not_called()
+        self.assertEqual(self.mock_get_groups.call_count, 3)
+        self.mock_get_groups.assert_called_with(self.pm_user)
+        self.mock_get_group_members.assert_not_called()
+        self.mock_get_ws_acl.assert_not_called()
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 12)
+        self.mock_get_ws_access_level.assert_called_with(
+            self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2',
+        )
+
+
     def _assert_expected_delete_analysis_group(self, delete_analysis_group_url, guid):
         response = self.client.post(delete_analysis_group_url, content_type='application/json')
 
@@ -210,3 +231,25 @@ class AnvilAnalysisGroupAPITest(AnvilAuthenticationTestCase, AnalysisGroupAPITes
         updated_analysis_group_model.save()
 
         super()._assert_expected_delete_analysis_group(delete_analysis_group_url, guid)
+
+    def _assert_expected_analysis_group_collaborators(self, url):
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        self.login_collaborator()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'analysisGroupsByGuid': {'AG0000183_test_group': {
+            'collaborators': [],
+        }}})
+
+        self.mock_list_workspaces.assert_not_called()
+        self.mock_get_groups.assert_not_called()
+        self.mock_get_group_members.assert_not_called()
+        self.mock_get_ws_acl.assert_called_once_with(self.collaborator_user, None, None)
+        self.mock_get_ws_access_level.assert_called_with(
+            self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de',
+        )
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
+
+
