@@ -42,7 +42,7 @@ class ExternalAPITest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
             'metrics': {
-                'numberOfCases': 4,
+                'numberOfCases': 5,
                 'numberOfSubmitters': 2,
                 'numberOfUniqueGenes': 3,
                 'numberOfUniqueFeatures': 4,
