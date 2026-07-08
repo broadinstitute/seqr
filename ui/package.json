@@ -106,7 +106,7 @@
     "react-router": "^5.2.1",
     "react-router-dom": "^5.3.0",
     "react-transition-group": "^2.2.1",
-    "react-use": "^17.3.2",
+    "react-use": "^17.6.1",
     "react-xhr-uploader": "^0.4.4",
     "redux": "^4.1.2",
     "redux-thunk": "2.2.0",
