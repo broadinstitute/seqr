@@ -27,8 +27,6 @@ PROJECT_GUID = 'R0001_1kg'
 EMPTY_PROJECT_GUID = 'R0002_empty'
 DEMO_PROJECT_GUID = 'R0003_test'
 
-PROJECT_PAGE_RESPONSE_KEYS = {'projectsByGuid'}
-
 BASE_CREATE_PROJECT_JSON = {
     'name': 'new_project', 'description': 'new project description', 'genomeVersion': '38', 'isDemo': True,
     'disableMme': True, 'consentCode': 'H',
@@ -301,15 +299,21 @@ class ProjectAPITest(object):
 
     def test_project_page_data(self):
         url = reverse(project_page_data, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
+        response = self.client.get(url)
+        project_fields = {*PROJECT_FIELDS, 'partialAccess'}
+        project_fields.remove('projectCategoryGuids')
+        self._check_partial_access(response, {
+            'projectsByGuid': {PROJECT_GUID: {**{k: mock.ANY for k in project_fields}, 'partialAccess': True}},
+        })
+
+        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), PROJECT_PAGE_RESPONSE_KEYS)
-        project_fields = {*PROJECT_FIELDS, 'partialAccess'}
-        project_fields.remove('projectCategoryGuids')
+        self.assertSetEqual(set(response_json.keys()), {'projectsByGuid'})
         self.assertSetEqual(set(response_json['projectsByGuid'][PROJECT_GUID].keys()), project_fields)
         self.assertEqual(
             response_json['projectsByGuid'][PROJECT_GUID]['lastAccessedDate'][:10],
@@ -473,7 +477,26 @@ class ProjectAPITest(object):
 
     def test_project_families(self):
         url = reverse(project_families, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        family_fields = {
+            'individualGuids', 'discoveryGeneIds', 'caseReviewStatuses', 'caseReviewStatusLastModified',
+            'hasRequiredMetadata', 'parents', 'hasPhenotypePrioritization', 'hasRna', 'externalData',
+        }
+        family_fields.update(SUMMARY_FAMILY_FIELDS)
+        expected_family = {k: mock.ANY for k in family_fields}
+        expected_family['discoveryGeneIds'] = []
+        self._check_partial_access(response, {
+            'familiesByGuid': {
+                'F000001_1': {**expected_family, 'discoveryGeneIds': ['ENSG00000135953']},
+                'F000003_3': expected_family,
+                'F000005_5': expected_family,
+            },
+            'genesById': {'ENSG00000135953': mock.ANY},
+        })
+
+        self.login_collaborator()
 
         response_keys = {'familiesByGuid', 'genesById'}
 
@@ -486,14 +509,10 @@ class ProjectAPITest(object):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), response_keys)
 
+        self.assertEqual(len(response_json['familiesByGuid']), 11)
         family_1 = response_json['familiesByGuid']['F000001_1']
         family_3 = response_json['familiesByGuid']['F000003_3']
         empty_family = response_json['familiesByGuid']['F000013_13']
-        family_fields = {
-            'individualGuids', 'discoveryGeneIds', 'caseReviewStatuses', 'caseReviewStatusLastModified', 'hasRequiredMetadata',
-            'parents', 'hasPhenotypePrioritization', 'hasRna', 'externalData',
-        }
-        family_fields.update(SUMMARY_FAMILY_FIELDS)
         self.assertSetEqual(set(family_1.keys()), family_fields)
         self.assertSetEqual(set(empty_family.keys()), family_fields)
 
@@ -536,14 +555,21 @@ class ProjectAPITest(object):
 
     def test_project_individuals(self):
         url = reverse(project_individuals, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
+        response = self.client.get(url)
+        self._check_partial_access(response, {'individualsByGuid': {guid: mock.ANY for guid in [
+            'I000001_na19675', 'I000002_na19678', 'I000003_na19679', 'I000007_na20870', 'I000009_na20874',
+        ]}})
+
+        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
         response_keys = {'individualsByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
+        self.assertEqual(len(response_json['individualsByGuid']), 14)
 
         self.assertSetEqual(set(next(iter(response_json['individualsByGuid'].values())).keys()), INDIVIDUAL_FIELDS)
         self.assertSetEqual(
@@ -578,8 +604,15 @@ class ProjectAPITest(object):
 
     def test_project_analysis_groups(self):
         url = reverse(project_analysis_groups, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
+        response = self.client.get(url)
+        self._check_partial_access(response, {'analysisGroupsByGuid': {
+            'AG0000183_test_group': {k: mock.ANY for k in ANALYSIS_GROUP_FIELDS},
+            'DAG0000001_unsolved': {k: mock.ANY for k in DYNAMIC_ANALYSIS_GROUP_FIELDS},
+        }})
+
+        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
