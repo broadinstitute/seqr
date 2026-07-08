@@ -307,22 +307,21 @@ def get_project_analysis_group_guids_user_can_view(user, limit_data_manager=True
     if user_is_data_manager(user) and not limit_data_manager:
         return list(Project.objects.values_list('guid', flat=True)), []
 
-    project_guids = get_project_guids_user_can_view(user)
-    return project_guids, _get_analysis_group_guids_user_can_view(user, project_guids)
+    cache_key = 'project_analysis_groups__{}'.format(user)
+    cached_results = safe_redis_get_json(cache_key)
+    if cached_results is not None:
+        return cached_results
 
-
-def get_project_guids_user_can_view(user):
-    cache_key = 'projects__{}'.format(user)
-    project_guids = safe_redis_get_json(cache_key)
-    if project_guids is not None:
-        return project_guids
-
+    analysis_group_guids = None
     if is_anvil_authenticated(user):
         workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
                       list_anvil_workspaces(user)]
         projects = Project.objects.annotate(
             workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
         ).filter(workspace__in=workspaces)
+        analysis_group_guids = sorted(AnalysisGroup.objects.exclude(project__in=projects).annotate(
+            workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
+        ).filter(workspace__in=workspaces, workspace_namespace__isnull=False).values_list('guid', flat=True))
     else:
         projects = get_objects_for_user(user, CAN_VIEW, Project)
 
@@ -330,17 +329,14 @@ def get_project_guids_user_can_view(user):
 
     project_guids = [p.guid for p in projects.distinct().only('guid')]
 
-    safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+    safe_redis_set_json(cache_key, [sorted(project_guids), analysis_group_guids], expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 
+    return project_guids, analysis_group_guids
+
+
+def get_project_guids_user_can_view(user):
+    project_guids, _ = get_project_analysis_group_guids_user_can_view(user)
     return project_guids
-
-
-def _get_analysis_group_guids_user_can_view(user, project_guids=None):
-    # TODO actually use workspace ACLs to check access and cache results
-    analysis_groups = AnalysisGroup.objects.filter(workspace_namespace__isnull=False)
-    if project_guids:
-        analysis_groups = analysis_groups.exclude(project__guid__in=project_guids)
-    return list(analysis_groups.values_list('guid', flat=True))
 
 
 def check_mme_permissions(submission, user):
