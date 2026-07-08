@@ -336,7 +336,7 @@ class ProjectAPITest(object):
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), PROJECT_PAGE_RESPONSE_KEYS)
+        self.assertSetEqual(set(response_json.keys()), {'projectsByGuid'})
         self.assertListEqual(list(response_json['projectsByGuid'].keys()), [DEMO_PROJECT_GUID])
         self.assertFalse(response_json['projectsByGuid'][DEMO_PROJECT_GUID]['canEdit'])
 
@@ -636,7 +636,7 @@ class ProjectAPITest(object):
 
     def test_project_locus_lists(self):
         url = reverse(project_locus_lists, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
+        self._check_locus_lists_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -1137,6 +1137,9 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     HAS_EMPTY_PROJECT = True
     TEMP_DIR = '/test/rna_loading'
 
+    def _check_locus_lists_login(self, url):
+        self.check_collaborator_login(url)
+
     def _check_partial_access(self, response, partial_access_response):
         self.assertEqual(response.status_code, 403)
 
@@ -1169,6 +1172,9 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     PROJECT_COLLABORATOR_GROUPS = None
     HAS_EMPTY_PROJECT = False
     TEMP_DIR = 'gs://seqr-scratch-temp'
+
+    def _check_locus_lists_login(self, url):
+        self.check_require_login(url)
 
     def _check_partial_access(self, response, partial_access_response):
         self.assertEqual(response.status_code, 200)
