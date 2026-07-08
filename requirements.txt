@@ -27,7 +27,7 @@ defusedxml==0.7.1
     # via
     #   python3-openid
     #   social-auth-core
-django==4.2.27
+django==4.2.30
     # via
     #   -r requirements.in
     #   django-anymail
@@ -84,13 +84,13 @@ googleapis-common-protos==1.58.0
     # via google-api-core
 gunicorn==23.0.0
     # via -r requirements.in
-idna==3.7
+idna==3.15
     # via requests
 jmespath==1.0.1
     # via -r requirements.in
 jsonfield==3.1.0
     # via django-notifications-hq
-markdownify==0.11.6
+markdownify==0.14.1
     # via -r requirements.in
 oauthlib==3.2.2
     # via
@@ -108,7 +108,7 @@ protobuf==4.25.8
     #   googleapis-common-protos
 psycopg==3.2.1
     # via -r requirements.in
-pyasn1==0.4.8
+pyasn1==0.6.3
     # via
     #   pyasn1-modules
     #   rsa
@@ -116,7 +116,7 @@ pyasn1-modules==0.2.8
     # via google-auth
 pycparser==2.21
     # via cffi
-pyjwt==2.12.0
+pyjwt==2.13.0
     # via social-auth-core
 pyliftover==0.4
     # via -r requirements.in
@@ -128,7 +128,7 @@ pytz==2022.7.1
     #   django-notifications-hq
 redis==4.5.4
     # via -r requirements.in
-requests==2.32.4
+requests==2.33.0
     # via
     #   -r requirements.in
     #   django-anymail
@@ -154,7 +154,7 @@ slacker==0.14.0
     # via -r requirements.in
 slugify==0.0.1
     # via -r requirements.in
-social-auth-app-django==5.4.1
+social-auth-app-django==5.6.0
     # via -r requirements.in
 social-auth-core==4.5.4
     # via
@@ -174,7 +174,7 @@ typing-extensions==4.12.2
     # via psycopg
 tzlocal==5.3.1
     # via clickhouse-driver
-urllib3==2.6.3
+urllib3==2.7.0
     # via
     #   requests
 whitenoise==6.3.0
