@@ -174,7 +174,8 @@ class AnalysisGroupAPITest(object):
         url = reverse(analysis_group_collaborators, args=[PROJECT_GUID, 'AG0000183_test_group'])
         self.check_require_login(url, login_redirect_url='/login/google-oauth2')
 
-        self._assert_expected_analysis_group_collaborators(url)
+        response = self.client.get(url)
+        self._assert_expected_analysis_group_collaborators(response)
 
 
 class LocalAnalysisGroupAPITest(AuthenticationTestCase, AnalysisGroupAPITest):
@@ -183,8 +184,7 @@ class LocalAnalysisGroupAPITest(AuthenticationTestCase, AnalysisGroupAPITest):
     def _assert_expected_update_workspace_response(self, response, guid):
         self.assertEqual(response.status_code, 403)
 
-    def _assert_expected_analysis_group_collaborators(self, url):
-        response = self.client.get(url)
+    def _assert_expected_analysis_group_collaborators(self, response):
         self.assertEqual(response.status_code, 302)
 
 
@@ -232,24 +232,19 @@ class AnvilAnalysisGroupAPITest(AnvilAuthenticationTestCase, AnalysisGroupAPITes
 
         super()._assert_expected_delete_analysis_group(delete_analysis_group_url, guid)
 
-    def _assert_expected_analysis_group_collaborators(self, url):
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 403)
-
-        self.login_collaborator()
-        response = self.client.get(url)
+    def _assert_expected_analysis_group_collaborators(self, response):
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'analysisGroupsByGuid': {'AG0000183_test_group': {
-            'collaborators': [],
-        }}})
+        self.assertDictEqual(response.json(), {'analysisGroupsByGuid': {'AG0000183_test_group': {'collaborators': [{
+            'displayName': 'Test No Access User',
+            'email': 'test_user_no_access@test.com',
+            'hasEditPermissions': False,
+            'hasViewPermissions': True,
+            'username': 'test_user_no_access',
+        }]}}})
 
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
-        self.mock_get_ws_acl.assert_called_once_with(self.collaborator_user, None, None)
-        self.mock_get_ws_access_level.assert_called_with(
-            self.collaborator_user, 'my-seqr-billing', 'anvil-1kg project n\u00e5me with uni\u00e7\u00f8de',
-        )
+        self.mock_get_ws_acl.assert_called_once_with(self.no_access_user, 'my-seqr-billing', 'anvil-analysis-group')
         self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
-
-
+        self.mock_get_ws_access_level.assert_called_with(self.no_access_user, 'my-seqr-billing', 'anvil-analysis-group')
