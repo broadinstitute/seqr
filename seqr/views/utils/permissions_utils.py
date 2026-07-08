@@ -129,11 +129,15 @@ def get_project_analysis_groups_and_check_view_permission(project_guid, user):
     if _has_project_view_permission(project, user):
         return project, None
 
-    analysis_group_guids = _get_analysis_group_guids_user_can_view(user)
-    if analysis_group_guids:
-        analysis_groups = project.analysisgroup_set.filter(guid__in=analysis_group_guids)
-        if analysis_groups.exists():
-            return project, analysis_groups
+    if is_anvil_authenticated(user):
+        analysis_group_ids = [
+            id for id, workspace_namespace, workspace_name in project.analysisgroup_set.filter(
+                workspace_namespace__isnull=False,
+            ).values_list('id', 'workspace_namespace', 'workspace_name')
+            if _has_workspace_perm(user, CAN_VIEW, workspace_namespace, workspace_name)
+        ]
+        if analysis_group_ids:
+            return project, project.analysisgroup_set.filter(id__in=analysis_group_ids)
 
     raise PermissionDenied(f'{user} does not have sufficient permissions for {project}')
 
@@ -228,7 +232,11 @@ def _has_project_view_permission(project, user):
 def has_family_view_permission(family, user):
     if _has_project_view_permission(family.project, user):
         return True
-    return family.analysisgroup_set.filter(guid__in=_get_analysis_group_guids_user_can_view(user)).exists()
+    if is_anvil_authenticated(user):
+        for ag in family.analysisgroup_set.filter(workspace_namespace__isnull=False):
+            if _has_workspace_perm(user, CAN_VIEW, ag.workspace_namespace, ag.workspace_name):
+                return True
+    return False
 
 def _has_project_permissions(project, user, permission_level):
     return user_is_data_manager(user) or _user_project_permission(user, permission_level, project)
