@@ -35,7 +35,6 @@ class DashboardPageTest(object):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.maxDiff = None
         self.assertDictEqual(response.json(), {
             'projectsByGuid': {}, 'projectCategoriesByGuid': {}, 'analysisGroupsByGuid': self.PARTIAL_ACCESS_GROUPS,
         })
@@ -160,7 +159,6 @@ class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
             'numIndividuals': 5,
             'numVariantTags': 3,
             'projectGuid': 'R0001_1kg',
-            'projectguid': 'R0001_1kg',
             'sampleTypeCounts': {'RNA': 1, 'WES': 5},
             'workspaceName': 'anvil-analysis-group',
             'workspaceNamespace': 'my-seqr-billing',

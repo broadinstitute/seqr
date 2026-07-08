@@ -32,12 +32,11 @@ def _get_projects_json(project_guids, user):
 def _get_analysis_groups_json(analysis_group_guids):
     return _get_entities_json(
         analysis_group_guids, AnalysisGroup, 'analysisGroupGuid', get_json_for_analysis_groups,
-        family_field='families', is_dynamic=True, additional_model_fields=['projectGuid', 'created_date'],
-        annotations={'projectGuid': models.F('project__guid')},
+        family_field='families', is_dynamic=True, additional_model_fields=['created_date'],
     )
 
 
-def _get_entities_json(guids, model_cls, guid_field, get_json_func, family_field='family', annotations=None, **kwargs):
+def _get_entities_json(guids, model_cls, guid_field, get_json_func, family_field='family', **kwargs):
     if not guids:
         return {}
 
@@ -45,7 +44,6 @@ def _get_entities_json(guids, model_cls, guid_field, get_json_func, family_field
         numFamilies=models.Count(family_field, distinct=True),
         numIndividuals=models.Count(f'{family_field}__individual', distinct=True),
         numVariantTags=models.Count(f'{family_field}__savedvariant', distinct=True),
-        **(annotations or {}),
     )
 
     models_by_guid = {p[guid_field]: p for p in get_json_func(models_with_counts, **kwargs)}
