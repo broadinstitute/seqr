@@ -310,11 +310,35 @@ AIRTABLE_COLLABORATOR_RECORDS = {
     ]
 }
 
+FAMILY_1_HPO_SUMMARY = {
+    'individualGuid': 'I000001_na19675',
+    'displayName': 'NA19675_1',
+    'features': [
+        {'id': 'HP:0001631', 'label': 'Defect in the atrial septum', 'category': 'HP:0025354'},
+        {'id': 'HP:0002011', 'label': 'Morphological abnormality of the central nervous system',
+         'category': 'HP:0000707', 'qualifiers': [
+            {'label': 'Infantile onset', 'type': 'age_of_onset'},
+            {'label': 'Mild', 'type': 'severity'},
+            {'label': 'Nonprogressive', 'type': 'pace_of_progression'}
+        ]},
+        {'id': 'HP:0001636', 'label': 'Tetralogy of Fallot', 'category': 'HP:0033127'},
+    ],
+    'familyId': '1',
+        'familyData': {
+        'projectGuid': PROJECT_GUID,
+        'genomeVersion': '37',
+        'familyGuid': 'F000001_1',
+        'analysisStatus': 'Q',
+        'displayName': '1',
+    }
+}
+
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class SummaryDataAPITest(AirtableTest):
     PARTIAL_ACCESS_MME_DETAILS = {'genesById': {}, 'savedVariantsByGuid': {}, 'submissions': []}
     PARTIAL_ACCESS_SAVED_VARIANTS_RESPONSE = {k: {} for k in VARIANT_TAG_RESPONSE_KEYS}
+    PARTIAL_ACCESS_HPO_DATA = []
 
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
@@ -452,7 +476,7 @@ class SummaryDataAPITest(AirtableTest):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'data': []})
+        self.assertDictEqual(response.json(), {'data': self.PARTIAL_ACCESS_HPO_DATA})
 
         self.login_manager()
         response = self.client.get(url)
@@ -460,28 +484,7 @@ class SummaryDataAPITest(AirtableTest):
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), {'data'})
         self.assertListEqual(response_json['data'], [
-            {
-                'individualGuid': 'I000001_na19675',
-                'displayName': 'NA19675_1',
-                'features': [
-                    {'id': 'HP:0001631', 'label': 'Defect in the atrial septum', 'category': 'HP:0025354'},
-                    {'id': 'HP:0002011', 'label': 'Morphological abnormality of the central nervous system',
-                     'category': 'HP:0000707', 'qualifiers': [
-                        {'label': 'Infantile onset', 'type': 'age_of_onset'},
-                        {'label': 'Mild', 'type': 'severity'},
-                        {'label': 'Nonprogressive', 'type': 'pace_of_progression'}
-                    ]},
-                    {'id': 'HP:0001636', 'label': 'Tetralogy of Fallot', 'category': 'HP:0033127'},
-                ],
-                'familyId': '1',
-                    'familyData': {
-                    'projectGuid': PROJECT_GUID,
-                    'genomeVersion': '37',
-                    'familyGuid': 'F000001_1',
-                    'analysisStatus': 'Q',
-                    'displayName': '1',
-                }
-            },
+            FAMILY_1_HPO_SUMMARY,
             {
                 'individualGuid': 'I000004_hg00731',
                 'displayName': 'HG00731_a',
@@ -850,6 +853,7 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         'mmeSubmissionsByGuid': {'MS000001_na19675': mock.ANY},
         'totalSampleCounts': TOTAL_SAMPLE_COUNTS,
     }
+    PARTIAL_ACCESS_HPO_DATA = [FAMILY_1_HPO_SUMMARY]
 
     def test_mme_details(self, *args):
         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
