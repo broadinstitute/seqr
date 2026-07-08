@@ -434,6 +434,19 @@
     }
 },
 {
+    "model": "seqr.familynote",
+    "pk": 4,
+    "fields": {
+        "guid": "FAN000007_1",
+        "created_date": "2024-03-12T19:27:08.563Z",
+        "created_by": null,
+        "last_modified_date": "2024-03-12T19:27:08.563Z",
+        "family": 6,
+        "note": "Do not send follow up",
+        "note_type": "M"
+    }
+},
+{
     "model": "seqr.individual",
     "pk": 1,
     "fields": {
@@ -2263,6 +2276,20 @@
         "contacts": [
             {"name": "Sam Baxter", "email": "matchmaker@broadinstitute.org"}
         ]
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmission",
+    "pk": 5,
+    "fields": {
+        "individual": 10,
+        "guid": "MS000005_na20875",
+        "created_date": "2019-02-05T06:42:55.397Z",
+        "last_modified_date": "2019-02-05T06:42:55.397Z",
+        "submission_id": "NA20875",
+        "label": "NA20875",
+        "contacts": [{"name": "Sam Baxter", "email": "matchmaker@broadinstitute.org"}],
+        "features": [{"id": "HP:0001252", "observed": "yes"}]
     }
 },
 {

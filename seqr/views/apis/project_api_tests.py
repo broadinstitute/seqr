@@ -425,7 +425,7 @@ class ProjectAPITest(object):
         mme_tag_type = project_response['variantTagTypes'][-2]
         self.assertDictEqual(mme_tag_type, expected_mme_tag)
         self.assertDictEqual(project_response['rnaSampleCounts'], rna_sample_counts)
-        self.assertEqual(project_response['mmeSubmissionCount'], 1)
+        self.assertEqual(project_response['mmeSubmissionCount'], 2)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
         self.assertEqual(len(response_json['datasetsByGuid']), 5)
@@ -655,15 +655,21 @@ class ProjectAPITest(object):
 
     def test_project_family_notes(self):
         url = reverse(project_family_notes, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
+        response = self.client.get(url)
+        note_guids = {'FAN000001_1', 'FAN000001_2', 'FAN000001_3'}
+        self._check_partial_access(response, {'familyNotesByGuid': {guid: mock.ANY for guid in note_guids}})
+
+        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
         response_keys = {'familyNotesByGuid'}
         self.assertSetEqual(set(response_json.keys()), response_keys)
-        self.assertEqual(len(response_json['familyNotesByGuid']), 3)
+        note_guids.add('FAN000007_1')
+        self.assertSetEqual(set(response_json['familyNotesByGuid']), note_guids)
         self.assertSetEqual(
             set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS
         )
@@ -674,24 +680,32 @@ class ProjectAPITest(object):
 
     def test_project_mme_submisssions(self):
         url = reverse(project_mme_submisssions, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
+        expected_response = {
+            'mmeSubmissionsByGuid': {
+                'MS000001_na19675': {
+                    **{k: mock.ANY for k in MATCHMAKER_SUBMISSION_FIELDS},
+                    'geneIds': ['ENSG00000135953'],
+                },
+            },
+            'familyNotesByGuid': {
+                guid: {k: mock.ANY for k in FAMILY_NOTE_FIELDS} for guid in ['FAN000001_1', 'FAN000001_2', 'FAN000001_3']
+            },
+        }
+        self._check_partial_access(response, expected_response)
 
-        response_json = response.json()
-        response_keys = {'mmeSubmissionsByGuid', 'familyNotesByGuid'}
-        self.assertSetEqual(set(response_json.keys()), response_keys)
-        self.assertSetEqual(set(response_json['mmeSubmissionsByGuid'].keys()), {'MS000001_na19675'})
-        submission_fields = {'geneIds'}
-        submission_fields.update(MATCHMAKER_SUBMISSION_FIELDS)
-        self.assertSetEqual(set(response_json['mmeSubmissionsByGuid']['MS000001_na19675'].keys()), submission_fields)
-        self.assertListEqual(response_json['mmeSubmissionsByGuid']['MS000001_na19675']['geneIds'], ['ENSG00000135953'])
-        self.assertSetEqual(set(next(iter(response_json['familyNotesByGuid'].values())).keys()), FAMILY_NOTE_FIELDS)
+        self.login_collaborator()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        expected_response['mmeSubmissionsByGuid']['MS000005_na20875'] = mock.ANY
+        expected_response['familyNotesByGuid']['FAN000007_1'] = mock.ANY
+        self.assertDictEqual(response.json(), expected_response)
 
         # Test empty project
         empty_url = reverse(project_mme_submisssions, args=[EMPTY_PROJECT_GUID])
-        self._check_empty_project(empty_url, response_keys)
+        self._check_empty_project(empty_url, {'mmeSubmissionsByGuid', 'familyNotesByGuid'})
 
     @mock.patch('django.contrib.humanize.templatetags.humanize.datetime')
     def test_project_notifications(self, mock_datetime):
