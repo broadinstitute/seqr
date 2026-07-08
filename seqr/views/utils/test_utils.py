@@ -305,6 +305,7 @@ TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
 TEST_EMPTY_PROJECT_WORKSPACE = 'empty'
 TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
 TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
+TEST_ANALYSIS_GROUP_WORKSPACE_NAME = 'anvil-analysis-group'
 EXT_WORKSPACE_NAMESPACE = 'ext-data'
 EXT_WORKSPACE_NAME = 'anvil-non-analyst-project 1000 Genomes Demo'
 
@@ -454,6 +455,22 @@ ANVIL_WORKSPACES = [{
             "pending": False,
             "canShare": True,
             "canCompute": True
+        },
+    },
+    'workspace': {
+        'authorizationDomain': [],
+        'bucketName': 'test_bucket'
+    },
+}, {
+    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_name': TEST_ANALYSIS_GROUP_WORKSPACE_NAME,
+    'public': False,
+    'acl': {
+        'test_user_no_access@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
         },
     },
     'workspace': {
