@@ -299,16 +299,13 @@ class ProjectAPITest(object):
 
     def test_project_page_data(self):
         url = reverse(project_page_data, args=[PROJECT_GUID])
-        self.check_require_login(url)
 
-        response = self.client.get(url)
         project_fields = {*PROJECT_FIELDS, 'partialAccess'}
         project_fields.remove('projectCategoryGuids')
-        self._check_partial_access(response, {
+        self.check_partial_access_login(url, {
             'projectsByGuid': {PROJECT_GUID: {**{k: mock.ANY for k in project_fields}, 'partialAccess': True}},
         })
 
-        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -353,9 +350,7 @@ class ProjectAPITest(object):
 
     def test_project_overview(self):
         url = reverse(project_overview, args=[PROJECT_GUID])
-        self.check_require_login(url)
 
-        response = self.client.get(url)
         rna_sample_counts = {
             'S': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
             'T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
@@ -379,7 +374,7 @@ class ProjectAPITest(object):
             'order': 99,
             'numTags': 1,
         }
-        self._check_partial_access(response, {
+        self.check_partial_access_login(url, {
             'projectsByGuid': {PROJECT_GUID: {
                 'projectGuid': PROJECT_GUID,
                 'mmeDeletedSubmissionCount': 0,
@@ -398,7 +393,6 @@ class ProjectAPITest(object):
             },
         })
 
-        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -477,9 +471,7 @@ class ProjectAPITest(object):
 
     def test_project_families(self):
         url = reverse(project_families, args=[PROJECT_GUID])
-        self.check_require_login(url)
 
-        response = self.client.get(url)
         family_fields = {
             'individualGuids', 'discoveryGeneIds', 'caseReviewStatuses', 'caseReviewStatusLastModified',
             'hasRequiredMetadata', 'parents', 'hasPhenotypePrioritization', 'hasRna', 'externalData',
@@ -487,7 +479,7 @@ class ProjectAPITest(object):
         family_fields.update(SUMMARY_FAMILY_FIELDS)
         expected_family = {k: mock.ANY for k in family_fields}
         expected_family['discoveryGeneIds'] = []
-        self._check_partial_access(response, {
+        self.check_partial_access_login(url, {
             'familiesByGuid': {
                 'F000001_1': {**expected_family, 'discoveryGeneIds': ['ENSG00000135953']},
                 'F000003_3': expected_family,
@@ -495,8 +487,6 @@ class ProjectAPITest(object):
             },
             'genesById': {'ENSG00000135953': mock.ANY},
         })
-
-        self.login_collaborator()
 
         response_keys = {'familiesByGuid', 'genesById'}
 
@@ -555,14 +545,10 @@ class ProjectAPITest(object):
 
     def test_project_individuals(self):
         url = reverse(project_individuals, args=[PROJECT_GUID])
-        self.check_require_login(url)
-
-        response = self.client.get(url)
-        self._check_partial_access(response, {'individualsByGuid': {guid: mock.ANY for guid in [
+        self.check_partial_access_login(url, {'individualsByGuid': {guid: mock.ANY for guid in [
             'I000001_na19675', 'I000002_na19678', 'I000003_na19679', 'I000007_na20870', 'I000009_na20874',
         ]}})
 
-        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -604,15 +590,11 @@ class ProjectAPITest(object):
 
     def test_project_analysis_groups(self):
         url = reverse(project_analysis_groups, args=[PROJECT_GUID])
-        self.check_require_login(url)
-
-        response = self.client.get(url)
-        self._check_partial_access(response, {'analysisGroupsByGuid': {
+        self.check_partial_access_login(url, {'analysisGroupsByGuid': {
             'AG0000183_test_group': {k: mock.ANY for k in ANALYSIS_GROUP_FIELDS},
             'DAG0000001_unsolved': {k: mock.ANY for k in DYNAMIC_ANALYSIS_GROUP_FIELDS},
         }})
 
-        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -655,13 +637,10 @@ class ProjectAPITest(object):
 
     def test_project_family_notes(self):
         url = reverse(project_family_notes, args=[PROJECT_GUID])
-        self.check_require_login(url)
 
-        response = self.client.get(url)
         note_guids = {'FAN000001_1', 'FAN000001_2', 'FAN000001_3'}
-        self._check_partial_access(response, {'familyNotesByGuid': {guid: mock.ANY for guid in note_guids}})
+        self.check_partial_access_login(url, {'familyNotesByGuid': {guid: mock.ANY for guid in note_guids}})
 
-        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
@@ -680,9 +659,7 @@ class ProjectAPITest(object):
 
     def test_project_mme_submisssions(self):
         url = reverse(project_mme_submisssions, args=[PROJECT_GUID])
-        self.check_require_login(url)
 
-        response = self.client.get(url)
         expected_response = {
             'mmeSubmissionsByGuid': {
                 'MS000001_na19675': {
@@ -694,9 +671,8 @@ class ProjectAPITest(object):
                 guid: {k: mock.ANY for k in FAMILY_NOTE_FIELDS} for guid in ['FAN000001_1', 'FAN000001_2', 'FAN000001_3']
             },
         }
-        self._check_partial_access(response, expected_response)
+        self.check_partial_access_login(url, expected_response)
 
-        self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         expected_response['mmeSubmissionsByGuid']['MS000005_na20875'] = mock.ANY
@@ -1154,9 +1130,6 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     def _check_locus_lists_login(self, url):
         self.check_collaborator_login(url)
 
-    def _check_partial_access(self, response, partial_access_response):
-        self.assertEqual(response.status_code, 403)
-
     def _check_created_project_groups(self, project):
         super()._check_created_project_groups(project)
         self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_group_123abd')
@@ -1189,10 +1162,6 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
 
     def _check_locus_lists_login(self, url):
         self.check_require_login(url)
-
-    def _check_partial_access(self, response, partial_access_response):
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), partial_access_response)
 
     def test_create_and_delete_project(self, *args, **kwargs):
         super(AnvilProjectAPITest, self).test_create_and_delete_project(*args, **kwargs)

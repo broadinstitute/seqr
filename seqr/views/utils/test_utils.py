@@ -132,6 +132,9 @@ class AuthenticationTestMixin(object):
     def check_require_login_no_policies(self, url, **request_kwargs):
         self._check_login(url, self.NO_POLICY_USER, **request_kwargs)
 
+    def check_partial_access_login(self, url, partial_access_response):
+        self.check_collaborator_login(url)
+
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
 
@@ -611,6 +614,15 @@ class AnvilAuthenticationTestMixin(AuthenticationTestMixin):
         self.mock_get_ws_acl.assert_not_called()
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
+
+    def check_partial_access_login(self, url, partial_access_response):
+        self.check_require_login(url)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), partial_access_response)
+
+        self.login_collaborator()
 
 
 class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AnvilAuthenticationTestMixin, TestCase):
