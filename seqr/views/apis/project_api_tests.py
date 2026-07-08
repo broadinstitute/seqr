@@ -349,38 +349,24 @@ class ProjectAPITest(object):
 
     def test_project_overview(self):
         url = reverse(project_overview, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-
-        response_json = response.json()
-        response_keys = {
-            'projectsByGuid', 'datasetsByGuid', 'familyTagTypeCounts',
+        rna_sample_counts = {
+            'S': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
+            'T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
+            'E': [{'familyCounts': {'F000001_1': 1}, 'loadedDate': '2017-02-05'}],
         }
-        self.assertSetEqual(set(response_json.keys()), response_keys)
-
-        project_fields = {
-            'variantTagTypes', 'variantFunctionalTagTypes', 'rnaSampleCounts',
-            'projectGuid', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
-        }
-        project_response = response_json['projectsByGuid'][PROJECT_GUID]
-        self.assertSetEqual(set(project_response.keys()), project_fields)
-        tag_type_fields = {'numTags'}
-        tag_type_fields.update(TAG_TYPE_FIELDS)
-        self.assertSetEqual(set(project_response['variantTagTypes'][0].keys()), tag_type_fields)
-        note_tag_type = project_response['variantTagTypes'][-1]
-        self.assertDictEqual(note_tag_type, {
+        expected_note_tag = {
             'variantTagTypeGuid': 'notes',
             'name': 'Has Notes',
             'category': 'Notes',
             'description': '',
             'color': 'grey',
             'order': 100,
-            'numTags': 1,
-        })
-        mme_tag_type = project_response['variantTagTypes'][-2]
-        self.assertDictEqual(mme_tag_type, {
+            'numTags': 0,
+        }
+        expected_mme_tag = {
             'variantTagTypeGuid': 'mmeSubmissionVariants',
             'name': 'MME Submission',
             'category': 'Matchmaker',
@@ -388,12 +374,53 @@ class ProjectAPITest(object):
             'color': '#6435c9',
             'order': 99,
             'numTags': 1,
+        }
+        self._check_partial_access(response, {
+            'projectsByGuid': {PROJECT_GUID: {
+                'projectGuid': PROJECT_GUID,
+                'mmeDeletedSubmissionCount': 0,
+                'mmeSubmissionCount': 1,
+                'rnaSampleCounts': rna_sample_counts,
+                'variantFunctionalTagTypes': mock.ANY,
+                'variantTagTypes': [
+                    {**{k: mock.ANY for k in TAG_TYPE_FIELDS}, 'numTags': num_tags} for num_tags in [1, 1, 0, 0, 0, 0]
+                ] + [expected_mme_tag, expected_note_tag],
+            }},
+            'datasetsByGuid': {
+                guid: {k: mock.ANY for k in DATASET_FIELDS} for guid in ['S000129_na19675', 'S000130_na19678']
+            },
+            'familyTagTypeCounts': {
+                'F000001_1': {'Review': 1, 'Tier 1 - Novel gene and phenotype': 1, 'MME Submission': 1},
+            },
         })
-        self.assertDictEqual(project_response['rnaSampleCounts'], {
-            'S': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
-            'T': [{'familyCounts': {'F000001_1': 2}, 'loadedDate': '2017-02-05'}],
-            'E': [{'familyCounts': {'F000001_1': 1}, 'loadedDate': '2017-02-05'}],
-        })
+
+        self.login_collaborator()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        project_fields = {
+            'variantTagTypes', 'variantFunctionalTagTypes', 'rnaSampleCounts',
+            'projectGuid', 'mmeDeletedSubmissionCount', 'mmeSubmissionCount',
+        }
+        response_json = response.json()
+        response_keys = {
+            'projectsByGuid', 'datasetsByGuid', 'familyTagTypeCounts',
+        }
+        self.assertSetEqual(set(response_json.keys()), response_keys)
+
+        project_response = response_json['projectsByGuid'][PROJECT_GUID]
+        self.assertSetEqual(set(project_response.keys()), project_fields)
+        tag_type_fields = {'numTags'}
+        tag_type_fields.update(TAG_TYPE_FIELDS)
+        self.assertSetEqual(set(project_response['variantTagTypes'][0].keys()), tag_type_fields)
+        for i, num_tags in enumerate([1, 1, 1, 1, 0, 1]):
+            self.assertEqual(project_response['variantTagTypes'][i]['numTags'], num_tags)
+        note_tag_type = project_response['variantTagTypes'][-1]
+        expected_note_tag['numTags'] = 1
+        self.assertDictEqual(note_tag_type, expected_note_tag)
+        mme_tag_type = project_response['variantTagTypes'][-2]
+        self.assertDictEqual(mme_tag_type, expected_mme_tag)
+        self.assertDictEqual(project_response['rnaSampleCounts'], rna_sample_counts)
         self.assertEqual(project_response['mmeSubmissionCount'], 1)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
 
@@ -1077,6 +1104,9 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     HAS_EMPTY_PROJECT = True
     TEMP_DIR = '/test/rna_loading'
 
+    def _check_partial_access(self, response, partial_access_response):
+        self.assertEqual(response.status_code, 403)
+
     def _check_created_project_groups(self, project):
         super()._check_created_project_groups(project)
         self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_group_123abd')
@@ -1106,6 +1136,10 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     PROJECT_COLLABORATOR_GROUPS = None
     HAS_EMPTY_PROJECT = False
     TEMP_DIR = 'gs://seqr-scratch-temp'
+
+    def _check_partial_access(self, response, partial_access_response):
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), partial_access_response)
 
     def test_create_and_delete_project(self, *args, **kwargs):
         super(AnvilProjectAPITest, self).test_create_and_delete_project(*args, **kwargs)
@@ -1165,7 +1199,7 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
         self.mock_list_workspaces.assert_not_called()
         self.assert_no_extra_anvil_calls()
         self.mock_get_ws_access_level.assert_called_with(self.collaborator_user, 'ext-data', 'empty')
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 4)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 5)
 
     def test_project_collaborators(self):
         super(AnvilProjectAPITest, self).test_project_collaborators()
