@@ -19,7 +19,7 @@ EXPECTED_SUCCESS_STORY = {'project_guid': 'R0001_1kg', 'family_guid': 'F000013_1
 EXPECTED_MME_DETAILS_METRICS = {
     u'numberOfPotentialMatchesSent': 1,
     u'numberOfUniqueGenes': 3,
-    u'numberOfCases': 4,
+    u'numberOfCases': 5,
     u'numberOfRequestsReceived': 3,
     u'numberOfSubmitters': 2,
     u'numberOfUniqueFeatures': 4,
@@ -33,6 +33,8 @@ SAVED_VARIANT_RESPONSE_KEYS = {
     *VARIANT_TAG_RESPONSE_KEYS, 'projectsByGuid', 'locusListsByGuid', 'genesById', 'totalSampleCounts',
     'individualsByGuid', 'familiesByGuid', 'familyNotesByGuid', 'mmeSubmissionsByGuid', 'transcriptsById',
 }
+SAVED_VARIANT_PROJECT_KEYS = {'projectGuid', 'name', 'variantTagTypes', 'variantFunctionalTagTypes'}
+TOTAL_SAMPLE_COUNTS = {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3}}
 
 EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW = {
     "projectGuid": "R0003_test",
@@ -311,6 +313,8 @@ AIRTABLE_COLLABORATOR_RECORDS = {
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
 class SummaryDataAPITest(AirtableTest):
+    PARTIAL_ACCESS_MME_DETAILS = {'genesById': {}, 'savedVariantsByGuid': {}, 'submissions': []}
+    PARTIAL_ACCESS_SAVED_VARIANTS_RESPONSE = {k: {} for k in VARIANT_TAG_RESPONSE_KEYS}
 
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
@@ -318,7 +322,7 @@ class SummaryDataAPITest(AirtableTest):
         self.check_require_login(url)
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'genesById': {}, 'savedVariantsByGuid': {}, 'submissions': []})
+        self.assertDictEqual(response.json(), self.PARTIAL_ACCESS_MME_DETAILS)
 
         # Test behavior for non-analysts
         self.login_manager()
@@ -329,7 +333,8 @@ class SummaryDataAPITest(AirtableTest):
         self.assertSetEqual(set(response_json.keys()), response_keys)
         self.assertSetEqual(set(response_json['genesById'].keys()),
                             {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
-        self.assertEqual(len(response_json['submissions']), self.NUM_MANAGER_SUBMISSIONS)
+        self.assertEqual(len(response_json['submissions']), 5)
+        self.assertEqual(len(response_json['savedVariantsByGuid']), 4)
         self.assertSetEqual(set(next(iter(response_json['savedVariantsByGuid'].values())).keys()), {
             'genomeVersion', *SAVED_VARIANT_FIELDS,
         })
@@ -345,7 +350,7 @@ class SummaryDataAPITest(AirtableTest):
         self.assertDictEqual(response_json['metrics'], EXPECTED_MME_DETAILS_METRICS)
         self.assertEqual(len(response_json['genesById']), 3)
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000240361', 'ENSG00000223972', 'ENSG00000135953'})
-        self.assertEqual(len(response_json['submissions']), 3)
+        self.assertEqual(len(response_json['submissions']), 4)
 
     def test_success_story(self):
         url = reverse(success_story, args=['all'])
@@ -378,7 +383,7 @@ class SummaryDataAPITest(AirtableTest):
 
         response = self.client.get('{}?gene=ENSG00000135953'.format(url))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {k: {} for k in VARIANT_TAG_RESPONSE_KEYS})
+        self.assertDictEqual(response.json(), self.PARTIAL_ACCESS_SAVED_VARIANTS_RESPONSE)
 
         self.login_manager()
         response = self.client.get(url)
@@ -396,10 +401,11 @@ class SummaryDataAPITest(AirtableTest):
         self.assertSetEqual(set(response_json['savedVariantsByGuid'].keys()), expected_variant_guids)
         self.assertSetEqual(
             set(response_json['projectsByGuid'][PROJECT_GUID].keys()),
-            {'projectGuid', 'name', 'variantTagTypes', 'variantFunctionalTagTypes'},
+            SAVED_VARIANT_PROJECT_KEYS,
         )
-        if 'totalSampleCounts' in response_json:
-            self.assertDictEqual(response_json['totalSampleCounts'], {'MITO': {'WES': 1}, 'SNV_INDEL': {'WES': 7}, 'SV': {'WES': 3}})
+        self.assertDictEqual(response_json['totalSampleCounts'], TOTAL_SAMPLE_COUNTS)
+        self.assertEqual(len(response_json['familiesByGuid']), 4)
+        self.assertEqual(len(response_json['individualsByGuid']), 6)
 
         all_tag_url = reverse(saved_variants_page, args=['ALL'])
         response = self.client.get('{}?gene=ENSG00000135953'.format(all_tag_url))
@@ -806,7 +812,6 @@ class SummaryDataAPITest(AirtableTest):
 # Tests for AnVIL access disabled
 class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', '1kg_project', 'reference_data', 'report_variants', 'clickhouse_saved_variants']
-    NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = ['NA21234', 'NA21987', 'NA21654']
     HAS_AIRTABLE = False
 
@@ -829,9 +834,22 @@ def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
 # Test for permissions from AnVIL only
 class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
     fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'report_variants', 'clickhouse_saved_variants']
-    NUM_MANAGER_SUBMISSIONS = 4
     ADDITIONAL_SAMPLES = []
     HAS_AIRTABLE = True
+    PARTIAL_ACCESS_MME_DETAILS = {
+        'genesById': {'ENSG00000135953': mock.ANY},
+        'savedVariantsByGuid': {'SV0000001_2103343353_r0390_100': mock.ANY},
+        'submissions': [mock.ANY],
+    }
+    PARTIAL_ACCESS_SAVED_VARIANTS_RESPONSE = {
+        **{k: mock.ANY for k in SAVED_VARIANT_RESPONSE_KEYS},
+        'savedVariantsByGuid': {'SV0000001_2103343353_r0390_100': mock.ANY},
+        'projectsByGuid': {PROJECT_GUID: {k: mock.ANY for k in SAVED_VARIANT_PROJECT_KEYS}},
+        'familiesByGuid': {'F000001_1': mock.ANY},
+        'individualsByGuid': {guid: mock.ANY for guid in ['I000001_na19675', 'I000002_na19678', 'I000003_na19679']},
+        'mmeSubmissionsByGuid': {'MS000001_na19675': mock.ANY},
+        'totalSampleCounts': TOTAL_SAMPLE_COUNTS,
+    }
 
     def test_mme_details(self, *args):
         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
@@ -839,6 +857,7 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         self.mock_get_ws_access_level.assert_not_called()
 
     def test_saved_variants_page(self):
+        self.maxDiff = None
         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
         assert_has_expected_calls(self, [
             self.no_access_user, self.manager_user, self.manager_user, self.manager_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user
