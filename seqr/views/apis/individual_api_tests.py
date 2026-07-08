@@ -105,21 +105,28 @@ class IndividualAPITest(object):
 
     def test_update_individual_handler(self):
         edit_individuals_url = reverse(update_individual_handler, args=[INDIVIDUAL_UPDATE_GUID])
-        self.check_collaborator_login(edit_individuals_url)
+
+        note_only_edit_response = {
+            INDIVIDUAL_UPDATE_GUID: {
+                **{k: mock.ANY for k in INDIVIDUAL_CORE_FIELDS},
+                'displayName': 'NA20870',
+                'notes': 'A note',
+                'birthYear': None,
+                'affected': 'A',
+            }
+        }
+        self.check_partial_access_login(
+            edit_individuals_url, note_only_edit_response, request_data=INDIVIDUAL_UPDATE_DATA,
+        )
 
         response = self.client.post(edit_individuals_url, content_type='application/json',
                                     data=json.dumps(INDIVIDUAL_UPDATE_DATA))
 
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertListEqual(list(response_json.keys()), [INDIVIDUAL_UPDATE_GUID])
-        self.assertSetEqual(set(response_json[INDIVIDUAL_UPDATE_GUID].keys()), INDIVIDUAL_CORE_FIELDS)
+        self.assertDictEqual(response_json, note_only_edit_response)
         individual = Individual.objects.get(guid=INDIVIDUAL_UPDATE_GUID)
-        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['displayName'], 'NA20870')
         self.assertEqual(individual.display_name, '')
-        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['notes'], 'A note')
-        self.assertIsNone(response_json[INDIVIDUAL_UPDATE_GUID]['birthYear'])
-        self.assertEqual(response_json[INDIVIDUAL_UPDATE_GUID]['affected'], 'A')
         self.assertFalse('features' in response_json[INDIVIDUAL_UPDATE_GUID])
         self.assertIsNone(individual.features)
 
