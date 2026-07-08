@@ -108,7 +108,7 @@ protobuf==4.25.8
     #   googleapis-common-protos
 psycopg==3.2.1
     # via -r requirements.in
-pyasn1==0.6.3
+pyasn1==0.4.8
     # via
     #   pyasn1-modules
     #   rsa
