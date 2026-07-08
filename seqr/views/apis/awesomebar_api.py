@@ -21,7 +21,7 @@ def _get_matching_objects(query, project_guids, analysis_group_guids, object_cls
     if project_field:
         matching_objects = getattr(object_cls, 'objects')
         match_q = Q(**{'{}__guid__in'.format(project_field): project_guids})
-        if analysis_group_guid_field:
+        if analysis_group_guid_field and analysis_group_guids:
             match_q |= Q(**{f'{analysis_group_guid_field}__in': analysis_group_guids})
         matching_objects = matching_objects.filter(match_q)
         if select_related_project:

@@ -1613,7 +1613,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
     def test_get_single_variant(self):
         url_template = (reverse(query_single_variant_handler, args=['variant_id']) + '?familyGuid={}').replace('variant_id', '{}')
         url = url_template.format('21-3343353-GAGA-G', 'F000001_1')
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -1630,7 +1630,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ]},
         })
 
-        response = self.client.get(url_template.format(VARIANT_IDS[1], 'F000002_2'))
+        family_2_url = url_template.format(VARIANT_IDS[1], 'F000002_2')
+        response = self.client.get(family_2_url)
+        self.assertEqual(response.status_code, 403)
+
+        self.login_collaborator()
+        response = self.client.get(family_2_url)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Variant 1-91511686-TCA-G not found'})
 
@@ -1652,8 +1657,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['variantsById'], {'7-143270172-A-G': GRCH37_VARIANT})
 
-        self.assertTrue(all(call.args[0].startswith('projects__') for call in self.mock_redis.get.mock_calls))
-        self.assertTrue(all(call.args[0].startswith('projects__') for call in self.mock_redis.set.mock_calls))
+        self.assertTrue(all(call.args[0].startswith('project_analysis_groups__') for call in self.mock_redis.get.mock_calls))
+        self.assertTrue(all(call.args[0].startswith('project_analysis_groups__') for call in self.mock_redis.set.mock_calls))
 
     def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
