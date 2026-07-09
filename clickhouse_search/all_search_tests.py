@@ -367,9 +367,17 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_all_project_search(self):
-        request_body = {'allGenomeProjectFamilies': '38'}
         self._assert_expected_search_error(
-            'No data available for genome version "GRCh38"', request_body=request_body, check_login=self.check_require_login,
+            'No data available for genome version "GRCh37"', request_body={'allGenomeProjectFamilies': '37'},
+            check_login=self.check_require_login,
+        )
+
+        request_body = {'allGenomeProjectFamilies': '38'}
+        additional_response = {'familiesByGuid': {'F000001_1': mock.ANY}}
+        self._assert_expected_search(
+            [FAMILY_3_VARIANT, FAMILY_1_VARIANT], project_families=[
+                {'projectGuid': 'R0001_1kg', 'familyGuids': ['F000001_1', 'F000003_3', 'F000005_5']},
+            ], request_body=request_body, additional_response=additional_response,
         )
 
         self.login_collaborator()
@@ -377,7 +385,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13',
         ]}]
-        additional_response = {'familiesByGuid': {'F000001_1': mock.ANY}}
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2,
              GCNV_VARIANT3, GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
