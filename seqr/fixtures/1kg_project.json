@@ -1155,6 +1155,22 @@
     }
 },
 {
+    "model": "seqr.rnasample",
+    "pk": 173,
+    "fields": {
+        "guid": "RS000173_T_na20872",
+        "created_date": "2017-02-05T06:35:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2017-03-13T09:07:49.744Z",
+        "individual": 8,
+        "is_active": true,
+        "tissue_type": "M",
+        "sequencing_type": "T",
+        "data_source": "muscle_samples.tsv.gz",
+        "data_type": "T"
+    }
+},
+{
     "model": "seqr.rnaseqoutlier",
     "pk": 1,
     "fields": {
@@ -1228,6 +1244,15 @@
         "sample": 153,
         "gene_id": "ENSG00000135953",
         "tpm": 2.36
+    }
+},
+{
+    "model": "seqr.rnaseqtpm",
+    "pk": 8,
+    "fields": {
+        "sample": 173,
+        "gene_id": "ENSG00000135953",
+        "tpm": 7.34
     }
 },
 {

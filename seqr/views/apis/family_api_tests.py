@@ -658,17 +658,21 @@ class FamilyAPITest(object):
 
     def test_get_family_rna_seq_data(self):
         url = reverse(get_family_rna_seq_data, args=[FAMILY_GUID, 'ENSG00000135953'])
-        self.check_collaborator_login(url)
+
+        expected_response = {
+            'F': {'W': {'individualData': {'NA19675_1': 1.01}, 'myData': [1.01], 'rdgData': [1.01]}},
+            'M': {'T': {'individualData': {'NA19675_1': 8.38}, 'myData': [8.38], 'rdgData': [7.34, 8.38]}}
+        }
+        self.check_partial_access_login(url, expected_response)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-        expected_response = {
-            'F': {'W': {'individualData': {'NA19675_1': 1.01}, 'myData': [1.01]}},
-            'M': {'T': {'individualData': {'NA19675_1': 8.38}, 'myData': [8.38]}}
-        }
-        if self.INCLUDE_RDG_TPMS:
-            expected_response = {tissue: {k: {**v, 'rdgData': [*v['myData']]} for k, v in data.items()} for tissue, data in expected_response.items()}
+        expected_response['M']['T']['myData'].insert(0, 7.34)
+        if not self.INCLUDE_RDG_TPMS:
+            for type_data in expected_response.values():
+                for data in type_data.values():
+                    del data['rdgData']
         self.assertDictEqual(response.json(), expected_response)
 
         self.login_manager()
@@ -728,7 +732,7 @@ class LocalFamilyAPITest(AuthenticationTestCase, FamilyAPITest):
 
 
 class AnvilFamilyAPITest(AnvilAuthenticationTestCase, FamilyAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
 
     EXTERNAL_ANVIL_CAN_DELETE = True
     INCLUDE_RDG_TPMS = True
