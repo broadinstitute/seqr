@@ -678,8 +678,8 @@ class SummaryDataAPITest(AirtableTest):
         if has_duplicate:
             self.assertEqual(len([r['participant_id'] for r in response_json['rows'] if r['participant_id'] == 'NA20888']), 2)
 
-    def _has_expected_partial_access_metadata_response(self, *args, **kwargs):
-        return self._has_expected_metadata_response(*args, **kwargs)
+    def _has_expected_partial_access_metadata_response(self, response, *args, **kwargs):
+        return self._has_expected_metadata_response(response, *args, **kwargs)
 
     @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
     @responses.activate
