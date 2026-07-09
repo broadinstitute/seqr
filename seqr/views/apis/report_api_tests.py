@@ -1572,7 +1572,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
             'WES__SV': {'non_demo': 3},
             'WGS__SV': {'non_demo': 3},
             'RNA__S': {'non_demo': 3},
-            'RNA__T': {'non_demo': 2},
+            'RNA__T': {'non_demo': 3},
             'RNA__E': {'non_demo': 1},
         },
     }
@@ -1586,6 +1586,7 @@ class LocalReportAPITest(AuthenticationTestCase, ReportAPITest):
         ['2018-02-05', '3', 'WGS', 'SV', 'False'],
         ['2020-02-05', '1', 'WGS', 'Variant', 'True'],
         ['2022-02-05', '1', 'WES', 'Mitochondria', 'False'],
+        ['2025-06-03', '1', 'RNA', 'TPM', 'False'],
     ]
 
     def _check_anvil_export_response(self, response, *args):
@@ -1610,7 +1611,7 @@ class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
             'WES__SV': {'internal': 3},
             'WGS__SV': {'external': 3},
             'RNA__S': {'internal': 2, 'external': 1},
-            'RNA__T': {'internal': 2},
+            'RNA__T': {'internal': 3},
             'RNA__E': {'internal': 1},
         },
     }
@@ -1625,4 +1626,5 @@ class AnvilReportAPITest(AnvilAuthenticationTestCase, ReportAPITest):
         ['2018-02-05', '3', 'WGS', 'SV', 'False', 'External'],
         ['2020-02-05', '1', 'WGS', 'Variant', 'True', 'No AnVIL'],
         ['2022-02-05', '1', 'WES', 'Mitochondria', 'False', 'Internal'],
+        ['2025-06-03', '1', 'RNA', 'TPM', 'False', 'Internal'],
     ]
