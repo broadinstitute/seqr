@@ -89,14 +89,17 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
             )
             searched_dataset_types.add(dataset_type)
 
-        if sample_data and has_comp_het:
+        if not sample_data:
+            continue
+
+        if has_comp_het:
             dataset_results += _get_data_type_comp_het_results_queryset(
                 entry_qs, variants_qs, sample_data, user, parsed_filters, **search,
                 exclude_key_pairs=(exclude_key_pairs or {}).get(dataset_type),
                 is_x_chrom=has_x_chrom_comp_het and dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS,
             )
 
-        if sample_data and 'samples' not in sample_data:
+        if 'samples' not in sample_data:
             _add_individual_guids(dataset_results)
         results += dataset_results
         searched_dataset_types.add(dataset_type)
