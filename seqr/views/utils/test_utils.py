@@ -132,7 +132,7 @@ class AuthenticationTestMixin(object):
     def check_require_login_no_policies(self, url, **request_kwargs):
         self._check_login(url, self.NO_POLICY_USER, **request_kwargs)
 
-    def check_partial_access_login(self, url, *args, **kwargs):
+    def check_partial_access_login(self, url, partial_access_response=None, request_data=None):
         self.check_collaborator_login(url)
 
     def check_collaborator_login(self, url, **request_kwargs):
@@ -615,7 +615,7 @@ class AnvilAuthenticationTestMixin(AuthenticationTestMixin):
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
 
-    def check_partial_access_login(self, url, partial_access_response=None, request_data=None, **kwargs):
+    def check_partial_access_login(self, url, partial_access_response=None, request_data=None):
         self.check_require_login(url)
 
         if not partial_access_response:
