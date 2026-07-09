@@ -615,7 +615,7 @@ class AnvilAuthenticationTestMixin(AuthenticationTestMixin):
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
 
-    def check_partial_access_login(self, url, partial_access_response, request_data=None):
+    def check_partial_access_login(self, url, partial_access_response, request_data=None, **kwargs):
         self.check_require_login(url)
 
         if request_data:
