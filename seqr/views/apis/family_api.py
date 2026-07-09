@@ -288,7 +288,7 @@ def update_family_analysed_by(request, family_guid):
     create_model_from_json(FamilyAnalysedBy, {'family': family, 'data_type': request_json['dataType']}, request.user)
 
     return create_json_response({
-        family.guid: {'analysedBy': list(get_json_for_queryset(family.familyanalysedby_set.all()))}
+        family.guid: {'analysedBy': list(get_json_for_queryset(family.familyanalysedby_set.order_by('created_date')))}
     })
 
 
