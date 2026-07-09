@@ -636,7 +636,7 @@ def variant_lookup_handler(request):
     project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user, limit_data_manager=True)
     access_filter = Q(project__guid__in=project_guids)
     if analysis_group_guids:
-        access_filter |= Q(analysisgroup_guid__in=analysis_group_guids)
+        access_filter |= Q(analysisgroup__guid__in=analysis_group_guids)
     family_guids = set(Family.objects.filter(access_filter).filter(
         guid__in=family_guids,
     ).values_list('guid', flat=True))
