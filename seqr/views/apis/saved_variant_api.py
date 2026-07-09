@@ -1,6 +1,7 @@
 import logging
 import json
 
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 
 from clickhouse_search.models.postgres_dicts import DiscoveryVariantDict, ExcludedVariantDict
@@ -34,6 +35,10 @@ def saved_variant_data(request, project_guid, variant_guids=None):
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
     elif family_guids:
+        if analysis_groups:
+            family_guids = analysis_groups.filter(families__guid__in=family_guids).values_list('families__guid').distinct()
+            if not family_guids:
+                raise PermissionDenied(f'{request.user} does not have sufficient permissions for requested families')
         variant_query = variant_query.filter(family__guid__in=family_guids)
     else:
         get_note_only = bool(request.GET.get('includeNoteVariants'))
