@@ -861,7 +861,6 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         self.mock_get_ws_access_level.assert_not_called()
 
     def test_saved_variants_page(self):
-        self.maxDiff = None
         super(AnvilSummaryDataAPITest, self).test_saved_variants_page()
         assert_has_expected_calls(self, [
             self.no_access_user, self.manager_user, self.manager_user, self.manager_user, self.manager_user, self.manager_user, self.analyst_user, self.analyst_user

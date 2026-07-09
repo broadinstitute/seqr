@@ -1422,8 +1422,7 @@ class IndividualAPITest(object):
 
     def test_get_individual_rna_seq_data(self):
         url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
-        check_access = self.check_require_login if self.HAS_EXTERNAL_PROJECT_ACCESS else self.check_collaborator_login
-        check_access(url)
+        self.check_partial_access_login(url)
 
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
@@ -1467,8 +1466,7 @@ class IndividualAPITest(object):
 
     def test_get_individual_rna_seq_data_is_significant(self):
         url = reverse(get_individual_rna_seq_data, args=[INDIVIDUAL_GUID])
-        check_access = self.check_require_login if self.HAS_EXTERNAL_PROJECT_ACCESS else self.check_collaborator_login
-        check_access(url)
+        self.check_partial_access_login(url)
 
         response = self.client.get(url, content_type='application/json')
         self.assertEqual(response.status_code, 200)

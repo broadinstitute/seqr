@@ -418,6 +418,7 @@ class ProjectAPITest(object):
         self.assertDictEqual(note_tag_type, expected_note_tag)
         mme_tag_type = project_response['variantTagTypes'][-2]
         self.assertDictEqual(mme_tag_type, expected_mme_tag)
+        rna_sample_counts['T'].append({'familyCounts': {'F000004_4': 1}, 'loadedDate': '2025-06-03'})
         self.assertDictEqual(project_response['rnaSampleCounts'], rna_sample_counts)
         self.assertEqual(project_response['mmeSubmissionCount'], 2)
         self.assertEqual(project_response['mmeDeletedSubmissionCount'], 0)
