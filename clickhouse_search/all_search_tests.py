@@ -2415,25 +2415,26 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
         del variant4['genotypes']
+        project_families = [
+            {'projectGuid': 'R0001_1kg', 'familyGuids': ['F000001_1', 'F000003_3', 'F000005_5']},
+        ]
         self._assert_expected_search(
             [variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
-            annotations=annotations, freqs=freqs, locus=locus, project_families=[], export_data=[
+            annotations=annotations, freqs=freqs, locus=locus, project_families=project_families, export_data=[
                 EXPORT_DATA[0][:27], EXPORT_DATA[4][:24] + ['3 Families', '', ''],
             ],
         )
 
         freqs = {'callset': freqs['callset']}
-        variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611', 'numFamilies': 4}
-        del variant3['familyGuids']
-        del variant3['genotypes']
+        variant3 = {**FAMILY_3_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
         self._assert_expected_search(
             [variant3, variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
-            annotations=annotations, freqs=freqs, locus=locus, project_families=[],
+            annotations=annotations, freqs=freqs, locus=locus, project_families=project_families,
         )
 
         self._assert_expected_search_error(
@@ -2442,11 +2443,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [], request_body=request_body, response_search=response_search, project_families=[],
+            [], request_body=request_body, response_search=response_search, project_families=project_families,
             annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='homozygous_recessive',
         )
 
-        variant3['numFamilies'] = 1
         variant4['numFamilies'] = 1
         self._assert_expected_search(
             [variant3, variant4], request_body=request_body, response_search=response_search,
@@ -2454,7 +2454,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
-            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo', project_families=[],
+            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo', project_families=project_families,
         )
 
         self.login_collaborator()
