@@ -619,7 +619,7 @@ class ProjectAPITest(object):
 
     def test_project_locus_lists(self):
         url = reverse(project_locus_lists, args=[PROJECT_GUID])
-        self._check_locus_lists_login(url)
+        self.check_partial_access_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -1128,9 +1128,6 @@ class LocalProjectAPITest(AuthenticationTestCase, ProjectAPITest):
     HAS_EMPTY_PROJECT = True
     TEMP_DIR = '/test/rna_loading'
 
-    def _check_locus_lists_login(self, url):
-        self.check_collaborator_login(url)
-
     def _check_created_project_groups(self, project):
         super()._check_created_project_groups(project)
         self.assertEqual(project.can_edit_group.name, 'new_project_can_edit_group_123abd')
@@ -1160,9 +1157,6 @@ class AnvilProjectAPITest(AnvilAuthenticationTestCase, ProjectAPITest):
     PROJECT_COLLABORATOR_GROUPS = None
     HAS_EMPTY_PROJECT = False
     TEMP_DIR = 'gs://seqr-scratch-temp'
-
-    def _check_locus_lists_login(self, url):
-        self.check_require_login(url)
 
     def test_create_and_delete_project(self, *args, **kwargs):
         super(AnvilProjectAPITest, self).test_create_and_delete_project(*args, **kwargs)
