@@ -175,7 +175,7 @@ class AnalysisGroupAPITest(object):
         self.check_require_login(url, login_redirect_url='/login/google-oauth2')
 
         response = self.client.get(url)
-        self._assert_expected_analysis_group_collaborators(response)
+        self._assert_expected_analysis_group_collaborators(url, response)
 
 
 class LocalAnalysisGroupAPITest(AuthenticationTestCase, AnalysisGroupAPITest):
@@ -184,7 +184,7 @@ class LocalAnalysisGroupAPITest(AuthenticationTestCase, AnalysisGroupAPITest):
     def _assert_expected_update_workspace_response(self, response, guid):
         self.assertEqual(response.status_code, 403)
 
-    def _assert_expected_analysis_group_collaborators(self, response):
+    def _assert_expected_analysis_group_collaborators(self, url, response):
         self.assertEqual(response.status_code, 302)
 
 
@@ -232,15 +232,16 @@ class AnvilAnalysisGroupAPITest(AnvilAuthenticationTestCase, AnalysisGroupAPITes
 
         super()._assert_expected_delete_analysis_group(delete_analysis_group_url, guid)
 
-    def _assert_expected_analysis_group_collaborators(self, response):
+    def _assert_expected_analysis_group_collaborators(self, url, response):
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'analysisGroupsByGuid': {'AG0000183_test_group': {'collaborators': [{
+        expected_response = {'analysisGroupsByGuid': {'AG0000183_test_group': {'collaborators': [{
             'displayName': 'Test No Access User',
             'email': 'test_user_no_access@test.com',
             'hasEditPermissions': False,
             'hasViewPermissions': True,
             'username': 'test_user_no_access',
-        }]}}})
+        }]}}}
+        self.assertDictEqual(response.json(), expected_response)
 
         self.mock_list_workspaces.assert_not_called()
         self.mock_get_groups.assert_not_called()
@@ -248,3 +249,9 @@ class AnvilAnalysisGroupAPITest(AnvilAuthenticationTestCase, AnalysisGroupAPITes
         self.mock_get_ws_acl.assert_called_once_with(self.no_access_user, 'my-seqr-billing', 'anvil-analysis-group')
         self.assertEqual(self.mock_get_ws_access_level.call_count, 2)
         self.mock_get_ws_access_level.assert_called_with(self.no_access_user, 'my-seqr-billing', 'anvil-analysis-group')
+
+        self.login_collaborator()
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_response)
+
