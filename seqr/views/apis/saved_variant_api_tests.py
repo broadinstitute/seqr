@@ -497,7 +497,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         Project.objects.filter(id=1).update(genome_version='38')
 
         create_saved_variant_url = reverse(create_saved_variant_handler)
-        self.check_require_login(create_saved_variant_url)
+        self.check_collaborator_login(create_saved_variant_url, request_data={'familyGuid': 'F000002_2'})
 
         variant_json = {
             'key': 123,
@@ -522,7 +522,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         }
 
         request_body = {
-            'familyGuid': 'F000001_1',
+            'familyGuid': 'F000002_2',
             'tags': [],
             'note': 'A promising SV',
             'saveAsGeneNote': True,
@@ -540,14 +540,14 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         self.assertEqual(len(response_json['savedVariantsByGuid']), 1)
         variant_guid = next(iter(response_json['savedVariantsByGuid']))
 
-        saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000001_1')
+        saved_variant = SavedVariant.objects.get(guid=variant_guid, family__guid='F000002_2')
         self._assert_created_variant(saved_variant, variant_json, dataset_type='SV_WES', sv_type='DUP', gene_ids=['ENSG00000240361'])
         self.assertEqual(saved_variant.xpos_end, 2061414175)
 
         expected_variant_json = {
             **{k: v for k, v in variant_json.items() if k in SAVED_VARIANT_FIELDS},
             'variantGuid': variant_guid,
-            'familyGuids': ['F000001_1'],
+            'familyGuids': ['F000002_2'],
             'alt': None,
             'ref': None,
             'selectedMainTranscriptId': None,
@@ -564,7 +564,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         self.assertDictEqual(response_json['variantTagsByGuid'], {})
         self.assertDictEqual(response_json['variantFunctionalDataByGuid'], {})
 
-        self.assert_no_list_ws_has_al(2)
+        self.assert_no_list_ws_has_al(2, workspace_name='anvil-1kg project nåme with uniçøde')
 
     def test_create_saved_compound_hets(self):
         create_saved_compound_hets_url = reverse(create_saved_variant_handler)
@@ -789,8 +789,13 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
 
         # save variant_note as gene_note for SV
         create_sv_variant_note_url = reverse(create_variant_note_handler, args=['SV0000007_prefix_19107_DEL_r00'])
+        sv_note_body = {'note': 'SV gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000011_11'}
         response = self.client.post(create_sv_variant_note_url, content_type='application/json', data=json.dumps(
-            {'note': 'SV gene note', 'saveAsGeneNote': True, 'familyGuid': 'F000011_11'}))
+            sv_note_body))
+        self.assertEqual(response.status_code, 403)
+
+        self.login_collaborator()
+        response = self.client.post(create_sv_variant_note_url, content_type='application/json', data=json.dumps(sv_note_body))
         self.assertEqual(response.status_code, 200)
         new_variant_note_response = next(iter(response.json()['variantNotesByGuid'].values()))
         self.assertEqual(new_variant_note_response['note'], 'SV gene note')
@@ -823,9 +828,9 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         new_variant_note = VariantNote.objects.filter(guid=updated_note_response['noteGuid'])
         self.assertEqual(len(new_variant_note), 0)
 
-        self.mock_list_workspaces.assert_called_with(self.no_access_user)
+        self.mock_list_workspaces.assert_called_with(self.collaborator_user)
         self.assertEqual(self.mock_list_workspaces.call_count, 2)
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 6)
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 10)
         self.assert_no_extra_anvil_calls()
 
     def test_create_partially_saved_compound_het_variant_note(self):
