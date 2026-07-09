@@ -339,6 +339,7 @@ class SummaryDataAPITest(AirtableTest):
     PARTIAL_ACCESS_MME_DETAILS = {'genesById': {}, 'savedVariantsByGuid': {}, 'submissions': []}
     PARTIAL_ACCESS_SAVED_VARIANTS_RESPONSE = {k: {} for k in VARIANT_TAG_RESPONSE_KEYS}
     PARTIAL_ACCESS_HPO_DATA = []
+    PARTIAL_ACCESS_INDIVIDUALS = set()
 
     @mock.patch('matchmaker.matchmaker_utils.datetime')
     def test_mme_details(self, mock_datetime):
@@ -661,18 +662,24 @@ class SummaryDataAPITest(AirtableTest):
             'majorConsequence': 'inframe_deletion', 'transcriptId': 'ENST00000505820', 'transcriptRank': 0,
         })
 
-    def _has_expected_metadata_response(self, response, expected_individuals, has_airtable=False, has_duplicate=False):
+    def _has_expected_metadata_response(self, response, expected_individuals, has_airtable=False, has_duplicate=False, skip_test_row=False):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertListEqual(list(response_json.keys()), ['rows'])
         self.assertSetEqual({r['participant_id'] for r in response_json['rows']}, expected_individuals)
         self.assertEqual(len(response_json['rows']), len(expected_individuals) + (2 if has_duplicate else 0))
-        test_row = next(r for r in response_json['rows'] if r['participant_id'] == 'NA20889')
-        self.assertDictEqual(
-            EXPECTED_SAMPLE_METADATA_ROW if has_airtable else EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row
-        )
+        test_row = next((r for r in response_json['rows'] if r['participant_id'] == 'NA20889'), None)
+        if skip_test_row:
+            self.assertIsNone(test_row)
+        else:
+            self.assertDictEqual(
+                EXPECTED_SAMPLE_METADATA_ROW if has_airtable else EXPECTED_NO_AIRTABLE_SAMPLE_METADATA_ROW, test_row
+            )
         if has_duplicate:
             self.assertEqual(len([r['participant_id'] for r in response_json['rows'] if r['participant_id'] == 'NA20888']), 2)
+
+    def _has_expected_partial_access_metadata_response(self, *args, **kwargs):
+        return self._has_expected_metadata_response(*args, **kwargs)
 
     @mock.patch('seqr.views.utils.airtable_utils.MAX_OR_FILTERS', 2)
     @responses.activate
@@ -683,6 +690,14 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()['error'], 'Permission Denied')
+
+        project_1_url = reverse(individual_metadata, args=[PROJECT_GUID])
+        response = self.client.get(project_1_url)
+        self._has_expected_partial_access_metadata_response(response, self.PARTIAL_ACCESS_INDIVIDUALS, skip_test_row=True)
+
+        all_projects_url = reverse(individual_metadata, args=['all'])
+        response = self.client.get(all_projects_url)
+        self._has_expected_metadata_response(response, self.PARTIAL_ACCESS_INDIVIDUALS, skip_test_row=True)
 
         # Test collaborator access
         self.login_collaborator()
@@ -695,13 +710,15 @@ class SummaryDataAPITest(AirtableTest):
         response = self.client.get(include_airtable_url)
         self._has_expected_metadata_response(response, expected_individuals)
 
-        # Test all projects
-        all_projects_url = reverse(individual_metadata, args=['all'])
-        multi_project_individuals = {
+        project_1_individuals = {
             'NA19679', 'NA20870', 'HG00732', 'NA20876', 'NA20874', 'NA20875', 'NA19678', 'NA19675_1', 'HG00731',
-            'NA20872', 'NA20881', 'HG00733', 'NA20878',
+            'NA20872', 'NA20881', 'HG00733', 'NA20878', 'NA20888',
         }
-        multi_project_individuals.update(expected_individuals)
+        response = self.client.get(project_1_url)
+        self._has_expected_metadata_response(response, project_1_individuals, skip_test_row=True)
+
+        # Test all projects
+        multi_project_individuals = {*project_1_individuals, *expected_individuals}
         response = self.client.get(all_projects_url)
         self._has_expected_metadata_response(response, multi_project_individuals, has_duplicate=True)
 
@@ -824,6 +841,9 @@ class LocalSummaryDataAPITest(AuthenticationTestCase, SummaryDataAPITest):
         self.assertEqual(response.status_code, 200)
         self._has_expected_metadata_response(response, expected_individuals)
 
+    def _has_expected_partial_access_metadata_response(self, response, *args, **kwargs):
+        self.assertEqual(response.status_code, 403)
+
 
 def assert_has_expected_calls(self, users, skip_group_call_idxs=None):
     calls = [mock.call(user) for user in users]
@@ -854,6 +874,7 @@ class AnvilSummaryDataAPITest(AnvilAuthenticationTestCase, SummaryDataAPITest):
         'totalSampleCounts': TOTAL_SAMPLE_COUNTS,
     }
     PARTIAL_ACCESS_HPO_DATA = [FAMILY_1_HPO_SUMMARY]
+    PARTIAL_ACCESS_INDIVIDUALS = {'NA19675_1', 'NA19678', 'NA19679', 'NA20874', 'NA20870'}
 
     def test_mme_details(self, *args):
         super(AnvilSummaryDataAPITest, self).test_mme_details(*args)
