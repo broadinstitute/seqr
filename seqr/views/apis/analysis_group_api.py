@@ -62,6 +62,7 @@ def _check_pm_field_permissions(pm_fields, user, analysis_group=None):
     if not pm_fields:
         return
     if analysis_group and all(getattr(analysis_group, _to_snake_case(field)) == value for field, value in pm_fields.items()):
+        # TODO test
         return
     if user_is_pm(user) and is_anvil_authenticated(user) and is_valid_anvil_workspace(pm_fields, user):
         return

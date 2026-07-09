@@ -580,6 +580,7 @@ def _get_valid_samples(families, dataset_type, sample_type, allow_no_samples):
     individuals = Individual.objects.filter(family__in=families, active_datasets__isnull=False)
     if not individuals.exists():
         if allow_no_samples:
+            # TODO test
             return None
         raise InvalidSearchException(f'No search data found for families {", ".join([f.family_id for f in families])}')
 

@@ -1072,6 +1072,7 @@ class BaseEntriesManager(SearchQuerySet):
        if sample_data:
            entries, multi_sample_type_families = self._filter_project_families(entries, sample_data)
        elif exclude_keys:
+           # TODO test
            entries = entries.exclude(key__in=exclude_keys)
 
        inheritance_q = None
