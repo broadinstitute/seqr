@@ -9,7 +9,7 @@ from django.urls.base import reverse
 from seqr.models import LocusList, Project, VariantSearch
 from seqr.views.apis.variant_search_api import vlm_lookup_handler, search_context_handler, get_saved_search_handler, \
     create_saved_search_handler, update_saved_search_handler, delete_saved_search_handler
-from seqr.views.utils.test_utils import AuthenticationTestCase, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, \
+from seqr.views.utils.test_utils import AuthenticationTestCase, AnvilAuthenticationTestCase, LOCUS_LIST_FIELDS, PA_LOCUS_LIST_FIELDS, \
     ANALYSIS_GROUP_FIELDS, DYNAMIC_ANALYSIS_GROUP_FIELDS
 
 LOCUS_LIST_GUID = 'LL00049_pid_genes_autosomal_do'
@@ -143,8 +143,7 @@ VLM_MATCH_RESPONSE_2 = {
 
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json', lambda *args: None)
-class VariantSearchAPITest(AuthenticationTestCase):
-    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches', 'clickhouse_saved_variants']
+class VariantSearchAPITest(object):
 
     def _assert_expected_search_context(self, response_json):
         self.assertSetEqual(set(response_json), set(EXPECTED_SEARCH_CONTEXT_RESPONSE))
@@ -173,7 +172,11 @@ class VariantSearchAPITest(AuthenticationTestCase):
 
     def test_search_context(self):
         search_context_url = reverse(search_context_handler)
-        self.check_collaborator_login(search_context_url, request_data={'familyGuid': 'F000001_1'})
+        self.check_partial_access_login(search_context_url, {
+            **EXPECTED_SEARCH_CONTEXT_RESPONSE,
+            'familiesByGuid': {'F000001_1': mock.ANY, 'F000003_3': mock.ANY, 'F000005_5': mock.ANY},
+            'analysisGroupsByGuid': {'AG0000183_test_group': mock.ANY, 'DAG0000001_unsolved': mock.ANY},
+        }, request_data={'familyGuid': 'F000001_1'})
 
         response = self.client.post(search_context_url, content_type='application/json', data=json.dumps({'foo': 'bar'}))
         self.assertEqual(response.status_code, 400)
@@ -426,3 +429,11 @@ class VariantSearchAPITest(AuthenticationTestCase):
         response = self.client.get('/report/custom_search/6ebb895dfca0f63c34be1ca59d950205?page=2&sort=cadd')
         self.assertEqual(response.status_code, 301)
         self.assertEqual(response.url, '/variant_search/results/6ebb895dfca0f63c34be1ca59d950205?page=2&sort=cadd')
+
+
+class LocalVariantSearchAPITest(AuthenticationTestCase, VariantSearchAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches', 'clickhouse_saved_variants']
+
+
+class AnvilVariantSearchAPITest(AnvilAuthenticationTestCase, VariantSearchAPITest):
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'variant_searches', 'clickhouse_saved_variants']

@@ -133,7 +133,7 @@ class AuthenticationTestMixin(object):
         self._check_login(url, self.NO_POLICY_USER, **request_kwargs)
 
     def check_partial_access_login(self, url, partial_access_response=None, request_data=None):
-        self.check_collaborator_login(url)
+        self.check_collaborator_login(url, request_data=request_data)
 
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
