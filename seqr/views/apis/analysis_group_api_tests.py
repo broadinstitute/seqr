@@ -102,6 +102,8 @@ class AnalysisGroupAPITest(object):
         self._assert_expected_update_workspace_response(response, guid)
 
         self.login_manager()
+        response = self.client.post(update_analysis_group_url, content_type='application/json', data=json.dumps(body))
+        self._assert_expected_update_workspace_response(response, guid, has_check_group_access_calls=False)
 
         # delete the analysis_group
         delete_analysis_group_url = reverse(delete_analysis_group_handler, args=[PROJECT_GUID, guid])
@@ -181,7 +183,7 @@ class AnalysisGroupAPITest(object):
 class LocalAnalysisGroupAPITest(AuthenticationTestCase, AnalysisGroupAPITest):
     fixtures = ['users', '1kg_project']
 
-    def _assert_expected_update_workspace_response(self, response, guid):
+    def _assert_expected_update_workspace_response(self, response, guid, **kwargs):
         self.assertEqual(response.status_code, 403)
 
     def _assert_expected_analysis_group_collaborators(self, url, response):
@@ -191,7 +193,7 @@ class LocalAnalysisGroupAPITest(AuthenticationTestCase, AnalysisGroupAPITest):
 class AnvilAnalysisGroupAPITest(AnvilAuthenticationTestCase, AnalysisGroupAPITest):
     fixtures = ['users', 'social_auth', '1kg_project']
 
-    def _assert_expected_update_workspace_response(self, response, guid):
+    def _assert_expected_update_workspace_response(self, response, guid, has_check_group_access_calls=True, **kwargs):
         self.assertEqual(response.status_code, 200)
         updated_analysis_group_response = response.json()
         self.assertEqual(len(updated_analysis_group_response['analysisGroupsByGuid']), 1)
@@ -213,10 +215,18 @@ class AnvilAnalysisGroupAPITest(AnvilAuthenticationTestCase, AnalysisGroupAPITes
         self.mock_get_groups.assert_called_with(self.pm_user)
         self.mock_get_group_members.assert_not_called()
         self.mock_get_ws_acl.assert_not_called()
-        self.assertEqual(self.mock_get_ws_access_level.call_count, 12)
-        self.mock_get_ws_access_level.assert_called_with(
-            self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2',
+        self.assertEqual(self.mock_get_ws_access_level.call_count, 12 if has_check_group_access_calls else 1)
+        self.mock_get_ws_access_level.assert_any_call(
+            self.manager_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde',
         )
+        if has_check_group_access_calls:
+            self.mock_get_ws_access_level.assert_any_call(
+                self.pm_user, 'my-seqr-billing', 'anvil-1kg project nåme with uniçøde',
+            )
+            self.mock_get_ws_access_level.assert_called_with(
+                self.pm_user, 'my-seqr-billing', 'anvil-no-project-workspace2',
+            )
+        self.mock_get_ws_access_level.reset_mock()
 
 
     def _assert_expected_delete_analysis_group(self, delete_analysis_group_url, guid):
