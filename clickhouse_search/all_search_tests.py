@@ -2401,6 +2401,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             check_login=self.check_require_login,
         )
 
+        locus = {'rawItems': 'ENSG00000097046'}
+        self._assert_expected_search(
+            [], request_body={'allGenomeProjectFamilies': '37', 'includeNoAccessProjects': True},
+            locus=locus, project_families=[], response_search={'no_access_project_genome_version': '37'},
+        )
+
         annotations = {
             'missense': ['missense_variant'],
             'other': ['non_coding_transcript_exon_variant'],
@@ -2410,7 +2416,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'gnomad_genomes': {'af': 0.003},
             'gnomad_exomes': {'af': 0.003},
         }
-        locus = {'rawItems': 'ENSG00000097046'}
         response_search = {'no_access_project_genome_version': '38'}
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
