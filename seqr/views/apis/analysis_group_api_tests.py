@@ -119,7 +119,6 @@ class AnalysisGroupAPITest(object):
         new_analysis_group = AnalysisGroup.objects.filter(guid=guid)
         self.assertEqual(len(new_analysis_group), 0)
 
-
     def test_create_update_and_delete_dynamic_analysis_group(self):
         create_analysis_group_url = reverse(update_dynamic_analysis_group_handler, args=[PROJECT_GUID])
         self.check_manager_login(create_analysis_group_url)
