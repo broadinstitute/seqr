@@ -109,7 +109,7 @@ const ANVIL_FORM_FIELDS = [
   ...ANVIL_FIELDS.map(({ validate, ...field }) => ({
     ...field,
     labelHelp: `Add an AnVIL workspace to control access for this subset of families. Accounts with access to this 
-    workspace will gain access  to thes families even if they have no access t the rest of the project.`,
+    workspace will gain access to these families even if they have no access to the rest of the project.`,
   })),
   ...FORM_FIELDS.slice(2),
 ]
@@ -202,7 +202,7 @@ export const UpdateAnalysisGroupButton = connect(mapUpdateStateToProps, mapDispa
 const navigateProjectPage = (history, projectGuid) => () => history.push(`/project/${projectGuid}/project_page`)
 
 const DeleteAnalysisGroup = React.memo(({ project, analysisGroup, onSubmit, size, iconOnly, history }) => (
-  canUpdateGroup(project, analysisGroup) ? (
+  canUpdateGroup(project, analysisGroup, null) ? (
     <DeleteButton
       initialValues={analysisGroup}
       onSubmit={onSubmit}
