@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 
 import orderBy from 'lodash/orderBy'
-import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getProjectExportUrls,
+import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getProjectExportUrls, getCurrentAnalysisGroup,
   getCaseReviewStatusCounts, getProjectAnalysisGroupFamiliesByGuid, getIndividualTaggedVariants,
   getDefaultMmeSubmission, getMmeResultsBySubmission, getMmeDefaultContactEmail, getIndividualPhenotypeGeneScores,
 } from './selectors'
@@ -83,6 +83,15 @@ test('getCaseReviewStatusCounts', () => {
 
   expect(caseReviewStatusCountsSorted[2]).toHaveProperty('count', 0)
 
+})
+
+test('getCurrentAnalysisGroup', () => {
+
+  const group = getCurrentAnalysisGroup(STATE_WITH_2_FAMILIES, { analysisGroupGuid: 'AG0000183_test_group' })
+  expect(group.analysisGroupGuid).toEqual('AG0000183_test_group')
+  expect(group.workspaceName).toEqual('anvil-analysis-group')
+
+  expect(getCurrentAnalysisGroup(STATE_WITH_2_FAMILIES)).toBe(undefined)
 })
 
 test('getProjectAnalysisGroupFamiliesByGuid', () => {
