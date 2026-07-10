@@ -577,6 +577,7 @@ def get_workspace_collaborators_by_username(user, workspace_namespace, workspace
             get_json_func=get_json_for_user if collaborator else _get_anvil_user_json)
         username = collaborator.username if collaborator else collaborator_json['username']
         collaborators[username] = collaborator_json
+
     return collaborators
 
 
