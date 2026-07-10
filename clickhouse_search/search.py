@@ -65,6 +65,7 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
             continue
 
         sample_data = sample_data_by_dataset_type[dataset_type]
+        exclude_keys = (exclude_keys or {}).get(dataset_type)
         dataset_results = []
 
         if sample_data:
@@ -72,20 +73,20 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
 
             if inheritance_mode != COMPOUND_HET:
                 dataset_results += _get_search_results(
-                    entry_qs, variants_qs, sample_data, inheritance_mode=inheritance_mode, exclude_keys=(exclude_keys or {}).get(dataset_type), **search, **parsed_filters,
+                    entry_qs, variants_qs, sample_data, inheritance_mode=inheritance_mode, exclude_keys=exclude_keys, **search, **parsed_filters,
                 )
 
             run_x_linked_male_search = has_x_linked and not (inheritance_mode == X_LINKED_RECESSIVE and sample_data.get('samples'))
             if run_x_linked_male_search:
                 dataset_results += _get_x_linked_male_search_results(
-                    entry_qs, variants_qs, dataset_type, user, sample_data, exclude_keys=(exclude_keys or {}).get(dataset_type),
+                    entry_qs, variants_qs, dataset_type, user, sample_data, exclude_keys=exclude_keys,
                     **search, **parsed_filters,
                 )
 
         if dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS and no_access_project_genome_version:
             results += _get_no_access_search_results(
                 entry_qs, variants_qs, has_comp_het, user, **search, **parsed_filters,
-                exclude_keys=[r['key'] for r in dataset_results], inheritance_mode=inheritance_mode,
+                exclude_keys=[r['key'] for r in dataset_results] + (exclude_keys or []), inheritance_mode=inheritance_mode,
             )
             searched_dataset_types.add(dataset_type)
 
