@@ -367,9 +367,17 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_all_project_search(self):
-        request_body = {'allGenomeProjectFamilies': '38'}
         self._assert_expected_search_error(
-            'No data available for genome version "GRCh38"', request_body=request_body, check_login=self.check_require_login,
+            'No data available for genome version "GRCh37"', request_body={'allGenomeProjectFamilies': '37'},
+            check_login=self.check_require_login,
+        )
+
+        request_body = {'allGenomeProjectFamilies': '38'}
+        additional_response = {'familiesByGuid': {'F000001_1': mock.ANY}}
+        self._assert_expected_search(
+            [FAMILY_3_VARIANT, FAMILY_1_VARIANT], project_families=[
+                {'projectGuid': 'R0001_1kg', 'familyGuids': ['F000001_1', 'F000003_3', 'F000005_5']},
+            ], request_body=request_body, additional_response=additional_response,
         )
 
         self.login_collaborator()
@@ -377,7 +385,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'F000001_1', 'F000002_2', 'F000003_3', 'F000004_4', 'F000005_5', 'F000006_6', 'F000007_7', 'F000008_8',
             'F000009_9', 'F000010_10', 'F000013_13',
         ]}]
-        additional_response = {'familiesByGuid': {'F000001_1': mock.ANY}}
         self._assert_expected_search(
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2,
              GCNV_VARIANT3, GCNV_VARIANT4, FAMILY_1_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
@@ -1613,7 +1620,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
     def test_get_single_variant(self):
         url_template = (reverse(query_single_variant_handler, args=['variant_id']) + '?familyGuid={}').replace('variant_id', '{}')
         url = url_template.format('21-3343353-GAGA-G', 'F000001_1')
-        self.check_collaborator_login(url)
+        self.check_require_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -1630,7 +1637,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ]},
         })
 
-        response = self.client.get(url_template.format(VARIANT_IDS[1], 'F000002_2'))
+        family_2_url = url_template.format(VARIANT_IDS[1], 'F000002_2')
+        response = self.client.get(family_2_url)
+        self.assertEqual(response.status_code, 403)
+
+        self.login_collaborator()
+        response = self.client.get(family_2_url)
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Variant 1-91511686-TCA-G not found'})
 
@@ -1652,8 +1664,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['variantsById'], {'7-143270172-A-G': GRCH37_VARIANT})
 
-        self.assertTrue(all(call.args[0].startswith('projects__') for call in self.mock_redis.get.mock_calls))
-        self.assertTrue(all(call.args[0].startswith('projects__') for call in self.mock_redis.set.mock_calls))
+        self.assertTrue(all(call.args[0].startswith('project_analysis_groups__') for call in self.mock_redis.get.mock_calls))
+        self.assertTrue(all(call.args[0].startswith('project_analysis_groups__') for call in self.mock_redis.set.mock_calls))
 
     def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
@@ -2389,6 +2401,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             check_login=self.check_require_login,
         )
 
+        locus = {'rawItems': 'ENSG00000097046'}
+        self._assert_expected_search(
+            [], request_body={'allGenomeProjectFamilies': '37', 'includeNoAccessProjects': True},
+            locus=locus, project_families=[], response_search={'no_access_project_genome_version': '37'},
+        )
+
         annotations = {
             'missense': ['missense_variant'],
             'other': ['non_coding_transcript_exon_variant'],
@@ -2398,30 +2416,30 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             'gnomad_genomes': {'af': 0.003},
             'gnomad_exomes': {'af': 0.003},
         }
-        locus = {'rawItems': 'ENSG00000097046'}
         response_search = {'no_access_project_genome_version': '38'}
         variant4 = {**VARIANT4, 'selectedMainTranscriptId': 'ENST00000350997', 'numFamilies': 3}
         del variant4['familyGuids']
         del variant4['genotypes']
+        project_families = [
+            {'projectGuid': 'R0001_1kg', 'familyGuids': ['F000001_1', 'F000003_3', 'F000005_5']},
+        ]
         self._assert_expected_search(
             [variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
-            annotations=annotations, freqs=freqs, locus=locus, project_families=[], export_data=[
+            annotations=annotations, freqs=freqs, locus=locus, project_families=project_families, export_data=[
                 EXPORT_DATA[0][:27], EXPORT_DATA[4][:24] + ['3 Families', '', ''],
             ], gene_counts={'ENSG00000097046': {'total': 1, 'families': {}}},
         )
 
         freqs = {'callset': freqs['callset']}
-        variant3 = {**VARIANT3, 'selectedMainTranscriptId': 'ENST00000497611', 'numFamilies': 4}
-        del variant3['familyGuids']
-        del variant3['genotypes']
+        variant3 = {**FAMILY_3_VARIANT, 'selectedMainTranscriptId': 'ENST00000497611'}
         self._assert_expected_search(
             [variant3, variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
-            annotations=annotations, freqs=freqs, locus=locus, project_families=[],
+            annotations=annotations, freqs=freqs, locus=locus, project_families=project_families,
         )
 
         self._assert_expected_search_error(
@@ -2430,22 +2448,22 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [], request_body=request_body, response_search=response_search, project_families=[],
+            [], request_body=request_body, response_search=response_search, project_families=project_families,
             annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='homozygous_recessive',
         )
 
-        variant3['numFamilies'] = 1
         variant4['numFamilies'] = 1
+        self.maxDiff = None
         self._assert_expected_search(
             [variant3, variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
-            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo', project_families=[],
+            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo', project_families=project_families,
             gene_counts={
-                'ENSG00000097046': {'total': 2, 'families': {}},
-                'ENSG00000177000': {'total': 1, 'families': {}},
+                'ENSG00000097046': {'total': 2, 'families': {'F000003_3': 1}},
+                'ENSG00000177000': {'total': 1, 'families': {'F000003_3': 1}},
             },
         )
 

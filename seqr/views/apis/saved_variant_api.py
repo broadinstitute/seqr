@@ -1,6 +1,7 @@
 import logging
 import json
 
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 
 from clickhouse_search.models.postgres_dicts import DiscoveryVariantDict, ExcludedVariantDict
@@ -12,7 +13,7 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, STRUCTURED_METADATA_TAG_TYPES
-from seqr.views.utils.permissions_utils import get_project_and_check_view_permission, check_project_edit_permission, \
+from seqr.views.utils.permissions_utils import get_project_analysis_groups_and_check_view_permission, check_project_edit_permission, \
     login_and_policies_required, check_family_view_permission, check_families_view_permission
 from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
 
@@ -23,16 +24,21 @@ INCLUDE_LOCUS_LISTS_PARAM = 'includeLocusLists'
 
 @login_and_policies_required
 def saved_variant_data(request, project_guid, variant_guids=None):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
     family_guids = request.GET['families'].split(',') if request.GET.get('families') else None
     variant_guids = variant_guids.split(',') if variant_guids else None
 
-    variant_query = SavedVariant.objects.filter(family__project=project)
+    variant_query = SavedVariant.objects.filter(family__analysisgroup__in=analysis_groups) \
+        if analysis_groups else SavedVariant.objects.filter(family__project=project)
     if variant_guids:
         variant_query = variant_query.filter(guid__in=variant_guids)
         if variant_query.count() < 1:
             return create_json_response({}, status=404, reason='Variant {} not found'.format(', '.join(variant_guids)))
     elif family_guids:
+        if analysis_groups:
+            family_guids = analysis_groups.filter(families__guid__in=family_guids).values_list('families__guid').distinct()
+            if not family_guids:
+                raise PermissionDenied(f'{request.user} does not have sufficient permissions for requested families')
         variant_query = variant_query.filter(family__guid__in=family_guids)
     else:
         get_note_only = bool(request.GET.get('includeNoteVariants'))

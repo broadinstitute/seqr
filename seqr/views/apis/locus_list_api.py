@@ -12,8 +12,8 @@ from seqr.views.utils.json_to_orm_utils import update_model_from_json, get_or_cr
     create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_locus_lists, get_json_for_locus_list
-from seqr.views.utils.permissions_utils import get_project_and_check_view_permission, check_locus_list_permissions, \
-    check_user_created_object_permissions, login_and_policies_required, get_project_guids_user_can_view, \
+from seqr.views.utils.permissions_utils import get_project_analysis_groups_and_check_view_permission, check_locus_list_permissions, \
+    check_user_created_object_permissions, login_and_policies_required, get_project_guids_any_family_user_can_view, \
     get_project_and_check_edit_permission
 
 logger = SeqrLogger(__name__)
@@ -49,7 +49,7 @@ def locus_lists(request):
 @login_and_policies_required
 def all_locus_list_options(request):
     locus_list_models = LocusList.objects.filter(
-        _get_user_list_filter(request.user) | Q(projects__guid__in=get_project_guids_user_can_view(request.user))
+        _get_user_list_filter(request.user) | Q(projects__guid__in=get_project_guids_any_family_user_can_view(request.user))
     )
     locus_lists_json = get_json_for_locus_lists(locus_list_models, request.user, include_metadata=True)
     return create_json_response({
@@ -136,7 +136,7 @@ def delete_locus_list_handler(request, locus_list_guid):
 
 @login_and_policies_required
 def add_project_locus_lists(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, _ = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
     request_json = json.loads(request.body)
     locus_lists = LocusList.objects.filter(guid__in=request_json['locusListGuids'])
     for locus_list in locus_lists:

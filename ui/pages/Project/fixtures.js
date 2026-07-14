@@ -328,6 +328,8 @@ export const STATE_WITH_2_FAMILIES = {
       familyGuids: ["F011652_1"],
       name: "Test Group",
       projectGuid: "R0237_1000_genomes_demo",
+      workspaceName: 'anvil-analysis-group',
+      workspaceNamespace: 'my-seqr-billing',
     },
   },
   currentProjectGuid: 'R0237_1000_genomes_demo',

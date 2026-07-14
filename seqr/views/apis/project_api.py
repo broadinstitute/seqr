@@ -24,8 +24,8 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     FAMILY_ADDITIONAL_VALUES
 from seqr.views.utils.permissions_utils import get_project_and_check_view_permission, get_project_and_check_edit_permission, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
-    has_workspace_perm, has_case_review_permissions, is_internal_anvil_project, get_project_and_check_pm_permissions, \
-    check_project_pm_permission, user_is_data_manager, external_anvil_project_can_edit
+    is_valid_anvil_workspace, has_case_review_permissions, is_internal_anvil_project, get_project_and_check_pm_permissions, \
+    check_project_pm_permission, user_is_data_manager, external_anvil_project_can_edit, get_project_analysis_groups_and_check_view_permission
 from seqr.views.utils.project_context_utils import families_discovery_tags, \
     add_project_tag_type_counts, get_project_analysis_groups, get_project_locus_lists
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, anvil_enabled
@@ -48,7 +48,7 @@ def create_project_handler(request):
         error = 'Field(s) "{}" are required'.format(', '.join(missing_fields))
         return create_json_response({'error': error}, status=400, reason=error)
 
-    if has_anvil and not _is_valid_anvil_workspace(request_json, request.user):
+    if has_anvil and not is_valid_anvil_workspace(request_json, request.user):
         return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
     project_args = {_to_snake_case(field): request_json[field] for field in required_fields}
@@ -67,12 +67,6 @@ def create_project_handler(request):
             project.guid: _get_json_for_project(project, request.user)
         },
     })
-
-
-def _is_valid_anvil_workspace(request_json, user):
-    namespace = request_json.get('workspaceNamespace')
-    name = request_json.get('workspaceName')
-    return bool(name and namespace and has_workspace_perm(user, CAN_EDIT, namespace, name))
 
 
 @login_and_policies_required
@@ -107,7 +101,7 @@ def update_project_workspace(request, project_guid):
     project = get_project_and_check_edit_permission(project_guid, request.user)
 
     request_json = json.loads(request.body)
-    if not _is_valid_anvil_workspace(request_json, request.user):
+    if not is_valid_anvil_workspace(request_json, request.user):
         return create_json_response({'error': 'Invalid Workspace'}, status=400)
 
     update_json = {k: request_json[k] for k in ['workspaceNamespace', 'workspaceName']}
@@ -129,11 +123,14 @@ def delete_project_handler(request, project_guid):
 
 @login_and_policies_required
 def project_page_data(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
     update_project_from_json(project, {'last_accessed_date': timezone.now()}, request.user)
     return create_json_response({
         'projectsByGuid': {
-            project.guid: _get_json_for_project(project, request.user, add_project_category_guids_field=False)
+            project.guid: {
+                'partialAccess': bool(analysis_groups),
+                **_get_json_for_project(project, request.user, add_project_category_guids_field=False),
+            }
         },
     })
 
@@ -169,9 +166,10 @@ def _get_formatted_value(value, config, *args):
 
 @login_and_policies_required
 def project_families(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
 
-    family_models = Family.objects.filter(project=project)
+    family_filter = Q(analysisgroup__in=analysis_groups) if analysis_groups else Q(project=project)
+    family_models = Family.objects.filter(family_filter)
     families = family_models.values(
         'id', 'description',
         **{_to_camel_case(field): F(field) for field in [
@@ -207,21 +205,23 @@ def project_families(request, project_guid):
             **{key: family_id in data_families for key, data_families in has_data_families.items()},
         })
 
-    response = families_discovery_tags(families, project=project)
+    response = families_discovery_tags(families, project=None if analysis_groups else project)
     return create_json_response(response)
 
 
 @login_and_policies_required
 def project_overview(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
+    family_filter = {'family__analysisgroup__in': analysis_groups} if analysis_groups else {'family__project': project}
 
     datasets = Dataset.objects.filter(
-        Q(active_individuals__family__project=project) | Q(inactive_individuals__family__project=project)
+        Q(**{f'active_individuals__{k}': v for k, v in family_filter.items()}) | Q(**{f'inactive_individuals__{k}': v for k, v in family_filter.items()})
     ).distinct()
     datasets_by_guid = {d['datasetGuid']: d for d in get_json_for_datasets(datasets, project_guid)}
 
+    individual_filter = {f'individual__{k}': v for k, v in family_filter.items()}
     rna_sample_load_counts = RnaSample.objects.filter(
-        individual__family__project=project,
+        **individual_filter,
     ).values('data_type', loadedDate=TruncDate('created_date')).order_by('loadedDate').annotate(
         familyCounts=ArrayAgg('individual__family__guid'),
     )
@@ -235,9 +235,9 @@ def project_overview(request, project_guid):
         'datasetsByGuid': datasets_by_guid,
     }
 
-    add_project_tag_type_counts(project, response, project_json=project_json)
+    add_project_tag_type_counts(project, response, project_json=project_json, analysis_groups=analysis_groups)
 
-    project_mme_submissions = MatchmakerSubmission.objects.filter(individual__family__project=project)
+    project_mme_submissions = MatchmakerSubmission.objects.filter(**individual_filter)
 
     project_json = response['projectsByGuid'][project_guid]
     project_json.update({
@@ -262,10 +262,12 @@ def project_collaborators(request, project_guid):
 
 @login_and_policies_required
 def project_individuals(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
+    family_q = Q(family__analysisgroup__in=analysis_groups) if analysis_groups else Q(family__project=project)
+    has_case_review_perm = False if analysis_groups else has_case_review_permissions(project, request.user)
     individuals = _get_json_for_individuals(
-        Individual.objects.filter(family__project=project), user=request.user, project_guid=project_guid,
-        add_hpo_details=True, has_case_review_perm=has_case_review_permissions(project, request.user))
+        Individual.objects.filter(family_q), user=request.user, project_guid=project_guid,
+        add_hpo_details=True, has_case_review_perm=has_case_review_perm)
 
     return create_json_response({
         'individualsByGuid': {i['individualGuid']: i for i in individuals},
@@ -274,16 +276,22 @@ def project_individuals(request, project_guid):
 
 @login_and_policies_required
 def project_analysis_groups(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
+
+    project_q = group_q = Q()
+    if analysis_groups:
+        group_q = Q(id__in=analysis_groups)
+    else:
+        project_q = Q(project=project)
 
     return create_json_response({
-        'analysisGroupsByGuid': get_project_analysis_groups([project], project_guid)
+        'analysisGroupsByGuid': get_project_analysis_groups(project_q, group_q, project_guid)
     })
 
 
 @login_and_policies_required
 def project_locus_lists(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, _ = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
     locus_list_json, _ = get_project_locus_lists([project], request.user, include_metadata=True)
 
     return create_json_response({
@@ -294,8 +302,9 @@ def project_locus_lists(request, project_guid):
 
 @login_and_policies_required
 def project_family_notes(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
-    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project=project), is_analyst=False)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
+    family_q = Q(family__analysisgroup__in=analysis_groups) if analysis_groups else Q(family__project=project)
+    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family_q), is_analyst=False)
 
     return create_json_response({
         'familyNotesByGuid': {n['noteGuid']: n for n in family_notes},
@@ -303,9 +312,10 @@ def project_family_notes(request, project_guid):
 
 @login_and_policies_required
 def project_mme_submisssions(request, project_guid):
-    project = get_project_and_check_view_permission(project_guid, request.user)
+    project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
+    family_filter = {'family__analysisgroup__in': analysis_groups} if analysis_groups else {'family__project': project}
     models = MatchmakerSubmission.objects.filter(
-        individual__family__project=project).prefetch_related('matchmakersubmissiongenes_set')
+        **{f'individual__{k}': v for k, v in family_filter.items()}).prefetch_related('matchmakersubmissiongenes_set')
 
     submissions_by_guid = {s['submissionGuid']: s for s in get_json_for_matchmaker_submissions(models)}
 
@@ -313,7 +323,7 @@ def project_mme_submisssions(request, project_guid):
         gene_ids = model.matchmakersubmissiongenes_set.values_list('gene_id', flat=True)
         submissions_by_guid[model.guid]['geneIds'] = list(gene_ids)
 
-    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project=project))
+    family_notes = get_json_for_family_notes(FamilyNote.objects.filter(**family_filter))
 
     return create_json_response({
         'mmeSubmissionsByGuid': submissions_by_guid,

@@ -88,6 +88,12 @@ export const getProjectAnalysisGroupsByGuid = createSelector(
   }),
 )
 
+export const getCurrentAnalysisGroup = createSelector(
+  getProjectAnalysisGroupsByGuid,
+  getAnalysisGroupGuid,
+  (analysisGroupsByGuid, analysisGroupGuid) => analysisGroupsByGuid[analysisGroupGuid],
+)
+
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   getProjectFamiliesByGuid,
   getCurrentAnalysisGroupFamilyGuids,

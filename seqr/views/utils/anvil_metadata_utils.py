@@ -166,14 +166,15 @@ def parse_anvil_metadata(
         get_additional_sample_fields: Callable[[Individual, dict], dict] = None,
         get_additional_individual_fields: Callable[[Individual, dict], dict] = None,
         individuals: list[Individual] = None, individual_data_types: dict[str, Iterable[str]] = None,
-        airtable_fields: Iterable[str] = None, mme_value: Aggregate = None,
+        airtable_fields: Iterable[str] = None, mme_value: Aggregate = None, individual_filter: Q = None,
         get_variant_json: Callable[[Iterable[SavedVariant], list[str], dict], dict] = _get_variant_json, post_process_variant: Callable[[dict, list[dict]], dict] = None,
         include_no_individual_families: bool = False, omit_airtable: bool = False, include_family_name_display: bool = False, include_family_sample_metadata: bool = False,
         include_discovery_sample_id: bool = False, include_mondo: bool = False, omit_parent_mnvs: bool = False,
         proband_only_variants: bool = False):
 
     if not individuals:
-        individuals = _get_sample_annotated_individuals(projects, max_loaded_date)
+        individual_filter = individual_filter or Q(family__project__in=projects)
+        individuals = _get_sample_annotated_individuals(individual_filter, max_loaded_date)
 
     family_data_by_id = _get_family_metadata(
         {'project__in': projects} if include_no_individual_families else {'individual__in': individuals},
@@ -269,8 +270,8 @@ def _get_nested_variant_name(v):
     return v['sv_name'] or f"{v['chrom']}-{v['pos']}-{v['ref']}-{v['alt']}"
 
 
-def _get_sample_annotated_individuals(projects, max_loaded_date):
-    individuals = Individual.objects.filter(family__project__in=projects)
+def _get_sample_annotated_individuals(individual_filter, max_loaded_date):
+    individuals = Individual.objects.filter(individual_filter)
     active_filter = inactive_filter = None
     if max_loaded_date:
         max_loaded_date = datetime.strptime(max_loaded_date, '%Y-%m-%d')

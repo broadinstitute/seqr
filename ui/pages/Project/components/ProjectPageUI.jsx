@@ -100,17 +100,19 @@ const ProjectPageUI = React.memo(({ analysisGroupGuid, load, loading, familiesLo
             />
           </ProjectSection>
           <VerticalSpacer height={10} />
-          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All" loading={loading}>
+          <ProjectSection label="Variant Tags" linkPath={analysisGroupGuid ? `saved_variants/analysis_group/${analysisGroupGuid}` : 'saved_variants'} linkText="View All" loading={loading}>
             <VariantTags analysisGroupGuid={analysisGroupGuid} />
           </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4}>
-          <ProjectSection label="Notifications">
-            <ProjectNotifications />
-          </ProjectSection>
+          {!analysisGroupGuid && (
+            <ProjectSection label="Notifications">
+              <ProjectNotifications />
+            </ProjectSection>
+          )}
           <VerticalSpacer height={10} />
           <ProjectSection label="Collaborators">
-            <ProjectCollaborators />
+            <ProjectCollaborators analysisGroupGuid={analysisGroupGuid} />
           </ProjectSection>
         </Grid.Column>
       </Grid.Row>

@@ -8,7 +8,7 @@ import { getAnalysisGroupIsLoading } from 'redux/selectors'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import DataLoader from 'shared/components/DataLoader'
 import { HelpIcon } from 'shared/components/StyledComponents'
-import { FAMILY_FIELD_NAME_LOOKUP, CATEGORY_FAMILY_FILTERS } from 'shared/utils/constants'
+import { ANVIL_URL, FAMILY_FIELD_NAME_LOOKUP, CATEGORY_FAMILY_FILTERS } from 'shared/utils/constants'
 import { compareObjects } from 'shared/utils/sortUtils'
 import { loadCurrentProjectAnalysisGroups } from '../reducers'
 import { getProjectAnalysisGroupsByGuid, getProjectGuid } from '../selectors'
@@ -37,6 +37,14 @@ const AnalysisGroups = React.memo(({ projectGuid, load, loading, analysisGroupsB
               <b>{`${ag.familyGuids.length} Families`}</b>
               <br />
               <i>{ag.description}</i>
+              {ag.workspaceName && (
+                <div>
+                  Access Control Workspace:&nbsp;
+                  <a href={`${ANVIL_URL}/#workspaces/${ag.workspaceNamespace}/${ag.workspaceName}`} target="_blank" rel="noreferrer">
+                    {`${ag.workspaceNamespace}/${ag.workspaceName}`}
+                  </a>
+                </div>
+              )}
             </div>
           )}
           size="tiny"

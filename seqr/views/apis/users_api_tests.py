@@ -40,7 +40,9 @@ class UsersAPITest(object):
     @mock.patch('seqr.views.utils.orm_to_json_utils.ANALYST_USER_GROUP', 'analysts')
     def test_get_project_collaborator_options(self):
         url = reverse(get_project_collaborator_options, args=[PROJECT_GUID])
-        self.check_collaborator_login(url)
+        self.check_partial_access_login(url, {'test_user_no_access': {
+            'displayName': 'Test No Access User', 'username': 'test_user_no_access', 'email': 'test_user_no_access@test.com',
+        }})
 
         if hasattr(self, 'mock_get_ws_acl'):
             self.mock_get_ws_acl.reset_mock()

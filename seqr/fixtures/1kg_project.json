@@ -434,6 +434,19 @@
     }
 },
 {
+    "model": "seqr.familynote",
+    "pk": 4,
+    "fields": {
+        "guid": "FAN000007_1",
+        "created_date": "2024-03-12T19:27:08.563Z",
+        "created_by": null,
+        "last_modified_date": "2024-03-12T19:27:08.563Z",
+        "family": 6,
+        "note": "Do not send follow up",
+        "note_type": "M"
+    }
+},
+{
     "model": "seqr.individual",
     "pk": 1,
     "fields": {
@@ -1142,6 +1155,22 @@
     }
 },
 {
+    "model": "seqr.rnasample",
+    "pk": 173,
+    "fields": {
+        "guid": "RS000173_T_na20872",
+        "created_date": "2025-06-03T06:35:55.397Z",
+        "created_by": null,
+        "last_modified_date": "2025-06-04T09:07:49.744Z",
+        "individual": 8,
+        "is_active": true,
+        "tissue_type": "M",
+        "sequencing_type": "T",
+        "data_source": "muscle_samples.tsv.gz",
+        "data_type": "T"
+    }
+},
+{
     "model": "seqr.rnaseqoutlier",
     "pk": 1,
     "fields": {
@@ -1215,6 +1244,15 @@
         "sample": 153,
         "gene_id": "ENSG00000135953",
         "tpm": 2.36
+    }
+},
+{
+    "model": "seqr.rnaseqtpm",
+    "pk": 8,
+    "fields": {
+        "sample": 173,
+        "gene_id": "ENSG00000135953",
+        "tpm": 7.34
     }
 },
 {
@@ -2088,6 +2126,8 @@
         "last_modified_date": "2018-08-09T18:53:24.207Z",
         "name": "Test Group 1",
         "description": "A sample analysis group",
+        "workspace_name": "anvil-analysis-group",
+        "workspace_namespace": "my-seqr-billing",
         "project": 1,
         "families": [1, 3, 5]
     }
@@ -2261,6 +2301,20 @@
         "contacts": [
             {"name": "Sam Baxter", "email": "matchmaker@broadinstitute.org"}
         ]
+    }
+},
+{
+    "model": "matchmaker.matchmakersubmission",
+    "pk": 5,
+    "fields": {
+        "individual": 10,
+        "guid": "MS000005_na20875",
+        "created_date": "2019-02-05T06:42:55.397Z",
+        "last_modified_date": "2019-02-05T06:42:55.397Z",
+        "submission_id": "NA20875",
+        "label": "NA20875",
+        "contacts": [{"name": "Sam Baxter", "email": "matchmaker@broadinstitute.org"}],
+        "features": [{"id": "HP:0001252", "observed": "yes"}]
     }
 },
 {
