@@ -2453,6 +2453,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         variant4['numFamilies'] = 1
+        self.maxDiff = None
         self._assert_expected_search(
             [variant3, variant4], request_body=request_body, response_search=response_search,
             cached_variant_fields=[
@@ -2461,8 +2462,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ],
             annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo', project_families=project_families,
             gene_counts={
-                'ENSG00000097046': {'total': 2, 'families': {}},
-                'ENSG00000177000': {'total': 1, 'families': {}},
+                'ENSG00000097046': {'total': 2, 'families': {'F000003_3': 1}},
+                'ENSG00000177000': {'total': 1, 'families': {'F000003_3': 1}},
             },
         )
 
