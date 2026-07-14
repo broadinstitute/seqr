@@ -286,7 +286,7 @@ def get_variant_gene_breakdown(request, search_hash):
         gene_ids = var['transcripts'].keys() if 'transcripts' in var else {t['geneId'] for t in var['sortedTranscriptConsequences']}
         for gene_id in gene_ids:
             gene_counts[gene_id]['total'] += 1
-            for family_guid in var['familyGuids']:
+            for family_guid in var.get('familyGuids', []):
                 gene_counts[gene_id]['families'][family_guid] += 1
 
     return create_json_response({
