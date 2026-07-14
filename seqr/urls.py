@@ -125,6 +125,7 @@ from seqr.views.apis.report_api import \
     family_metadata, \
     variant_metadata, \
     gregor_export, \
+    sample_stats_download, \
     seqr_stats
 from seqr.views.apis.summary_data_api import success_story, saved_variants_page, mme_details, hpo_summary_data, \
     bulk_update_family_external_analysis, individual_metadata
@@ -325,6 +326,7 @@ api_endpoints = {
     'report/variant_metadata/(?P<project_guid>[^/]+)': variant_metadata,
     'report/gregor': gregor_export,
     'report/seqr_stats': seqr_stats,
+    'report/sample_stats_download': sample_stats_download,
 
     'data_management/get_all_users': get_all_users,
     'data_management/update_rna_seq': update_rna_seq,

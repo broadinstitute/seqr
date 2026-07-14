@@ -2408,7 +2408,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             cached_variant_fields=[{'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]}],
             annotations=annotations, freqs=freqs, locus=locus, project_families=[], export_data=[
                 EXPORT_DATA[0][:27], EXPORT_DATA[4][:24] + ['3 Families', '', ''],
-            ],
+            ], gene_counts={'ENSG00000097046': {'total': 1, 'families': {}}},
         )
 
         freqs = {'callset': freqs['callset']}
@@ -2443,6 +2443,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
             annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo', project_families=[],
+            gene_counts={
+                'ENSG00000097046': {'total': 2, 'families': {}},
+                'ENSG00000177000': {'total': 1, 'families': {}},
+            },
         )
 
         self.login_collaborator()
@@ -2455,7 +2459,10 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][3]},
                 {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
             ],
-            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo',
+            annotations=annotations, freqs=freqs, locus=locus, inheritance_mode='de_novo', gene_counts={
+                'ENSG00000097046': {'total': 2, 'families': {'F000002_2': 1, 'F000003_3': 1}},
+                'ENSG00000177000': {'total': 1, 'families': {'F000003_3': 1}},
+            },
         )
 
         locus['rawItems'] = 'ENSG00000171621'

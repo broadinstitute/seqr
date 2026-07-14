@@ -269,8 +269,16 @@ class RegisterCaidsTest(TestCase):
             'MESSAGE: 1\t10469\trs370233998\tC\tG\t.\t.\t.\n'
             'INPUT_LINE: Cannot align NC_000001.10 [10468,10469).',
         )
-        vd = VariantDetailsSnvIndel.objects.get(variant_id='1-91511686-T-G')
-        self.assertEqual(vd.caid, 'CA997563840')
+        self.assertListEqual(list(VariantDetailsSnvIndel.objects.order_by('key').values_list('variant_id', 'caid')), [
+            ('1-10439-AC-A', 'CA16717152'),
+            ('1-38724419-T-G', None),
+            ('1-91502721-G-A', None),
+            ('1-91511686-T-G', 'CA997563840'),
+            ('1-10146-ACC-A', 'CA997563845'),
+            ('1-94818-T-C', 'CA16717153'),
+            ('7-143270172-A-G', None),
+            ('7-9310123-T-C', None)
+        ])
 
         # Ensure re-calling is a no-op
         responses.reset()

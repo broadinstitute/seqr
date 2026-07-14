@@ -22,7 +22,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project, get_json_f
     get_json_for_project_collaborator_list, get_json_for_matchmaker_submissions, \
     get_json_for_family_notes, _get_json_for_individuals, get_json_for_project_collaborator_groups, \
     FAMILY_ADDITIONAL_VALUES
-from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_project_permissions, \
+from seqr.views.utils.permissions_utils import get_project_and_check_view_permission, get_project_and_check_edit_permission, \
     check_user_created_object_permissions, pm_required, user_is_pm, login_and_policies_required, \
     has_workspace_perm, has_case_review_permissions, is_internal_anvil_project, get_project_and_check_pm_permissions, \
     check_project_pm_permission, user_is_data_manager, external_anvil_project_can_edit
@@ -77,9 +77,7 @@ def _is_valid_anvil_workspace(request_json, user):
 
 @login_and_policies_required
 def update_project_handler(request, project_guid):
-    project = Project.objects.get(guid=project_guid)
-
-    check_project_permissions(project, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     request_json = json.loads(request.body)
     updated_fields = set()
@@ -106,7 +104,7 @@ def update_project_workspace(request, project_guid):
     if not is_anvil_authenticated(request.user):
         raise PermissionDenied()
 
-    project = get_project_and_check_permissions(project_guid, request.user, can_edit=True)
+    project = get_project_and_check_edit_permission(project_guid, request.user)
 
     request_json = json.loads(request.body)
     if not _is_valid_anvil_workspace(request_json, request.user):
@@ -131,7 +129,7 @@ def delete_project_handler(request, project_guid):
 
 @login_and_policies_required
 def project_page_data(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
     update_project_from_json(project, {'last_accessed_date': timezone.now()}, request.user)
     return create_json_response({
         'projectsByGuid': {
@@ -171,7 +169,7 @@ def _get_formatted_value(value, config, *args):
 
 @login_and_policies_required
 def project_families(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
 
     family_models = Family.objects.filter(project=project)
     families = family_models.values(
@@ -215,7 +213,7 @@ def project_families(request, project_guid):
 
 @login_and_policies_required
 def project_overview(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
 
     datasets = Dataset.objects.filter(
         Q(active_individuals__family__project=project) | Q(inactive_individuals__family__project=project)
@@ -252,7 +250,7 @@ def project_overview(request, project_guid):
 
 @login_and_policies_required
 def project_collaborators(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
 
     return create_json_response({
         'projectsByGuid': {project_guid: {
@@ -264,7 +262,7 @@ def project_collaborators(request, project_guid):
 
 @login_and_policies_required
 def project_individuals(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
     individuals = _get_json_for_individuals(
         Individual.objects.filter(family__project=project), user=request.user, project_guid=project_guid,
         add_hpo_details=True, has_case_review_perm=has_case_review_permissions(project, request.user))
@@ -276,7 +274,7 @@ def project_individuals(request, project_guid):
 
 @login_and_policies_required
 def project_analysis_groups(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
 
     return create_json_response({
         'analysisGroupsByGuid': get_project_analysis_groups([project], project_guid)
@@ -285,7 +283,7 @@ def project_analysis_groups(request, project_guid):
 
 @login_and_policies_required
 def project_locus_lists(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
     locus_list_json, _ = get_project_locus_lists([project], request.user, include_metadata=True)
 
     return create_json_response({
@@ -296,7 +294,7 @@ def project_locus_lists(request, project_guid):
 
 @login_and_policies_required
 def project_family_notes(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
     family_notes = get_json_for_family_notes(FamilyNote.objects.filter(family__project=project), is_analyst=False)
 
     return create_json_response({
@@ -305,7 +303,7 @@ def project_family_notes(request, project_guid):
 
 @login_and_policies_required
 def project_mme_submisssions(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
     models = MatchmakerSubmission.objects.filter(
         individual__family__project=project).prefetch_related('matchmakersubmissiongenes_set')
 
@@ -325,7 +323,7 @@ def project_mme_submisssions(request, project_guid):
 
 @login_and_policies_required
 def project_notifications(request, project_guid, read_status):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
     is_subscriber = project.subscribers.user_set.filter(id=request.user.id).exists()
     if not is_subscriber:
         max_loaded = _project_notifications(
@@ -360,14 +358,14 @@ def _project_notifications(project, notifications):
 
 @login_and_policies_required
 def mark_read_project_notifications(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
     _project_notifications(project, request.user.notifications).mark_all_as_read()
     return create_json_response({'readCount': request.user.notifications.read().count(), 'unreadNotifications': []})
 
 
 @login_and_policies_required
 def subscribe_project_notifications(request, project_guid):
-    project = get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_view_permission(project_guid, request.user)
     request.user.groups.add(project.subscribers)
     return create_json_response({'isSubscriber': True})
 

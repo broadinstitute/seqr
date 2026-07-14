@@ -224,7 +224,7 @@ def handle_api_response(
 def register_caids(
     genome_version: Literal[GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38],
     variants: Union[list[VariantDetailsGRCh37SnvIndel], list[VariantDetailsSnvIndel]],
-) -> int:
+) -> tuple[int, Union[list[VariantDetailsGRCh37SnvIndel], list[VariantDetailsSnvIndel]]]:
     rows = list(ALLELE_REGISTRY_HEADERS[genome_version]) # NB: new copy of the list
     for variant in variants:
         chrom, pos, ref, alt = variant.variant_id.split("-")
@@ -254,10 +254,14 @@ def register_caids(
     )
     mapped_variants = handle_api_response(genome_version, res)
     max_key_id = -1
+    update_variants = []
     for variant in variants:
-        variant.caid = mapped_variants.get(variant.variant_id, None)
+        caid = mapped_variants.get(variant.variant_id)
+        if caid:
+            variant.caid = caid
+            update_variants.append(variant)
         max_key_id = max(max_key_id, variant.key_id)
-    return max_key_id
+    return max_key_id, update_variants
 
 def join_series(model: Union[VariantDetailsSnvIndel, VariantDetailsGRCh37SnvIndel], min_: int, max_: int):
     table = model._meta.db_table
@@ -316,8 +320,8 @@ class Command(BaseCommand):
                     break
 
                 try:
-                    max_key = register_caids(genome_version, variants)
-                    variant_details_model.objects.using('clickhouse_write').bulk_update(variants, ["caid"])
+                    max_key, update_variants = register_caids(genome_version, variants)
+                    variant_details_model.objects.using('clickhouse_write').bulk_update(update_variants, ["caid"])
                     # Save current key on every iteration
                     curr_key = max_key
                     version_obj.version = curr_key
