@@ -45,7 +45,7 @@ django-clickhouse-backend==1.6
     # via -r requirements.in
 django-cors-headers==3.14.0
     # via -r requirements.in
-django-csp==4.0
+django-csp==3.8
     # via -r requirements.in
 django-guardian==3.3.2
     # via -r requirements.in
@@ -101,9 +101,7 @@ oauthlib==3.3.1
 openpyxl==3.1.5
     # via -r requirements.in
 packaging==26.2
-    # via
-    #   django-csp
-    #   gunicorn
+    # via gunicorn
 pillow==12.3.0
     # via -r requirements.in
 proto-plus==1.28.1
