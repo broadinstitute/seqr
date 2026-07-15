@@ -5,9 +5,7 @@
 #    pip-compile requirements.in
 #
 asgiref==3.12.1
-    # via
-    #   django
-    #   django-cors-headers
+    # via django
 beautifulsoup4==4.15.0
     # via markdownify
 certifi==2026.6.17
@@ -45,7 +43,7 @@ django-anymail==14.0
     # via -r requirements.in
 django-clickhouse-backend==1.6
     # via -r requirements.in
-django-cors-headers==4.9.0
+django-cors-headers==3.14.0
     # via -r requirements.in
 django-csp==4.0
     # via -r requirements.in
