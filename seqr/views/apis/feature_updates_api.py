@@ -26,7 +26,7 @@ def get_feature_updates(request):
     entries = []
     for entry in fetch_feature_updates():
         # Atom feeds can have multiple content elements per feed entry
-        markdown = "".join(md(content.value) for content in entry.content)
+        markdown = "\n\n".join(md(content.value) for content in entry.content)
         entries.append(
             {
                 "author": entry.author,
