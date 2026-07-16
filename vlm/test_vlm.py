@@ -816,6 +816,11 @@ class VlmTestCase(AioHTTPTestCase):
             self._caplog.messages,
         )
 
+        async with self.client.request('GET', f'/vlm/{path}?assemblyId=GRCh37&referenceName=1&start=39190091&referenceBases=T&alternateBases=G', headers=headers) as resp:
+            self.assertEqual(resp.status, 200)
+            resp_json = await resp.json()
+        self.assertDictEqual(resp_json, response)
+
         async with self.client.request('GET', f'/vlm/{path}?assemblyId=hg19&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
