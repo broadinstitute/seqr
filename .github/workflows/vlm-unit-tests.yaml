@@ -11,14 +11,13 @@ on:
       - dev
     paths:
       - 'vlm/**'
-      - '.github/workflows/*vlm*.yaml'
-      - 'clickhouse_search/fixtures/clickhouse_search.json'
-      - 'seqr/fixtures/1kg_project.json'
+      - '.github/workflows/*vlm-release.yaml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
+      - 'clickhouse_search/migrations/*.py'
       - 'clickhouse_search/fixtures/clickhouse_search.json'
       - 'seqr/fixtures/1kg_project.json'
 

@@ -303,10 +303,14 @@ LIFTOVERS = {
 
 
 def _liftover_variant(chrom: str, pos: int, genome_build: str) -> Optional[Tuple[str, int, str]]:
-    liftover_genome_build = GENOME_VERSION_GRCh38 if genome_build == GENOME_VERSION_GRCh37 else GENOME_VERSION_GRCh37
+    if genome_build == GENOME_VERSION_GRCh38:
+        liftover_genome_build = GENOME_VERSION_GRCh37
+        chrom = f'chr{chrom}'
+    else:
+        liftover_genome_build = GENOME_VERSION_GRCh38
     if not LIFTOVERS[genome_build]:
         LIFTOVERS[genome_build] = LiftOver(
             f'{LIFTOVER_DIR}/{genome_build.lower()}_to_{liftover_genome_build.lower()}.over.chain.gz'
         )
-    lifted_coord = LIFTOVERS[genome_build].convert_coordinate(f'chr{chrom}', pos)
+    lifted_coord = LIFTOVERS[genome_build].convert_coordinate(chrom, pos)
     return (lifted_coord[0][0].replace('chr', ''), lifted_coord[0][1], liftover_genome_build) if lifted_coord and lifted_coord[0] else None
