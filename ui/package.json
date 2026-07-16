@@ -126,8 +126,14 @@
   },
   "jest": {
     "collectCoverageFrom": [
-      "src/**/*.{js,jsx,mjs,ts,tsx}"
+      "**/*.{js,jsx,mjs,ts,tsx}"
     ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 40,
+        "statements": 40
+      }
+    },
     "setupFiles": [
       "<rootDir>/config/polyfills.js"
     ],
