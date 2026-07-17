@@ -1,0 +1,1280 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for ui/pages/Public/components/PrivacyPolicy.jsx</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../../../prettify.css" />
+    <link rel="stylesheet" href="../../../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../../../index.html">All files</a> / <a href="index.html">ui/pages/Public/components</a> PrivacyPolicy.jsx</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">100% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/0</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a>
+<a name='L253'></a><a href='#L253'>253</a>
+<a name='L254'></a><a href='#L254'>254</a>
+<a name='L255'></a><a href='#L255'>255</a>
+<a name='L256'></a><a href='#L256'>256</a>
+<a name='L257'></a><a href='#L257'>257</a>
+<a name='L258'></a><a href='#L258'>258</a>
+<a name='L259'></a><a href='#L259'>259</a>
+<a name='L260'></a><a href='#L260'>260</a>
+<a name='L261'></a><a href='#L261'>261</a>
+<a name='L262'></a><a href='#L262'>262</a>
+<a name='L263'></a><a href='#L263'>263</a>
+<a name='L264'></a><a href='#L264'>264</a>
+<a name='L265'></a><a href='#L265'>265</a>
+<a name='L266'></a><a href='#L266'>266</a>
+<a name='L267'></a><a href='#L267'>267</a>
+<a name='L268'></a><a href='#L268'>268</a>
+<a name='L269'></a><a href='#L269'>269</a>
+<a name='L270'></a><a href='#L270'>270</a>
+<a name='L271'></a><a href='#L271'>271</a>
+<a name='L272'></a><a href='#L272'>272</a>
+<a name='L273'></a><a href='#L273'>273</a>
+<a name='L274'></a><a href='#L274'>274</a>
+<a name='L275'></a><a href='#L275'>275</a>
+<a name='L276'></a><a href='#L276'>276</a>
+<a name='L277'></a><a href='#L277'>277</a>
+<a name='L278'></a><a href='#L278'>278</a>
+<a name='L279'></a><a href='#L279'>279</a>
+<a name='L280'></a><a href='#L280'>280</a>
+<a name='L281'></a><a href='#L281'>281</a>
+<a name='L282'></a><a href='#L282'>282</a>
+<a name='L283'></a><a href='#L283'>283</a>
+<a name='L284'></a><a href='#L284'>284</a>
+<a name='L285'></a><a href='#L285'>285</a>
+<a name='L286'></a><a href='#L286'>286</a>
+<a name='L287'></a><a href='#L287'>287</a>
+<a name='L288'></a><a href='#L288'>288</a>
+<a name='L289'></a><a href='#L289'>289</a>
+<a name='L290'></a><a href='#L290'>290</a>
+<a name='L291'></a><a href='#L291'>291</a>
+<a name='L292'></a><a href='#L292'>292</a>
+<a name='L293'></a><a href='#L293'>293</a>
+<a name='L294'></a><a href='#L294'>294</a>
+<a name='L295'></a><a href='#L295'>295</a>
+<a name='L296'></a><a href='#L296'>296</a>
+<a name='L297'></a><a href='#L297'>297</a>
+<a name='L298'></a><a href='#L298'>298</a>
+<a name='L299'></a><a href='#L299'>299</a>
+<a name='L300'></a><a href='#L300'>300</a>
+<a name='L301'></a><a href='#L301'>301</a>
+<a name='L302'></a><a href='#L302'>302</a>
+<a name='L303'></a><a href='#L303'>303</a>
+<a name='L304'></a><a href='#L304'>304</a>
+<a name='L305'></a><a href='#L305'>305</a>
+<a name='L306'></a><a href='#L306'>306</a>
+<a name='L307'></a><a href='#L307'>307</a>
+<a name='L308'></a><a href='#L308'>308</a>
+<a name='L309'></a><a href='#L309'>309</a>
+<a name='L310'></a><a href='#L310'>310</a>
+<a name='L311'></a><a href='#L311'>311</a>
+<a name='L312'></a><a href='#L312'>312</a>
+<a name='L313'></a><a href='#L313'>313</a>
+<a name='L314'></a><a href='#L314'>314</a>
+<a name='L315'></a><a href='#L315'>315</a>
+<a name='L316'></a><a href='#L316'>316</a>
+<a name='L317'></a><a href='#L317'>317</a>
+<a name='L318'></a><a href='#L318'>318</a>
+<a name='L319'></a><a href='#L319'>319</a>
+<a name='L320'></a><a href='#L320'>320</a>
+<a name='L321'></a><a href='#L321'>321</a>
+<a name='L322'></a><a href='#L322'>322</a>
+<a name='L323'></a><a href='#L323'>323</a>
+<a name='L324'></a><a href='#L324'>324</a>
+<a name='L325'></a><a href='#L325'>325</a>
+<a name='L326'></a><a href='#L326'>326</a>
+<a name='L327'></a><a href='#L327'>327</a>
+<a name='L328'></a><a href='#L328'>328</a>
+<a name='L329'></a><a href='#L329'>329</a>
+<a name='L330'></a><a href='#L330'>330</a>
+<a name='L331'></a><a href='#L331'>331</a>
+<a name='L332'></a><a href='#L332'>332</a>
+<a name='L333'></a><a href='#L333'>333</a>
+<a name='L334'></a><a href='#L334'>334</a>
+<a name='L335'></a><a href='#L335'>335</a>
+<a name='L336'></a><a href='#L336'>336</a>
+<a name='L337'></a><a href='#L337'>337</a>
+<a name='L338'></a><a href='#L338'>338</a>
+<a name='L339'></a><a href='#L339'>339</a>
+<a name='L340'></a><a href='#L340'>340</a>
+<a name='L341'></a><a href='#L341'>341</a>
+<a name='L342'></a><a href='#L342'>342</a>
+<a name='L343'></a><a href='#L343'>343</a>
+<a name='L344'></a><a href='#L344'>344</a>
+<a name='L345'></a><a href='#L345'>345</a>
+<a name='L346'></a><a href='#L346'>346</a>
+<a name='L347'></a><a href='#L347'>347</a>
+<a name='L348'></a><a href='#L348'>348</a>
+<a name='L349'></a><a href='#L349'>349</a>
+<a name='L350'></a><a href='#L350'>350</a>
+<a name='L351'></a><a href='#L351'>351</a>
+<a name='L352'></a><a href='#L352'>352</a>
+<a name='L353'></a><a href='#L353'>353</a>
+<a name='L354'></a><a href='#L354'>354</a>
+<a name='L355'></a><a href='#L355'>355</a>
+<a name='L356'></a><a href='#L356'>356</a>
+<a name='L357'></a><a href='#L357'>357</a>
+<a name='L358'></a><a href='#L358'>358</a>
+<a name='L359'></a><a href='#L359'>359</a>
+<a name='L360'></a><a href='#L360'>360</a>
+<a name='L361'></a><a href='#L361'>361</a>
+<a name='L362'></a><a href='#L362'>362</a>
+<a name='L363'></a><a href='#L363'>363</a>
+<a name='L364'></a><a href='#L364'>364</a>
+<a name='L365'></a><a href='#L365'>365</a>
+<a name='L366'></a><a href='#L366'>366</a>
+<a name='L367'></a><a href='#L367'>367</a>
+<a name='L368'></a><a href='#L368'>368</a>
+<a name='L369'></a><a href='#L369'>369</a>
+<a name='L370'></a><a href='#L370'>370</a>
+<a name='L371'></a><a href='#L371'>371</a>
+<a name='L372'></a><a href='#L372'>372</a>
+<a name='L373'></a><a href='#L373'>373</a>
+<a name='L374'></a><a href='#L374'>374</a>
+<a name='L375'></a><a href='#L375'>375</a>
+<a name='L376'></a><a href='#L376'>376</a>
+<a name='L377'></a><a href='#L377'>377</a>
+<a name='L378'></a><a href='#L378'>378</a>
+<a name='L379'></a><a href='#L379'>379</a>
+<a name='L380'></a><a href='#L380'>380</a>
+<a name='L381'></a><a href='#L381'>381</a>
+<a name='L382'></a><a href='#L382'>382</a>
+<a name='L383'></a><a href='#L383'>383</a>
+<a name='L384'></a><a href='#L384'>384</a>
+<a name='L385'></a><a href='#L385'>385</a>
+<a name='L386'></a><a href='#L386'>386</a>
+<a name='L387'></a><a href='#L387'>387</a>
+<a name='L388'></a><a href='#L388'>388</a>
+<a name='L389'></a><a href='#L389'>389</a>
+<a name='L390'></a><a href='#L390'>390</a>
+<a name='L391'></a><a href='#L391'>391</a>
+<a name='L392'></a><a href='#L392'>392</a>
+<a name='L393'></a><a href='#L393'>393</a>
+<a name='L394'></a><a href='#L394'>394</a>
+<a name='L395'></a><a href='#L395'>395</a>
+<a name='L396'></a><a href='#L396'>396</a>
+<a name='L397'></a><a href='#L397'>397</a>
+<a name='L398'></a><a href='#L398'>398</a>
+<a name='L399'></a><a href='#L399'>399</a>
+<a name='L400'></a><a href='#L400'>400</a>
+<a name='L401'></a><a href='#L401'>401</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/* eslint-disable react/jsx-one-expression-per-line */
+&nbsp;
+import React from 'react'
+import { Header, Segment, List } from 'semantic-ui-react'
+&nbsp;
+export default <span class="fstat-no" title="function not covered" >()</span> =&gt; (
+<span class="cstat-no" title="statement not covered" >  &lt;Segment basic padded="very"&gt;</span>
+    &lt;Header dividing content="Privacy Policy" subheader="Last Updated 9/22/2023" size="huge" /&gt;
+&nbsp;
+    The Broad Institute of MIT &amp; Harvard (&lt;b&gt;&amp;quot;Broad&amp;quot;&lt;/b&gt;) values your privacy. This Privacy Policy
+    (&lt;b&gt;&amp;quot;Policy&amp;quot;&lt;/b&gt;) provides important information about how Broad collects and uses your Personal
+    Information (as defined in Section 6 below) through the seqr platform.
+&nbsp;
+    &lt;b&gt;
+      &amp;nbsp;Please make sure you review this Policy before using the seqr platform. If you have any questions about
+      this Policy, please contact us at &lt;a href="mailto:seqr@broadinstitute.org"&gt;seqr@broadinstitute.org&lt;/a&gt;.
+    &lt;/b&gt;
+&nbsp;
+    &lt;Header content="1. What is Broad?" size="medium" /&gt;
+    The Broad Institute of MIT &amp; Harvard is a non-profit research institution that is dedicated to improving human
+    health by using genomics to advance our understanding of the biology and treatment of human disease, and to help lay
+    the groundwork for a new generation of therapies.  For more information on the organization, please
+    see &lt;a href="https://www.broadinstitute.org/about-us"&gt;https://www.broadinstitute.org/about-us&lt;/a&gt;.  We will refer
+    to Broad in this Policy as &lt;b&gt;&amp;quot;we,&amp;quot;&lt;/b&gt; &lt;b&gt;&amp;quot;us&amp;quot;&lt;/b&gt; or &lt;b&gt;&amp;quot;our.&amp;quot;&lt;/b&gt; &lt;br /&gt;&lt;br /&gt;
+&nbsp;
+    This Policy applies to the seqr platform (&lt;b&gt;&amp;quot;Platform&amp;quot;&lt;/b&gt;) - an open-source web-based application
+    developed and hosted by Broad. To be more broadly available to researchers, seqr has been made available as a
+    connected application in the National Human Genome Research Institute Analysis Visualization and Informatics
+    Lab‐Space (NHGRI&amp;apos;s AnVIL; https://anvilproject.org). The seqr platform is used by Broad employees and external
+    users for family-focused rare disease analysis and project management. While the Platform is owned by the
+    Broad&amp;apos;s Translational Genomics Group, the genomic and other data hosted within the Platform
+    (&lt;b&gt;&amp;quot;Genomic Data&amp;quot;&lt;/b&gt;) is owned or controlled by the data contributor who consented the sample and
+    uploaded the data to the Platform. &lt;br /&gt;&lt;br /&gt;
+&nbsp;
+    Please note that the Platform may link to other websites that are not affiliated with us
+    (&lt;b&gt;&amp;quot;Third-Party Sites&amp;quot;&lt;/b&gt;). We may offer those links as a convenience to you but we are not responsible
+    for the privacy practice of those Third-Party Sites. You should make sure you review the privacy policies for those
+    Third-Party Sites before providing them any of your information.
+&nbsp;
+    &lt;Header content="2. What is the purpose and scope of this Policy?" size="medium" /&gt;
+    This Policy describes the Personal Information we collect from users of the Platform, the purposes for collecting
+    that information, how we use that information, and with whom we share that information.  Please note that this
+    Policy only applies to information that we collect about users of the Platform, and does not apply to Genomic Data
+    about Research Participants that may be contributed by users to the Platform.
+&nbsp;
+    &lt;Header content="3. Does this Policy Apply to Genomic Data Uploaded to the Platform?" size="medium" /&gt;
+    This Policy only applies to information that we collect about users of the Platform and does not apply to Genomic
+    Data contributed by users to the Platform. While the Platform also allows users to view and contribute Genomic Data
+    for research purposes,  the relevant Genomic Data contributor is  responsible for obtaining all necessary
+    permissions and consents for such data.  If you are a user of the Platform, you are required to keep the Genomic
+    Data confidential and not to disclose such data to any third party, except other users of the Platform with
+    permission to view it.  If you are an individual whose Genomic Data has been uploaded to the Platform
+    (a &lt;b&gt;&amp;quot;Research Participant&amp;quot;&lt;/b&gt;) and have questions about the privacy or use of your Genomic Data, please
+    refer to the research consent for the study you participated in for more information, including contact information.
+&nbsp;
+    &lt;Header content="4. If I use the Platform, am I agreeing to this Policy?" size="medium" /&gt;
+    Yes.  However, your use of the Platform is entirely voluntary and you have certain rights to control use of your
+    information as described below.  If you decide to use the Platform, you are agreeing that we can use your
+    information as described in this Policy.
+&nbsp;
+    &lt;Header content="5. How do we collect information from you?" size="medium" /&gt;
+    We collect information about you in two ways.  The first is information you voluntarily provide to us when you
+    choose to do any of the following, none of which is required:
+    &lt;List bulleted&gt;
+      &lt;List.Item&gt;
+        Register to use the Platform, such as when you create an account on the Platform, in which case we collect your
+        name and e-mail address;
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        Use the Platform, such as comments, material or information you may post on or upload to the Platform
+        (&amp;quot;User Content&amp;quot;); and
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        Communicate with us (e.g., by email).
+      &lt;/List.Item&gt;
+    &lt;/List&gt;
+    In all these cases, we only collect information that you have provided to us, except for information obtained
+    through cookies and the tracking technologies noted below. The second way we collect information is through certain
+    automated technologies that are used when you access our Platform.  An example is a &amp;quot;cookie&amp;quot;, which is a
+    small piece of computer code that is placed on your computer or other device that can be used for various purposes,
+    such as to recognize a user or to track their activities on a website.  We describe  automated technologies in more
+    detail in Section 7 below.  We collect various information through these automated technologies, including your
+    Device Information as described in Section 6 below; your Location Information as described in Section 6 below; and
+    how you use our Site and App, such as the web pages you view, the links you click, the length of time you visit our
+    Platform, and the web page or web site that led you to our Platform.
+&nbsp;
+    &lt;Header content="6. What kind of information do we collect?" size="medium" /&gt;
+    We collect various types of information:
+    &lt;List bulleted&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;&amp;quot;Personal Information&amp;quot;&lt;/b&gt; is information that alone or in combination with other information may
+        be used to readily identify, contact, or locate you. For example, your name and email address are Personal
+        Information we may collect through your use of the Platform.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;&amp;quot;Device Information&amp;quot;&lt;/b&gt; is information that relates to a particular computer, mobile device, or
+        other device (e.g., iPad) that you use to access the Platform. Device information includes such things as an IP
+        address (which is a number assigned by an internet service provider to the computer you use to access the
+        Internet), a device ID (which is a number assigned to a mobile phone by the device manufacturer), or the type of
+        operating system or web browser used to access the Platform.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;&amp;quot;Location Information&amp;quot;&lt;/b&gt; is information that can be used to identify your geographical location,
+        such as where you are geographically located when you are accessing the Platform using a mobile phone.  We will
+        not collect Location Information from your mobile phone using a location-based service without sending you a
+        separate notice to your mobile phone and obtaining your consent.  Please note, however, that certain automated
+        technologies such as cookies can identify IP addresses and other data to infer the location of a device that you
+        may be using.
+      &lt;/List.Item&gt;
+    &lt;/List&gt;
+&nbsp;
+    &lt;Header content="7. Do we use cookies and other tracking technologies?" size="medium" /&gt;
+    Yes.  We use cookies for various purposes, such as to make it easier for you to navigate our Platform, to enable a
+    faster log-in process, or to allow us to track your activities on our Platform.  There are two types of cookies:
+    session and persistent cookies.
+    &lt;List bulleted&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Session Cookies.&lt;/i&gt; Session cookies exist only during a session.  They disappear from your computer or
+        device when you close your browser or App or turn off your computer or device.  We use Session Cookies to allow
+        our systems to uniquely identify you during a session or while you are logged into the Platform.  This allows us
+        to process your communications and requests and verify your identity after you have logged in and as you move
+        through our Platform, and to optimize your experience when using the Platform.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Persistent Cookies.&lt;/i&gt; Persistent Cookies remain on your computer or device after you have closed your
+        browser or turned off your computer or mobile device.  We use persistent cookies such as local storage objects,
+        and other similar technologies to track activity on our Platform and to enhance the functionality of our
+        Platform to track aggregate and statistical information about user activity on our Platform (see
+        &amp;quot;Tracking Technologies&amp;quot; below).  We may also use local storage objects to collect and store
+        information about your visits to our Platform, such as page visits, the duration of the visit, the specific
+        link(s) that you clicked during your visit, and the address of the website from which you arrived at the
+        Platform.
+      &lt;/List.Item&gt;
+    &lt;/List&gt;
+&nbsp;
+    &lt;b&gt;Disabling Cookies.&lt;/b&gt; Most web browsers automatically accept cookies, but if you prefer, you can edit your
+    browser options to block them in the future. The Help portion of the toolbar on most browsers will tell you how to
+    prevent your computer from accepting new cookies, how to have the browser notify you when you receive a new cookie,
+    or how to disable cookies altogether.  Visitors to our Site who disable cookies may not be able to browse certain
+    areas of the Site or use the Platform.&lt;br /&gt;&lt;br /&gt;
+&nbsp;
+    &lt;b&gt;Tracking Technologies.&lt;/b&gt; We use automated devices and applications, such as Google Analytics, to evaluate usage
+    of our Platform.  We also may use other analytic means to evaluate our Services.  We use these tools to help us
+    improve our Platform, performance, and user experiences.  We may also use third-party tracking technologies,
+    such as a web application firewall, to detect malicious code or attacks on our Platform. These entities may use
+    cookies and other tracking technologies to perform their services. We do not share your Personal Information with
+    these third parties.
+&nbsp;
+    &lt;Header content="8. Do you respond to Do Not Track signals?" size="medium" /&gt;
+    Do Not Track (&amp;quot;DNT&amp;quot;) is a privacy preference that users can set in their web browsers. When users turn on
+    DNT, their browser sends a message to websites requesting that they do not track the user. However, our Platform
+    does not change its information collection in response to DNT browser settings or signals. For information about
+    DNT, visit &lt;a href="https://www.allaboutdnt.org"&gt;www.allaboutdnt.org&lt;/a&gt;.
+&nbsp;
+    &lt;Header content="9. How do we use your information?" size="medium" /&gt;
+    We use your information, including your Personal Information, for various purposes:
+    &lt;List bulleted&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Provide the Platform.&lt;/i&gt; We, and our vendors and service providers, use your information (e.g. your Profile
+        information, user identification, and password) to provide the Platform, respond to your inquiries, and
+        troubleshoot issues with the Platform, and for other customer service purposes.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Personalize Your Experience.&lt;/i&gt;  We use your information to tailor the content and information that we may
+        send or display to you, to offer location customization, and personalized help and instructions, and to
+        otherwise personalize your experiences while you are using the Platform.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Improve and Develop Our Platform.&lt;/i&gt; We use your information to ensure our Platform is working as intended,
+        to better understand how users access and use our Platform, both on an aggregated and individualized basis, to
+        make improvements to our Platform, to develop new features and applications, and for other research and
+        analytical purposes.
+      &lt;/List.Item&gt;
+    &lt;/List&gt;
+&nbsp;
+    &lt;Header content="10. With whom do we share your information?" size="medium" /&gt;
+    We may need to share your information, including your Personal Information, with third parties.  The following are
+    the categories of third parties with whom we may share your Personal Information:
+    &lt;List bulleted&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Other Users.&lt;/i&gt; The purpose of the Platform is to facilitate the sharing of information and collaboration.
+        During such collaboration, Personal Information you supplied during the registration process may be visible to
+        other Platform users.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Vendors and Service Providers.&lt;/i&gt; We use various third-party vendors and service providers that assist us
+        in providing the Platform.  For example, we may use third-party vendors to store and authenticate account
+        credentials, send email communications, and for hosting and storing information collected through our Platform.
+        We may need to share your information with these vendors and service providers to enable them to provide these
+        services to us.  These service providers and vendors are required to only use your information to provide their
+        services to us and in a manner consistent with this Policy.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Marketing.&lt;/i&gt; We do not rent, sell, or share Personal Information about you with other people or
+        unaffiliated organizations for marketing purposes.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;As Required By Law.&lt;/i&gt; We may be required, by law, to disclose your Personal Information to third parties,
+        such as in the following situations:
+        &lt;List.List&gt;
+          &lt;List.Item&gt;In response to a request by law enforcement;&lt;/List.Item&gt;
+          &lt;List.Item&gt;
+            In response to legal process, such as a subpoena, a request for discovery in a civil proceeding, or in
+            response to a court order.
+          &lt;/List.Item&gt;
+        &lt;/List.List&gt;
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Enforce Our Terms and Protect You, Us and Others.&lt;/i&gt; We may access, preserve, and disclose your Personal
+        Information to enforce the Terms of Use for the Platform and protect your, our, or others’ rights, property,
+        or safety.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Merger, Sale, or Other Corporate Transactions.&lt;/i&gt; A legal entity, such as Broad, may be involved in a
+        business transaction where its ownership or assets are sold or transferred to another legal entity.  This can
+        happen in a merger with another legal entity, an acquisition by another legal entity, a corporate
+        reorganization, or a legal proceeding (e.g. bankruptcy or receivership), where a trustee or other party takes
+        over control of the entity.  In each of these situations, your information, including your Personal Information,
+        may be sold or transferred as part of such a transaction as permitted by law and/or contract.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;With Your Consent.&lt;/i&gt; We may ask you from time to time to give us permission to share your information with
+        other third parties not described in this section.  In each case, we will describe that third party and the
+        purpose for sharing your information.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;i&gt;Aggregate and De-Identified Information.&lt;/i&gt; We may share aggregate or de-identified information about users
+        and their use of the Platform with third parties and publicly for marketing, advertising, research, or similar
+        purposes.  This information will not identify you personally.
+      &lt;/List.Item&gt;
+    &lt;/List&gt;
+&nbsp;
+    &lt;Header content="11. Can other users see my Personal Information?" size="medium" /&gt;
+    The Platform allows you to interact with other users.  Therefore, any information that you post to the Platform,
+    including your contact information, will be visible to other users. Although we expect users to only use such
+    information in connection with the Platform, we cannot assure you that such other users will not disclose or use
+    your information outside of the Platform.
+&nbsp;
+    &lt;Header content="12. What rights do I have with respect to my information?" size="medium" /&gt;
+    Users can update their seqr profile at any time.  All users can also contact us to request access to, a copy of,
+    correction, or deletion of their Personal Information by contacting us
+    at &lt;a href="mailto:seqr@broadinstitute.org"&gt;seqr@broadinstitute.org&lt;/a&gt;. &lt;br /&gt;&lt;br /&gt;
+&nbsp;
+    We will respond to any user request as soon as we reasonably can, and within the time and in the manner required by
+    law.  We may request additional information from you to verify the request.  We may not be able to accommodate all
+    requests; for example, we may be unable to accommodate a deletion request if we are required to maintain information
+    under law or a legal obligation or if information is used as part of a published study.
+&nbsp;
+    &lt;Header content="13. What kind of security does seqr use to protect my information?" size="medium" /&gt;
+    We use reasonable security to protect the Personal Information we collect from users, including using our good faith
+    efforts to adhere to the NIST 800-53 Rev 4’s Moderate Impact baseline.  However, we cannot guarantee the security of
+    information we collect or any transmission of information over the Internet.  For this reason, you should make sure
+    that you keep your profile account on the Platform confidential, including any user identification or password.  You
+    should also notify us immediately if there has been any unauthorized use of your account.
+&nbsp;
+    &lt;Header content="14. Is there any transfer of Personal Information from one country to another?" size="medium" /&gt;
+    We store the information you provide on servers in the United States.  If you are a user of the Platform, you agree
+    to the transfer of your Personal Information to the United States and acknowledge that the laws in the United States
+    may offer less protection to your Personal Information than the laws where you live.
+&nbsp;
+    &lt;Header content="15. Whom do I contact if I have a question or a complaint?" size="medium" /&gt;
+    You may contact us at the addresses below if you have any questions or complaints about information practices or
+    this Policy:&lt;br /&gt;
+    By email to: &lt;a href="mailto:seqr@broadinstitute.org"&gt;seqr@broadinstitute.org&lt;/a&gt;&lt;br /&gt;
+    By mail to:&lt;br /&gt;
+    The Broad Institute of MIT and Harvard&lt;br /&gt;
+    415 Main St.&lt;br /&gt;
+    Cambridge, MA 02142,&lt;br /&gt;
+    United States&lt;br /&gt;
+    Attention: Data Privacy&lt;br /&gt;
+&nbsp;
+    &lt;Header content="16. Will you update or change this Policy?" size="medium" /&gt;
+    Yes, we may need to update or change this Policy for various reasons, such as to comply with changes in the law, or
+    to cover new features or services provided through the Platform.  If we update or change this Policy we will post
+    the changes to the Policy on the Platform and in the App. To make sure you are aware of any updates or changes, you
+    should review this Policy periodically and make sure you have your most current email address in your seqr profile.
+    Any changes to our Policy will become effective upon our posting of the revised Policy on the Platform.  Use of the
+    Platform following such changes constitutes your acceptance of the revised Policy then in effect.  You will be able
+    to determine when this Privacy Policy was last revised by checking the &amp;quot;Last Updated&amp;quot; information that
+    appears at the top of this page.
+&nbsp;
+    &lt;Header content="17. HIPAA, Protected Health Information and Clinical Compliance Features." size="medium" /&gt;
+    The Broad is not a Covered Entity or Business Associate as such terms are defined in the Health Insurance
+    Portability and Accountability Act of 1996, as amended, and its related regulations
+    (collectively, &lt;b&gt;&amp;quot;HIPAA&amp;quot;&lt;/b&gt;) and, therefore, is not generally subject to the requirements of HIPAA with
+    respect to &lt;b&gt;P&lt;/b&gt;ersonal Information we process through the Platform.  seqr is not
+    intended &lt;b&gt;to store&lt;/b&gt; protected health information subject to HIPAA (&lt;b&gt;&amp;quot;PHI&amp;quot;&lt;/b&gt;).
+&nbsp;
+    &lt;Header content="18. Notice to Residents of the European Union" size="medium" /&gt;
+    This section outlines certain additional information that we are obligated to provide to data subjects of the
+    European Union as well as certain rights such data subjects have with respect to the processing of their Personal
+    Information, pursuant to applicable local laws.  Capitalized terms not otherwise defined in this Policy, shall have
+    the meaning ascribed to them by the European Union General Data Protection Regulation 2016/679 and its
+    amendments (&lt;b&gt;&amp;quot;GDPR&amp;quot;&lt;/b&gt;).  With respect to User Supplied Data, we are a data processor or subprocessor
+    for our users, who are either data controllers or data processors.  As such, we are not liable for the provisions of
+    GDPR that pertain to the data controllers as it relates to User Supplied Data.  Our obligations as a data processor
+    for User Supplied Data shall include those specified in Article 28 of the GDPR.  If you make a request for User
+    Supplied Data, we will submit that request to the provider of User Supplied Data for further instructions on such
+    request, except to the extent we are required to act upon that request under GDPR.&lt;br /&gt;&lt;br /&gt;
+&nbsp;
+    We do act as data controller for Personal Information that we collect directly from users themselves. In such cases,
+    we rely on the following legal bases for processing such information:
+    &lt;List bulleted&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;Performance of a contract.&lt;/b&gt; We will process your Personal Information to provide the Platform to you,
+        under the terms of the &lt;a href="/terms_of_service"&gt;Terms of Service&lt;/a&gt; you&amp;apos;ve agreed to as a condition of
+        using the Platform.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;Legitimate interests.&lt;/b&gt; We may use your Personal Information for our legitimate interests provided that
+        our legitimate interests are not outweighed by any prejudice or harm to your rights and freedoms, including:
+        &lt;List.List&gt;
+          &lt;List.Item&gt;
+            improving our products and services and the content on Platform (for example to manage our network, improve
+            the Platform, and better tailor the features, performance and support of the Platform);
+          &lt;/List.Item&gt;
+          &lt;List.Item&gt;operating and administering of the Platform;&lt;/List.Item&gt;
+          &lt;List.Item&gt;promoting the safety and security of the Platform;&lt;/List.Item&gt;
+          &lt;List.Item&gt;fulfilling your requests and communicating with you when you contact us; and&lt;/List.Item&gt;
+          &lt;List.Item&gt;marketing and promoting the Platform.&lt;/List.Item&gt;
+        &lt;/List.List&gt;
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;Consent.&lt;/b&gt; In some cases, you will give us consent to use your Personal Information for a specific purpose.
+        For example, we may rely on your consent to use technical information such as cookie data to the extent required
+        by the GDPR.  You can withdraw your consent at any time by contacting
+        as &lt;a href="mailto:seqr@broadinstitute.org"&gt;seqr@broadinstitute.org&lt;/a&gt;; however, such withdrawal shall not
+        affect the legality of any processing done before receipt of the withdrawal.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;Legal obligations.&lt;/b&gt; We may be required to process your Personal Information to comply with our legal
+        obligations.
+      &lt;/List.Item&gt;
+    &lt;/List&gt;
+&nbsp;
+    &lt;b&gt;Data Retention.&lt;/b&gt; We retain Personal Information about you for the time necessary to accomplish the purpose
+    for which such information was collected, usually for the duration of any contractual relationship and for any
+    period thereafter as legally required or permitted by applicable law.  Our retention policies reflect applicable
+    statute of limitation periods and legal requirements.
+&nbsp;
+    &lt;b&gt;EU Data Subject Rights.&lt;/b&gt; Data Subjects of the European Union have the following rights:
+    &lt;List bulleted&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;Access, Correction and Erasure Requests:&lt;/b&gt; You have the right to:
+        &lt;List.List&gt;
+          &lt;List.Item&gt;contact us to confirm whether we are processing your Personal Information;&lt;/List.Item&gt;
+          &lt;List.Item&gt;receive information on how your Personal Information is processed;&lt;/List.Item&gt;
+          &lt;List.Item&gt;obtain a copy of your Personal Information;&lt;/List.Item&gt;
+          &lt;List.Item&gt;request that we update or correct your Personal Information; and&lt;/List.Item&gt;
+          &lt;List.Item&gt;request that we delete Personal Information in certain circumstances.&lt;/List.Item&gt;
+        &lt;/List.List&gt;
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;Right to Object to Processing:&lt;/b&gt; You have the right to request that we cease processing of your Personal
+        Information:  for marketing activities, including profiling for statistical purposes where such processing is
+        based upon our legitimate business interests, unless we are able to demonstrate a compelling legitimate basis
+        for such processing or we need to process your Personal Information for the establishment, exercise or defense
+        of a legal claim.
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;Right to Restrict Processing:&lt;/b&gt; You have the right to request that we limit the processing of your
+        Personal Information:
+        &lt;List.List&gt;
+          &lt;List.Item&gt;
+            while we are evaluating or in the process of responding to a request by you to update or correct your
+            Personal Information where such processing is unlawful and you do not want us to delete your data;
+          &lt;/List.Item&gt;
+          &lt;List.Item&gt;
+            where we no longer require such data, but you want us to retain the data for the establishment, exercise or
+            defense of a legal claim; and
+          &lt;/List.Item&gt;
+          &lt;List.Item&gt;
+            where you have submitted an objection to processing based upon our legitimate business interests, pending
+            our response to such request.
+          &lt;/List.Item&gt;
+        &lt;/List.List&gt;
+      &lt;/List.Item&gt;
+      &lt;List.Item&gt;
+        &lt;b&gt;Data Portability Requests:&lt;/b&gt; You have the right to request that we provide you or a third party that you
+        designate with certain of your Personal Information in a commonly used, machine readable format.  Please note,
+        however, that data portability rights apply only to Personal Information that we have obtained directly from you
+        and only where our processing is based upon consent or the performance of a contract.
+      &lt;/List.Item&gt;
+    &lt;/List&gt;
+&nbsp;
+    If you believe our processing of your Personal Information violates data protection laws, you have a legal right to
+    lodge a complaint with a supervisory authority responsible for data protection.  You may do so in the EU member
+    state of your habitual residence, your place of work or the place of the alleged violation.&lt;br /&gt;&lt;br /&gt;
+&nbsp;
+    &lt;b&gt;Submitting Requests:&lt;/b&gt; EU data subject can submit requests by contacting us
+    at &lt;a href="mailto:seqr@broadinstitute.org"&gt;seqr@broadinstitute.org&lt;/a&gt;.  We will respond to all such requests
+    within 30 days of our receipt of the request, unless there are extenuating circumstances, in which event we may
+    take up to 60 days to respond.  We will inform you if we expect our response to take longer than 30 days.  Please
+    note, however, that certain Personal Information may be exempt from such rights pursuant to applicable data
+    protection laws.  In addition, we will not respond to any request unless we are able to appropriately verify the
+    requester’s identity.  We may charge you a reasonable fee for subsequent copies of Personal Information that you
+    request.  In addition, if we consider that a request is manifestly unfounded or excessive, we may either request a
+    reasonable fee to deal with the request or refuse to deal with the request.
+  &lt;/Segment&gt;
+)
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank">istanbul</a>
+                at Fri Jul 17 2026 16:49:20 GMT-0400 (Eastern Daylight Time)
+            </div>
+        </div>
+        <script src="../../../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../../../sorter.js"></script>
+        <script src="../../../../block-navigation.js"></script>
+    </body>
+</html>
+    
