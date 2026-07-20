@@ -7,7 +7,7 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { FAMILY_MAIN_FIELDS, FAMILY_DETAIL_FIELDS } from 'shared/utils/constants'
 
-import FamilyTable, { FamilyTableComponent } from './FamilyTable'
+import FamilyTable from './FamilyTable'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
 configure({ adapter: new Adapter() })
