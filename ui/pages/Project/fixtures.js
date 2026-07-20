@@ -354,6 +354,7 @@ export const STATE_WITH_2_FAMILIES = {
       name: '1000 Genomes Demo',
       projectCategoryGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
+      genomeVersion: '38',
       workspaceName: 'test-namespace',
       workspaceNamespace: 'test-workspace',
       locusListGuids: ['LL00001_locus_list'],
