@@ -82,16 +82,24 @@ class Command(BaseCommand):
             run_dir: run_details for run_dir, run_details in runs.items()
             if run_dir in success_run_dirs and run_details['run_version'] not in loaded_runs
         }
+        migration_runs = {
+            run_dir: f'{run_details["genome_version"]}/{run_details["dataset_type"]}/{run_details["run_version"]}'
+            for run_dir, run_details in new_runs.items() if CLICKHOUSE_MIGRATION_SENTINEL in run_details["run_version"]
+        }
+        if migration_runs:
+            logger.info(f'Skipping {len(migration_runs)} ClickHouse migrations', extra={
+                'detail': sorted(migration_runs.values()),
+            })
+            new_runs = {
+                run_dir: run_details for run_dir, run_details in new_runs.items() if run_dir not in migration_runs
+            }
         if not new_runs:
             logger.info(f'Data already loaded for all {len(success_run_dirs)} runs')
             return
 
-        logger.info(f'Loading new samples from {len(success_run_dirs)} run(s)')
+        logger.info(f'Loading new samples from {len(new_runs)} run(s)')
         for run_dir, run_details in new_runs.items():
             try:
-                if CLICKHOUSE_MIGRATION_SENTINEL in run_details["run_version"]:
-                    logging.info(f'Skipping ClickHouse migration {run_details["genome_version"]}/{run_details["dataset_type"]}: {run_details["run_version"]}')
-                    continue
                 metadata_path = os.path.join(run_dir, 'metadata.json')
                 self._load_new_samples(metadata_path, **run_details)
             except Exception as e:
