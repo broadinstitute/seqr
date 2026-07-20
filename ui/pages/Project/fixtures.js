@@ -163,6 +163,7 @@ export const STATE_WITH_2_FAMILIES = {
         'I021474_na19679_1',
         'I021475_na19675_1',
       ],
+      externalData: [],
     },
     F011652_2: {
       familyGuid: 'F011652_2',
@@ -175,6 +176,7 @@ export const STATE_WITH_2_FAMILIES = {
         'I021474_na19679_2',
         'I021475_na19675_2',
       ],
+      externalData: [],
     },
   },
   familyNotesByGuid: {
@@ -201,6 +203,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021476_na19678_1: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_1',
+      individualGuid: 'I021476_na19678_1',
       individualId: 'NA19678',
       displayName: 'NA19678',
       affected: 'N',
@@ -213,6 +216,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021475_na19675_1: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_1',
+      individualGuid: 'I021475_na19675_1',
       individualId: 'NA19675',
       affected: 'A',
       caseReviewStatus: 'I',
@@ -255,6 +259,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021474_na19679_1: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_1',
+      individualGuid: 'I021474_na19679_1',
       individualId: 'NA19679',
       displayName: 'NA19679_1',
       affected: 'N',
@@ -281,6 +286,7 @@ export const STATE_WITH_2_FAMILIES = {
     I021475_na19675_2: {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_2',
+      individualGuid: 'I021475_na19675_2',
       individualId: 'NA19675',
       affected: 'A',
       caseReviewStatus: 'I',
@@ -293,6 +299,7 @@ export const STATE_WITH_2_FAMILIES = {
       projectGuid: 'R0237_1000_genomes_demo',
       familyGuid: 'F011652_2',
       individualId: 'NA19679',
+      individualGuid: 'I021474_na19679_2',
       affected: 'N',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -349,6 +356,12 @@ export const STATE_WITH_2_FAMILIES = {
       projectGuid: 'R0237_1000_genomes_demo',
       workspaceName: 'test-namespace',
       workspaceNamespace: 'test-workspace',
+      locusListGuids: ['LL00001_locus_list'],
+      variantTagTypes: [
+        { name: 'Review', category: 'Collaboration', color: '#668FE3', variantTagTypeGuid: 'VTT_REVIEW', numTags: 2 },
+        { name: 'Excluded', category: 'Collaboration', color: '#668FE3', variantTagTypeGuid: 'VTT_EXCLUDED', numTags: 0 },
+        { name: 'Tier 1 - Phenotype not delineated', category: 'CMG Discovery Tags', color: '#44AA60', description: 'Gene and phenotype fully solve the family', variantTagTypeGuid: 'VTT_TIER1', numTags: 1},
+      ],
       collaborators: [
         {
           dateJoined: '2019-02-20T18:01:36.677Z',
@@ -395,8 +408,9 @@ export const STATE_WITH_2_FAMILIES = {
     email: 'test@broadinstitute.org',
     first_name: '',
     id: 1,
-    is_active: true,
-    is_superuser: true,
+    isActive: true,
+    isPm: false,
+    isAnvil: false,
     last_login: '2017-03-14T17:44:53.403Z',
     last_name: '',
     username: 'test',
@@ -1052,7 +1066,16 @@ export const STATE_WITH_2_FAMILIES = {
     },
   },
   search: { familiesByGuid: { result: ['F011652_1', 'F011652_2'] } },
-  genesById: { 'ENSG00000228198': { geneId: 'ENSG00000228198', geneSymbol: 'OR2M3' } },
+  genesById: {
+    ENSG00000228198: {
+      geneId: 'ENSG00000228198',
+      geneSymbol: 'OR2M3',
+      constraints: {},
+      cnSensitivity: {},
+      sHet: {},
+      omimPhenotypes: [],
+    }
+  },
   igvReadsVisibility: {},
   userOptionsByUsername: {
     '3v9tbN78K6': {
@@ -1116,17 +1139,22 @@ export const STATE_WITH_2_FAMILIES = {
   rnaSeqDataByIndividual: {
     I021476_na19678_1: {
       outliers: {
-        ENSG00000228198: [{ isSignificant: true, pValue: 0.0004 }],
-        ENSG00000164458: [{ isSignificant: true, pValue: 0.0073 }],
+        ENSG00000228198: [{ geneId: 'ENSG00000228198', isSignificant: true, pValue: 0.0004, zScore: -5, tissueType: 'M', sequencingType: 'T' }],
+        ENSG00000164458: [{ geneId: 'ENSG00000164458', isSignificant: true, pValue: 0.0073, tissueType: 'M', sequencingType: 'T' }],
       },
+      spliceOutliers: {},
     },
     I021474_na19679_1: {
       outliers: {
-        ENSG00000228198: [{ isSignificant: true, pValue: 0.01 }],
-        ENSG00000164458: [{ isSignificant: false, pValue: 0.73 }],
+        ENSG00000228198: [{ geneId: 'ENSG00000228198', isSignificant: true, pValue: 0.01 }],
+        ENSG00000164458: [{ geneId: 'ENSG00000164458', isSignificant: false, pValue: 0.73 }],
       },
+      spliceOutliers: {},
     },
-    I021476_na19678_2: { outliers: { ENSG00000228198: [{ isSignificant: true, pValue: 0.0214 }] } },
+    I021476_na19678_2: {
+      outliers: { ENSG00000228198: [{ geneId: 'ENSG00000228198', isSignificant: true, pValue: 0.0214 }] },
+      spliceOutliers: {},
+    },
   },
   phenotypeGeneScoresByIndividual: {
     I021476_na19678_1: {
@@ -1140,6 +1168,22 @@ export const STATE_WITH_2_FAMILIES = {
       },
     },
   },
+  locusListsByGuid: {
+    LL00001_locus_list: {
+      locusListGuid: 'LL00001_locus_list',
+      name: 'Known Genes',
+      description: 'A list of known genes',
+      numEntries: 5,
+    },
+  },
+  modal: {},
+  analysisGroupsLoading: { isLoading: false },
+  individualsLoading: { isLoading: false },
+  mmeSubmissionsLoading: { isLoading: false },
+  phenotypeDataLoading: { isLoading: false },
+  projectLocusListsLoading: { isLoading: false },
+  rnaSeqDataLoading: { isLoading: false },
+  savedVariantsLoading: { isLoading: false },
 }
 
 export const DATA_MANAGER_USER = {

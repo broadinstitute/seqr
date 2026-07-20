@@ -14,11 +14,9 @@ jest.mock('../reducers', () => ({
 
 configure({ adapter: new Adapter() })
 
-const STATE = { ...STATE_WITH_2_FAMILIES, savedVariantsLoading: { isLoading: false } }
-
-const { alt, chrom, pos, ref, tagGuids, geneIds } = STATE_WITH_2_FAMILIES.savedVariantsByGuid.SV0000004_116042722_r0390_1000
+const { alt, chrom, pos, ref, tagGuids, geneIds, variantGuid } = STATE_WITH_2_FAMILIES.savedVariantsByGuid.SV0000004_116042722_r0390_1000
 const VARIANT = {
-  variantGuid: 'SV0000004_116042722_r0390_1000',
+  variantGuid,
   chrom,
   pos,
   ref,
@@ -28,7 +26,7 @@ const VARIANT = {
 }
 
 test('renders variant position, genes, and tags columns', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <SelectSavedVariantsTable
@@ -48,7 +46,7 @@ test('renders variant position, genes, and tags columns', () => {
 
 test('selects a row when clicked and calls onChange with the selection', () => {
   const onChange = jest.fn()
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <SelectSavedVariantsTable

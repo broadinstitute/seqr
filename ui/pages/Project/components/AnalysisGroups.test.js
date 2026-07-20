@@ -9,7 +9,7 @@ import AnalysisGroups from './AnalysisGroups'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 // Loading is triggered on mount via a thunk action creator; replace it with a no-op so mounting
-// does not attempt to make a real HTTP request or require additional reducer state
+// does not attempt to make a real HTTP request or require additional reducer STATE_WITH_2_FAMILIES
 jest.mock('../reducers', () => ({
   ...jest.requireActual('../reducers'),
   loadCurrentProjectAnalysisGroups: () => ({ type: 'NOOP' }),
@@ -17,10 +17,8 @@ jest.mock('../reducers', () => ({
 
 configure({ adapter: new Adapter() })
 
-const STATE = { ...STATE_WITH_2_FAMILIES, analysisGroupsLoading: { isLoading: false } }
-
 test('renders the current project analysis group with its name and family count', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <BrowserRouter>
@@ -37,7 +35,7 @@ test('renders the current project analysis group with its name and family count'
 })
 
 test('renders only the requested analysis group when analysisGroupGuid is specified', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <BrowserRouter>

@@ -16,23 +16,8 @@ jest.mock('../reducers', () => ({
 
 configure({ adapter: new Adapter() })
 
-// BaseVariantGene unconditionally reads several gene detail fields the shared fixture's gene record omits
-const GENE = {
-  ...STATE_WITH_2_FAMILIES.genesById.ENSG00000228198,
-  constraints: {},
-  cnSensitivity: {},
-  sHet: {},
-  omimPhenotypes: [],
-}
-const STATE = {
-  ...STATE_WITH_2_FAMILIES,
-  modal: {},
-  phenotypeDataLoading: { isLoading: false },
-  genesById: { ENSG00000228198: GENE },
-}
-
 test('renders the phenotype-prioritized gene table for an individual', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <PhenotypePrioritizedGenes individualGuid="I021476_na19678_1" familyGuid="F011652_1" />
@@ -46,7 +31,7 @@ test('renders the phenotype-prioritized gene table for an individual', () => {
     scores: { compositeLR: 0.066, post_test_probability: 0 },
     tool: 'lirical',
     familyGuid: 'F011652_1',
-    gene: GENE,
+    gene: STATE_WITH_2_FAMILIES.genesById.ENSG00000228198,
     rowId: 'ENSG00000228198-lirical-OMIM:618460',
   }])
   expect(wrapper.text()).toContain('Khan-Khan-Katsanis syndrome')

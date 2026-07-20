@@ -7,8 +7,7 @@ import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
-const { outliers } = STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1
-const RNA_SEQ_DATA = outliers.ENSG00000228198.map(outlier => ({ ...outlier, geneId: 'ENSG00000228198' }))
+const RNA_SEQ_DATA = STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1.outliers.ENSG00000228198
 
 // The scatterplot itself is drawn with d3 on mount; the project's jest config stubs any module
 // whose name contains "d3" (see package.json moduleNameMapper), so deep-mounting it isn't possible.
@@ -35,7 +34,7 @@ test('renders a title, search link, and passes outlier data through to the graph
 })
 
 test('only includes significant outliers in the search link location', () => {
-  const insignificantData = [{ geneId: 'ENSG00000164458', isSignificant: false, pValue: 0.73 }]
+  const insignificantData = STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021474_na19679_1.outliers.ENSG00000164458
   const wrapper = shallow(
     <RnaSeqOutliers
       familyGuid="F011652_1"

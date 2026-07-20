@@ -9,10 +9,8 @@ import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
-const STATE = { ...STATE_WITH_2_FAMILIES, modal: {} }
-
 test('renders an "Edit Datasets" button for a data manager', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditDatasetsButton user={{ isDataManager: true }} />
@@ -23,7 +21,7 @@ test('renders an "Edit Datasets" button for a data manager', () => {
 })
 
 test('renders a "Load Additional Data" button when workspace loading is allowed for a non-manager', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditDatasetsButton user={{ isDataManager: false, isPm: false }} showLoadWorkspaceData />
@@ -34,7 +32,7 @@ test('renders a "Load Additional Data" button when workspace loading is allowed 
 })
 
 test('renders nothing for a regular user without workspace loading', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditDatasetsButton user={{ isDataManager: false, isPm: false }} />

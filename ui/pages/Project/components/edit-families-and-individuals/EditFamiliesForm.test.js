@@ -13,7 +13,7 @@ configure({ adapter: new Adapter() })
 const configureStore = configureMockStore([thunk])
 
 test('renders an editable row for each family in the project', () => {
-  const store = configureStore({ ...STATE_WITH_2_FAMILIES, modal: {} })
+  const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditFamiliesForm modalName="editFamilies" />

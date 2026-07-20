@@ -10,34 +10,8 @@ import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
-const STATE = {
-  ...STATE_WITH_2_FAMILIES,
-  projectsByGuid: {
-    ...STATE_WITH_2_FAMILIES.projectsByGuid,
-    R0237_1000_genomes_demo: {
-      ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
-      variantTagTypes: [
-        {
-          variantTagTypeGuid: 'VTT_REVIEW', name: 'Review', category: 'Collaboration', color: '#668FE3', numTags: 2,
-        },
-        {
-          variantTagTypeGuid: 'VTT_EXCLUDED', name: 'Excluded', category: 'Collaboration', color: '#668FE3', numTags: 0,
-        },
-        {
-          variantTagTypeGuid: 'VTT_TIER1',
-          name: 'Tier 1 - Phenotype not delineated',
-          category: 'CMG Discovery Tags',
-          color: '#44AA60',
-          numTags: 1,
-          description: 'Gene and phenotype fully solve the family',
-        },
-      ],
-    },
-  },
-}
-
 test('renders a summary row for each tag type with saved variants', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter>
@@ -62,7 +36,7 @@ test('renders a summary row for each tag type with saved variants', () => {
 })
 
 test('does not show a help icon for tag types without a description', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter>

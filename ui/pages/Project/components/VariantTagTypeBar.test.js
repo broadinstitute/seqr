@@ -4,15 +4,12 @@ import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import { MemoryRouter } from 'react-router-dom'
 
 import VariantTagTypeBar, { getSavedVariantsLinkPath } from './VariantTagTypeBar'
+import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
-const TAG_TYPES = [
-  { name: 'Review', color: '#668FE3', category: 'Collaboration' },
-  { name: 'Excluded', color: '#668FE3', category: 'Collaboration' },
-  { name: 'Tier 1 - Phenotype not delineated', color: '#44AA60', category: 'CMG Discovery Tags' },
-]
-const TAG_TYPE_COUNTS = { Review: 2, Excluded: 1, 'Tier 1 - Phenotype not delineated': 0 }
+const TAG_TYPES = STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo.variantTagTypes
+const TAG_TYPE_COUNTS = { Review: 2, Excluded: 0, 'Tier 1 - Phenotype not delineated': 1 }
 
 test('renders a bar section per tag type with data, linked to the saved variants page', () => {
   const wrapper = mount(
@@ -30,7 +27,7 @@ test('renders a bar section per tag type with data, linked to the saved variants
   expect(barSections.length).toEqual(2)
   expect(barSections.at(0).prop('color')).toEqual('#668FE3')
   expect(barSections.at(0).find('a').prop('href')).toEqual('/project/R0237_1000_genomes_demo/saved_variants/Review')
-  expect(barSections.at(1).find('a').prop('href')).toEqual('/project/R0237_1000_genomes_demo/saved_variants/Excluded')
+  expect(barSections.at(1).find('a').prop('href')).toEqual('/project/R0237_1000_genomes_demo/saved_variants/Tier 1 - Phenotype not delineated')
 })
 
 test('shows a no-data message when there are no saved variants', () => {

@@ -31,25 +31,8 @@ jest.mock('shared/components/panel/variants/SavedVariants', () => function MockS
 
 configure({ adapter: new Adapter() })
 
-const STATE = {
-  ...STATE_WITH_2_FAMILIES,
-  modal: {},
-  savedVariantsLoading: { isLoading: false },
-  projectsByGuid: {
-    ...STATE_WITH_2_FAMILIES.projectsByGuid,
-    R0237_1000_genomes_demo: {
-      ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
-      variantTagTypes: [
-        { name: 'Review', category: 'Collaboration', color: '#668FE3' },
-        { name: 'Excluded', category: 'Collaboration', color: '#668FE3' },
-        { name: 'Tier 1 - Phenotype not delineated', category: 'CMG Discovery Tags', color: '#44AA60' },
-      ],
-    },
-  },
-}
-
 test('renders tag options built from the project variant tag types, grouped by category', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -64,7 +47,7 @@ test('renders tag options built from the project variant tag types, grouped by c
 })
 
 test('defaults to the "Show All" tag when there is no tag/variant in the route', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -77,7 +60,7 @@ test('defaults to the "Show All" tag when there is no tag/variant in the route',
 })
 
 test('uses the requested tag from the route', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/Excluded']}>
@@ -90,7 +73,7 @@ test('uses the requested tag from the route', () => {
 })
 
 test('renders a link-variants button for a family route when the project is editable', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>

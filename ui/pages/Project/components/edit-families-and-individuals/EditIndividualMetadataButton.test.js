@@ -22,7 +22,7 @@ configure({ adapter: new Adapter() })
 const configureStore = configureMockStore([thunk])
 
 test('renders a trigger button', () => {
-  const store = configureStore({ ...STATE_WITH_2_FAMILIES, modal: {} })
+  const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditIndividualMetadataButton />
@@ -36,7 +36,6 @@ test('shows the bulk edit metadata form when opened', () => {
   const store = configureStore({
     ...STATE_WITH_2_FAMILIES,
     modal: { editIndividualsMetadata: { open: true } },
-    individualsLoading: { isLoading: false },
   })
   const wrapper = mount(
     <Provider store={store}>

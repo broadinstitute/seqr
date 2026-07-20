@@ -9,18 +9,8 @@ import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
-const STATE = {
-  ...STATE_WITH_2_FAMILIES,
-  modal: {},
-  mmeSubmissionsLoading: { isLoading: false },
-  // Anvil renders `(workspaceName || user.isPm) && user.isAnvil && (...)`; leaving isPm/isAnvil
-  // undefined (rather than false) makes the expression itself evaluate to undefined, which React
-  // rejects as a component return value
-  user: { ...STATE_WITH_2_FAMILIES.user, isPm: false, isAnvil: false },
-}
-
 test('renders family, matchmaker, and dataset overview sections for the current project', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <ProjectOverview familiesLoading={false} overviewLoading={false} />

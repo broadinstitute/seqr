@@ -152,10 +152,7 @@ test('getIndividualPhenotypeGeneScores', () => {
         diseaseId: 'OMIM:618460',
         diseaseName: 'Khan-Khan-Katsanis syndrome',
         familyGuid: 'F011652_1',
-        gene: {
-          geneId: 'ENSG00000228198',
-          geneSymbol: 'OR2M3',
-        },
+        gene: STATE_WITH_2_FAMILIES.genesById.ENSG00000228198,
         rowId: 'ENSG00000228198-lirical-OMIM:618460',
         rank: 1,
         scores: { compositeLR: 0.066, post_test_probability: 0 },

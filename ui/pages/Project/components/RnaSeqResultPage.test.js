@@ -23,26 +23,8 @@ jest.mock('./RnaSeqOutliers', () => function MockRnaSeqOutliers({ title }) {
 
 configure({ adapter: new Adapter() })
 
-// The fixture's rnaSeqDataByIndividual entries only have an "outliers" key with bare pValue/
-// isSignificant records; this component also reads "spliceOutliers" and groups by tissue/
-// sequencing type, so supply a fuller record for one individual to exercise that logic
-const STATE = {
-  ...STATE_WITH_2_FAMILIES,
-  rnaSeqDataLoading: { isLoading: false },
-  rnaSeqDataByIndividual: {
-    I021476_na19678_1: {
-      outliers: {
-        ENSG00000228198: [{
-          geneId: 'ENSG00000228198', isSignificant: true, pValue: 0.0004, zScore: -5, tissueType: 'muscle', sequencingType: 'RNA',
-        }],
-      },
-      spliceOutliers: {},
-    },
-  },
-}
-
 test('renders a single tissue type as plain text and the outlier plot for it', () => {
-  const store = configureStore()(STATE)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
@@ -50,7 +32,7 @@ test('renders a single tissue type as plain text and the outlier plot for it', (
   )
 
   expect(wrapper.find('Dropdown').exists()).toBe(false)
-  expect(wrapper.text()).toContain('Tissue type: Unknown Tissue, Sequencing Product: Unknown Product')
+  expect(wrapper.text()).toContain('Tissue type: Muscle, Sequencing Product: TruSeq')
   // RnaSeqOutliers itself is React.lazy-loaded and covered by its own test; this just confirms
   // RnaSeqResultPage decided to render a plot section at all for the matching tissue/sequencing type
   expect(wrapper.find('Suspense').exists()).toBe(true)
@@ -58,20 +40,20 @@ test('renders a single tissue type as plain text and the outlier plot for it', (
 
 test('renders a dropdown when there is more than one tissue/sequencing type', () => {
   const multiTissueState = {
-    ...STATE,
+    ...STATE_WITH_2_FAMILIES,
     rnaSeqDataByIndividual: {
+      ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual,
       I021476_na19678_1: {
+        ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1,
         outliers: {
+          ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1.outliers,
           ENSG00000228198: [
+            ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1.outliers.ENSG00000228198,
             {
-              geneId: 'ENSG00000228198', isSignificant: true, pValue: 0.0004, zScore: -5, tissueType: 'muscle', sequencingType: 'RNA',
-            },
-            {
-              geneId: 'ENSG00000228198', isSignificant: true, pValue: 0.001, zScore: -4, tissueType: 'blood', sequencingType: 'RNA',
+              geneId: 'ENSG00000228198', isSignificant: true, pValue: 0.001, zScore: -4, tissueType: 'F', sequencingType: 'W',
             },
           ],
         },
-        spliceOutliers: {},
       },
     },
   }
@@ -84,5 +66,5 @@ test('renders a dropdown when there is more than one tissue/sequencing type', ()
 
   expect(wrapper.find('Dropdown').exists()).toBe(true)
   const options = wrapper.find('Dropdown').prop('options').map(o => o.value)
-  expect(options).toEqual(['muscle-RNA', 'blood-RNA'])
+  expect(options).toEqual(['M-T', 'F-W'])
 })

@@ -22,10 +22,9 @@ configure({ adapter: new Adapter() })
 
 const configureStore = configureMockStore([thunk])
 
-const STATE = { ...STATE_WITH_2_FAMILIES, modal: {}, individualsLoading: { isLoading: false } }
 
 test('renders family bulk edit required/optional columns and the core (non-analyst) fields', () => {
-  const store = configureStore(STATE)
+  const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditFamiliesBulkForm modalName="bulkEditFamilies" />
@@ -44,11 +43,8 @@ test('renders analyst-only optional fields for an analyst user', () => {
   // The analyst-only "external data" column's export formatter is called eagerly for the "download
   // current data" template link, and unconditionally calls .map on it, so it must be an array here
   const analystState = {
-    ...STATE,
-    user: { ...STATE.user, isAnalyst: true },
-    familiesByGuid: Object.entries(STATE.familiesByGuid).reduce((acc, [guid, family]) => (
-      { ...acc, [guid]: { ...family, externalData: [] } }
-    ), {}),
+    ...STATE_WITH_2_FAMILIES,
+    user: { ...STATE_WITH_2_FAMILIES.user, isAnalyst: true },
   }
   const analystStore = configureStore(analystState)
   const wrapper = mount(
@@ -62,7 +58,7 @@ test('renders analyst-only optional fields for an analyst user', () => {
 })
 
 test('renders individuals bulk form with the individual ID required columns', () => {
-  const store = configureStore(STATE)
+  const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditIndividualsBulkForm modalName="bulkEditIndividuals" />
@@ -78,7 +74,7 @@ test('renders individuals bulk form with the individual ID required columns', ()
 })
 
 test('renders individual metadata bulk form', () => {
-  const store = configureStore(STATE)
+  const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditIndividualMetadataBulkForm modalName="bulkEditIndividualMetadata" />
