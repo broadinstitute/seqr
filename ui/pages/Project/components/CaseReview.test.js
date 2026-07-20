@@ -1,19 +1,29 @@
 import React from 'react'
-import { shallow, configure } from 'enzyme'
+import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
-import configureStore from 'redux-mock-store'
-import { getProject } from '../selectors'
+import configureMockStore from 'redux-mock-store'
+import thunk from 'redux-thunk'
+import { Provider } from 'react-redux'
+import { MemoryRouter } from 'react-router-dom'
 import CaseReviewTable from './CaseReview'
 
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
-test('shallow-render without crashing', () => {
-  /*
-    project: PropTypes.object.isRequired,
-   */
+const configureStore = configureMockStore([thunk])
 
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
-  shallow(<CaseReviewTable store={store} />)
+test('renders the accepted families and the individual status summary', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <CaseReviewTable />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(wrapper.text()).toContain('Individual Statuses:')
+  expect(wrapper.find('FamilyTableRow').length).toEqual(2)
 })
