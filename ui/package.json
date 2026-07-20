@@ -132,6 +132,10 @@
       "global": {
         "lines": 40,
         "statements": 40
+      },
+      "pages/Project/components/": {
+        "lines": 60,
+        "statements": 60
       }
     },
     "setupFiles": [
