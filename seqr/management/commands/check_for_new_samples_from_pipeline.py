@@ -82,14 +82,17 @@ class Command(BaseCommand):
             run_dir: run_details for run_dir, run_details in runs.items()
             if run_dir in success_run_dirs and run_details['run_version'] not in loaded_runs
         }
-        num_new_runs = len(new_runs)
-        new_runs = {
-            run_dir: run_details for run_dir, run_details in new_runs.items()
-            if CLICKHOUSE_MIGRATION_SENTINEL not in run_details["run_version"]
+        migration_runs = {
+            run_dir: f'{run_details["genome_version"]}/{run_details["dataset_type"]}/{run_details["run_version"]}'
+            for run_dir, run_details in new_runs.items() if CLICKHOUSE_MIGRATION_SENTINEL in run_details["run_version"]
         }
-        num_migrations = num_new_runs - len(new_runs)
-        if num_migrations:
-            logging.info(f'Skipping {num_migrations} ClickHouse migrations')
+        if migration_runs:
+            logger.info(f'Skipping {len(migration_runs)} ClickHouse migrations', extra={
+                'detail': sorted(migration_runs.values()),
+            })
+            new_runs = {
+                run_dir: run_details for run_dir, run_details in new_runs.items() if run_dir not in migration_runs
+            }
         if not new_runs:
             logger.info(f'Data already loaded for all {len(success_run_dirs)} runs')
             return

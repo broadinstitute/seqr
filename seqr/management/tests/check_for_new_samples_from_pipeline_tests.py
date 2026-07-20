@@ -435,7 +435,9 @@ class CheckNewSamplesTest(object):
         if single_call:
             runs = runs[:1]
         else:
-            logs.insert(-1, ('Skipping 1 ClickHouse migrations', None))
+            logs.insert(-1, ('Skipping 1 ClickHouse migrations', {'detail': [
+                'GRCh38/SNV_INDEL/hail_search_to_clickhouse_migration_WGS_R0877_neptune',
+            ]}))
         for data_type, version in runs:
             logs.append((f'Loading new samples from {data_type}: {version}', None))
             logs += self._additional_loading_logs(data_type, version)
