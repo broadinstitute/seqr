@@ -55,9 +55,9 @@ test('only includes significant outliers in the search link location', () => {
 // functions so these tests can focus on what RnaSeqOutliersGraph itself computes and draws: which
 // points get circles/labels, how they're styled, and how they're positioned/anchored.
 const GRAPH_DATA = [
-  { geneId: 'ENSG00000228198', foldChange: 10, pValue: 0.001, isSignificant: true },
-  { geneId: 'ENSG00000272333', foldChange: 550, pValue: 0.002, isSignificant: true },
-  { geneId: 'ENSG00000164458', foldChange: 20, pValue: 0.5, isSignificant: false },
+  ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1.outliers.ENSG00000228198,
+  ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1.outliers.ENSG00000164458,
+  ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021474_na19679_1.outliers.ENSG00000164458,
 ]
 
 describe('RnaSeqOutliersGraph', () => {
@@ -67,46 +67,46 @@ describe('RnaSeqOutliersGraph', () => {
 
   test('plots one circle per datum, styled by significance', () => {
     shallow(
-      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="foldChange" />,
+      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="zScore" />,
     )
 
     const [circles] = FakeD3Selection.getAppended('circle')
-    expect(circles.attrs.cx).toEqual([10, 550, 20])
-    expect(circles.attrs.cy).toEqual([0.001, 0.002, 0.5])
+    expect(circles.attrs.cx).toEqual([-5, 20, 550])
+    expect(circles.attrs.cy).toEqual([0.0004, 0.0073, 0.73])
     expect(circles.styles.fill).toEqual(['None', 'None', 'None'])
     expect(circles.styles.stroke).toEqual(['red', 'red', 'lightgrey'])
   })
 
   test('only labels significant points, with their gene symbol', () => {
     shallow(
-      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="foldChange" />,
+      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="zScore" />,
     )
 
     const [text] = FakeD3Selection.getAppended('text')
-    expect(text.texts).toEqual(['OR2M3', 'RGS5', null])
+    expect(text.texts).toEqual(['OR2M3', 'TBXT', null])
     expect(text.styles.fill).toEqual(['red', 'red', 'red'])
     expect(text.styles['font-weight']).toEqual(['bold', 'bold', 'bold'])
   })
 
   test('anchors labels to avoid running off the right edge of the graph', () => {
     shallow(
-      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="foldChange" />,
+      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="zScore" />,
     )
 
     // GRAPH_WIDTH (600) - 100 = 500: points past that flip anchor/offset to keep the label on-graph
     const [text] = FakeD3Selection.getAppended('text')
-    expect(text.attrs['text-anchor']).toEqual(['start', 'end', 'start'])
-    expect(text.attrs.x).toEqual([15, 545, 25])
+    expect(text.attrs['text-anchor']).toEqual(['start', 'start', 'end'])
+    expect(text.attrs.x).toEqual([0, 25, 545])
   })
 
   test('re-draws the graph when the data changes', () => {
     const wrapper = shallow(
-      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="foldChange" />,
+      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="zScore" />,
     )
     expect(FakeD3Selection.getAppended('circle')).toHaveLength(1)
     expect(FakeD3Selection.removeCallCount).toEqual(0)
 
-    const newData = [{ geneId: 'ENSG00000164458', foldChange: 5, pValue: 0.9, isSignificant: false }]
+    const newData = [{ geneId: 'ENSG00000164458', zScore: 5, pValue: 0.9, isSignificant: false }]
     wrapper.setProps({ data: newData })
 
     expect(FakeD3Selection.removeCallCount).toEqual(1)
@@ -117,11 +117,11 @@ describe('RnaSeqOutliersGraph', () => {
 
   test('does not re-draw when unrelated props change', () => {
     const wrapper = shallow(
-      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="foldChange" />,
+      <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="zScore" />,
     )
     expect(FakeD3Selection.getAppended('circle')).toHaveLength(1)
 
-    wrapper.setProps({ xField: 'foldChange' })
+    wrapper.setProps({ xField: 'zScore' })
 
     expect(FakeD3Selection.removeCallCount).toEqual(0)
     expect(FakeD3Selection.getAppended('circle')).toHaveLength(1)

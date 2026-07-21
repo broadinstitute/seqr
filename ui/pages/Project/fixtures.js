@@ -1098,6 +1098,14 @@ export const STATE_WITH_2_FAMILIES = {
       sHet: {},
       omimPhenotypes: [],
     },
+    ENSG00000164458: {
+      geneId: 'ENSG00000272333',
+      geneSymbol: 'TBXT',
+      constraints: {},
+      cnSensitivity: {},
+      sHet: {},
+      omimPhenotypes: [],
+    },
   },
   igvReadsVisibility: {},
   userOptionsByUsername: {
@@ -1163,14 +1171,14 @@ export const STATE_WITH_2_FAMILIES = {
     I021476_na19678_1: {
       outliers: {
         ENSG00000228198: [{ geneId: 'ENSG00000228198', isSignificant: true, pValue: 0.0004, zScore: -5, tissueType: 'M', sequencingType: 'T' }],
-        ENSG00000164458: [{ geneId: 'ENSG00000164458', isSignificant: true, pValue: 0.0073, tissueType: 'M', sequencingType: 'T' }],
+        ENSG00000164458: [{ geneId: 'ENSG00000164458', isSignificant: true, pValue: 0.0073, zScore: 20, tissueType: 'M', sequencingType: 'T' }],
       },
       spliceOutliers: {},
     },
     I021474_na19679_1: {
       outliers: {
         ENSG00000228198: [{ geneId: 'ENSG00000228198', isSignificant: true, pValue: 0.01 }],
-        ENSG00000164458: [{ geneId: 'ENSG00000164458', isSignificant: false, pValue: 0.73 }],
+        ENSG00000164458: [{ geneId: 'ENSG00000164458', isSignificant: false, pValue: 0.73, zScore: 550 }],
       },
       spliceOutliers: {},
     },

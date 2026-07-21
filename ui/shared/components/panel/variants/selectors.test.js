@@ -99,7 +99,7 @@ test('getIndividualGeneDataByFamilyGene', () => {
           { geneId: 'ENSG00000228198', individualName: 'NA19679_1', isSignificant: true, pValue: 0.01 },
         ],
         ENSG00000164458: [
-          { geneId: 'ENSG00000164458', individualName: 'NA19678', isSignificant: true, pValue: 0.0073, tissueType: 'M', sequencingType: 'T' },
+          { geneId: 'ENSG00000164458', individualName: 'NA19678', isSignificant: true, pValue: 0.0073, zScore: 20, tissueType: 'M', sequencingType: 'T' },
         ],
       },
       phenotypeGeneScores: {
