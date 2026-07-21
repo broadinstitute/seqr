@@ -11,10 +11,12 @@ const ANALYSIS_GROUP = {
   ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid.AG0000183_test_group, workspaceNamespace: undefined,
 }
 
+const WORKSPACE_ANALYSIS_GROUP = STATE_WITH_2_FAMILIES.analysisGroupsByGuid.AG0000183_test_group
+
 configure({ adapter: new Adapter() })
 
-const renderWithStore = (Component, props) => mount(
-  <Provider store={configureStore()(STATE_WITH_2_FAMILIES)}>
+const renderWithStore = (Component, props, state = STATE_WITH_2_FAMILIES) => mount(
+  <Provider store={configureStore()(state)}>
     <MemoryRouter>
       <Component {...props} />
     </MemoryRouter>
@@ -37,4 +39,30 @@ test('renders a delete button for an existing analysis group', () => {
   const wrapper = renderWithStore(DeleteAnalysisGroupButton, { analysisGroup: ANALYSIS_GROUP })
 
   expect(wrapper.find('ButtonLink').prop('content')).toEqual('Delete Analysis Group')
+})
+
+test('does not render an edit button for an analysis group with a workspaceNamespace when the user is not a PM', () => {
+  const wrapper = renderWithStore(UpdateAnalysisGroupButton, { analysisGroup: WORKSPACE_ANALYSIS_GROUP })
+
+  expect(wrapper.find('ButtonLink').exists()).toBe(false)
+})
+
+test('renders an edit button for an analysis group with a workspaceNamespace when the user is a PM', () => {
+  const state = { ...STATE_WITH_2_FAMILIES, user: { ...STATE_WITH_2_FAMILIES.user, isPm: true } }
+  const wrapper = renderWithStore(UpdateAnalysisGroupButton, { analysisGroup: WORKSPACE_ANALYSIS_GROUP }, state)
+
+  expect(wrapper.find('ButtonLink').prop('content')).toEqual('Edit Analysis Group')
+})
+
+test('does not render a delete button for an analysis group with a workspaceNamespace', () => {
+  const wrapper = renderWithStore(DeleteAnalysisGroupButton, { analysisGroup: WORKSPACE_ANALYSIS_GROUP })
+
+  expect(wrapper.find('ButtonLink').exists()).toBe(false)
+})
+
+test('does not render a delete button for an analysis group with a workspaceNamespace when the user is a PM', () => {
+  const state = { ...STATE_WITH_2_FAMILIES, user: { ...STATE_WITH_2_FAMILIES.user, isPm: true } }
+  const wrapper = renderWithStore(DeleteAnalysisGroupButton, { analysisGroup: WORKSPACE_ANALYSIS_GROUP }, state)
+
+  expect(wrapper.find('ButtonLink').exists()).toBe(false)
 })
