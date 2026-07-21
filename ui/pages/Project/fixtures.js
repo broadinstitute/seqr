@@ -299,6 +299,8 @@ export const STATE_WITH_2_FAMILIES = {
       familyGuid: 'F011652_2',
       individualGuid: 'I021475_na19675_2',
       individualId: 'NA19675',
+      displayName: 'NA19675',
+      mmeSubmissionGuid: 'MS021475_na19675_1',
       affected: 'A',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -428,6 +430,7 @@ export const STATE_WITH_2_FAMILIES = {
     username: 'test',
     displayName: 'Test User',
   },
+  mmeContactNotes: {},
   savedVariantTableState: { hideExcluded: true, recordsPerPage: 1 },
   projectCollaboratorsLoading: {},
   projectSavedVariantsLoading: {},
@@ -1086,7 +1089,15 @@ export const STATE_WITH_2_FAMILIES = {
       cnSensitivity: {},
       sHet: {},
       omimPhenotypes: [],
-    }
+    },
+    ENSG00000272333: {
+      geneId: 'ENSG00000272333',
+      geneSymbol: 'RGS5',
+      constraints: {},
+      cnSensitivity: {},
+      sHet: {},
+      omimPhenotypes: [],
+    },
   },
   igvReadsVisibility: {},
   userOptionsByUsername: {
