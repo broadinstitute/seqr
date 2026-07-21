@@ -16,7 +16,7 @@ const configureStore = configureMockStore([thunk])
 const INITIAL_ENTRIES = ['/project/R0237_1000_genomes_demo/family_page/F011652_1']
 
 test('renders the family display name and its individuals', () => {
-  const store = configureStore({ ...STATE_WITH_2_FAMILIES, familyTagTypeCounts: {} })
+  const store = configureStore(STATE_WITH_2_FAMILIES)
 
   const wrapper = mount(
     <Provider store={store}>

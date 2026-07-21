@@ -14,7 +14,7 @@ const configureStore = configureMockStore([thunk])
 const MATCH = { params: { familyGuid: 'F011652_1' } }
 
 test('renders the affected individual with no matchmaker submission', () => {
-  const store = configureStore({ ...STATE_WITH_2_FAMILIES, matchmakerMatchesLoading: { isLoading: false } })
+  const store = configureStore(STATE_WITH_2_FAMILIES)
 
   const wrapper = mount(
     <Provider store={store}>

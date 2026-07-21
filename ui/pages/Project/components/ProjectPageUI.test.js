@@ -16,9 +16,7 @@ const configureStore = configureMockStore([thunk])
 const MATCH = { params: {} }
 
 test('renders the project sections and the families table', () => {
-  const store = configureStore({
-    ...STATE_WITH_2_FAMILIES, projectDetailsLoading: { isLoading: false }, familyTagTypeCounts: {},
-  })
+  const store = configureStore(STATE_WITH_2_FAMILIES)
 
   const wrapper = mount(
     <Provider store={store}>
