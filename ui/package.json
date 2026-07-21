@@ -126,12 +126,15 @@
   },
   "jest": {
     "collectCoverageFrom": [
-      "**/*.{js,jsx,mjs,ts,tsx}"
+      "**/*.{js,jsx,mjs,ts,tsx}",
+      "!config/**",
+      "!coverage/**"
     ],
     "coverageThreshold": {
       "global": {
-        "lines": 40,
-        "statements": 40
+        "branch": 30,
+        "lines": 50,
+        "statements": 50
       },
       "pages/Project/components/": {
         "lines": 60,
