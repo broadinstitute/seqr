@@ -106,4 +106,5 @@ RnaSeqOutliers.propTypes = {
   title: PropTypes.string,
 }
 
+export { RnaSeqOutliersGraph }
 export default RnaSeqOutliers
