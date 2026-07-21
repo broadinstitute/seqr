@@ -160,7 +160,7 @@
     "moduleNameMapper": {
       "igv": "<rootDir>/config/jest/fileTransform.js",
       "jsoneditor-react": "<rootDir>/config/jest/fileTransform.js",
-      "d3": "<rootDir>/config/jest/fileTransform.js",
+      "d3": "<rootDir>/config/jest/fakeD3.js",
       "pedigreejs": "<rootDir>/config/jest/fileTransform.js",
       "^react-native$": "react-native-web"
     },

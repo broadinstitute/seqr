@@ -2,20 +2,15 @@ import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 
-import { FakeD3Selection } from './testUtils/fakeD3'
+// This project's jest config maps every module whose name contains "d3" (see package.json
+// moduleNameMapper) - which includes d3-array, d3-scale, d3-selection, and
+// shared/components/graph/d3Utils - to config/jest/fakeD3.js, so this is the real FakeD3Selection
+// the component below draws with, not a separate mock.
+import { FakeD3Selection } from 'd3-selection'
 import RnaSeqOutliers, { RnaSeqOutliersGraph } from './RnaSeqOutliers'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
-
-// This project's jest config maps every module whose name contains "d3" (see package.json
-// moduleNameMapper) - which includes d3-array, d3-scale, d3-selection, and
-// shared/components/graph/d3Utils - to the exact same dummy stub file. That means all of those
-// specifiers resolve to one physical module, so they can only be jest.mock'd once: whichever
-// jest.mock call runs last "wins" and its factory is used for every one of them. So instead of
-// mocking each package separately, register a single merged factory (fakeD3Module) that exports
-// everything all of those imports need; every import below receives the same merged object.
-jest.mock('d3-array', () => require('./testUtils/fakeD3').fakeD3Module) // eslint-disable-line global-require
 
 const RNA_SEQ_DATA = STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1.outliers.ENSG00000228198
 
