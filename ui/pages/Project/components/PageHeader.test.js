@@ -61,13 +61,6 @@ test('renders the consent code when the user is a PM viewing a project with a co
   const store = configureStore()({
     ...STATE_WITH_2_FAMILIES,
     user: { ...STATE_WITH_2_FAMILIES.user, isPm: true },
-    projectsByGuid: {
-      ...STATE_WITH_2_FAMILIES.projectsByGuid,
-      R0237_1000_genomes_demo: {
-        ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
-        consentCode: 'H',
-      },
-    },
   })
   const wrapper = mount(
     <Provider store={store}>

@@ -111,6 +111,9 @@ test('renders the family upload and family table fields for a static analysis gr
   expect(familyGuidsField.prop('format')(['a', 'b'])).toEqual({ a: true, b: true })
   expect(familyGuidsField.prop('parse')({ a: true, b: false, c: true })).toEqual(['a', 'c'])
 
+  expect(wrapper.find('ForwardRef(Field)[name="workspaceNamespace"]').exists()).toBe(false)
+  expect(wrapper.find('ForwardRef(Field)[name="workspaceName"]').exists()).toBe(false)
+
   const parseUpload = wrapper.find('ForwardRef(Field)[name="uploadedFamilyIds"]').last().prop('parse')
   expect(parseUpload({ errors: ['bad row'] })).toEqual({ errors: [], info: ['bad row'] })
   expect(parseUpload({ other: 'unchanged' })).toEqual({ other: 'unchanged' })

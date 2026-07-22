@@ -74,32 +74,7 @@ test('renders a dropdown when there is more than one tissue/sequencing type', ()
 })
 
 test('renders the splice junction outlier plot and table when there is significant junction data', () => {
-  const spliceState = {
-    ...STATE_WITH_2_FAMILIES,
-    rnaSeqDataByIndividual: {
-      ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual,
-      I021476_na19678_1: {
-        ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1,
-        spliceOutliers: {
-          ENSG00000228198: [{
-            geneId: 'ENSG00000228198',
-            isSignificant: true,
-            pValue: 0.0004,
-            pAdjust: 0.001,
-            deltaIntronJaccardIndex: -0.5,
-            chrom: '1',
-            start: 100,
-            end: 200,
-            strand: '+',
-            type: 'psi5',
-            tissueType: 'M',
-            sequencingType: 'T',
-          }],
-        },
-      },
-    },
-  }
-  const store = configureStore()(spliceState)
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
