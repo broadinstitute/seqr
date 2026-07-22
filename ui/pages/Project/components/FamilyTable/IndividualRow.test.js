@@ -7,7 +7,7 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { CASE_REVIEW_TABLE_NAME } from '../../constants'
 
-import IndividualRow, { IndividualRowComponent } from './IndividualRow'
+import IndividualRow from './IndividualRow'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
 jest.mock('../../reducers', () => ({
@@ -157,21 +157,19 @@ test('dispatches pedigree and IGV updates and renders parent/IGV select and gene
   expect(igvAction.filePath).toBe('gs://test.cram')
 })
 
-const PROJECT = STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo
-
-const renderIndividualRowComponent = (individual, props = {}) => {
-  const store = configureStore(STATE_WITH_2_FAMILIES)
+const renderIndividualRow = (individual, props = {}, state = STATE_WITH_2_FAMILIES) => {
+  const store = configureStore(state)
   return mount(
     <Provider store={store}>
       <MemoryRouter>
-        <IndividualRowComponent project={PROJECT} individual={individual} {...props} />
+        <IndividualRow individual={individual} {...props} />
       </MemoryRouter>
     </Provider>,
   )
 }
 
 test('renders case review status without a last modified date or user', () => {
-  const wrapper = renderIndividualRowComponent(
+  const wrapper = renderIndividualRow(
     {
       ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
       caseReviewStatusLastModifiedDate: null,
@@ -184,7 +182,7 @@ test('renders case review status without a last modified date or user', () => {
 })
 
 test('renders case review status with a last modified date and user', () => {
-  const wrapper = renderIndividualRowComponent(
+  const wrapper = renderIndividualRow(
     {
       ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
@@ -198,7 +196,7 @@ test('renders case review status with a last modified date and user', () => {
 })
 
 test('renders RNAseq results link when only splice outlier data type is present', () => {
-  const wrapper = renderIndividualRowComponent({
+  const wrapper = renderIndividualRow({
     ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1,
     rnaSample: { loadedDate: '2020-01-01T12:00:00.000Z', dataTypes: ['S'] },
   })
@@ -207,7 +205,7 @@ test('renders RNAseq results link when only splice outlier data type is present'
 })
 
 test('does not render RNAseq results link when no outlier data types are present', () => {
-  const wrapper = renderIndividualRowComponent({
+  const wrapper = renderIndividualRow({
     ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1,
     rnaSample: { loadedDate: '2020-01-01T12:00:00.000Z', dataTypes: ['T'] },
   })
@@ -216,7 +214,7 @@ test('does not render RNAseq results link when no outlier data types are present
 })
 
 test('renders a rejected gene without comments', () => {
-  const wrapper = renderIndividualRowComponent({
+  const wrapper = renderIndividualRow({
     ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
     rejectedGenes: [{ gene: 'BRCA1' }],
   })
@@ -225,7 +223,7 @@ test('renders a rejected gene without comments', () => {
 })
 
 test('renders age details when death year is 0 and birth year is unknown', () => {
-  const wrapper = renderIndividualRowComponent({
+  const wrapper = renderIndividualRow({
     ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
     birthYear: null,
     deathYear: 0,
@@ -235,7 +233,7 @@ test('renders age details when death year is 0 and birth year is unknown', () =>
 })
 
 test('renders age details when death year is known but birth year is unknown', () => {
-  const wrapper = renderIndividualRowComponent({
+  const wrapper = renderIndividualRow({
     ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
     birthYear: null,
     deathYear: 2015,
@@ -245,7 +243,7 @@ test('renders age details when death year is known but birth year is unknown', (
 })
 
 test('renders unknown age when neither birth year nor death year is known', () => {
-  const wrapper = renderIndividualRowComponent({
+  const wrapper = renderIndividualRow({
     ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
     birthYear: null,
     deathYear: null,
@@ -255,7 +253,7 @@ test('renders unknown age when neither birth year nor death year is known', () =
 })
 
 test('renders an unmapped population code as-is', () => {
-  const wrapper = renderIndividualRowComponent({
+  const wrapper = renderIndividualRow({
     ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
     population: 'XYZ',
   })
@@ -264,27 +262,48 @@ test('renders an unmapped population code as-is', () => {
 })
 
 test('renders "Not Loaded" when no population is set', () => {
-  const wrapper = renderIndividualRowComponent(
+  const wrapper = renderIndividualRow(
     {
       ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
       population: null,
     },
-    { project: { ...PROJECT, isAnalystProject: true } },
+    {},
+    {
+      ...STATE_WITH_2_FAMILIES,
+      projectsByGuid: {
+        ...STATE_WITH_2_FAMILIES.projectsByGuid,
+        R0237_1000_genomes_demo: {
+          ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
+          isAnalystProject: true,
+        },
+      },
+    },
   )
 
   expect(wrapper.text()).toMatch(/Imputed Population\s*:Not Loaded/)
 })
 
 test('only shows active or first/last inactive samples from an explicit datasets list', () => {
-  const wrapper = renderIndividualRowComponent(
-    STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+  const individualGuid = 'I021475_na19675_1'
+  const loadedDates = ['2020-01-01', '2020-01-02', '2020-01-03', '2020-01-04']
+  const datasetsByGuid = loadedDates.reduce((acc, loadedDate, i) => ({
+    ...acc,
+    [`D_${loadedDate}`]: {
+      datasetGuid: `D_${loadedDate}`,
+      datasetType: 'SNV_INDEL',
+      sampleType: 'WES',
+      loadedDate,
+      activeIndividuals: i === 1 ? [individualGuid] : [],
+      inactiveIndividuals: i === 1 ? [] : [individualGuid],
+    },
+  }), {})
+
+  const wrapper = renderIndividualRow(
+    STATE_WITH_2_FAMILIES.individualsByGuid[individualGuid],
+    {},
     {
-      datasets: [
-        { loadedDate: '2020-01-01', sampleType: 'WES', datasetType: 'SNV_INDEL', isActive: false },
-        { loadedDate: '2020-01-02', sampleType: 'WES', datasetType: 'SNV_INDEL', isActive: true },
-        { loadedDate: '2020-01-03', sampleType: 'WES', datasetType: 'SNV_INDEL', isActive: false },
-        { loadedDate: '2020-01-04', sampleType: 'WES', datasetType: 'SNV_INDEL', isActive: false },
-      ],
+      ...STATE_WITH_2_FAMILIES,
+      datasetsByGuid: { ...STATE_WITH_2_FAMILIES.datasetsByGuid, ...datasetsByGuid },
     },
   )
 
