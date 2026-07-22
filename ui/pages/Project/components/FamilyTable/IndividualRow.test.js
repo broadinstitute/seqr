@@ -22,33 +22,6 @@ const configureStore = configureMockStore([thunk])
 
 const TEST_INDIVIDUAL_GUID = 'I021475_na19675_1'
 
-const renderIndividualRow = (stateOverrides = {}, individualOverrides = {}, props = {}) => {
-  const state = {
-    ...STATE_WITH_2_FAMILIES,
-    ...stateOverrides,
-    individualsByGuid: {
-      ...STATE_WITH_2_FAMILIES.individualsByGuid,
-      [TEST_INDIVIDUAL_GUID]: {
-        ...STATE_WITH_2_FAMILIES.individualsByGuid[TEST_INDIVIDUAL_GUID],
-        ...individualOverrides,
-      },
-    },
-  }
-  const store = configureStore(state)
-  const wrapper = mount(
-    <Provider store={store}>
-      <MemoryRouter>
-        <IndividualRow
-          family={state.familiesByGuid.F011652_1}
-          individual={state.individualsByGuid[TEST_INDIVIDUAL_GUID]}
-          {...props}
-        />
-      </MemoryRouter>
-    </Provider>,
-  )
-  return { wrapper, store }
-}
-
 test('toggles compact/full individual details via CollapsableLayout when deeply rendered', () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
 
@@ -77,36 +50,32 @@ test('toggles compact/full individual details via CollapsableLayout when deeply 
   expect(wrapper.find('BaseFieldView').length).toBeGreaterThan(baseFieldCount)
 })
 
-test('renders individual data details, mme status, and age details for the non-case-review table', () => {
-  const { wrapper } = renderIndividualRow({
-    datasetsByGuid: {
-      ...STATE_WITH_2_FAMILIES.datasetsByGuid,
-      TEST_DS: {
-        datasetType: 'SNV_INDEL',
-        activeIndividuals: [TEST_INDIVIDUAL_GUID],
-        inactiveIndividuals: [],
-        loadedDate: '2020-03-13T13:25:21.551Z',
-        projectGuid: 'R0237_1000_genomes_demo',
-        datasetGuid: 'TEST_DS',
-        sampleType: 'WES',
-      },
-    },
-  }, {
-    population: 'AFR',
-    birthYear: 1980,
-    deathYear: 2020,
-    phenotypePrioritizationTools: [{ tool: 'exomiser', loadedDate: '2020-01-01' }],
-    rnaSample: { loadedDate: '2020-01-01', dataTypes: ['E'] },
-  })
+test('renders individual data details, submitted MME status, and age details for the non-case-review table', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          family={STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1}
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
 
   expect(wrapper.text()).toContain('Submitted to MME')
-  expect(wrapper.text()).toContain('RNAseq Results')
-  expect(wrapper.text()).toContain('Show Phenotype Prioritized Genes')
-  expect(wrapper.text()).toContain('African')
-  expect(wrapper.text()).toContain('at age 40')
+  expect(wrapper.text()).toContain('Age:Deceased at age 10 - Born in 2010')
+  expect(wrapper.text()).toContain('Age of Onset:Adult onset')
+  expect(wrapper.text()).toContain('Expected Mode of Inheritance:Sporadic, X-linked recessive inheritance')
+  expect(wrapper.text()).toContain('Assisted Reproduction:Intrauterine insemination')
+  expect(wrapper.text()).toContain('Maternal Ancestry:White / Asian')
+  expect(wrapper.text()).toContain('Imputed Population :African')
+  expect(wrapper.text()).toContain('Pre-discovery OMIM disorders:10243')
+  expect(wrapper.text()).toContain('Previously Tested Genes:LGMD panel  (15 genes, lab A, 2013, NGS, negative)')
 })
 
-test('renders a removed MME submission label', () => {
+test('renders individual data details, removed MME status, and age details', () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
 
   const wrapper = mount(
@@ -120,16 +89,10 @@ test('renders a removed MME submission label', () => {
     </Provider>,
   )
 
-  expect(wrapper.text()).toContain('Removed from MME')
-})
-
-test('renders age details when only a birth year is present', () => {
-  const { wrapper } = renderIndividualRow({}, {
-    birthYear: 1980,
-    deathYear: null,
-  })
-
-  expect(wrapper.text()).toContain(String(new Date().getFullYear() - 1980))
+  expect(wrapper.text()).toContain('Removed from MME: 12/31/2019')
+  expect(wrapper.text()).toContain('Show Phenotype Prioritized Genes')
+  expect(wrapper.text()).toContain('RNAseq Results')
+  expect(wrapper.text()).toContain(`Age:${new Date().getFullYear() - 1980}`)
 })
 
 test('dispatches pedigree and IGV updates and renders parent/IGV select and gene fields when editing', () => {
@@ -139,7 +102,8 @@ test('dispatches pedigree and IGV updates and renders parent/IGV select and gene
   const arModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_ar_-_undefined`
   const ageModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_age_-_undefined`
 
-  const { wrapper, store } = renderIndividualRow({
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
     modal: {
       [pedigreeModalId]: { open: true },
       [igvModalId]: { open: true },
@@ -148,6 +112,17 @@ test('dispatches pedigree and IGV updates and renders parent/IGV select and gene
       [ageModalId]: { open: true },
     },
   })
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          family={STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1}
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
 
   // mapParentOptionsStateToProps and mapIgvOptionsStateToProps are exercised by rendering these connected fields
   expect(wrapper.find('Connect(Select)').length).toBeGreaterThan(0)
