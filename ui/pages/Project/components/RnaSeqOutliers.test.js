@@ -97,7 +97,7 @@ describe('RnaSeqOutliersGraph', () => {
 
     const [circles] = FakeD3Selection.getAppended('circle')
     expect(circles.attrs.cx).toEqual([-5, 20, 550])
-    expect(circles.attrs.cy).toEqual([.0004, 0.0073, 0.73])
+    expect(circles.attrs.cy).toEqual([0.0004, 0.0073, 0.73])  // NOPMD
     expect(circles.styles.fill).toEqual(['None', 'None', 'None'])
     expect(circles.styles.stroke).toEqual(['red', 'red', 'lightgrey'])
   })
