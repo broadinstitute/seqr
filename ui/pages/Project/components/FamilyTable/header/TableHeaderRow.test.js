@@ -5,7 +5,7 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { FAMILY_FIELD_ID, FAMILY_FIELD_ANALYSIS_STATUS, FAMILY_FIELD_SAVED_VARIANTS } from 'shared/utils/constants'
-import TableHeaderRow, { TableHeaderRowComponent } from './TableHeaderRow'
+import TableHeaderRow from './TableHeaderRow'
 import { CASE_REVIEW_TABLE_NAME } from '../../../constants'
 
 import { STATE_WITH_2_FAMILIES } from '../../../fixtures'
@@ -14,17 +14,10 @@ configure({ adapter: new Adapter() })
 
 const configureStore = configureMockStore([thunk])
 
-const noOp = () => {}
-const updateFamiliesTableField = () => noOp
-
-const renderHeaderRow = props => mount(
-  <Provider store={configureStore(STATE_WITH_2_FAMILIES)}>
+const renderHeaderRow = (props, state = STATE_WITH_2_FAMILIES) => mount(
+  <Provider store={configureStore(state)}>
     <table>
-      <TableHeaderRowComponent
-        familiesTableState={STATE_WITH_2_FAMILIES.familyTableState}
-        updateFamiliesTableField={updateFamiliesTableField}
-        {...props}
-      />
+      <TableHeaderRow {...props} />
     </table>
   </Provider>,
 )
@@ -34,33 +27,31 @@ const headerText = wrapper => wrapper.find('th').first().text()
   .trim()
 
 test('renders the visible/total family count and search filter', () => {
-  const wrapper = renderHeaderRow({ visibleFamiliesCount: 1, totalFamiliesCount: 2 })
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSearch: '1' },
+  }
+  const wrapper = renderHeaderRow({}, state)
 
   expect(headerText(wrapper)).toEqual('Showing 1 out of 2 families')
   expect(wrapper.find('input[placeholder="Search..."]').exists()).toBe(true)
 })
 
 test('renders all families when the visible count matches the total count', () => {
-  const wrapper = renderHeaderRow({ visibleFamiliesCount: 2, totalFamiliesCount: 2 })
+  const wrapper = renderHeaderRow({})
 
   expect(headerText(wrapper)).toEqual('Showing all 2 families')
 })
 
 test('renders a FamilyLayout row when fields are specified', () => {
-  const wrapper = renderHeaderRow({
-    visibleFamiliesCount: 2,
-    totalFamiliesCount: 2,
-    fields: [{ id: FAMILY_FIELD_ID }],
-  })
+  const wrapper = renderHeaderRow({ fields: [{ id: FAMILY_FIELD_ID }] })
 
   const familyLayout = wrapper.find({ compact: true, fields: [{ id: FAMILY_FIELD_ID }] })
   expect(familyLayout.exists()).toBe(true)
 })
 
 test('renders the case review filter fields when the table is the case review table', () => {
-  const wrapper = renderHeaderRow({
-    visibleFamiliesCount: 2, totalFamiliesCount: 2, tableName: CASE_REVIEW_TABLE_NAME,
-  })
+  const wrapper = renderHeaderRow({ tableName: CASE_REVIEW_TABLE_NAME })
 
   expect(wrapper.find('input[placeholder="Search..."]').exists()).toBe(true)
 })
@@ -72,19 +63,7 @@ test('renders a category filter dropdown for a category field with an active fil
     ...STATE_WITH_2_FAMILIES,
     familyTableFilterState: { R0237_1000_genomes_demo: { analysisStatus: ['ACCEPTED'] } },
   }
-  const wrapper = mount(
-    <Provider store={configureStore(state)}>
-      <table>
-        <TableHeaderRowComponent
-          familiesTableState={STATE_WITH_2_FAMILIES.familyTableState}
-          updateFamiliesTableField={updateFamiliesTableField}
-          visibleFamiliesCount={2}
-          totalFamiliesCount={2}
-          fields={ANALYSIS_STATUS_FIELDS}
-        />
-      </table>
-    </Provider>,
-  )
+  const wrapper = renderHeaderRow({ fields: ANALYSIS_STATUS_FIELDS }, state)
 
   const filterIcon = wrapper.find('Icon[name="filter"]')
   expect(filterIcon.exists()).toBe(true)
@@ -92,8 +71,6 @@ test('renders a category filter dropdown for a category field with an active fil
 
 test('renders a saved variants filter dropdown when showVariantDetails is true', () => {
   const wrapper = renderHeaderRow({
-    visibleFamiliesCount: 2,
-    totalFamiliesCount: 2,
     fields: [{ id: FAMILY_FIELD_ID }],
     showVariantDetails: true,
   })
