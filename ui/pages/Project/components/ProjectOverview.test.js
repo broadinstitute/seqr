@@ -119,7 +119,6 @@ test('renders family size histogram edge cases and the case review edit button',
   const text = wrapper.text()
   expect(text).toContain('trio+')
   expect(text).toContain('quad+')
-  // Two families of size 3 both counted as "trios" exercises the plural label branch
   expect(text).toContain('trios')
   expect(wrapper.find('[modalName="editFamiliesAndIndividuals"]').exists()).toBe(true)
 })
