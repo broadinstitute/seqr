@@ -132,13 +132,16 @@
     ],
     "coverageThreshold": {
       "global": {
-        "branch": 30,
-        "lines": 50,
+        "branches": 30,
+        "functions": 35,
+        "lines": 55,
         "statements": 50
       },
-      "pages/Project/components/": {
-        "lines": 60,
-        "statements": 60
+      "pages/Project/components/**/*.{js,jsx}": {
+        "branches": 95,
+        "functions": 95,
+        "lines": 95,
+        "statements": -2
       }
     },
     "setupFiles": [
