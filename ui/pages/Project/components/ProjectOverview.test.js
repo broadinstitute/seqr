@@ -27,12 +27,7 @@ const renderProjectOverview = state => mount(
 )
 
 test('divides content correctly by section for the current project', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
-  const wrapper = mount(
-    <Provider store={store}>
-      <ProjectOverview familiesLoading={false} overviewLoading={false} />
-    </Provider>
-  )
+  const wrapper = renderProjectOverview(STATE_WITH_2_FAMILIES)
 
   // Each DetailSection renders a <b> title alongside a styled DetailContent with its content.
   // Pair them up by DOM position so we verify each title is associated with its own content,
@@ -116,32 +111,53 @@ test('renders family size histogram edge cases and the case review edit button',
 })
 
 test('shows additional loaded datasets and renders rna datasets', () => {
-  const datasetState = cloneDeep(STATE_WITH_2_FAMILIES)
-  datasetState.datasetsByGuid = {}
+  const datasetState = {
+    ...STATE_WITH_2_FAMILIES,
+    datasetsByGuid: {
+      ...STATE_WITH_2_FAMILIES.datasetsByGuid,
+    },
+  }
   for (let i = 0; i < 6; i += 1) {
     datasetState.datasetsByGuid[`DS${i}`] = {
       datasetType: 'SNV_INDEL',
       sampleType: 'WES',
       projectGuid: PROJECT_GUID,
-      activeIndividuals: ['dummy'],
+      activeIndividuals: ['dummy', 'dummy2'],
       inactiveIndividuals: [],
       loadedDate: `2020-01-0${i + 1}T00:00:00.000Z`,
     }
   }
-  datasetState.projectsByGuid[PROJECT_GUID].rnaSampleCounts = {
-    S: [{ loadedDate: '2021-01-01T00:00:00.000Z', familyCounts: { F011652_1: 3 } }],
-  }
 
   const wrapper = renderProjectOverview(datasetState)
 
-  expect(wrapper.text()).toContain('RNA Splice Outlier Datasets')
-  const showMoreButton = wrapper.find('ButtonLink').filterWhere(n => n.text().startsWith('Show '))
-  expect(showMoreButton.exists()).toBe(true)
+  const datasetsSection = wrapper.find('LoadingSection').filterWhere(
+    content => content.find('b').first().text() === 'Exome Datasets',
+  ).first()
+  expect(datasetsSection.find('b').map(content => content.text())).toEqual([
+      'Exome Datasets', 'RNA Expression Outlier Datasets', 'RNA Splice Outlier Datasets'
+  ])
+  const datasets = [
+    ['3/13/2018 - 1 samples', '12/31/2019 - 2 samples', '1/3/2020 - 2 samples', '1/4/2020 - 2 samples', '1/5/2020 - 2 samples'],
+    ['12/31/2020 - 3 samples'],
+    ['1/1/2021 - 1 samples'],
+  ]
+  expect(datasetsSection.find('DatasetSection').map(
+      content => content.find('div').map(content => content.text())
+  )).toEqual(datasets)
 
+  expect(datasetsSection.find('DatasetSection').map(
+      content => content.find('ButtonLink').map(content => content.text())
+  )).toEqual([['Show 2 additional datasets'], [], []])
+  const showMoreButton = datasetsSection.find('ButtonLink').first()
   showMoreButton.first().simulate('click')
   wrapper.update()
 
-  expect(wrapper.find('ButtonLink').filterWhere(n => n.text().startsWith('Show ')).exists()).toBe(false)
+  const updatedDatasetsSection = wrapper.find('LoadingSection').filterWhere(
+    content => content.find('b').first().text() === 'Exome Datasets',
+  ).first().find('DatasetSection')
+  expect(updatedDatasetsSection.find('ButtonLink').exists()).toBe(false)
+  datasets[0].splice(2, 0, '1/1/2020 - 2 samples', '1/2/2020 - 2 samples')
+  expect(updatedDatasetsSection.map(content => content.find('div').map(content => content.text()))).toEqual(datasets)
 })
 
 test('renders anvil workspace details and a message when no datasets are loaded', () => {

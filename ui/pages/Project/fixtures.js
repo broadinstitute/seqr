@@ -385,6 +385,10 @@ export const STATE_WITH_2_FAMILIES = {
         { name: 'Excluded', category: 'Collaboration', color: '#668FE3', variantTagTypeGuid: 'VTT_EXCLUDED', numTags: 0 },
         { name: 'Tier 1 - Phenotype not delineated', category: 'CMG Discovery Tags', color: '#44AA60', description: 'Gene and phenotype fully solve the family', variantTagTypeGuid: 'VTT_TIER1', numTags: 1},
       ],
+      rnaSampleCounts: {
+        E: [{ loadedDate: '2021-01-01T00:00:00.000Z', familyCounts: { F011652_1: 2, F011652_2: 1 } }],
+        S: [{ loadedDate: '2021-01-02T00:00:00.000Z', familyCounts: { F011652_1: 1 } }],
+      },
       collaborators: [
         {
           dateJoined: '2019-02-20T18:01:36.677Z',
