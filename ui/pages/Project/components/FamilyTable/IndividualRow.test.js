@@ -39,6 +39,8 @@ test('toggles compact/full individual details via CollapsableLayout when deeply 
 
   // the pedigree/IGV edit buttons are always rendered, regardless of collapsed state
   const baseFieldCount = wrapper.find('BaseFieldView').length
+  expect(wrapper.text()).toContain('CHANGED ON')
+  expect(wrapper.text()).toContain('BY test user')
 
   const toggle = wrapper.find('CollapsableLayout').find('Icon[name="dropdown"]')
   expect(toggle.exists()).toBe(true)
@@ -72,7 +74,9 @@ test('renders individual data details, submitted MME status, and age details for
   expect(wrapper.text()).toContain('Maternal Ancestry:White / Asian')
   expect(wrapper.text()).toContain('Imputed Population :African')
   expect(wrapper.text()).toContain('Pre-discovery OMIM disorders:10243')
-  expect(wrapper.text()).toContain('Previously Tested Genes:LGMD panel  (15 genes, lab A, 2013, NGS, negative)')
+  expect(wrapper.text()).toContain('Previously Tested Genes:BRCA1 LGMD panel  (15 genes, lab A, 2013, NGS, negative)')
+
+  expect(wrapper.text()).not.toContain('RNAseq Results')
 })
 
 test('renders individual data details, removed MME status, and age details', () => {
@@ -93,6 +97,8 @@ test('renders individual data details, removed MME status, and age details', () 
   expect(wrapper.text()).toContain('Show Phenotype Prioritized Genes')
   expect(wrapper.text()).toContain('RNAseq Results')
   expect(wrapper.text()).toContain(`Age:${new Date().getFullYear() - 1980}`)
+
+  expect(wrapper.text()).not.toContain('Imputed Population')
 })
 
 test('dispatches pedigree and IGV updates and renders parent/IGV select and gene fields when editing', () => {
@@ -157,118 +163,80 @@ test('dispatches pedigree and IGV updates and renders parent/IGV select and gene
   expect(igvAction.filePath).toBe('gs://test.cram')
 })
 
-const renderIndividualRow = (individual, props = {}, state = STATE_WITH_2_FAMILIES) => {
-  const store = configureStore(state)
-  return mount(
+test('renders case review status without a last modified date or user', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+
+  const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter>
-        <IndividualRow individual={individual} {...props} />
+        <IndividualRow
+          family={STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2}
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021474_na19679_2}
+          tableName={CASE_REVIEW_TABLE_NAME}
+        />
       </MemoryRouter>
     </Provider>,
-  )
-}
-
-test('renders case review status without a last modified date or user', () => {
-  const wrapper = renderIndividualRow(
-    {
-      ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
-      caseReviewStatusLastModifiedDate: null,
-      caseReviewStatusLastModifiedBy: null,
-    },
-    { tableName: CASE_REVIEW_TABLE_NAME },
   )
 
   expect(wrapper.text()).not.toContain('CHANGED ON')
 })
 
-test('renders case review status with a last modified date and user', () => {
-  const wrapper = renderIndividualRow(
-    {
-      ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
-      caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
-      caseReviewStatusLastModifiedBy: 'test user',
-    },
-    { tableName: CASE_REVIEW_TABLE_NAME },
-  )
-
-  expect(wrapper.text()).toContain('CHANGED ON')
-  expect(wrapper.text()).toContain('BY test user')
-})
-
 test('renders RNAseq results link when only splice outlier data type is present', () => {
-  const wrapper = renderIndividualRow({
-    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1,
-    rnaSample: { loadedDate: '2020-01-01T12:00:00.000Z', dataTypes: ['S'] },
-  })
+  const store = configureStore(STATE_WITH_2_FAMILIES)
 
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          family={STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1}
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021474_na19679_1}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
   expect(wrapper.text()).toContain('RNAseq Results')
-})
-
-test('does not render RNAseq results link when no outlier data types are present', () => {
-  const wrapper = renderIndividualRow({
-    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1,
-    rnaSample: { loadedDate: '2020-01-01T12:00:00.000Z', dataTypes: ['T'] },
-  })
-
-  expect(wrapper.text()).not.toContain('RNAseq Results')
-})
-
-test('renders a rejected gene without comments', () => {
-  const wrapper = renderIndividualRow({
-    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
-    rejectedGenes: [{ gene: 'BRCA1' }],
-  })
-
-  expect(wrapper.text()).toContain('Previously Tested Genes:BRCA1')
-})
-
-test('renders age details when death year is 0 and birth year is unknown', () => {
-  const wrapper = renderIndividualRow({
-    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
-    birthYear: null,
-    deathYear: 0,
-  })
-
   expect(wrapper.text()).toContain('Age:Deceased (date unknown)')
+  expect(wrapper.text()).toMatch(/Imputed Population\s*:XYZ/)
 })
 
 test('renders age details when death year is known but birth year is unknown', () => {
-  const wrapper = renderIndividualRow({
-    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
-    birthYear: null,
-    deathYear: 2015,
-  })
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          family={STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2}
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_2}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
 
   expect(wrapper.text()).toContain('Age:Deceased in 2015')
 })
 
 test('renders unknown age when neither birth year nor death year is known', () => {
-  const wrapper = renderIndividualRow({
-    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
-    birthYear: null,
-    deathYear: null,
-  })
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          family={STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2}
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_2}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
 
   expect(wrapper.text()).toContain('Age:Unknown')
-})
-
-test('renders an unmapped population code as-is', () => {
-  const wrapper = renderIndividualRow({
-    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
-    population: 'XYZ',
-  })
-
-  expect(wrapper.text()).toMatch(/Imputed Population\s*:XYZ/)
+  expect(wrapper.text()).not.toContain('Imputed Population')
 })
 
 test('renders "Not Loaded" when no population is set', () => {
-  const wrapper = renderIndividualRow(
-    {
-      ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
-      population: null,
-    },
-    {},
-    {
+
+  const store = configureStore({
       ...STATE_WITH_2_FAMILIES,
       projectsByGuid: {
         ...STATE_WITH_2_FAMILIES.projectsByGuid,
@@ -277,7 +245,16 @@ test('renders "Not Loaded" when no population is set', () => {
           isAnalystProject: true,
         },
       },
-    },
+    })
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_2}
+        />
+      </MemoryRouter>
+    </Provider>,
   )
 
   expect(wrapper.text()).toMatch(/Imputed Population\s*:Not Loaded/)
@@ -298,13 +275,19 @@ test('only shows active or first/last inactive samples from an explicit datasets
     },
   }), {})
 
-  const wrapper = renderIndividualRow(
-    STATE_WITH_2_FAMILIES.individualsByGuid[individualGuid],
-    {},
-    {
-      ...STATE_WITH_2_FAMILIES,
-      datasetsByGuid: { ...STATE_WITH_2_FAMILIES.datasetsByGuid, ...datasetsByGuid },
-    },
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    datasetsByGuid: { ...STATE_WITH_2_FAMILIES.datasetsByGuid, ...datasetsByGuid },
+  })
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1}
+        />
+      </MemoryRouter>
+    </Provider>,
   )
 
   // reversed order: 01-04 (i=0, inactive, kept as first), 01-03 (i=1, inactive, dropped),

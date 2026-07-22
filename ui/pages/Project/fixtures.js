@@ -234,7 +234,7 @@ export const STATE_WITH_2_FAMILIES = {
       mmeSubmissionGuid: 'MS021475_na19675_1',
       affected: 'A',
       caseReviewStatus: 'I',
-      caseReviewStatusLastModifiedBy: null,
+      caseReviewStatusLastModifiedBy: 'test user',
       caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
       createdDate: '2016-12-05T10:29:00.000Z',
       sex: 'M',
@@ -263,6 +263,7 @@ export const STATE_WITH_2_FAMILIES = {
       ],
       nonstandardFeatures: [{ id: 'A made up feature' }],
       rejectedGenes: [
+        { gene: 'BRCA1' },
         {
           comments: '15 genes, lab A, 2013, NGS, negative ',
           gene: 'LGMD panel',
@@ -271,6 +272,7 @@ export const STATE_WITH_2_FAMILIES = {
       disorders: [10243],
       maternalEthnicity: ['White', 'Asian'],
       phenotypePrioritizationTools: [],
+      rnaSample: { loadedDate: '2020-01-01T12:00:00.000Z', dataTypes: ['T'] },
     },
     I021474_na19679_1: {
       projectGuid: 'R0237_1000_genomes_demo',
@@ -284,7 +286,11 @@ export const STATE_WITH_2_FAMILIES = {
       caseReviewStatusLastModifiedDate: '2016-12-05T10:30:00.000Z',
       createdDate: '2016-12-05T10:30:00.000Z',
       sex: 'M',
+      birthYear: null,
+      deathYear: 0,
+      population: 'XYZ',
       phenotypePrioritizationTools: [],
+      rnaSample: { loadedDate: '2020-01-01T12:00:00.000Z', dataTypes: ['S'] },
     },
     I021476_na19678_2: {
       projectGuid: 'R0237_1000_genomes_demo',
@@ -299,6 +305,9 @@ export const STATE_WITH_2_FAMILIES = {
       createdDate: '2016-12-06T10:28:00.000Z',
       igvSampleGuids: ['IS2310656_wal_mc16200_mc16203'],
       sex: 'F',
+      birthYear: null,
+      deathYear: 2015,
+      phenotypePrioritizationTools: [],
     },
     I021475_na19675_2: {
       projectGuid: 'R0237_1000_genomes_demo',
@@ -313,6 +322,7 @@ export const STATE_WITH_2_FAMILIES = {
       createdDate: '2016-12-06T10:29:00.000Z',
       sex: 'M',
       features: [],
+      phenotypePrioritizationTools: [],
     },
     I021474_na19679_2: {
       projectGuid: 'R0237_1000_genomes_demo',
@@ -322,7 +332,7 @@ export const STATE_WITH_2_FAMILIES = {
       affected: 'N',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
-      caseReviewStatusLastModifiedDate: '2016-12-06T10:30:00.000Z',
+      caseReviewStatusLastModifiedDate: null,
       createdDate: '2016-12-06T10:30:00.000Z',
       sex: 'M',
     },
