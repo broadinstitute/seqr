@@ -140,7 +140,7 @@
       "pages/Project/components/**/*.{js,jsx}": {
         "branches": 95,
         "functions": 95,
-        "lines": 95,
+        "lines": 100,
         "statements": -2
       }
     },
