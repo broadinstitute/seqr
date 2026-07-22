@@ -16,6 +16,14 @@ const MATCH_CREATE_SUBMISSION = { params: { familyGuid: 'F011652_1' } }
 const MATCH_UNKNOWN_FAMILY = { params: { familyGuid: 'F_UNKNOWN' } }
 const FAILED_CONTACT_META = { submitFailed: true, error: 'Invalid email' }
 const NOT_FAILED_CONTACT_META = { submitFailed: false, error: 'Invalid email' }
+const INDIVIDUAL_WITH_FEATURES = {
+  features: [
+    { id: 'HP:0001324', label: 'Muscle weakness' },
+    { id: 'HP:0001631', label: 'Defect in the atrial septum', observed: 'no' },
+    { id: 'HP:0009821', label: 'Forearm undergrowth' },
+  ],
+}
+const EMPTY_VALUE = {}
 
 test('renders the affected individual with no matchmaker submission', () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
@@ -95,6 +103,44 @@ test('opens the create submission modal and exercises form field callbacks', () 
   expect(numAltColumn.format({ numAlt: 2 })).toBeTruthy()
   const tagsColumn = genotypeColumns.find(({ name }) => name === 'tags')
   expect(tagsColumn.format({ tags: [{ tagGuid: 't1', color: 'red', name: 'Tag 1' }] }).length).toBe(1)
+})
+
+test('computes individual features onChange for the phenotypes edit table', () => {
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    savedVariantFamilies: { F011652_2: { loaded: true } },
+    modal: { 'I021475_na19675_2_-_CreateMmeSubmission': { open: true } },
+  })
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <Matchmaker match={MATCH} />
+    </Provider>,
+  )
+
+  // BaseEditPhenotypesTable is not exported, so it is pulled off the mounted tree, the same way
+  // ContactFieldItem is above, to exercise its onChange logic directly with custom individual data
+  const phenotypesTable = wrapper.find({ idField: 'id' }).first()
+  const BaseEditPhenotypesTable = phenotypesTable.parents().filterWhere(
+    n => n.props().individual && n.props().onChange,
+  ).first().type()
+
+  const onChange = jest.fn()
+  const editTable = shallow(
+    <BaseEditPhenotypesTable individual={INDIVIDUAL_WITH_FEATURES} value={EMPTY_VALUE} onChange={onChange} />,
+  )
+
+  // selecting a subset filters out unselected features, defaults newly selected features to
+  // "observed", and preserves an already-set observed value instead of overwriting it
+  editTable.find({ idField: 'id' }).prop('onChange')({ 'HP:0001324': true, 'HP:0001631': true })
+  expect(onChange).toHaveBeenCalledWith([
+    { id: 'HP:0001324', label: 'Muscle weakness', observed: 'yes' },
+    { id: 'HP:0001631', label: 'Defect in the atrial septum', observed: 'no' },
+  ])
+
+  onChange.mockClear()
+  editTable.find({ idField: 'id' }).prop('onChange')({})
+  expect(onChange).toHaveBeenCalledWith([])
 })
 
 test('renders the affected individual with a matchmaker submission', () => {
