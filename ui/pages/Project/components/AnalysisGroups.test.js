@@ -47,3 +47,29 @@ test('renders only the requested analysis group when analysisGroupGuid is specif
   expect(wrapper.find('a').length).toEqual(1)
   expect(wrapper.find('a').text()).toEqual('Test Group')
 })
+
+test('renders a sync icon and criteria fields for a dynamic analysis group', () => {
+  const criteriaState = {
+    ...STATE_WITH_2_FAMILIES,
+    analysisGroupsByGuid: {
+      ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid,
+      AG0000183_test_group: {
+        ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid.AG0000183_test_group,
+        criteria: { analysisStatus: ['Q'] },
+      },
+    },
+  }
+  const store = configureStore()(criteriaState)
+  const wrapper = mount(
+    <Provider store={store}>
+      <BrowserRouter>
+        <AnalysisGroups />
+      </BrowserRouter>
+    </Provider>
+  )
+
+  expect(wrapper.find('Icon[name="sync"]').exists()).toBe(true)
+
+  const popupContent = wrapper.find('Popup').prop('content')
+  expect(shallow(popupContent[0]).prop('field')).toEqual('analysisStatus')
+})

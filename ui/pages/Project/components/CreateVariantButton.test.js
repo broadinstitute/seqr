@@ -1,7 +1,8 @@
 import React from 'react'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
-import configureStore from 'redux-mock-store'
+import configureMockStore from 'redux-mock-store'
+import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
 import CreateVariantButtons from './CreateVariantButton'
@@ -9,10 +10,12 @@ import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
+const configureStore = configureMockStore([thunk])
+
 const FAMILY = STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1
 
 test('renders manual variant and SV buttons when the project is editable', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <CreateVariantButtons family={FAMILY} />
@@ -21,6 +24,58 @@ test('renders manual variant and SV buttons when the project is editable', () =>
 
   expect(wrapper.text()).toContain('Add Manual Variant')
   expect(wrapper.text()).toContain('Add Manual SV')
+
+  const { onSubmit } = wrapper.findWhere(n => n.props().onSubmit && n.props().family).first().props()
+  expect(() => onSubmit({ chrom: '1' })).not.toThrow()
+})
+
+test('opens the manual SNV modal and exercises the form field callbacks', () => {
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    savedVariantFamilies: { F011652_1: { loaded: true } },
+    modal: { 'F011652_1-addVariant-Variant': { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <CreateVariantButtons family={FAMILY} />
+    </Provider>,
+  )
+
+  const hgvscField = wrapper.find('ForwardRef(Field)[name="hgvsc"]')
+  expect(hgvscField.exists()).toBe(true)
+  const validateHasTranscriptId = hgvscField.first().prop('validate')
+  expect(validateHasTranscriptId(undefined, {})).toBeUndefined()
+  expect(validateHasTranscriptId('ENST1.1:c.1A>T', {}, {}, 'hgvsc')).toBe(
+    'Transcript ID is required to include hgvsc',
+  )
+  expect(validateHasTranscriptId('ENST1.1:c.1A>T', { mainTranscriptId: 'ENST1' })).toBeUndefined()
+
+  const zygosityFields = wrapper.find('ForwardRef(Field)[name^="genotypes."]')
+  expect(zygosityFields.length).toBeGreaterThan(0)
+  const zygosityField = zygosityFields.first()
+  expect(zygosityField.prop('parse')(2)).toEqual({ numAlt: 2 })
+  expect(zygosityField.prop('format')({ numAlt: 2 })).toBe(2)
+  expect(zygosityField.prop('format')(undefined)).toBeUndefined()
+})
+
+test('opens the manual SV modal and exercises the form field callbacks', () => {
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    savedVariantFamilies: { F011652_1: { loaded: true } },
+    modal: { 'F011652_1-addVariant-SV': { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <CreateVariantButtons family={FAMILY} />
+    </Provider>,
+  )
+
+  const zygosityFields = wrapper.find('ForwardRef(Field)[name^="genotypes."]')
+  expect(zygosityFields.length).toBeGreaterThan(0)
+  const zygosityField = zygosityFields.first()
+  expect(zygosityField.prop('parse')(2)).toEqual({ cn: 2 })
+  expect(zygosityField.prop('format')({ cn: 2 })).toBe(2)
+  expect(zygosityField.prop('format')(undefined)).toBeUndefined()
 })
 
 test('renders nothing when the project is not editable and the user is not an analyst', () => {
@@ -31,7 +86,7 @@ test('renders nothing when the project is not editable and the user is not an an
       R0237_1000_genomes_demo: { ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo, canEdit: false },
     },
   }
-  const store = configureStore()(readOnlyState)
+  const store = configureStore(readOnlyState)
   const wrapper = mount(
     <Provider store={store}>
       <CreateVariantButtons family={FAMILY} />
@@ -52,7 +107,7 @@ test('renders buttons for a non-editable project when the user is an analyst on 
       },
     },
   }
-  const store = configureStore()(analystState)
+  const store = configureStore(analystState)
   const wrapper = mount(
     <Provider store={store}>
       <CreateVariantButtons family={FAMILY} />

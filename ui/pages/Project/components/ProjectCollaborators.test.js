@@ -5,6 +5,7 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
+import UpdateButton from 'shared/components/buttons/UpdateButton'
 import ProjectCollaborators from './ProjectCollaborators'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -24,4 +25,62 @@ test('renders each collaborator email with an edit and add button', () => {
   expect(wrapper.find('a[href="mailto:test1@broadinstitute.org"]').exists()).toBe(true)
   expect(wrapper.find('a[href="mailto:test2@broadinstitute.org"]').exists()).toBe(true)
   expect(wrapper.find('ButtonLink[content="Add Collaborator"]').exists()).toBe(true)
+})
+
+test('renders the add collaborator form and submits a new collaborator', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    modal: { addCollaborator: { open: true } },
+    userOptionsLoading: { isLoading: false },
+  }
+  const store = configureStore(state)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <ProjectCollaborators />
+    </Provider>,
+  )
+
+  const userField = wrapper.find('ForwardRef(Field)[name="user"]')
+  expect(userField.exists()).toBe(true)
+
+  const email = 'newuser@broadinstitute.org'
+  expect(userField.prop('parse')(email)).toEqual({ email })
+  expect(userField.prop('parse')({ username: 'existing', email })).toEqual({ username: 'existing', email })
+  expect(userField.prop('format')({ username: 'existing', email })).toEqual({ username: 'existing', email })
+  expect(userField.prop('format')({ email })).toEqual(email)
+  expect(userField.prop('format')(null)).toBeFalsy()
+  expect(userField.prop('validate')({ email })).toBeUndefined()
+  expect(userField.prop('validate')(null)).toBeTruthy()
+
+  const addButton = wrapper.find(UpdateButton).filterWhere(n => n.prop('modalId') === 'addCollaborator')
+  expect(addButton.exists()).toBe(true)
+  expect(() => addButton.prop('onSubmit')({ user: { email } })).not.toThrow()
+})
+
+test('renders collaborator groups and the AnVIL managed message', () => {
+  const project = STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    projectsByGuid: {
+      ...STATE_WITH_2_FAMILIES.projectsByGuid,
+      R0237_1000_genomes_demo: {
+        ...project,
+        canEdit: true,
+        workspaceName: 'anvil-workspace',
+        collaboratorGroups: [{ name: 'group1', hasEditPermissions: false }],
+      },
+    },
+    user: { ...STATE_WITH_2_FAMILIES.user, isAnvil: true },
+  }
+  const store = configureStore(state)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <ProjectCollaborators />
+    </Provider>,
+  )
+
+  expect(wrapper.text()).toContain('group1')
+  expect(wrapper.text()).toContain('Collaborators fetched from AnVIL')
 })

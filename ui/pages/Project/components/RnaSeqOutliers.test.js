@@ -12,6 +12,22 @@ import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
+// The fake d3Utils.initializeD3 ignores the axis config it is given (there is nothing
+// meaningful for it to draw without a real DOM), so it never invokes the x/y "transform"
+// callbacks RnaSeqOutliersGraph builds. This spy wraps the real fake so those callbacks - and
+// the tick-label formatter they build - actually run, without needing a real d3 axis/DOM.
+jest.mock('shared/components/graph/d3Utils', () => {
+  const actual = jest.requireActual('shared/components/graph/d3Utils')
+  return {
+    ...actual,
+    initializeD3: (containerElement, dimensions, margin, scales, axes) => {
+      axes.x.transform({ tickSizeOuter: () => ({}) })
+      axes.y.transform({ tickSizeOuter: () => ({ ticks: (n, tickFormat) => tickFormat(0.01) }) })
+      return actual.initializeD3(containerElement, dimensions, margin, scales, axes)
+    },
+  }
+})
+
 const RNA_SEQ_DATA = STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1.outliers.ENSG00000228198
 
 test('renders a title, search link, and passes outlier data through to the graph', () => {
@@ -33,6 +49,15 @@ test('renders a title, search link, and passes outlier data through to the graph
   expect(wrapper.find('GeneSearchLink').prop('buttonText')).toEqual('Search for variants in outlier genes')
   expect(wrapper.find('RnaSeqOutliersGraph').prop('data')).toEqual(RNA_SEQ_DATA)
   expect(wrapper.find('RnaSeqOutliersGraph').prop('xField')).toEqual('pValue')
+})
+
+test('handles a container element ref callback', () => {
+  const wrapper = shallow(
+    <RnaSeqOutliersGraph data={GRAPH_DATA} genesById={STATE_WITH_2_FAMILIES.genesById} xField="zScore" />,
+  )
+  const fakeElement = {}
+  wrapper.instance().setContainerElement(fakeElement)
+  expect(wrapper.instance().container).toBe(fakeElement)
 })
 
 test('only includes significant outliers in the search link location', () => {
@@ -86,6 +111,18 @@ describe('RnaSeqOutliersGraph', () => {
     expect(text.texts).toEqual(['OR2M3', 'TBXT', null])
     expect(text.styles.fill).toEqual(['red', 'red', 'red'])
     expect(text.styles['font-weight']).toEqual(['bold', 'bold', 'bold'])
+  })
+
+  test('labels a significant point with an unknown gene as undefined', () => {
+    const unknownGeneData = [
+      { ...GRAPH_DATA[0], geneId: 'ENSG00000UNKNOWN', isSignificant: true },
+    ]
+    shallow(
+      <RnaSeqOutliersGraph data={unknownGeneData} genesById={STATE_WITH_2_FAMILIES.genesById} xField="zScore" />,
+    )
+
+    const [text] = FakeD3Selection.getAppended('text')
+    expect(text.texts).toEqual([undefined])
   })
 
   test('anchors labels to avoid running off the right edge of the graph', () => {

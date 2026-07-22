@@ -67,4 +67,46 @@ test('renders a dropdown when there is more than one tissue/sequencing type', ()
   expect(wrapper.find('Dropdown').exists()).toBe(true)
   const options = wrapper.find('Dropdown').prop('options').map(o => o.value)
   expect(options).toEqual(['M-T', 'F-W'])
+
+  wrapper.find('Dropdown').props().onChange(null, { value: 'F-W' })
+  wrapper.update()
+  expect(wrapper.find('Dropdown').prop('value')).toEqual('F-W')
+})
+
+test('renders the splice junction outlier plot and table when there is significant junction data', () => {
+  const spliceState = {
+    ...STATE_WITH_2_FAMILIES,
+    rnaSeqDataByIndividual: {
+      ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual,
+      I021476_na19678_1: {
+        ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual.I021476_na19678_1,
+        spliceOutliers: {
+          ENSG00000228198: [{
+            geneId: 'ENSG00000228198',
+            isSignificant: true,
+            pValue: 0.0004,
+            pAdjust: 0.001,
+            deltaIntronJaccardIndex: -0.5,
+            chrom: '1',
+            start: 100,
+            end: 200,
+            strand: '+',
+            type: 'psi5',
+            tissueType: 'M',
+            sequencingType: 'T',
+          }],
+        },
+      },
+    },
+  }
+  const store = configureStore()(spliceState)
+  const wrapper = mount(
+    <Provider store={store}>
+      <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
+    </Provider>
+  )
+
+  expect(wrapper.find('GridColumn').length).toEqual(2)
+  expect(wrapper.find('.mock-rna-seq-outliers').last().text()).toEqual('Splice Junction Outliers')
+  expect(wrapper.find('DataTable').exists()).toBe(true)
 })

@@ -10,9 +10,44 @@ import { CASE_REVIEW_TABLE_NAME } from '../../constants'
 import IndividualRow from './IndividualRow'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
+jest.mock('../../reducers', () => ({
+  ...jest.requireActual('../../reducers'),
+  updateIndividuals: values => ({ type: 'UPDATE_INDIVIDUALS', ...values }),
+  updateIndividualIGV: values => ({ type: 'UPDATE_INDIVIDUAL_IGV', ...values }),
+}))
+
 configure({ adapter: new Adapter() })
 
 const configureStore = configureMockStore([thunk])
+
+const TEST_INDIVIDUAL_GUID = 'I021475_na19675_1'
+
+const renderIndividualRow = (stateOverrides = {}, individualOverrides = {}, props = {}) => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    ...stateOverrides,
+    individualsByGuid: {
+      ...STATE_WITH_2_FAMILIES.individualsByGuid,
+      [TEST_INDIVIDUAL_GUID]: {
+        ...STATE_WITH_2_FAMILIES.individualsByGuid[TEST_INDIVIDUAL_GUID],
+        ...individualOverrides,
+      },
+    },
+  }
+  const store = configureStore(state)
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          family={state.familiesByGuid.F011652_1}
+          individual={state.individualsByGuid[TEST_INDIVIDUAL_GUID]}
+          {...props}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
+  return { wrapper, store }
+}
 
 test('toggles compact/full individual details via CollapsableLayout when deeply rendered', () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
@@ -40,4 +75,118 @@ test('toggles compact/full individual details via CollapsableLayout when deeply 
 
   // after toggling, the full set of case review detail fields is rendered in addition
   expect(wrapper.find('BaseFieldView').length).toBeGreaterThan(baseFieldCount)
+})
+
+test('renders individual data details, mme status, and age details for the non-case-review table', () => {
+  const { wrapper } = renderIndividualRow({
+    datasetsByGuid: {
+      ...STATE_WITH_2_FAMILIES.datasetsByGuid,
+      TEST_DS: {
+        datasetType: 'SNV_INDEL',
+        activeIndividuals: [TEST_INDIVIDUAL_GUID],
+        inactiveIndividuals: [],
+        loadedDate: '2020-03-13T13:25:21.551Z',
+        projectGuid: 'R0237_1000_genomes_demo',
+        datasetGuid: 'TEST_DS',
+        sampleType: 'WES',
+      },
+    },
+    mmeSubmissionsByGuid: {
+      MS_test_active: {
+        submissionGuid: 'MS_test_active',
+        individualGuid: TEST_INDIVIDUAL_GUID,
+        createdDate: '2020-01-01T00:00:00.000Z',
+        lastModifiedDate: '2020-02-01T00:00:00.000Z',
+      },
+    },
+  }, {
+    mmeSubmissionGuid: 'MS_test_active',
+    population: 'AFR',
+    birthYear: 1980,
+    deathYear: 2020,
+    phenotypePrioritizationTools: [{ tool: 'exomiser', loadedDate: '2020-01-01' }],
+    rnaSample: { loadedDate: '2020-01-01', dataTypes: ['E'] },
+  })
+
+  expect(wrapper.text()).toContain('Submitted to MME')
+  expect(wrapper.text()).toContain('RNAseq Results')
+  expect(wrapper.text()).toContain('Show Phenotype Prioritized Genes')
+  expect(wrapper.text()).toContain('African')
+  expect(wrapper.text()).toContain('at age 40')
+})
+
+test('renders a removed MME submission label', () => {
+  const { wrapper } = renderIndividualRow({
+    mmeSubmissionsByGuid: {
+      MS_test_deleted: {
+        submissionGuid: 'MS_test_deleted',
+        individualGuid: TEST_INDIVIDUAL_GUID,
+        createdDate: '2019-01-01T00:00:00.000Z',
+        deletedDate: '2020-01-01T00:00:00.000Z',
+      },
+    },
+  }, {
+    mmeSubmissionGuid: 'MS_test_deleted',
+  })
+
+  expect(wrapper.text()).toContain('Removed from MME')
+})
+
+test('renders age details when only a birth year is present', () => {
+  const { wrapper } = renderIndividualRow({}, {
+    birthYear: 1980,
+    deathYear: null,
+  })
+
+  expect(wrapper.text()).toContain(String(new Date().getFullYear() - 1980))
+})
+
+test('dispatches pedigree and IGV updates and renders parent/IGV select and gene fields when editing', () => {
+  const pedigreeModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_coreEdit_-_undefined`
+  const igvModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_ IGVEdit_-_undefined`
+  const rejectedGenesModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_rejectedGenes_-_undefined`
+  const arModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_ar_-_undefined`
+  const ageModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_age_-_undefined`
+
+  const { wrapper, store } = renderIndividualRow({
+    modal: {
+      [pedigreeModalId]: { open: true },
+      [igvModalId]: { open: true },
+      [rejectedGenesModalId]: { open: true },
+      [arModalId]: { open: true },
+      [ageModalId]: { open: true },
+    },
+  })
+
+  // mapParentOptionsStateToProps and mapIgvOptionsStateToProps are exercised by rendering these connected fields
+  expect(wrapper.find('Connect(Select)').length).toBeGreaterThan(0)
+  expect(wrapper.find('Connect(LoadOptionsSelect)').length).toBe(1)
+
+  // GeneEntry fields for the rejectedGenes list
+  expect(wrapper.find('ForwardRef(Field)[name="rejectedGenes[0].gene"]').length).toBe(1)
+
+  // ButtonRadioGroup groupContainer for the 'ar' subfields
+  expect(wrapper.find('Inputs__RadioButtonGroup').length).toBeGreaterThan(0)
+
+  const filePathField = wrapper.find('ForwardRef(Field)[name="filePath"]')
+  expect(filePathField.prop('formatOption')('gs://test.cram')).toBe('gs://test.cram')
+
+  const deathYearField = wrapper.find('ForwardRef(Field)[name="deathYear"]')
+  expect(deathYearField.prop('format')(0)).toBe(0)
+  expect(deathYearField.prop('format')(undefined)).toBe(-1)
+  expect(deathYearField.prop('parse')(-1)).toBe(null)
+  expect(deathYearField.prop('parse')(2020)).toBe(2020)
+
+  const pedigreeEdit = wrapper.find('Connect(FormWrapper)').filterWhere(n => n.prop('modalName') === pedigreeModalId)
+  pedigreeEdit.first().prop('onSubmit')({ individualGuid: TEST_INDIVIDUAL_GUID, sex: 'M' })
+
+  const igvEdit = wrapper.find('Connect(FormWrapper)').filterWhere(n => n.prop('modalName') === igvModalId)
+  igvEdit.first().prop('onSubmit')({ filePath: 'gs://test.cram' })
+
+  const actions = store.getActions()
+  const pedigreeAction = actions.find(action => action.type === 'UPDATE_INDIVIDUALS')
+  const igvAction = actions.find(action => action.type === 'UPDATE_INDIVIDUAL_IGV')
+
+  expect(pedigreeAction.individuals).toEqual([{ individualGuid: TEST_INDIVIDUAL_GUID, sex: 'M' }])
+  expect(igvAction.filePath).toBe('gs://test.cram')
 })
