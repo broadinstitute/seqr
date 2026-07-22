@@ -37,7 +37,7 @@ const FEATURES = [
 
 test('renders each feature with its label and id', () => {
   const wrapper = mount(
-    <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />
+    <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />,
   )
 
   expect(wrapper.find('Icon[name="remove"]').length).toEqual(2)
@@ -49,7 +49,7 @@ test('renders each feature with its label and id', () => {
 test('removes a feature when its remove icon is clicked', () => {
   const onChange = jest.fn()
   const wrapper = mount(
-    <HpoTermsEditor name="features" value={FEATURES} onChange={onChange} allowAdditions />
+    <HpoTermsEditor name="features" value={FEATURES} onChange={onChange} allowAdditions />,
   )
 
   wrapper.find('Icon[id="HP:0001250"]').simulate('click')
@@ -65,7 +65,7 @@ test('toggles feature details when Edit Details is clicked', () => {
       render={() => (
         <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />
       )}
-    />
+    />,
   )
 
   expect(wrapper.find('input[name="features[0].notes"]').exists()).toBe(false)
@@ -113,7 +113,7 @@ test('renders a section header and category name for non-additive editors', () =
       value={formatted}
       onChange={jest.fn()}
       header={{ content: 'Not Present', color: 'red' }}
-    />
+    />,
   )
 
   expect(wrapper.find('Header[content="Not Present"]').exists()).toBe(true)
@@ -147,7 +147,7 @@ test('renders a green header for nonstandard present features', () => {
       value={formatted}
       onChange={jest.fn()}
       header={{ content: 'Present', color: 'green' }}
-    />
+    />,
   )
 
   expect(wrapper.find('Header[content="Present"]').exists()).toBe(true)
@@ -157,7 +157,7 @@ test('renders a green header for nonstandard present features', () => {
 test('does not add a duplicate feature', () => {
   const onChange = jest.fn()
   const wrapper = mount(
-    <HpoTermsEditor name="features" value={FEATURES} onChange={onChange} allowAdditions />
+    <HpoTermsEditor name="features" value={FEATURES} onChange={onChange} allowAdditions />,
   )
 
   wrapper.find(HpoTermsEditor).instance().addItem({ id: 'HP:0001250', label: 'Seizures' })
@@ -172,7 +172,7 @@ test('toggles the add-item selector when Add Feature is clicked', () => {
       <MemoryRouter>
         <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('AwesomeBar').exists()).toBe(false)
@@ -195,7 +195,7 @@ test('adds a feature selected from a loaded HPO category', () => {
       <MemoryRouter>
         <HpoTermsEditor name="features" value={FEATURES} onChange={onChange} allowAdditions />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   wrapper.find('ButtonLink[content="Add Feature"]').find('button').simulate('click')
@@ -266,6 +266,102 @@ test('does not render any terms when the loaded category has no terms', () => {
   wrapper.update()
 
   expect(wrapper.find('Tab.Pane').exists()).toBe(false)
+})
+
+test('formats existing qualifiers into a lookup keyed by type', () => {
+  const wrapper = mount(
+    <FinalForm
+      onSubmit={() => {}}
+      render={() => (
+        <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />
+      )}
+    />,
+  )
+
+  wrapper.find('ButtonLink[content="Edit Details"]').at(0).find('button').simulate('click')
+  wrapper.update()
+
+  const qualifiersField = wrapper.find('ForwardRef(Field)[name="features[0].qualifiers"]')
+  const { format } = qualifiersField.props()
+
+  expect(format([{ type: 'severity', label: 'Mild' }])).toEqual({ severity: 'Mild' })
+})
+
+test('updates a qualifier value when a radio option is selected', () => {
+  const wrapper = mount(
+    <FinalForm
+      onSubmit={() => {}}
+      render={() => (
+        <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />
+      )}
+    />,
+  )
+
+  wrapper.find('ButtonLink[content="Edit Details"]').at(0).find('button').simulate('click')
+  wrapper.update()
+
+  wrapper.find('AccordionTitle').filterWhere(n => n.text() === 'Severity').first().simulate('click')
+  wrapper.update()
+
+  const moderateRadio = wrapper.find('Radio').filterWhere(n => n.prop('label') === 'Moderate')
+  expect(moderateRadio.prop('checked')).toBe(false)
+
+  moderateRadio.prop('onChange')({}, { checked: true })
+  wrapper.update()
+
+  expect(wrapper.find('Radio').filterWhere(n => n.prop('label') === 'Moderate').prop('checked')).toBe(true)
+})
+
+test('parses a selected hpo search result into an item to add', () => {
+  const store = mockStore({
+    hpoTermsByParent: {},
+    hpoTermsLoading: { isLoading: false },
+  })
+  const onChange = jest.fn()
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <HpoTermsEditor name="features" value={FEATURES} onChange={onChange} allowAdditions />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  wrapper.find('ButtonLink[content="Add Feature"]').find('button').simulate('click')
+  wrapper.update()
+
+  wrapper.find('AwesomeBar').instance().handleResultSelect(
+    { preventDefault: () => {} },
+    { result: { key: 'HP:0005678', title: 'Ataxia', category: 'HP:0000707' } },
+  )
+
+  expect(onChange).toHaveBeenCalledWith([...FEATURES, { id: 'HP:0005678', label: 'Ataxia', category: 'HP:0000707' }])
+})
+
+test('renders the nested category tab when a term is selected', () => {
+  const store = mockStore({
+    hpoTermsByParent: {
+      'HP:0000707': { 'HP:0009999': { id: 'HP:0009999', label: 'New Term' } },
+    },
+    hpoTermsLoading: { isLoading: false },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  wrapper.find('ButtonLink[content="Add Feature"]').find('button').simulate('click')
+  wrapper.update()
+
+  wrapper.findWhere(n => n.type() === 'a' && n.text() === 'Nervous System').first().simulate('click')
+  wrapper.update()
+
+  wrapper.findWhere(n => n.type() === 'a' && n.text().includes('New Term')).first().simulate('click')
+  wrapper.update()
+
+  expect(wrapper.find('DataLoader').filterWhere(n => n.prop('contentId') === 'HP:0009999').exists()).toBe(true)
 })
 
 test('checks whether hpo terms are loading when none are cached for the category', () => {

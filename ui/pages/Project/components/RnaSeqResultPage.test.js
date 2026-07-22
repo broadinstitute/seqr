@@ -4,6 +4,7 @@ import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
 import { Provider } from 'react-redux'
 
+import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import RnaSeqResultPage from './RnaSeqResultPage'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -28,7 +29,7 @@ test('renders a single tissue type as plain text and the outlier plot for it', (
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('Dropdown').exists()).toBe(false)
@@ -61,7 +62,7 @@ test('renders a dropdown when there is more than one tissue/sequencing type', ()
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('Dropdown').exists()).toBe(true)
@@ -78,7 +79,7 @@ test('renders no splice junction outlier table when there is no significant junc
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021474_na19679_1' } }} />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('DataTable').exists()).toBe(false)
@@ -89,10 +90,26 @@ test('renders the splice junction outlier plot and table when there is significa
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('GridColumn').length).toEqual(2)
   expect(wrapper.find('.mock-rna-seq-outliers').last().text()).toEqual('Splice Junction Outliers')
   expect(wrapper.find('DataTable').exists()).toBe(true)
+})
+
+test('computes plot locations for expression and splice junction outliers', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
+    </Provider>,
+  )
+
+  const [expressionConfig, spliceConfig] = wrapper.find('MockRnaSeqOutliers').map(node => node.props())
+
+  expect(expressionConfig.getLocation({ geneId: 'ENSG00000228198' })).toEqual('ENSG00000228198')
+  expect(spliceConfig.getLocation({ chrom: '1', start: 1000, end: 2000 })).toEqual(
+    `1:${1000 - RNASEQ_JUNCTION_PADDING}-${2000 + RNASEQ_JUNCTION_PADDING}`,
+  )
 })

@@ -5,7 +5,7 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
-import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA } from 'shared/utils/constants'
+import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, FILE_FIELD_NAME } from 'shared/utils/constants'
 import { EditFamiliesBulkForm, EditIndividualsBulkForm, EditIndividualMetadataBulkForm } from './BulkEditForm'
 import { FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
@@ -16,7 +16,10 @@ global.URL.createObjectURL = jest.fn()
 jest.mock('../../reducers', () => ({
   ...jest.requireActual('../../reducers'),
   loadIndividuals: () => ({ type: 'NOOP' }),
+  updateFamilies: jest.fn(() => () => Promise.resolve()),
 }))
+
+const { updateFamilies } = jest.requireMock('../../reducers')
 
 configure({ adapter: new Adapter() })
 
@@ -54,6 +57,20 @@ test('renders analyst-only optional fields for an analyst user', () => {
 
   const lastField = FAMILY_BULK_EDIT_EXPORT_DATA[FAMILY_BULK_EDIT_EXPORT_DATA.length - 1]
   expect(wrapper.text()).toContain(lastField.header)
+})
+
+test('submits the uploaded file value on form submission', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <EditFamiliesBulkForm modalName="bulkEditFamilies" />
+    </Provider>,
+  )
+
+  const uploadedFileId = 'file123'
+  wrapper.find('FormWrapper').prop('onSubmit')({ [FILE_FIELD_NAME]: uploadedFileId })
+
+  expect(updateFamilies).toHaveBeenCalledWith(uploadedFileId)
 })
 
 test('renders individuals bulk form with the individual ID required columns', () => {

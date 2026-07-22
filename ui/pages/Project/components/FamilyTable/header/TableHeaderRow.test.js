@@ -1,21 +1,24 @@
 import React from 'react'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
-import configureStore from 'redux-mock-store'
+import configureMockStore from 'redux-mock-store'
+import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { FAMILY_FIELD_ID, FAMILY_FIELD_ANALYSIS_STATUS, FAMILY_FIELD_SAVED_VARIANTS } from 'shared/utils/constants'
-import { TableHeaderRowComponent } from './TableHeaderRow'
+import TableHeaderRow, { TableHeaderRowComponent } from './TableHeaderRow'
 import { CASE_REVIEW_TABLE_NAME } from '../../../constants'
 
 import { STATE_WITH_2_FAMILIES } from '../../../fixtures'
 
 configure({ adapter: new Adapter() })
 
+const configureStore = configureMockStore([thunk])
+
 const noOp = () => {}
 const updateFamiliesTableField = () => noOp
 
 const renderHeaderRow = props => mount(
-  <Provider store={configureStore()(STATE_WITH_2_FAMILIES)}>
+  <Provider store={configureStore(STATE_WITH_2_FAMILIES)}>
     <table>
       <TableHeaderRowComponent
         familiesTableState={STATE_WITH_2_FAMILIES.familyTableState}
@@ -70,7 +73,7 @@ test('renders a category filter dropdown for a category field with an active fil
     familyTableFilterState: { R0237_1000_genomes_demo: { analysisStatus: ['ACCEPTED'] } },
   }
   const wrapper = mount(
-    <Provider store={configureStore()(state)}>
+    <Provider store={configureStore(state)}>
       <table>
         <TableHeaderRowComponent
           familiesTableState={STATE_WITH_2_FAMILIES.familyTableState}
@@ -97,4 +100,49 @@ test('renders a saved variants filter dropdown when showVariantDetails is true',
 
   const filterDropdown = wrapper.find({ category: FAMILY_FIELD_SAVED_VARIANTS })
   expect(filterDropdown.exists()).toBe(true)
+})
+
+test('dispatches an update to the families table state when the search filter changes', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <table>
+        <TableHeaderRow
+          familiesTableState={STATE_WITH_2_FAMILIES.familyTableState}
+          visibleFamiliesCount={1}
+          totalFamiliesCount={2}
+        />
+      </table>
+    </Provider>,
+  )
+
+  wrapper.find('input[placeholder="Search..."]').simulate('change', { target: { value: 'foo' } })
+
+  expect(store.getActions()).toContainEqual({
+    type: 'UPDATE_FAMILY_TABLE_STATE',
+    updates: { familiesSearch: 'foo' },
+  })
+})
+
+test('dispatches an update to the families table filter state when a category filter changes', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <table>
+        <TableHeaderRow
+          familiesTableState={STATE_WITH_2_FAMILIES.familyTableState}
+          visibleFamiliesCount={2}
+          totalFamiliesCount={2}
+          fields={ANALYSIS_STATUS_FIELDS}
+        />
+      </table>
+    </Provider>,
+  )
+
+  wrapper.find('BaseFamilyTableFilter').first().props().updateNestedFilter(FAMILY_FIELD_ANALYSIS_STATUS)(['ACCEPTED'])
+
+  expect(store.getActions()).toContainEqual({
+    type: 'UPDATE_FAMILY_TABLE_FILTER_STATE',
+    updatesById: { R0237_1000_genomes_demo: { analysisStatus: ['ACCEPTED'] } },
+  })
 })

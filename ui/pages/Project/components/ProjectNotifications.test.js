@@ -4,6 +4,7 @@ import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
 import { Provider } from 'react-redux'
 
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import ProjectNotifications from './ProjectNotifications'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -63,4 +64,25 @@ test('renders a show-read-notifications button when there are read notifications
   wrapper.update()
 
   expect(wrapper.find('ButtonLink[content="Show 3 read notifications"]').exists()).toBe(true)
+})
+
+test('re-fetches with a new url path when a notification action button is clicked', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <ProjectNotifications />
+    </Provider>,
+  )
+
+  onSuccessCallback({
+    unreadNotifications: [{ id: 1, verb: 'added a note', timestamp: '2020-01-01T00:00:00Z' }],
+    isSubscriber: true,
+  })
+  wrapper.update()
+
+  wrapper.find('ButtonLink[content="Mark all as read"]').find('button').simulate('click')
+  wrapper.update()
+
+  const lastUrl = HttpRequestHelper.mock.calls[HttpRequestHelper.mock.calls.length - 1][0]
+  expect(lastUrl).toContain('/mark_read')
 })
