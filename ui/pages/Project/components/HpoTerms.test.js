@@ -1,7 +1,7 @@
 import React from 'react'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
-import { Form as FinalForm, Field } from 'react-final-form'
+import { Form as FinalForm } from 'react-final-form'
 import configureStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
@@ -228,7 +228,7 @@ test('parses qualifiers back into a lookup keyed by type', () => {
   wrapper.find('ButtonLink[content="Edit Details"]').at(0).find('button').simulate('click')
   wrapper.update()
 
-  const qualifiersField = wrapper.find(Field).filterWhere(n => n.prop('name') === 'features[0].qualifiers')
+  const qualifiersField = wrapper.find('ForwardRef(Field)[name="features[0].qualifiers"]')
   expect(qualifiersField.exists()).toBe(true)
   const { parse } = qualifiersField.props()
 
