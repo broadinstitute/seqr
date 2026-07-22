@@ -91,16 +91,7 @@ test('renders individual data details, mme status, and age details for the non-c
         sampleType: 'WES',
       },
     },
-    mmeSubmissionsByGuid: {
-      MS_test_active: {
-        submissionGuid: 'MS_test_active',
-        individualGuid: TEST_INDIVIDUAL_GUID,
-        createdDate: '2020-01-01T00:00:00.000Z',
-        lastModifiedDate: '2020-02-01T00:00:00.000Z',
-      },
-    },
   }, {
-    mmeSubmissionGuid: 'MS_test_active',
     population: 'AFR',
     birthYear: 1980,
     deathYear: 2020,
@@ -116,18 +107,18 @@ test('renders individual data details, mme status, and age details for the non-c
 })
 
 test('renders a removed MME submission label', () => {
-  const { wrapper } = renderIndividualRow({
-    mmeSubmissionsByGuid: {
-      MS_test_deleted: {
-        submissionGuid: 'MS_test_deleted',
-        individualGuid: TEST_INDIVIDUAL_GUID,
-        createdDate: '2019-01-01T00:00:00.000Z',
-        deletedDate: '2020-01-01T00:00:00.000Z',
-      },
-    },
-  }, {
-    mmeSubmissionGuid: 'MS_test_deleted',
-  })
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          family={STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1}
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
 
   expect(wrapper.text()).toContain('Removed from MME')
 })

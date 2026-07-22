@@ -165,6 +165,7 @@
       "jsoneditor-react": "<rootDir>/config/jest/fileTransform.js",
       "d3": "<rootDir>/config/jest/fakeD3.js",
       "pedigreejs": "<rootDir>/config/jest/fileTransform.js",
+      "react-markdown": "<rootDir>/config/jest/reactMarkdownMock.js",
       "^react-native$": "react-native-web"
     },
     "moduleFileExtensions": [

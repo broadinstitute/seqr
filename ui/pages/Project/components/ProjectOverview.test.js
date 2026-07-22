@@ -53,7 +53,7 @@ test('divides content correctly by section for the current project', () => {
     },
     {
       title: 'Matchmaker Submissions',
-      content: 'No Submissions',
+      content: '1 submissions 1 removed submissions',
     },
     {
       title: 'Genome Version',
@@ -71,17 +71,12 @@ test('divides content correctly by section for the current project', () => {
 })
 
 test('renders matchmaker submission details when the submissions modal is open', () => {
-  const mmeState = cloneDeep(STATE_WITH_2_FAMILIES)
-  mmeState.projectsByGuid[PROJECT_GUID].mmeSubmissionCount = 1
-  mmeState.projectsByGuid[PROJECT_GUID].mmeDeletedSubmissionCount = 2
-  mmeState.modal = { mmeSubmissions: { open: true } }
-
-  const wrapper = renderProjectOverview(mmeState)
+  const wrapper = renderProjectOverview({ ...STATE_WITH_2_FAMILIES, modal: { mmeSubmissions: { open: true } } })
 
   const dataTable = wrapper.find('DataTable').filterWhere(n => n.prop('idField') === 'submissionGuid')
   expect(dataTable.exists()).toBe(true)
   expect(dataTable.text()).toContain('5/9/2018')
-  expect(wrapper.text()).toContain('2 removed submissions')
+  expect(wrapper.text()).toContain('1 removed submissions')
   expect(wrapper.find('[modalId="mmeContact"]').exists()).toBe(true)
 })
 

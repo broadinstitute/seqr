@@ -11,8 +11,8 @@ configure({ adapter: new Adapter() })
 
 const configureStore = configureMockStore([thunk])
 
-const MATCH = { params: { familyGuid: 'F011652_1' } }
-const MATCH_WITH_SUBMISSION = { params: { familyGuid: 'F011652_2' } }
+const MATCH = { params: { familyGuid: 'F011652_2' } }
+const MATCH_CREATE_SUBMISSION = { params: { familyGuid: 'F011652_1' } }
 
 test('renders the affected individual with no matchmaker submission', () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
@@ -30,8 +30,8 @@ test('renders the affected individual with no matchmaker submission', () => {
 test('opens the create submission modal and exercises form field callbacks', () => {
   const store = configureStore({
     ...STATE_WITH_2_FAMILIES,
-    savedVariantFamilies: { F011652_1: { loaded: true } },
-    modal: { 'I021475_na19675_1_-_CreateMmeSubmission': { open: true } },
+    savedVariantFamilies: { F011652_2: { loaded: true } },
+    modal: { 'I021475_na19675_2_-_CreateMmeSubmission': { open: true } },
   })
 
   const wrapper = mount(
@@ -74,7 +74,7 @@ test('renders the affected individual with a matchmaker submission', () => {
 
   const wrapper = mount(
     <Provider store={store}>
-      <Matchmaker match={MATCH_WITH_SUBMISSION} />
+      <Matchmaker match={MATCH_CREATE_SUBMISSION} />
     </Provider>,
   )
 
