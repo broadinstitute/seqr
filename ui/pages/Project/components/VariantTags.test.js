@@ -50,12 +50,34 @@ test('does not show a help icon for tag types without a description', () => {
 })
 
 test('uses analysis group tag type counts when an analysisGroupGuid is provided', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
-  expect(() => mount(
+  const store = configureStore()({
+    ...STATE_WITH_2_FAMILIES,
+    familyTagTypeCounts: {
+      F011652_1: { Review: 2, 'Tier 1 - Phenotype not delineated': 1 },
+      F011652_2: { Excluded: 5 },
+    },
+  })
+  const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter>
         <VariantTags projectGuid="R0237_1000_genomes_demo" analysisGroupGuid="AG0000183_test_group" />
       </MemoryRouter>
     </Provider>,
-  )).not.toThrow()
+  )
+
+  // AG0000183_test_group only contains family F011652_1, whose tagged variants are 2 Review and 1 Tier 1
+  const rows = wrapper.find('TagSummary')
+  expect(rows.length).toEqual(2)
+
+  const reviewRow = rows.at(0)
+  expect(reviewRow.find('b').text()).toEqual('2')
+  expect(reviewRow.find('a').prop('href')).toEqual(
+    '/project/R0237_1000_genomes_demo/saved_variants/analysis_group/AG0000183_test_group/Review',
+  )
+
+  const tier1Row = rows.at(1)
+  expect(tier1Row.find('b').text()).toEqual('1')
+  expect(tier1Row.find('a').prop('href')).toEqual(
+    '/project/R0237_1000_genomes_demo/saved_variants/analysis_group/AG0000183_test_group/Tier 1 - Phenotype not delineated',
+  )
 })
