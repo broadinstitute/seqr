@@ -53,27 +53,6 @@ test('toggles compact/full family details', () => {
   expect(toggledRow.find('IndividualRow').length).toEqual(3)
 })
 
-const HEADER_STATUS = { title: 'Individual Statuses', data: [{ name: 'a', count: 1, color: 'red' }] }
-
-test('renders a header status bar when headerStatus is provided', () => {
-  const store = configureStore(STATE_WITH_2_FAMILIES)
-
-  const wrapper = mount(
-    <Provider store={store}>
-      <MemoryRouter>
-        <FamilyTable
-          detailFields={FAMILY_DETAIL_FIELDS}
-          noDetailFields={FAMILY_MAIN_FIELDS}
-          headerStatus={HEADER_STATUS}
-        />
-      </MemoryRouter>
-    </Provider>,
-  )
-
-  expect(wrapper.find('HorizontalStackedBar').exists()).toBe(true)
-  expect(wrapper.text()).toContain('Individual Statuses')
-})
-
 test('renders a loading indicator while families are loading', () => {
   const loadingState = {
     ...STATE_WITH_2_FAMILIES,

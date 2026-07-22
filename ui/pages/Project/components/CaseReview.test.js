@@ -24,6 +24,7 @@ test('renders the accepted families and the individual status summary', () => {
     </Provider>,
   )
 
+  expect(wrapper.find('HorizontalStackedBar').exists()).toBe(true)
   expect(wrapper.text()).toContain('Individual Statuses:')
   expect(wrapper.find('FamilyTableRow').length).toEqual(2)
 })
