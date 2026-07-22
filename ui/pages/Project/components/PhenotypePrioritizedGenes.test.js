@@ -37,3 +37,15 @@ test('renders the phenotype-prioritized gene table for an individual', () => {
   expect(wrapper.text()).toContain('Khan-Khan-Katsanis syndrome')
   expect(wrapper.text()).toContain('lirical')
 })
+
+test('renders without error for an individual with no phenotype-prioritized genes loaded', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <PhenotypePrioritizedGenes individualGuid="I021475_na19675_2" familyGuid="F011652_1" />
+    </Provider>
+  )
+
+  expect(wrapper.find('DataTable').exists()).toBe(false)
+  expect(wrapper.text()).toContain('Error 404')
+})
