@@ -124,7 +124,7 @@ test('shows additional loaded datasets and renders rna datasets', () => {
       projectGuid: PROJECT_GUID,
       activeIndividuals: ['dummy', 'dummy2'],
       inactiveIndividuals: [],
-      loadedDate: `2020-01-0${i + 1}T00:00:00.000Z`,
+      loadedDate: `2020-01-0${i + 1}T12:00:00.000Z`,
     }
   }
 
@@ -137,9 +137,9 @@ test('shows additional loaded datasets and renders rna datasets', () => {
       'Exome Datasets', 'RNA Expression Outlier Datasets', 'RNA Splice Outlier Datasets'
   ])
   const datasets = [
-    ['3/13/2018 - 1 samples', '12/31/2019 - 2 samples', '1/3/2020 - 2 samples', '1/4/2020 - 2 samples', '1/5/2020 - 2 samples'],
-    ['12/31/2020 - 3 samples'],
-    ['1/1/2021 - 1 samples'],
+    ['3/13/2018 - 1 samples', '1/1/2020 - 2 samples', '1/4/2020 - 2 samples', '1/5/2020 - 2 samples', '1/6/2020 - 2 samples'],
+    ['1/1/2021 - 3 samples'],
+    ['1/2/2021 - 1 samples'],
   ]
   expect(datasetsSection.find('DatasetSection').map(
       content => content.find('div').map(content => content.text())
@@ -156,7 +156,7 @@ test('shows additional loaded datasets and renders rna datasets', () => {
     content => content.find('b').first().text() === 'Exome Datasets',
   ).first().find('DatasetSection')
   expect(updatedDatasetsSection.find('ButtonLink').exists()).toBe(false)
-  datasets[0].splice(2, 0, '1/1/2020 - 2 samples', '1/2/2020 - 2 samples')
+  datasets[0].splice(2, 0, '1/2/2020 - 2 samples', '1/3/2020 - 2 samples')
   expect(updatedDatasetsSection.map(content => content.find('div').map(content => content.text()))).toEqual(datasets)
 })
 

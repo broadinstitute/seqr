@@ -89,7 +89,7 @@ test('renders individual data details, removed MME status, and age details', () 
     </Provider>,
   )
 
-  expect(wrapper.text()).toContain('Removed from MME: 12/31/2019')
+  expect(wrapper.text()).toContain('Removed from MME: 1/1/2020')
   expect(wrapper.text()).toContain('Show Phenotype Prioritized Genes')
   expect(wrapper.text()).toContain('RNAseq Results')
   expect(wrapper.text()).toContain(`Age:${new Date().getFullYear() - 1980}`)

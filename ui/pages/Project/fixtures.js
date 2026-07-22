@@ -223,8 +223,8 @@ export const STATE_WITH_2_FAMILIES = {
       sex: 'F',
       birthYear: 1980,
       deathYear: null,
-      rnaSample: { loadedDate: '2020-01-01', dataTypes: ['E', 'S'] },
-      phenotypePrioritizationTools: [{ tool: 'lirical', loadedDate: '2020-01-01' }],
+      rnaSample: { loadedDate: '2020-01-01T12:00:00.000Z', dataTypes: ['E', 'S'] },
+      phenotypePrioritizationTools: [{ tool: 'lirical', loadedDate: '2020-01-01T12:00:00.000Z' }],
     },
     I021475_na19675_1: {
       projectGuid: 'R0237_1000_genomes_demo',
@@ -386,8 +386,8 @@ export const STATE_WITH_2_FAMILIES = {
         { name: 'Tier 1 - Phenotype not delineated', category: 'CMG Discovery Tags', color: '#44AA60', description: 'Gene and phenotype fully solve the family', variantTagTypeGuid: 'VTT_TIER1', numTags: 1},
       ],
       rnaSampleCounts: {
-        E: [{ loadedDate: '2021-01-01T00:00:00.000Z', familyCounts: { F011652_1: 2, F011652_2: 1 } }],
-        S: [{ loadedDate: '2021-01-02T00:00:00.000Z', familyCounts: { F011652_1: 1 } }],
+        E: [{ loadedDate: '2021-01-01T12:00:00.000Z', familyCounts: { F011652_1: 2, F011652_2: 1 } }],
+        S: [{ loadedDate: '2021-01-02T12:00:00.000Z', familyCounts: { F011652_1: 1 } }],
       },
       collaborators: [
         {
@@ -1040,7 +1040,7 @@ export const STATE_WITH_2_FAMILIES = {
       submissionGuid: 'MS021476_na19678_1',
       individualGuid: 'I021476_na19678_1',
       createdDate: '2018-05-09T10:29:00.000Z',
-      deletedDate: '2020-01-01T00:00:00.000Z',
+      deletedDate: '2020-01-01T12:00:00.000Z',
     }
   },
   mmeResultsByGuid: {
