@@ -44,6 +44,42 @@ test('renders variant position, genes, and tags columns', () => {
   expect(wrapper.find('ColoredLabel').prop('color')).toEqual('#668FE3')
 })
 
+test('renders a deletion variant summary and handles missing genes', () => {
+  const deletionVariant = {
+    ...VARIANT, variantGuid: 'SV_deletion', alt: null, end: 116043000, genes: null,
+  }
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <SelectSavedVariantsTable
+        familyGuid="F011652_1"
+        idField="variantGuid"
+        data={[deletionVariant]}
+        columns={[GENES_COLUMN, VARIANT_POS_COLUMN, TAG_COLUMN]}
+      />
+    </Provider>
+  )
+
+  expect(wrapper.text()).toContain(`22:${pos} -116043000`)
+})
+
+test('handles a null gene within a variant\'s genes list', () => {
+  const variantWithNullGene = { ...VARIANT, variantGuid: 'SV_null_gene', genes: [null] }
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <SelectSavedVariantsTable
+        familyGuid="F011652_1"
+        idField="variantGuid"
+        data={[variantWithNullGene]}
+        columns={[GENES_COLUMN, VARIANT_POS_COLUMN, TAG_COLUMN]}
+      />
+    </Provider>
+  )
+
+  expect(wrapper.find('tbody tr').length).toEqual(1)
+})
+
 test('selects a row when clicked and calls onChange with the selection', () => {
   const onChange = jest.fn()
   const store = configureStore()(STATE_WITH_2_FAMILIES)

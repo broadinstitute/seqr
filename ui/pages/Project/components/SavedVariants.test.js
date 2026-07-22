@@ -13,6 +13,11 @@ import VariantTagTypeBar from './VariantTagTypeBar'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
+const getLinkVariantsValidate = (wrapper) => {
+  const { formFields } = wrapper.find(UpdateButton).props()
+  return formFields.find(f => f.name === 'variantGuids').validate
+}
+
 jest.mock('../reducers', () => ({
   ...jest.requireActual('../reducers'),
   loadSavedVariants: () => ({ type: 'NOOP' }),
@@ -53,7 +58,7 @@ test('renders tag options built from the project variant tag types, grouped by c
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('.tag-options').text().split(',')).toEqual([
@@ -68,7 +73,7 @@ test('defaults to the "Show All" tag when there is no tag/variant in the route',
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('.selected-tag').text()).toEqual('ALL')
@@ -81,7 +86,7 @@ test('uses the requested tag from the route', () => {
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/Excluded']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('.selected-tag').text()).toEqual('Excluded')
@@ -94,7 +99,7 @@ test('renders a link-variants button for a family route when the project is edit
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('.additional-filter').text()).toContain('Link Variants')
@@ -107,7 +112,7 @@ test('renders no link-variants button when there is no family route', () => {
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('.additional-filter').text()).toEqual('')
@@ -120,7 +125,7 @@ test('renders the savedBy filter dropdown with options built from the project st
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('.saved-by-filter').exists()).toBe(true)
@@ -133,7 +138,7 @@ test('getUpdateTagUrl updates the category filter and omits the tag segment for 
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   const url = mockLatestProps.getUpdateTagUrl('CMG Discovery Tags')
@@ -151,7 +156,7 @@ test('getUpdateTagUrl clears the category filter and includes the tag segment fo
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   const url = mockLatestProps.getUpdateTagUrl('Excluded')
@@ -169,7 +174,7 @@ test('loadVariants resets the page and only reloads when the initial load or the
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   const { match } = mockLatestProps
@@ -195,7 +200,7 @@ test('tableSummaryComponent renders the tag type bar and excludes tags based on 
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   const renderSummary = props => mount(
@@ -221,7 +226,7 @@ test('the link-variants form submits the selected variant guids and tags for the
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   const { onSubmit } = wrapper.find(UpdateButton).props()
@@ -247,9 +252,132 @@ test('renders the link-variants form fields when the modal is open', () => {
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
         <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find(SelectSavedVariantsTable).exists()).toBe(true)
   expect(wrapper.find('table').exists()).toBe(true)
+})
+
+test('the link-variants form validation requires 2+ variants in the same gene', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  const validate = getLinkVariantsValidate(wrapper)
+
+  expect(validate({})).toEqual('Multiple variants required')
+  expect(validate({ v1: { transcripts: { GENE1: [{}] } } })).toEqual('Multiple variants required')
+
+  expect(validate({
+    v1: { transcripts: { GENE1: [{}] } },
+    v2: { transcripts: { GENE2: [{}] } },
+  })).toEqual('Compound het pairs must be in the same gene')
+
+  expect(validate({
+    v1: { transcripts: { GENE1: [{}] } },
+    v2: { transcripts: { GENE1: [{}] } },
+  })).toBeUndefined()
+
+  expect(validate({
+    v1: { transcripts: { GENE1: [{}] } },
+    v2: { transcripts: { GENE1: [{}] } },
+    v3: { transcripts: { GENE1: [{}] } },
+  })).toBeUndefined()
+})
+
+test('loadVariants uses the analysis group families when there is no family in the route', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  const { match } = mockLatestProps
+
+  expect(() => mockLatestProps.loadVariants(match.params)).not.toThrow()
+  expect(store.getActions()).toContainEqual({ type: 'UPDATE_VARIANT_STATE', updates: { page: 1 } })
+})
+
+test('tagOptions omits the category header for tags with no category and falls back when there are no tag types', () => {
+  const noCategoryState = {
+    ...STATE_WITH_2_FAMILIES,
+    projectsByGuid: {
+      ...STATE_WITH_2_FAMILIES.projectsByGuid,
+      R0237_1000_genomes_demo: {
+        ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
+        variantTagTypes: [
+          { name: 'Review', category: 'Collaboration', color: '#668FE3', variantTagTypeGuid: 'VTT_REVIEW', numTags: 2 },
+          { name: 'Uncategorized', category: null, color: '#000000', variantTagTypeGuid: 'VTT_NONE', numTags: 0 },
+        ],
+      },
+    },
+  }
+  const store = configureStore()(noCategoryState)
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(wrapper.find('.tag-options').text().split(',')).toEqual(['All Saved', 'Collaboration', 'Review', 'Uncategorized'])
+
+  const noTagTypesState = {
+    ...STATE_WITH_2_FAMILIES,
+    projectsByGuid: {
+      ...STATE_WITH_2_FAMILIES.projectsByGuid,
+      R0237_1000_genomes_demo: {
+        ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
+        variantTagTypes: null,
+      },
+    },
+  }
+  const noTagTypesStore = configureStore()(noTagTypesState)
+  const noTagTypesWrapper = mount(
+    <Provider store={noTagTypesStore}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(noTagTypesWrapper.find('.tag-options').text().split(',')).toEqual(['All Saved'])
+})
+
+test('selects no tag when a specific variant is requested from the route', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter
+        initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/variant/SV0000004_116042722_r0390_1000']}
+      >
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(wrapper.find('.selected-tag').text()).toEqual('')
+})
+
+test('includes the hideKnownGeneForPhenotype filter for the discovery tag category', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/CMG%20Discovery%20Tags']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(wrapper.find('.filter-names').text().split(',')).toContain('hideKnownGeneForPhenotype')
 })

@@ -17,7 +17,7 @@ test('renders a summary row for each tag type with saved variants', () => {
       <MemoryRouter>
         <VariantTags projectGuid="R0237_1000_genomes_demo" />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   // Excluded has numTags 0, so it should not get a summary row
@@ -42,9 +42,20 @@ test('does not show a help icon for tag types without a description', () => {
       <MemoryRouter>
         <VariantTags projectGuid="R0237_1000_genomes_demo" />
       </MemoryRouter>
-    </Provider>
+    </Provider>,
   )
 
   const reviewRow = wrapper.find('TagSummary').at(0)
   expect(reviewRow.find('HelpIcon').exists()).toBe(false)
+})
+
+test('uses analysis group tag type counts when an analysisGroupGuid is provided', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  expect(() => mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <VariantTags projectGuid="R0237_1000_genomes_demo" analysisGroupGuid="AG0000183_test_group" />
+      </MemoryRouter>
+    </Provider>,
+  )).not.toThrow()
 })

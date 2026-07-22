@@ -78,6 +78,22 @@ test('opens the manual SV modal and exercises the form field callbacks', () => {
   expect(zygosityField.prop('format')(undefined)).toBeUndefined()
 })
 
+test('opens the manual SNV modal for a family with no tagged saved variants', () => {
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    savedVariantsByGuid: {},
+    savedVariantFamilies: { F011652_1: { loaded: true } },
+    modal: { 'F011652_1-addVariant-Variant': { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <CreateVariantButtons family={FAMILY} />
+    </Provider>,
+  )
+
+  expect(wrapper.find('ForwardRef(Field)[name^="genotypes."]').length).toBeGreaterThan(0)
+})
+
 test('renders nothing when the project is not editable and the user is not an analyst', () => {
   const readOnlyState = {
     ...STATE_WITH_2_FAMILIES,

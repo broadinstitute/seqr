@@ -85,11 +85,23 @@ test('renders family size histogram edge cases and the case review edit button',
       individualGuids: ['a1', 'a2', 'a3'],
       parents: [{ maternalGuid: 'm1', paternalGuid: 'p1' }],
     },
+    F1b: {
+      familyGuid: 'F1b',
+      projectGuid: PROJECT_GUID,
+      individualGuids: ['e1', 'e2', 'e3'],
+      parents: [{ maternalGuid: 'm5', paternalGuid: 'p5' }],
+    },
     F2: {
       familyGuid: 'F2',
       projectGuid: PROJECT_GUID,
       individualGuids: ['b1', 'b2', 'b3', 'b4'],
       parents: [{ maternalGuid: 'm2', paternalGuid: 'p2' }],
+    },
+    F3: {
+      familyGuid: 'F3',
+      projectGuid: PROJECT_GUID,
+      individualGuids: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'],
+      parents: [],
     },
     F4: {
       familyGuid: 'F4',
@@ -107,6 +119,8 @@ test('renders family size histogram edge cases and the case review edit button',
   const text = wrapper.text()
   expect(text).toContain('trio+')
   expect(text).toContain('quad+')
+  // Two families of size 3 both counted as "trios" exercises the plural label branch
+  expect(text).toContain('trios')
   expect(wrapper.find('[modalName="editFamiliesAndIndividuals"]').exists()).toBe(true)
 })
 
@@ -172,4 +186,85 @@ test('renders anvil workspace details and a message when no datasets are loaded'
   expect(wrapper.text()).toContain('No Datasets Loaded')
   expect(wrapper.text()).toContain('Where is my data?')
   expect(wrapper.find('[modalId="editAnvilWorkspace"]').exists()).toBe(true)
+})
+
+test('shows no submissions message when there are no mme submissions', () => {
+  const noMmeState = cloneDeep(STATE_WITH_2_FAMILIES)
+  noMmeState.projectsByGuid[PROJECT_GUID].mmeSubmissionCount = 0
+  noMmeState.projectsByGuid[PROJECT_GUID].mmeDeletedSubmissionCount = 0
+
+  const wrapper = renderProjectOverview(noMmeState)
+
+  expect(wrapper.text()).toContain('No Submissions')
+})
+
+test('falls back to the raw sample type when it is not a recognized sample type', () => {
+  const unknownSampleTypeState = cloneDeep(STATE_WITH_2_FAMILIES)
+  unknownSampleTypeState.datasetsByGuid.DS_UNKNOWN = {
+    datasetType: 'SNV_INDEL',
+    sampleType: 'FOO',
+    projectGuid: PROJECT_GUID,
+    activeIndividuals: ['I021476_na19678_2'],
+    inactiveIndividuals: [],
+    loadedDate: '2019-01-01T12:00:00.000Z',
+  }
+
+  const wrapper = renderProjectOverview(unknownSampleTypeState)
+
+  expect(wrapper.text()).toContain('FOO Datasets')
+})
+
+test('does not render the anvil section when there is no workspace and the user is not a pm', () => {
+  const noAnvilState = cloneDeep(STATE_WITH_2_FAMILIES)
+  noAnvilState.projectsByGuid[PROJECT_GUID].workspaceName = null
+  noAnvilState.user.isPm = false
+  noAnvilState.user.isAnvil = true
+
+  const wrapper = renderProjectOverview(noAnvilState)
+
+  expect(wrapper.find('[title="AnVIL Workspace"]').exists()).toBe(false)
+})
+
+test('renders "None" for the anvil workspace when the user is a pm with no workspace', () => {
+  const noWorkspaceState = cloneDeep(STATE_WITH_2_FAMILIES)
+  noWorkspaceState.projectsByGuid[PROJECT_GUID].workspaceName = null
+  noWorkspaceState.user.isPm = true
+  noWorkspaceState.user.isAnvil = true
+
+  const wrapper = renderProjectOverview(noWorkspaceState)
+
+  expect(wrapper.text()).toContain('AnVIL WorkspaceNone')
+  expect(wrapper.find('[modalId="editAnvilWorkspace"]').exists()).toBe(true)
+})
+
+test('uses the analysis group workspace details when the group has its own workspace', () => {
+  const analysisGroupState = cloneDeep(STATE_WITH_2_FAMILIES)
+  analysisGroupState.user.isAnvil = true
+
+  const wrapper = mount(
+    <Provider store={configureStore()(analysisGroupState)}>
+      <MemoryRouter>
+        <ProjectOverview
+          familiesLoading={false}
+          overviewLoading={false}
+          analysisGroupGuid="AG0000183_test_group"
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(wrapper.text()).toContain('anvil-analysis-group')
+})
+
+test('shows a loading indicator when families or overview data is loading', () => {
+  const wrapper = mount(
+    <Provider store={configureStore()(STATE_WITH_2_FAMILIES)}>
+      <MemoryRouter>
+        <ProjectOverview familiesLoading overviewLoading />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(wrapper.find('Dimmer').exists()).toBe(true)
+  expect(wrapper.find('Loader').exists()).toBe(true)
 })

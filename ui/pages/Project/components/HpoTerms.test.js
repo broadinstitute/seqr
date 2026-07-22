@@ -1,13 +1,18 @@
 import React from 'react'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
-import { Form as FinalForm } from 'react-final-form'
+import { Form as FinalForm, Field } from 'react-final-form'
 import configureStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 
 import { HPO_FORM_FIELDS } from './HpoTerms'
+
+jest.mock('redux/rootReducer', () => ({
+  ...jest.requireActual('redux/rootReducer'),
+  loadHpoTerms: () => ({ type: 'NOOP' }),
+}))
 
 configure({ adapter: new Adapter() })
 
@@ -204,4 +209,83 @@ test('adds a feature selected from a loaded HPO category', () => {
   wrapper.find('Icon[name="plus"]').simulate('click')
 
   expect(onChange).toHaveBeenCalledWith([...FEATURES, { id: 'HP:0009999', label: 'New Term' }])
+})
+
+test('formats an empty/ missing feature list as an empty array', () => {
+  expect(formatFeatures(undefined)).toEqual([])
+})
+
+test('parses qualifiers back into a lookup keyed by type', () => {
+  const wrapper = mount(
+    <FinalForm
+      onSubmit={() => {}}
+      render={() => (
+        <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />
+      )}
+    />,
+  )
+
+  wrapper.find('ButtonLink[content="Edit Details"]').at(0).find('button').simulate('click')
+  wrapper.update()
+
+  const qualifiersField = wrapper.find(Field).filterWhere(n => n.prop('name') === 'features[0].qualifiers')
+  expect(qualifiersField.exists()).toBe(true)
+  const { parse } = qualifiersField.props()
+
+  expect(parse({ severity: 'Mild' })).toEqual([{ type: 'severity', label: 'Mild' }])
+  expect(parse(undefined)).toEqual([])
+})
+
+test('renders the hpo id alone when a feature has no label', () => {
+  const unlabeledFeature = [{ index: 0, id: 'HP:0000001' }]
+  const wrapper = mount(
+    <HpoTermsEditor name="features" value={unlabeledFeature} onChange={jest.fn()} allowAdditions />,
+  )
+
+  expect(wrapper.text()).toContain('HP:0000001')
+  expect(wrapper.text()).not.toContain('undefined')
+})
+
+test('does not render any terms when the loaded category has no terms', () => {
+  const store = mockStore({
+    hpoTermsByParent: { 'HP:0000598': {} },
+    hpoTermsLoading: { isLoading: false },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  wrapper.find('ButtonLink[content="Add Feature"]').find('button').simulate('click')
+  wrapper.update()
+
+  wrapper.findWhere(n => n.type() === 'a' && n.text() === 'Ear').first().simulate('click')
+  wrapper.update()
+
+  expect(wrapper.find('Tab.Pane').exists()).toBe(false)
+})
+
+test('checks whether hpo terms are loading when none are cached for the category', () => {
+  const store = mockStore({
+    hpoTermsByParent: {},
+    hpoTermsLoading: { isLoading: true },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <HpoTermsEditor name="features" value={FEATURES} onChange={jest.fn()} allowAdditions />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  wrapper.find('ButtonLink[content="Add Feature"]').find('button').simulate('click')
+  wrapper.update()
+
+  wrapper.findWhere(n => n.type() === 'a' && n.text() === 'Ear').first().simulate('click')
+  wrapper.update()
+
+  expect(wrapper.find('Dimmer').exists()).toBe(true)
 })

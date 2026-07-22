@@ -1,5 +1,5 @@
 import React from 'react'
-import { shallow, mount, configure } from 'enzyme'
+import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
@@ -7,7 +7,7 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { CASE_REVIEW_TABLE_NAME } from '../../constants'
 
-import IndividualRow from './IndividualRow'
+import IndividualRow, { IndividualRowComponent } from './IndividualRow'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
 jest.mock('../../reducers', () => ({
@@ -155,4 +155,196 @@ test('dispatches pedigree and IGV updates and renders parent/IGV select and gene
 
   expect(pedigreeAction.individuals).toEqual([{ individualGuid: TEST_INDIVIDUAL_GUID, sex: 'M' }])
   expect(igvAction.filePath).toBe('gs://test.cram')
+})
+
+const PROJECT = STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo
+
+const renderIndividualRowComponent = (individual, props = {}) => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  return mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRowComponent project={PROJECT} individual={individual} {...props} />
+      </MemoryRouter>
+    </Provider>,
+  )
+}
+
+test('renders case review status without a last modified date or user', () => {
+  const wrapper = renderIndividualRowComponent(
+    {
+      ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+      caseReviewStatusLastModifiedDate: null,
+      caseReviewStatusLastModifiedBy: null,
+    },
+    { tableName: CASE_REVIEW_TABLE_NAME },
+  )
+
+  expect(wrapper.text()).not.toContain('CHANGED ON')
+})
+
+test('renders case review status with a last modified date and user', () => {
+  const wrapper = renderIndividualRowComponent(
+    {
+      ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+      caseReviewStatusLastModifiedDate: '2016-12-05T10:29:00.000Z',
+      caseReviewStatusLastModifiedBy: 'test user',
+    },
+    { tableName: CASE_REVIEW_TABLE_NAME },
+  )
+
+  expect(wrapper.text()).toContain('CHANGED ON')
+  expect(wrapper.text()).toContain('BY test user')
+})
+
+test('renders RNAseq results link when only splice outlier data type is present', () => {
+  const wrapper = renderIndividualRowComponent({
+    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1,
+    rnaSample: { loadedDate: '2020-01-01T12:00:00.000Z', dataTypes: ['S'] },
+  })
+
+  expect(wrapper.text()).toContain('RNAseq Results')
+})
+
+test('does not render RNAseq results link when no outlier data types are present', () => {
+  const wrapper = renderIndividualRowComponent({
+    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1,
+    rnaSample: { loadedDate: '2020-01-01T12:00:00.000Z', dataTypes: ['T'] },
+  })
+
+  expect(wrapper.text()).not.toContain('RNAseq Results')
+})
+
+test('renders a rejected gene without comments', () => {
+  const wrapper = renderIndividualRowComponent({
+    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+    rejectedGenes: [{ gene: 'BRCA1' }],
+  })
+
+  expect(wrapper.text()).toContain('Previously Tested Genes:BRCA1')
+})
+
+test('renders age details when death year is 0 and birth year is unknown', () => {
+  const wrapper = renderIndividualRowComponent({
+    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+    birthYear: null,
+    deathYear: 0,
+  })
+
+  expect(wrapper.text()).toContain('Age:Deceased (date unknown)')
+})
+
+test('renders age details when death year is known but birth year is unknown', () => {
+  const wrapper = renderIndividualRowComponent({
+    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+    birthYear: null,
+    deathYear: 2015,
+  })
+
+  expect(wrapper.text()).toContain('Age:Deceased in 2015')
+})
+
+test('renders unknown age when neither birth year nor death year is known', () => {
+  const wrapper = renderIndividualRowComponent({
+    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+    birthYear: null,
+    deathYear: null,
+  })
+
+  expect(wrapper.text()).toContain('Age:Unknown')
+})
+
+test('renders an unmapped population code as-is', () => {
+  const wrapper = renderIndividualRowComponent({
+    ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+    population: 'XYZ',
+  })
+
+  expect(wrapper.text()).toMatch(/Imputed Population\s*:XYZ/)
+})
+
+test('renders "Not Loaded" when no population is set', () => {
+  const wrapper = renderIndividualRowComponent(
+    {
+      ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+      population: null,
+    },
+    { project: { ...PROJECT, isAnalystProject: true } },
+  )
+
+  expect(wrapper.text()).toMatch(/Imputed Population\s*:Not Loaded/)
+})
+
+test('only shows active or first/last inactive samples from an explicit datasets list', () => {
+  const wrapper = renderIndividualRowComponent(
+    STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1,
+    {
+      datasets: [
+        { loadedDate: '2020-01-01', sampleType: 'WES', datasetType: 'SNV_INDEL', isActive: false },
+        { loadedDate: '2020-01-02', sampleType: 'WES', datasetType: 'SNV_INDEL', isActive: true },
+        { loadedDate: '2020-01-03', sampleType: 'WES', datasetType: 'SNV_INDEL', isActive: false },
+        { loadedDate: '2020-01-04', sampleType: 'WES', datasetType: 'SNV_INDEL', isActive: false },
+      ],
+    },
+  )
+
+  // reversed order: 01-04 (i=0, inactive, kept as first), 01-03 (i=1, inactive, dropped),
+  // 01-02 (i=2, active, kept), 01-01 (i=3, inactive, kept as last)
+  const samples = wrapper.find('Memo()').filterWhere(n => n.prop('sampleType') === 'WES')
+  expect(samples).toHaveLength(3)
+  expect(samples.map(n => n.prop('loadedDate'))).toEqual(['2020-01-04', '2020-01-02', '2020-01-01'])
+})
+
+test('renders parent options select as disabled when there are no eligible parents', () => {
+  const parentPedigreeModalId = 'edit_-_I021476_na19678_2_-_coreEdit_-_undefined'
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    modal: { [parentPedigreeModalId]: { open: true } },
+  })
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          family={STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2}
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_2}
+          tableName={CASE_REVIEW_TABLE_NAME}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  const motherSelect = wrapper.find('Select').filterWhere(n => n.prop('name') === 'maternalGuid')
+  expect(motherSelect.first().prop('disabled')).toBe(true)
+  expect(motherSelect.first().prop('options')).toEqual([])
+})
+
+test('renders disorders and candidate genes item inputs when editing', () => {
+  const disordersModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_disorders_-_undefined`
+  const candidateGenesModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_candidateGenes_-_undefined`
+
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    modal: {
+      [disordersModalId]: { open: true },
+      [candidateGenesModalId]: { open: true },
+    },
+  })
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <IndividualRow
+          family={STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1}
+          individual={STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  // disorders list item is edited via a plain input (no react-final-form `input` prop forwarded)
+  expect(wrapper.find('input[value=10243]').exists()).toBe(true)
+
+  // candidateGenes has no existing values, so a blank searchable gene input is rendered
+  expect(wrapper.find('ForwardRef(Field)[name="candidateGenes[0].gene"]').length).toBe(1)
 })

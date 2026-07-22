@@ -32,3 +32,22 @@ test('renders an editable row for each individual in the family', () => {
   expect(wrapper.find('input[value="NA19675"]').exists()).toBe(true)
   expect(wrapper.find('input[value="NA19679"]').exists()).toBe(true)
 })
+
+test('shows the analyst-only fields when the user is an analyst', () => {
+  const state = { ...STATE_WITH_2_FAMILIES, user: { ...STATE_WITH_2_FAMILIES.user, isAnalyst: true } }
+  const store = configureStore(state)
+  const wrapperWithoutAnalystFields = mount(
+    <Provider store={configureStore(STATE_WITH_2_FAMILIES)}>
+      <EditIndividualsForm modalName="editIndividuals" analysisGroupGuid="AG0000183_test_group" />
+    </Provider>
+  )
+  const wrapper = mount(
+    <Provider store={store}>
+      <EditIndividualsForm modalName="editIndividuals" analysisGroupGuid="AG0000183_test_group" />
+    </Provider>
+  )
+
+  expect(wrapper.find('EditRecordsForm').prop('columns').length).toBeGreaterThan(
+    wrapperWithoutAnalystFields.find('EditRecordsForm').prop('columns').length,
+  )
+})

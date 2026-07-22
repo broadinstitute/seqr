@@ -22,7 +22,7 @@ test('renders unread notifications and a mark-as-read button', () => {
   const wrapper = mount(
     <Provider store={store}>
       <ProjectNotifications />
-    </Provider>
+    </Provider>,
   )
 
   onSuccessCallback({
@@ -41,7 +41,7 @@ test('renders a subscribe button and empty state when there are no notifications
   const wrapper = mount(
     <Provider store={store}>
       <ProjectNotifications />
-    </Provider>
+    </Provider>,
   )
 
   onSuccessCallback({ unreadNotifications: [], isSubscriber: false })
@@ -49,4 +49,18 @@ test('renders a subscribe button and empty state when there are no notifications
 
   expect(wrapper.text()).toContain('No new notifications')
   expect(wrapper.find('ButtonLink[content="Subscribe"]').exists()).toBe(true)
+})
+
+test('renders a show-read-notifications button when there are read notifications to show', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <ProjectNotifications />
+    </Provider>,
+  )
+
+  onSuccessCallback({ unreadNotifications: [], readCount: 3, isSubscriber: true })
+  wrapper.update()
+
+  expect(wrapper.find('ButtonLink[content="Show 3 read notifications"]').exists()).toBe(true)
 })

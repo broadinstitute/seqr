@@ -17,7 +17,7 @@ test('renders a trigger button', () => {
   const wrapper = mount(
     <Provider store={store}>
       <EditFamiliesAndIndividualsButton />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.text()).toEqual('Edit Families & Individuals')
@@ -31,7 +31,25 @@ test('shows the standard edit panes, without a Gregor import pane, by default', 
   const wrapper = mount(
     <Provider store={store}>
       <EditFamiliesAndIndividualsButton />
-    </Provider>
+    </Provider>,
+  )
+
+  const menuItems = wrapper.find('Tab').prop('panes').map(p => p.menuItem)
+  expect(menuItems).toEqual([
+    'Edit Families', 'Edit Individuals', 'Bulk Edit Families', 'Bulk Edit Individuals', 'Bulk Edit Individual Metadata',
+  ])
+})
+
+test('shows the standard edit panes when there is no current project', () => {
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    modal: { editFamiliesAndIndividuals: { open: true } },
+    projectsByGuid: {},
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <EditFamiliesAndIndividualsButton />
+    </Provider>,
   )
 
   const menuItems = wrapper.find('Tab').prop('panes').map(p => p.menuItem)
@@ -55,7 +73,7 @@ test('adds a Gregor import pane when the project has a Gregor finding tag type',
   const wrapper = mount(
     <Provider store={store}>
       <EditFamiliesAndIndividualsButton />
-    </Provider>
+    </Provider>,
   )
 
   const menuItems = wrapper.find('Tab').prop('panes').map(p => p.menuItem)

@@ -73,6 +73,13 @@ test('renders the consent code when the user is a PM viewing a project with a co
   expect(wrapper.text()).toContain('Consent Code:')
 })
 
+test('renders the project title for an unrecognized breadcrumb', () => {
+  const wrapper = renderPageHeader({ match: { params: { breadcrumb: 'other_page' } } })
+
+  expect(wrapper.find('Breadcrumb').text()).toContain('1000 Genomes Demo')
+  expect(wrapper.find('ButtonLink[content="Edit Project"]').exists()).toBe(false)
+})
+
 test('renders no description on the family page for the matchmaker exchange and rna-seq results sections', () => {
   const wrapper = renderPageHeader({
     match: {

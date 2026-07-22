@@ -57,6 +57,30 @@ test('renders the add collaborator form and submits a new collaborator', () => {
   expect(() => addButton.prop('onSubmit')({ user: { email } })).not.toThrow()
 })
 
+test('renders analysis group workspace collaborators when the collaborator has a display name', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    analysisGroupsByGuid: {
+      ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid,
+      AG0000183_test_group: {
+        ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid.AG0000183_test_group,
+        collaborators: [{ email: 'group-collab@broadinstitute.org', displayName: 'Group Collaborator' }],
+      },
+    },
+  }
+  const store = configureStore(state)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <ProjectCollaborators analysisGroupGuid="AG0000183_test_group" />
+    </Provider>,
+  )
+
+  expect(wrapper.find('a[href="mailto:group-collab@broadinstitute.org"]').exists()).toBe(true)
+  expect(wrapper.text()).toContain('Group Collaborator -')
+  expect(wrapper.find('a[href="mailto:test1@broadinstitute.org"]').exists()).toBe(false)
+})
+
 test('renders collaborator groups and the AnVIL managed message', () => {
   const project = STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo
   const state = {

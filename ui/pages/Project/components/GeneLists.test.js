@@ -58,6 +58,28 @@ test('dispatches an update when a gene list is removed', () => {
   expect(updateAction.delete).toBe(true)
 })
 
+test('renders no gene lists when the project has no locusListGuids', () => {
+  const stateWithNoLists = {
+    ...STATE_WITH_2_FAMILIES,
+    projectsByGuid: {
+      ...STATE_WITH_2_FAMILIES.projectsByGuid,
+      R0237_1000_genomes_demo: {
+        ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
+        locusListGuids: undefined,
+      },
+    },
+  }
+  const store = configureStore()(stateWithNoLists)
+  const wrapper = mount(
+    <Provider store={store}>
+      <GeneLists />
+    </Provider>
+  )
+
+  expect(wrapper.find('GeneLists__ItemContainer').length).toBe(0)
+  expect(wrapper.find('ButtonLink').filterWhere(n => n.text() === 'Show More...').length).toBe(0)
+})
+
 test('shows a "Show More" link when there are more than 20 gene lists', () => {
   const manyLocusListGuids = Array.from({ length: 25 }, (v, i) => `LL${i}_locus_list`)
   const stateWithManyLists = {

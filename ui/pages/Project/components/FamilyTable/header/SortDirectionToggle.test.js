@@ -23,3 +23,14 @@ test('renders the sort direction icon and toggles direction on click', () => {
 
   expect(onChange).toHaveBeenCalledWith(1)
 })
+
+test('renders the down arrow when the sort direction value is 1', () => {
+  const onChange = jest.fn()
+  const wrapper = mount(<SortDirectionToggle value={1} onChange={onChange} />)
+
+  expect(wrapper.find('Icon').prop('name')).toEqual('arrow down')
+
+  wrapper.find('button').simulate('click')
+
+  expect(onChange).toHaveBeenCalledWith(-1)
+})

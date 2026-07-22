@@ -73,6 +73,17 @@ test('renders a dropdown when there is more than one tissue/sequencing type', ()
   expect(wrapper.find('Dropdown').prop('value')).toEqual('F-W')
 })
 
+test('renders no splice junction outlier table when there is no significant junction data', () => {
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <RnaSeqResultPage match={{ params: { individualGuid: 'I021474_na19679_1' } }} />
+    </Provider>
+  )
+
+  expect(wrapper.find('DataTable').exists()).toBe(false)
+})
+
 test('renders the splice junction outlier plot and table when there is significant junction data', () => {
   const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(

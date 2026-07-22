@@ -5,9 +5,9 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
+import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA } from 'shared/utils/constants'
 import { EditFamiliesBulkForm, EditIndividualsBulkForm, EditIndividualMetadataBulkForm } from './BulkEditForm'
 import { FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
-import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA } from 'shared/utils/constants'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
 // jsdom does not implement createObjectURL; BulkUploadForm's template download links need it
@@ -22,13 +22,12 @@ configure({ adapter: new Adapter() })
 
 const configureStore = configureMockStore([thunk])
 
-
 test('renders family bulk edit required/optional columns and the core (non-analyst) fields', () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditFamiliesBulkForm modalName="bulkEditFamilies" />
-    </Provider>
+    </Provider>,
   )
 
   const [idField, ...optionalFields] = FAMILY_BULK_EDIT_EXPORT_DATA
@@ -50,7 +49,7 @@ test('renders analyst-only optional fields for an analyst user', () => {
   const wrapper = mount(
     <Provider store={analystStore}>
       <EditFamiliesBulkForm modalName="bulkEditFamilies" />
-    </Provider>
+    </Provider>,
   )
 
   const lastField = FAMILY_BULK_EDIT_EXPORT_DATA[FAMILY_BULK_EDIT_EXPORT_DATA.length - 1]
@@ -62,7 +61,7 @@ test('renders individuals bulk form with the individual ID required columns', ()
   const wrapper = mount(
     <Provider store={store}>
       <EditIndividualsBulkForm modalName="bulkEditIndividuals" />
-    </Provider>
+    </Provider>,
   )
 
   INDIVIDUAL_ID_EXPORT_DATA.forEach((field) => {
@@ -73,12 +72,29 @@ test('renders individuals bulk form with the individual ID required columns', ()
   })
 })
 
+test('renders analyst-only optional fields for individuals bulk form for an analyst user', () => {
+  const analystState = {
+    ...STATE_WITH_2_FAMILIES,
+    user: { ...STATE_WITH_2_FAMILIES.user, isAnalyst: true },
+  }
+  const analystStore = configureStore(analystState)
+  const wrapper = mount(
+    <Provider store={analystStore}>
+      <EditIndividualsBulkForm modalName="bulkEditIndividuals" />
+    </Provider>,
+  )
+
+  INDIVIDUAL_ID_EXPORT_DATA.forEach((field) => {
+    expect(wrapper.text()).toContain(field.header)
+  })
+})
+
 test('renders individual metadata bulk form', () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <EditIndividualMetadataBulkForm modalName="bulkEditIndividualMetadata" />
-    </Provider>
+    </Provider>,
   )
 
   INDIVIDUAL_ID_EXPORT_DATA.forEach((field) => {

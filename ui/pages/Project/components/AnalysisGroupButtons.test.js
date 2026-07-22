@@ -152,6 +152,88 @@ test('renders the criteria fields with a required first criteria for a dynamic a
   expect(wrapper.find('ForwardRef(Field)[name="familyGuids"]').exists()).toBe(false)
 })
 
+test('renders an icon-only create button with no button text', () => {
+  const wrapper = renderWithStore(UpdateAnalysisGroupButton, { iconOnly: true })
+
+  expect(wrapper.find('ButtonLink').prop('content')).toBeFalsy()
+})
+
+test('renders an icon-only delete button with no button text', () => {
+  const wrapper = renderWithStore(
+    DeleteAnalysisGroupButton, { analysisGroup: ANALYSIS_GROUP, iconOnly: true },
+  )
+
+  expect(wrapper.find('ButtonLink').prop('content')).toBeFalsy()
+})
+
+test('validates that a name value is present', () => {
+  const store = configureStore([thunk])({
+    ...STATE_WITH_2_FAMILIES,
+    modal: { 'createAnalysisGroup-R0237_1000_genomes_demo': { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <UpdateAnalysisGroupButton />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  const nameField = wrapper.find('ForwardRef(Field)[name="name"]')
+  expect(nameField.prop('validate')('Some Name')).toBeUndefined()
+  expect(nameField.prop('validate')('')).toEqual('Name is required')
+})
+
+test('merges uploaded family guids into the family guids field via the form calculate decorator', () => {
+  const editModalId = `editAnalysisGroup-${ANALYSIS_GROUP.analysisGroupGuid}`
+  const store = configureStore([thunk])({
+    ...STATE_WITH_2_FAMILIES,
+    modal: { [editModalId]: { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <UpdateAnalysisGroupButton analysisGroup={ANALYSIS_GROUP} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  const uploadedFamilyIdsField = wrapper.find('ForwardRef(Field)[name="uploadedFamilyIds"]').last()
+  uploadedFamilyIdsField.prop('onChange')({ familyGuids: ['F011652_2'] })
+  wrapper.update()
+
+  let familyGuidsField = wrapper.find('Memo()').filterWhere(n => n.prop('idField') === 'familyGuid')
+  expect(familyGuidsField.first().prop('value')).toEqual({ F011652_1: true, F011652_2: true })
+
+  // an upload with no parsed family guids does not add anything new
+  wrapper.find('ForwardRef(Field)[name="uploadedFamilyIds"]').last().prop('onChange')({})
+  wrapper.update()
+
+  familyGuidsField = wrapper.find('Memo()').filterWhere(n => n.prop('idField') === 'familyGuid')
+  expect(familyGuidsField.first().prop('value')).toEqual({ F011652_1: true, F011652_2: true })
+})
+
+test('merges uploaded family guids into an empty family guids field via the form calculate decorator', () => {
+  const store = configureStore([thunk])({
+    ...STATE_WITH_2_FAMILIES,
+    modal: { 'createAnalysisGroup-R0237_1000_genomes_demo': { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <UpdateAnalysisGroupButton />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  const uploadedFamilyIdsField = wrapper.find('ForwardRef(Field)[name="uploadedFamilyIds"]').last()
+  uploadedFamilyIdsField.prop('onChange')({ familyGuids: ['F011652_1'] })
+  wrapper.update()
+
+  const familyGuidsField = wrapper.find('Memo()').filterWhere(n => n.prop('idField') === 'familyGuid')
+  expect(familyGuidsField.first().prop('value')).toEqual({ F011652_1: true })
+})
+
 test('renders the AnVIL workspace fields for a static analysis group when the user is a PM on an analyst project', () => {
   const state = {
     ...STATE_WITH_2_FAMILIES,
