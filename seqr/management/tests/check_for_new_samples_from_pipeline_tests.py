@@ -418,7 +418,7 @@ class CheckNewSamplesTest(object):
 
         Dataset.objects.filter(guid=OLD_DATA_DATASET_GUID).update(sample_type='WES')
 
-    def _test_call(self, error_logs=None, run_loading_logs=None, num_runs=6):
+    def _test_call(self, error_logs=None, run_loading_logs=None, num_runs=5):
         self._set_loading_files()
         self.reset_logs()
 
@@ -431,14 +431,14 @@ class CheckNewSamplesTest(object):
         runs = [
             ('GRCh38/SNV_INDEL', 'auto__2023-08-09'), ('GRCh37/SNV_INDEL', 'manual__2023-11-02'),
             ('GRCh38/MITO', 'auto__2024-08-12'), ('GRCh38/MITO', 'auto__2025-12-02'), ('GRCh38/SV', 'auto__2024-09-14'),
-            ('GRCh38/SNV_INDEL', 'hail_search_to_clickhouse_migration_WGS_R0877_neptune'),
         ]
         if single_call:
             runs = runs[:1]
+        else:
+            logs.insert(-1, ('Skipping 1 ClickHouse migrations', {'detail': [
+                'GRCh38/SNV_INDEL/hail_search_to_clickhouse_migration_WGS_R0877_neptune',
+            ]}))
         for data_type, version in runs:
-            if 'hail_search_to_clickhouse_migration' in version:
-                logs.append((f'Skipping ClickHouse migration {data_type}: {version}', None))
-                continue
             logs.append((f'Loading new samples from {data_type}: {version}', None))
             logs += self._additional_loading_logs(data_type, version)
             if (run_loading_logs or {}).get(data_type):
@@ -740,7 +740,7 @@ The following 1 families failed sex check:
         airtable_logs = []
         if self.AIRTABLE_LOGS:
             airtable_logs = self.AIRTABLE_LOGS + [('Fetched 1 AnVIL Seqr Loading Requests Tracking records from airtable', None)]
-        self._test_call(num_runs=2, run_loading_logs={
+        self._test_call(num_runs=1, run_loading_logs={
             'GRCh38/SNV_INDEL': [
                 ('Loading 4 WES SNV_INDEL samples in 2 projects', None),
                 ('create Dataset D0000159_snv_indel_wes_2025_09', {'dbUpdate': mock.ANY}),
