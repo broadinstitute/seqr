@@ -96,7 +96,6 @@ test('renders the add gene lists button and modal form', () => {
   const stateWithOpenModal = {
     ...STATE_WITH_2_FAMILIES,
     modal: { 'add-gene-list-R0237_1000_genomes_demo': { open: true } },
-    locusListsLoading: { isLoading: false },
   }
   const store = configureStore([thunk])(stateWithOpenModal)
   const wrapper = mount(

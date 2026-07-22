@@ -6,8 +6,6 @@ import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import { Provider } from 'react-redux'
 import { MemoryRouter, Router } from 'react-router-dom'
 import { createMemoryHistory } from 'history'
-import DeleteButton from 'shared/components/buttons/DeleteButton'
-import FileUploadField from 'shared/components/form/XHRUploaderField'
 import { CATEGORY_FAMILY_FILTERS } from 'shared/utils/constants'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
@@ -88,7 +86,7 @@ test('navigates to the project page when a delete succeeds', () => {
     </Provider>,
   )
 
-  wrapper.find(DeleteButton).prop('onSuccess')()
+  wrapper.find('DispatchRequestButton').first().prop('onSuccess')()
 
   expect(history.location.pathname).toEqual('/project/R0237_1000_genomes_demo/project_page')
 })
@@ -113,7 +111,7 @@ test('renders the family upload and family table fields for a static analysis gr
   expect(familyGuidsField.prop('format')(['a', 'b'])).toEqual({ a: true, b: true })
   expect(familyGuidsField.prop('parse')({ a: true, b: false, c: true })).toEqual(['a', 'c'])
 
-  const parseUpload = wrapper.find(FileUploadField).prop('parse')
+  const parseUpload = wrapper.find('ForwardRef(Field)[name="uploadedFamilyIds"]').last().prop('parse')
   expect(parseUpload({ errors: ['bad row'] })).toEqual({ errors: [], info: ['bad row'] })
   expect(parseUpload({ other: 'unchanged' })).toEqual({ other: 'unchanged' })
 

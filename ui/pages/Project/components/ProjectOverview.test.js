@@ -5,10 +5,8 @@ import configureStore from 'redux-mock-store'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
-import UpdateButton from 'shared/components/buttons/UpdateButton'
 
 import ProjectOverview from './ProjectOverview'
-import EditFamiliesAndIndividualsButton from './edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 jest.mock('../reducers', () => ({
@@ -84,9 +82,7 @@ test('renders matchmaker submission details when the submissions modal is open',
   expect(dataTable.exists()).toBe(true)
   expect(dataTable.text()).toContain('5/9/2018')
   expect(wrapper.text()).toContain('2 removed submissions')
-  expect(
-    wrapper.find(UpdateButton).filterWhere(n => n.prop('modalId') === 'mmeContact').exists(),
-  ).toBe(true)
+  expect(wrapper.find('[modalId="mmeContact"]').exists()).toBe(true)
 })
 
 test('renders family size histogram edge cases and the case review edit button', () => {
@@ -121,7 +117,7 @@ test('renders family size histogram edge cases and the case review edit button',
   const text = wrapper.text()
   expect(text).toContain('trio+')
   expect(text).toContain('quad+')
-  expect(wrapper.find(EditFamiliesAndIndividualsButton).exists()).toBe(true)
+  expect(wrapper.find('[modalName="editFamiliesAndIndividuals"]').exists()).toBe(true)
 })
 
 test('shows additional loaded datasets and renders rna datasets', () => {
@@ -164,7 +160,5 @@ test('renders anvil workspace details and a message when no datasets are loaded'
 
   expect(wrapper.text()).toContain('No Datasets Loaded')
   expect(wrapper.text()).toContain('Where is my data?')
-  expect(
-    wrapper.find(UpdateButton).filterWhere(n => n.prop('modalId') === 'editAnvilWorkspace').exists(),
-  ).toBe(true)
+  expect(wrapper.find('[modalId="editAnvilWorkspace"]').exists()).toBe(true)
 })

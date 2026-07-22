@@ -5,7 +5,6 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
-import UpdateButton from 'shared/components/buttons/UpdateButton'
 import ProjectCollaborators from './ProjectCollaborators'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -53,7 +52,7 @@ test('renders the add collaborator form and submits a new collaborator', () => {
   expect(userField.prop('validate')({ email })).toBeUndefined()
   expect(userField.prop('validate')(null)).toBeTruthy()
 
-  const addButton = wrapper.find(UpdateButton).filterWhere(n => n.prop('modalId') === 'addCollaborator')
+  const addButton = wrapper.find('[modalId="addCollaborator"]')
   expect(addButton.exists()).toBe(true)
   expect(() => addButton.prop('onSubmit')({ user: { email } })).not.toThrow()
 })
@@ -83,4 +82,6 @@ test('renders collaborator groups and the AnVIL managed message', () => {
 
   expect(wrapper.text()).toContain('group1')
   expect(wrapper.text()).toContain('Collaborators fetched from AnVIL')
+  const addButton = wrapper.find('[modalId="addCollaborator"]')
+  expect(addButton.exists()).toBe(false)
 })

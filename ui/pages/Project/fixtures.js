@@ -1214,6 +1214,7 @@ export const STATE_WITH_2_FAMILIES = {
   familiesLoading: { isLoading: false },
   familyVariantSummaryLoading: { isLoading: false },
   individualsLoading: { isLoading: false },
+  locusListsLoading: { isLoading: false },
   matchmakerMatchesLoading: { isLoading: false },
   mmeSubmissionsLoading: { isLoading: false },
   phenotypeDataLoading: { isLoading: false },
