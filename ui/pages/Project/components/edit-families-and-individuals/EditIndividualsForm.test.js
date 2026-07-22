@@ -47,7 +47,15 @@ test('shows the analyst-only fields when the user is an analyst', () => {
     </Provider>
   )
 
-  expect(wrapper.find('EditRecordsForm').prop('columns').length).toBeGreaterThan(
-    wrapperWithoutAnalystFields.find('EditRecordsForm').prop('columns').length,
+  const columnNames = wrapper.find('EditRecordsForm').prop('columns').map(({ name }) => name)
+  const columnNamesWithoutAnalystFields = wrapperWithoutAnalystFields.find('EditRecordsForm').prop('columns').map(
+    ({ name }) => name,
   )
+
+  expect(columnNames).toEqual([
+    'familyId', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected', 'probandRelationship',
+  ])
+  expect(columnNamesWithoutAnalystFields).toEqual([
+    'familyId', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected',
+  ])
 })
