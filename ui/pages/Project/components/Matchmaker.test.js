@@ -4,25 +4,15 @@ import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { mockFetchResponse, mockFetchRejection, flushAll, getLastFetchUrl } from 'shared/utils/testHelpers'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 import Matchmaker from './Matchmaker'
-
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  ...jest.requireActual('shared/utils/httpRequestHelper'),
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({
-    get: jest.fn(() => Promise.resolve()),
-    post: jest.fn(() => Promise.resolve()),
-  })),
-}))
 
 configure({ adapter: new Adapter() })
 
 const configureStore = configureMockStore([thunk])
 
-beforeEach(() => {
-  HttpRequestHelper.mockClear()
-})
+const fetchedUrl = urlPrefix => fetch.mock.calls.some(([url]) => url.startsWith(urlPrefix))
 
 const MATCH = { params: { familyGuid: 'F011652_2' } }
 const MATCH_CREATE_SUBMISSION = { params: { familyGuid: 'F011652_1' } }
@@ -156,7 +146,7 @@ test('computes individual features onChange for the phenotypes edit table', () =
   expect(onChange).toHaveBeenCalledWith([])
 })
 
-test('renders the affected individual with a matchmaker submission', () => {
+test('renders the affected individual with a matchmaker submission', async () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
 
   const wrapper = mount(
@@ -226,9 +216,20 @@ test('renders the affected individual with a matchmaker submission', () => {
   const { searchMme, onSubmit } = wrapper.findWhere(
     n => n.props().searchMme && n.props().onSubmit,
   ).first().props()
+
+  // searchMme's own get_mme_nodes request has an onError handler, so a rejection is handled
+  // internally (dispatches an error action) without any further chained requests
+  mockFetchRejection(new Error('ignored'))
   searchMme()
   expect(store.getActions().some(({ type }) => type === 'REQUEST_MME_MATCHES')).toBe(true)
-  expect(() => onSubmit({ comments: 'updated' })).not.toThrow()
+
+  // updateMmeSubmission's HttpRequestHelper has no onError, so a rejection propagates out as a
+  // rejected promise instead of triggering its onSuccess (which would otherwise cascade into a
+  // second searchMmeMatches call) - catch it explicitly so it isn't left unhandled
+  mockFetchRejection(new Error('ignored'))
+  let submitResult
+  expect(() => { submitResult = onSubmit({ comments: 'updated' }) }).not.toThrow()
+  await submitResult.catch(() => {})
 })
 
 test('renders an individual whose submission and data are missing optional fields', () => {
@@ -303,9 +304,7 @@ test('fetches mme matches on mount when the submission has no recorded gene vari
     </Provider>,
   )
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    '/api/matchmaker/get_mme_matches/MS021475_na19675_1', expect.any(Function), expect.any(Function),
-  )
+  expect(fetchedUrl('/api/matchmaker/get_mme_matches/MS021475_na19675_1')).toBe(true)
 })
 
 test('does not re-fetch mme matches on mount when gene variants are already recorded', () => {
@@ -317,12 +316,10 @@ test('does not re-fetch mme matches on mount when gene variants are already reco
     </Provider>,
   )
 
-  expect(HttpRequestHelper).not.toHaveBeenCalledWith(
-    '/api/matchmaker/get_mme_matches/MS021475_na19675_1', expect.any(Function), expect.any(Function),
-  )
+  expect(fetchedUrl('/api/matchmaker/get_mme_matches/MS021475_na19675_1')).toBe(false)
 })
 
-test('submits an mme submission status update', () => {
+test('submits an mme submission status update', async () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
@@ -332,13 +329,12 @@ test('submits an mme submission status update', () => {
 
   const onSubmit = wrapper.find({ field: 'matchStatus' }).first().prop('onSubmit')
   onSubmit({ comments: 'Looks promising', matchmakerResultGuid: 'MR0005038_HK018_0047' })
+  await flushAll()
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    '/api/matchmaker/result_status/MR0005038_HK018_0047/update', expect.any(Function),
-  )
+  expect(getLastFetchUrl()).toEqual('/api/matchmaker/result_status/MR0005038_HK018_0047/update')
 })
 
-test('submits an mme contact notes update', () => {
+test('submits an mme contact notes update', async () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
@@ -348,13 +344,12 @@ test('submits an mme contact notes update', () => {
 
   const onSubmit = wrapper.find({ idField: 'contactInstitution' }).first().prop('onSubmit')
   onSubmit({ institution: 'UNC Chapel Hill', comments: 'Reached out via email' })
+  await flushAll()
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    '/api/matchmaker/contact_notes/UNC Chapel Hill/update', expect.any(Function),
-  )
+  expect(getLastFetchUrl()).toEqual('/api/matchmaker/contact_notes/UNC Chapel Hill/update')
 })
 
-test('sends an mme contact email', () => {
+test('sends an mme contact email', async () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
@@ -366,10 +361,9 @@ test('sends an mme contact email', () => {
     n => typeof n.prop('onSubmit') === 'function',
   ).first().prop('onSubmit')
   onSubmit({ matchmakerResultGuid: 'MR0005038_HK018_0047', body: 'Hello' })
+  await flushAll()
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    '/api/matchmaker/send_email/MR0005038_HK018_0047', expect.any(Function),
-  )
+  expect(getLastFetchUrl()).toEqual('/api/matchmaker/send_email/MR0005038_HK018_0047')
 })
 
 test('searches for new mme matches and finalizes the search', async () => {
@@ -384,29 +378,14 @@ test('searches for new mme matches and finalizes the search', async () => {
     n => n.props().searchMme && n.props().onSubmit,
   ).first().props()
 
-  HttpRequestHelper.mockClear()
+  // queue responses in the exact order fetch() will be called across the chained requests
+  mockFetchResponse({ mmeNodes: [] })
+  mockFetchResponse({ incomingQueryGuid: 'q1' })
+
   searchMme()
+  await flushAll(12)
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    '/api/matchmaker/get_mme_nodes', expect.any(Function), expect.any(Function),
-  )
-  const [, onGetNodesSuccess] = HttpRequestHelper.mock.calls.find(([url]) => url === '/api/matchmaker/get_mme_nodes')
-  onGetNodesSuccess({ mmeNodes: [] })
-
-  // flush the chained promises triggered by the get_mme_nodes success callback
-  await Promise.resolve().then().then().then()
-
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    '/api/matchmaker/search_local_mme_matches/MS021475_na19675_1', expect.any(Function), expect.any(Function),
-  )
-  const [, onLocalMatchesSuccess] = HttpRequestHelper.mock.calls.find(
-    ([url]) => url === '/api/matchmaker/search_local_mme_matches/MS021475_na19675_1',
-  )
-  onLocalMatchesSuccess({ incomingQueryGuid: 'q1' })
-
-  await Promise.resolve().then().then().then()
-
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    '/api/matchmaker/finalize_mme_search/MS021475_na19675_1', expect.any(Function), expect.any(Function),
-  )
+  expect(fetchedUrl('/api/matchmaker/get_mme_nodes')).toBe(true)
+  expect(fetchedUrl('/api/matchmaker/search_local_mme_matches/MS021475_na19675_1')).toBe(true)
+  expect(getLastFetchUrl()).toEqual('/api/matchmaker/finalize_mme_search/MS021475_na19675_1?incomingQueryGuid=q1')
 })
