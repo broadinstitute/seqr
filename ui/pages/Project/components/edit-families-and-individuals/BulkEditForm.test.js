@@ -124,3 +124,19 @@ test('renders individual metadata bulk form', () => {
     expect(wrapper.text()).toContain(field.header)
   })
 })
+
+test('submits the uploaded file id on individual metadata form submission', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <EditIndividualMetadataBulkForm modalName="bulkEditIndividualMetadata" />
+    </Provider>,
+  )
+
+  const uploadedFileId = 'file456'
+  wrapper.find('FormWrapper').prop('onSubmit')({ [FILE_FIELD_NAME]: { uploadedFileId } })
+
+  expect(lastPostUrl).toEqual(
+    `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/save_individuals_metadata_table/${uploadedFileId}`,
+  )
+})

@@ -8,7 +8,20 @@ import { Provider } from 'react-redux'
 import ProjectCollaborators from './ProjectCollaborators'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
+let mockHttpRequestCalls
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  ...jest.requireActual('shared/utils/httpRequestHelper'),
+  HttpRequestHelper: jest.fn().mockImplementation((url, onSuccess, onError) => {
+    mockHttpRequestCalls.push({ url, onSuccess, onError })
+    return { get: jest.fn(), post: jest.fn(() => Promise.resolve()) }
+  }),
+}))
+
 configure({ adapter: new Adapter() })
+
+beforeEach(() => {
+  mockHttpRequestCalls = []
+})
 
 const configureStore = configureMockStore([thunk])
 
@@ -108,4 +121,56 @@ test('renders collaborator groups and the AnVIL managed message', () => {
   expect(wrapper.text()).toContain('Collaborators fetched from AnVIL')
   const addButton = wrapper.find('[modalId="addCollaborator"]')
   expect(addButton.exists()).toBe(false)
+})
+
+test('fetches collaborators from the server for an analysis group without cached collaborators', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+
+  mount(
+    <Provider store={store}>
+      <ProjectCollaborators analysisGroupGuid="AG0000183_test_group" />
+    </Provider>,
+  )
+
+  expect(mockHttpRequestCalls).toHaveLength(1)
+  expect(mockHttpRequestCalls[0].url).toEqual(
+    '/api/project/R0237_1000_genomes_demo/analysis_groups/AG0000183_test_group/get_collaborators',
+  )
+
+  store.clearActions()
+  mockHttpRequestCalls[0].onSuccess({ projectsByGuid: {} })
+  expect(store.getActions().some(action => action.type === 'RECEIVE_DATA')).toBe(true)
+  expect(store.getActions().some(action => action.type === 'RECEIVE_PROJECT_COLLABORATORS')).toBe(true)
+
+  store.clearActions()
+  mockHttpRequestCalls[0].onError(new Error('fail'))
+  expect(store.getActions()).toEqual([{ type: 'RECEIVE_PROJECT_COLLABORATORS', error: 'fail' }])
+})
+
+test('renders the add collaborator group form and submits a new group', () => {
+  const project = STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    projectsByGuid: {
+      ...STATE_WITH_2_FAMILIES.projectsByGuid,
+      R0237_1000_genomes_demo: { ...project, canEdit: true },
+    },
+    modal: { 'addCollaborator Group': { open: true } },
+  }
+  const store = configureStore(state)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <ProjectCollaborators />
+    </Provider>,
+  )
+
+  const addGroupButton = wrapper.find('[modalId="addCollaborator Group"]')
+  expect(addGroupButton.exists()).toBe(true)
+
+  mockHttpRequestCalls.length = 0
+  addGroupButton.prop('onSubmit')({ name: 'newGroup', hasEditPermissions: true })
+
+  expect(mockHttpRequestCalls).toHaveLength(1)
+  expect(mockHttpRequestCalls[0].url).toEqual('/api/project/R0237_1000_genomes_demo/collaboratorGroups/newGroup/update')
 })

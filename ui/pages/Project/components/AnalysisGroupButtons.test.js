@@ -16,6 +16,19 @@ jest.mock('shared/components/panel/view-pedigree-image/PedigreeImagePanel', () =
   return <div className="mock-pedigree-image" />
 })
 
+let lastPostUrl
+let lastPostBody
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  HttpRequestHelper: jest.fn().mockImplementation(url => ({
+    get: jest.fn(() => Promise.resolve()),
+    post: jest.fn((body) => {
+      lastPostUrl = url
+      lastPostBody = body
+      return Promise.resolve()
+    }),
+  })),
+}))
+
 const ANALYSIS_GROUP = {
   ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid.AG0000183_test_group, workspaceNamespace: undefined,
 }
@@ -257,4 +270,83 @@ test('renders the AnVIL workspace fields for a static analysis group when the us
 
   expect(wrapper.find('ForwardRef(Field)[name="workspaceNamespace"]').exists()).toBe(true)
   expect(wrapper.find('ForwardRef(Field)[name="workspaceName"]').exists()).toBe(true)
+})
+
+test('submits a new static analysis group', () => {
+  const store = configureStore([thunk])({
+    ...STATE_WITH_2_FAMILIES,
+    modal: { 'createAnalysisGroup-R0237_1000_genomes_demo': { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <UpdateAnalysisGroupButton />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  wrapper.find('FormWrapper').prop('onSubmit')({ name: 'New Group', familyGuids: ['F011652_1'] })
+
+  expect(lastPostUrl).toEqual('/api/project/R0237_1000_genomes_demo/analysis_groups/create')
+  expect(lastPostBody).toEqual({ name: 'New Group', familyGuids: ['F011652_1'] })
+})
+
+test('submits a new dynamic analysis group', () => {
+  const store = configureStore([thunk])({
+    ...STATE_WITH_2_FAMILIES,
+    modal: { 'createDynamicAnalysisGroup-R0237_1000_genomes_demo': { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <UpdateAnalysisGroupButton createDynamic />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  const criteria = { analysisStatus: ['Q'] }
+  wrapper.find('FormWrapper').prop('onSubmit')({ name: 'Dynamic Group', criteria })
+
+  expect(lastPostUrl).toEqual('/api/project/R0237_1000_genomes_demo/dynamic_analysis_groups/create')
+  expect(lastPostBody).toEqual({ name: 'Dynamic Group', criteria })
+})
+
+test('submits an update to an existing analysis group', () => {
+  const editModalId = `editAnalysisGroup-${ANALYSIS_GROUP.analysisGroupGuid}`
+  const store = configureStore([thunk])({
+    ...STATE_WITH_2_FAMILIES,
+    modal: { [editModalId]: { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <UpdateAnalysisGroupButton analysisGroup={ANALYSIS_GROUP} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  wrapper.find('FormWrapper').prop('onSubmit')({ ...ANALYSIS_GROUP, name: 'Updated Name' })
+
+  expect(lastPostUrl).toEqual(
+    `/api/project/R0237_1000_genomes_demo/analysis_groups/${ANALYSIS_GROUP.analysisGroupGuid}/update`,
+  )
+  expect(lastPostBody).toEqual({ ...ANALYSIS_GROUP, name: 'Updated Name' })
+})
+
+test('dispatches a delete request for an existing analysis group', () => {
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <DeleteAnalysisGroupButton analysisGroup={ANALYSIS_GROUP} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  wrapper.find('DispatchRequestButton').first().prop('onSubmit')()
+
+  expect(lastPostUrl).toEqual(
+    `/api/project/R0237_1000_genomes_demo/analysis_groups/${ANALYSIS_GROUP.analysisGroupGuid}/delete`,
+  )
+  expect(lastPostBody).toEqual({ ...ANALYSIS_GROUP, delete: true })
 })

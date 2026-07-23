@@ -9,6 +9,7 @@ import { MemoryRouter } from 'react-router-dom'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { updateVariantTags } from 'redux/rootReducer'
 import { REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import RoutedSavedVariants from './SavedVariants'
 import VariantTagTypeBar from './VariantTagTypeBar'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
@@ -382,4 +383,106 @@ test('includes the hideKnownGeneForPhenotype filter for the discovery tag catego
   )
 
   expect(wrapper.find('.filter-names').text().split(',')).toContain('hideKnownGeneForPhenotype')
+})
+
+test('loadVariants requests a single variant by guid when it is not already loaded', () => {
+  HttpRequestHelper.mockClear()
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+  mount(
+    <Provider store={store}>
+      <MemoryRouter
+        initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/variant/SV_NOT_LOADED']}
+      >
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  mockLatestProps.loadVariants(mockLatestProps.match.params)
+
+  expect(HttpRequestHelper).toHaveBeenCalledWith(
+    '/api/project/R0237_1000_genomes_demo/saved_variants/SV_NOT_LOADED', expect.any(Function), expect.any(Function),
+  )
+})
+
+test('loadVariants does not re-request a single variant that is already loaded', () => {
+  HttpRequestHelper.mockClear()
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+  mount(
+    <Provider store={store}>
+      <MemoryRouter
+        initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/variant/SV0000004_116042722_r0390_1000']}
+      >
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  mockLatestProps.loadVariants(mockLatestProps.match.params)
+
+  expect(HttpRequestHelper).not.toHaveBeenCalled()
+})
+
+test('loadVariants does not re-request families whose saved variants are already loaded', () => {
+  HttpRequestHelper.mockClear()
+  const loadedState = {
+    ...STATE_WITH_2_FAMILIES,
+    savedVariantFamilies: { F011652_1: { loaded: true, noteVariants: true } },
+  }
+  const store = configureStore([thunk])(loadedState)
+  mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  mockLatestProps.loadVariants(mockLatestProps.match.params)
+
+  expect(HttpRequestHelper).not.toHaveBeenCalled()
+})
+
+test('loadVariants requests note variants for the "Has Notes" tag', () => {
+  HttpRequestHelper.mockClear()
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+  mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/Has%20Notes']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  mockLatestProps.loadVariants(mockLatestProps.match.params)
+
+  const callIndex = HttpRequestHelper.mock.calls.findIndex(
+    call => call[0] === '/api/project/R0237_1000_genomes_demo/saved_variants',
+  )
+  expect(callIndex).toBeGreaterThan(-1)
+  const getMock = HttpRequestHelper.mock.results[callIndex].value.get
+  expect(getMock).toHaveBeenCalledWith(expect.objectContaining({ includeNoteVariants: true }))
+})
+
+test('receiving a single-variant response marks its families as loaded', () => {
+  HttpRequestHelper.mockClear()
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+  mount(
+    <Provider store={store}>
+      <MemoryRouter
+        initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/variant/SV_NOT_LOADED']}
+      >
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  mockLatestProps.loadVariants(mockLatestProps.match.params)
+
+  const [, onSuccess] = HttpRequestHelper.mock.calls[HttpRequestHelper.mock.calls.length - 1]
+  onSuccess({ familiesByGuid: { F011652_1: {} }, savedVariantsByGuid: {} })
+
+  expect(store.getActions()).toContainEqual(
+    expect.objectContaining({ updates: { F011652_1: { loaded: true, noteVariants: undefined } } }),
+  )
 })

@@ -7,8 +7,14 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { FAMILY_MAIN_FIELDS, FAMILY_DETAIL_FIELDS } from 'shared/utils/constants'
 
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import FamilyTable from './FamilyTable'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
+
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  ...jest.requireActual('shared/utils/httpRequestHelper'),
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
+}))
 
 configure({ adapter: new Adapter() })
 
@@ -95,4 +101,33 @@ test('renders an empty message when there are no visible families', () => {
 
   expect(wrapper.find('FamilyTableRow').length).toEqual(0)
   expect(wrapper.text()).toContain('0 families found')
+})
+
+test('loads export data when the export popup content is rendered', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <FamilyTable
+          detailFields={FAMILY_DETAIL_FIELDS}
+          noDetailFields={FAMILY_MAIN_FIELDS}
+        />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  HttpRequestHelper.mockClear()
+
+  // Popup content is a portal only rendered on hover/click, so render its `content` prop directly
+  const popupContent = wrapper.find('Popup[on="click"]').prop('content')
+  shallow(popupContent)
+
+  const requestedUrls = HttpRequestHelper.mock.calls.map(([url]) => url)
+  expect(requestedUrls).toContain(
+    `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/get_individuals`,
+  )
+  expect(requestedUrls).toContain(
+    `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/get_family_notes`,
+  )
 })

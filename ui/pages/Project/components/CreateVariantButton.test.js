@@ -5,8 +5,17 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import CreateVariantButtons from './CreateVariantButton'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
+
+let onSuccessCallback
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  HttpRequestHelper: jest.fn().mockImplementation((url, onSuccess) => {
+    onSuccessCallback = onSuccess
+    return { get: jest.fn(), post: jest.fn(() => Promise.resolve()) }
+  }),
+}))
 
 configure({ adapter: new Adapter() })
 
@@ -27,6 +36,20 @@ test('renders manual variant and SV buttons when the project is editable', () =>
 
   const { onSubmit } = wrapper.findWhere(n => n.props().onSubmit && n.props().family).first().props()
   expect(() => onSubmit({ chrom: '1' })).not.toThrow()
+
+  expect(HttpRequestHelper).toHaveBeenCalledWith(
+    `/api/saved_variant/create_manual/${FAMILY.familyGuid}`, expect.any(Function),
+  )
+  expect(HttpRequestHelper.mock.results[HttpRequestHelper.mock.results.length - 1].value.post)
+    .toHaveBeenCalledWith({ chrom: '1' })
+
+  const dispatchedActions = store.getActions()
+  const dispatchCountBeforeSuccess = dispatchedActions.length
+  onSuccessCallback({ savedVariantsByGuid: { SV001: {} } })
+  expect(store.getActions().length).toBe(dispatchCountBeforeSuccess + 1)
+  expect(store.getActions()[dispatchCountBeforeSuccess]).toEqual(
+    { type: 'RECEIVE_DATA', updatesById: { savedVariantsByGuid: { SV001: {} } } },
+  )
 })
 
 test('opens the manual SNV modal and exercises the form field callbacks', () => {

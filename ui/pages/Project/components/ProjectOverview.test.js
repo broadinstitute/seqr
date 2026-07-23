@@ -263,6 +263,38 @@ test('uses the analysis group workspace details when the group has its own works
   expect(wrapper.text()).toContain('anvil-analysis-group')
 })
 
+test('submits AnVIL workspace updates', () => {
+  const workspaceState = cloneDeep(STATE_WITH_2_FAMILIES)
+  workspaceState.user.isPm = true
+  workspaceState.user.isAnvil = true
+
+  const wrapper = renderProjectOverview(workspaceState)
+
+  const updateButton = wrapper.find('[modalId="editAnvilWorkspace"]').first()
+  expect(updateButton.exists()).toBe(true)
+  updateButton.prop('onSubmit')({ workspaceNamespace: 'new-namespace', workspaceName: 'new-workspace' })
+
+  expect(HttpRequestHelper).toHaveBeenCalledWith(
+    `/api/project/${PROJECT_GUID}/update_workspace`, expect.any(Function),
+  )
+  const { post } = HttpRequestHelper.mock.results[HttpRequestHelper.mock.results.length - 1].value
+  expect(post).toHaveBeenCalledWith({ workspaceNamespace: 'new-namespace', workspaceName: 'new-workspace' })
+})
+
+test('submits a matchmaker contact to all submissions', () => {
+  const wrapper = renderProjectOverview({ ...STATE_WITH_2_FAMILIES, modal: { mmeSubmissions: { open: true } } })
+
+  const updateButton = wrapper.find('[modalId="mmeContact"]').first()
+  expect(updateButton.exists()).toBe(true)
+  updateButton.prop('onSubmit')({ contact: 'new-contact@broadinstitute.org' })
+
+  expect(HttpRequestHelper).toHaveBeenCalledWith(
+    `/api/matchmaker/update_project_contact/${PROJECT_GUID}`, expect.any(Function),
+  )
+  const { post } = HttpRequestHelper.mock.results[HttpRequestHelper.mock.results.length - 1].value
+  expect(post).toHaveBeenCalledWith({ contact: 'new-contact@broadinstitute.org' })
+})
+
 test('shows a loading indicator when families or overview data is loading', () => {
   const wrapper = mount(
     <Provider store={configureStore([thunk])(STATE_WITH_2_FAMILIES)}>
