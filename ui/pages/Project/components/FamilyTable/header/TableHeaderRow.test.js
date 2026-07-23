@@ -7,6 +7,7 @@ import { Provider } from 'react-redux'
 import { FAMILY_FIELD_ID, FAMILY_FIELD_ANALYSIS_STATUS, FAMILY_FIELD_SAVED_VARIANTS } from 'shared/utils/constants'
 import TableHeaderRow from './TableHeaderRow'
 import { CASE_REVIEW_TABLE_NAME } from '../../../constants'
+import { getVisibleFamiliesInSortedOrder } from '../../../selectors'
 
 import { STATE_WITH_2_FAMILIES } from '../../../fixtures'
 
@@ -185,4 +186,178 @@ test('filters visible families by matching saved variant tag types and excludes 
   const wrapper = renderHeaderRow({}, state)
 
   expect(headerText(wrapper)).toEqual('Showing 1 out of 2 families')
+})
+
+test('filters visible families by case review status, falling back to family.caseReviewStatuses when an individual is missing', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
+        individualGuids: ['MISSING_INDIVIDUAL_GUID'],
+        caseReviewStatuses: ['I', 'I', 'I'],
+      },
+    },
+    familyTableFilterState: { R0237_1000_genomes_demo: { analysisStatus: ['IN_REVIEW'] } },
+  }
+  const wrapper = renderHeaderRow({}, state)
+
+  // F011652_1 falls back to family.caseReviewStatuses (all in review), F011652_2's individuals'
+  // statuses are a mix of in-review/accepted so it does not pass the every()-based in-review filter
+  expect(headerText(wrapper)).toEqual('Showing 1 out of 2 families')
+})
+
+test('filters visible families using the case review "assigned to me - in review" filter', () => {
+  const inReviewState = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
+        assignedAnalyst: { email: STATE_WITH_2_FAMILIES.user.email },
+        individualGuids: ['I021476_na19678_1', 'I021474_na19679_1', 'I021475_na19675_1'],
+      },
+      F011652_2: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2,
+        assignedAnalyst: { email: STATE_WITH_2_FAMILIES.user.email },
+      },
+    },
+    individualsByGuid: {
+      ...STATE_WITH_2_FAMILIES.individualsByGuid,
+      I021476_na19678_1: { ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1, caseReviewStatus: 'I' },
+      I021474_na19679_1: { ...STATE_WITH_2_FAMILIES.individualsByGuid.I021474_na19679_1, caseReviewStatus: 'I' },
+      I021475_na19675_1: { ...STATE_WITH_2_FAMILIES.individualsByGuid.I021475_na19675_1, caseReviewStatus: 'I' },
+    },
+    caseReviewTableState: { familiesFilter: 'SHOW_ASSIGNED_TO_ME_IN_REVIEW' },
+  }
+  const wrapper = renderHeaderRow({ tableName: CASE_REVIEW_TABLE_NAME }, inReviewState)
+
+  // F011652_1 is assigned to the current user and fully in review, F011652_2 is assigned but not in review
+  expect(headerText(wrapper)).toEqual('Showing 1 out of 2 families')
+})
+
+test('filters visible families by required metadata presence/absence', () => {
+  const noIndividualsState = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
+        individualGuids: [],
+        hasRequiredMetadata: true,
+      },
+    },
+    familyTableFilterState: { R0237_1000_genomes_demo: { firstSample: ['SHOW_PHENOTYPES_ENTERED'] } },
+  }
+  const wrapperNoIndividuals = renderHeaderRow({}, noIndividualsState)
+  expect(headerText(wrapperNoIndividuals)).toEqual('Showing 1 out of 2 families')
+
+  const requiredFieldsState = {
+    ...STATE_WITH_2_FAMILIES,
+    individualsByGuid: {
+      ...STATE_WITH_2_FAMILIES.individualsByGuid,
+      I021476_na19678_1: {
+        ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1,
+        probandRelationship: false,
+        population: 'AFR',
+        features: [{ id: 'HP:0001631' }],
+      },
+      I021474_na19679_1: {
+        ...STATE_WITH_2_FAMILIES.individualsByGuid.I021474_na19679_1,
+        probandRelationship: undefined,
+        population: undefined,
+        features: [],
+      },
+    },
+    familyTableFilterState: { R0237_1000_genomes_demo: { firstSample: ['SHOW_NO_PHENOTYPES_ENTERED'] } },
+  }
+  const wrapperRequiredFields = renderHeaderRow({}, requiredFieldsState)
+  expect(headerText(wrapperRequiredFields)).toEqual('Showing 1 out of 2 families')
+})
+
+test('sorts visible families by date loaded, falling back when a family has no loaded dataset', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'DATA_LOADED_DATE' },
+  }
+  const sorted = getVisibleFamiliesInSortedOrder(state, {})
+  expect(sorted.length).toEqual(2)
+
+  const firstLoadedState = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'DATA_FIRST_LOADED_DATE' },
+  }
+  const firstLoadedSorted = getVisibleFamiliesInSortedOrder(firstLoadedState, {})
+  expect(firstLoadedSorted.length).toEqual(2)
+})
+
+test('sorts visible families by analysis status, falling back when the status is not in the lookup', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: { ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1, analysisStatus: 'NOT_A_REAL_STATUS' },
+    },
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'SORT_BY_ANALYSIS_STATUS' },
+  }
+  const sorted = getVisibleFamiliesInSortedOrder(state, {})
+  expect(sorted.length).toEqual(2)
+})
+
+test('sorts visible families by analysed date, only counting SNP analysedBy entries and falling back when there are none', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
+        analysedBy: [
+          { dataType: 'SNP', lastModifiedDate: '2020-01-01T01:00:00.000Z', createdBy: 'user1' },
+          { dataType: 'SV', lastModifiedDate: '2022-01-01T01:00:00.000Z', createdBy: 'user2' },
+        ],
+      },
+      F011652_2: { ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2, analysedBy: [] },
+    },
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'SORT_BY_ANALYSED_DATE' },
+  }
+  const sorted = getVisibleFamiliesInSortedOrder(state, {})
+  expect(sorted.length).toEqual(2)
+})
+
+test('sorts visible families by review status changed date, handling missing individuals and comparing multiple modified dates', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
+        individualGuids: ['MISSING_INDIVIDUAL_GUID', 'I021476_na19678_1', 'I021474_na19679_1'],
+        caseReviewStatusLastModified: '2010-01-01T01:00:00.000Z',
+      },
+      F011652_2: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2,
+        individualGuids: [],
+        caseReviewStatusLastModified: undefined,
+      },
+    },
+    individualsByGuid: {
+      ...STATE_WITH_2_FAMILIES.individualsByGuid,
+      I021476_na19678_1: {
+        ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1,
+        caseReviewStatusLastModifiedDate: '2018-01-01T01:00:00.000Z',
+      },
+      I021474_na19679_1: {
+        ...STATE_WITH_2_FAMILIES.individualsByGuid.I021474_na19679_1,
+        caseReviewStatusLastModifiedDate: '2019-01-01T01:00:00.000Z',
+      },
+    },
+    familyTableState: {
+      ...STATE_WITH_2_FAMILIES.familyTableState,
+      familiesSortOrder: 'REVIEW_STATUS_CHANGED_DATE',
+    },
+  }
+  const sorted = getVisibleFamiliesInSortedOrder(state, {})
+  expect(sorted.length).toEqual(2)
+  expect(sorted[0].familyGuid).toEqual('F011652_1')
 })

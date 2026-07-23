@@ -170,3 +170,60 @@ test('getProjectExportUrls produces raw family/individual/sample export data wit
   expect(caseReviewExportUrls.find(({ name }) => name === 'Families').filename).toContain('case_review')
   expect(exportUrls.find(({ name }) => name === 'Families').filename).not.toContain('case_review')
 })
+
+test('formats family export field values, including notes, firstSample, analysisStatus, assignedAnalyst, and analysedBy', () => {
+  const state = cloneDeep(STATE_WITH_2_FAMILIES)
+  state.familiesByGuid.F011652_1.analysisStatus = 'NOT_A_REAL_ANALYSIS_STATUS'
+  state.familiesByGuid.F011652_1.assignedAnalyst = null
+  state.familiesByGuid.F011652_1.analysedBy = []
+  state.familiesByGuid.F011652_2.assignedAnalyst = { email: 'analyst@broadinstitute.org' }
+  state.familiesByGuid.F011652_2.analysedBy = [
+    { createdBy: 'user1', dataType: 'SNP', lastModifiedDate: '2020-01-01T01:00:00.000Z' },
+    { createdBy: 'user2', dataType: 'SV', lastModifiedDate: '2021-01-01T01:00:00.000Z' },
+  ]
+
+  const exportUrls = getProjectExportUrls(state, {})
+  const familiesExport = exportUrls.find(({ name }) => name === 'Families')
+  const familiesData = familiesExport.getRawData(state)
+
+  const family1 = familiesData.find(f => f.familyGuid === 'F011652_1')
+  const family2 = familiesData.find(f => f.familyGuid === 'F011652_2')
+
+  const [
+    , , , firstSample1, , analysisStatus1, assignedAnalyst1, analysedBy1, analysisNotes1,
+  ] = familiesExport.processRow(family1)
+  const [
+    , , , firstSample2, , , assignedAnalyst2, analysedBy2, analysisNotes2,
+  ] = familiesExport.processRow(family2)
+
+  // firstSample is absent for F011652_1 (no loaded dataset) and present for F011652_2
+  expect(firstSample1).toBeUndefined()
+  expect(firstSample2).toEqual('2018-03-13')
+
+  // analysisStatus falls back to {}.name when missing from the lookup
+  expect(analysisStatus1).toBeUndefined()
+
+  // assignedAnalyst is formatted to an email when present, and to '' when null
+  expect(assignedAnalyst1).toEqual('')
+  expect(assignedAnalyst2).toEqual('analyst@broadinstitute.org')
+
+  // analysedBy joins createdBy values for multiple entries
+  expect(analysedBy1).toEqual('')
+  expect(analysedBy2).toEqual('user1,user2')
+
+  // analysisNotes is absent for F011652_1 and present (formatted) for F011652_2
+  expect(analysisNotes1).toEqual('')
+  expect(analysisNotes2).toEqual('A note;Another note')
+})
+
+test('formats case review family export fields including internal notes', () => {
+  const caseReviewExportUrls = getProjectExportUrls(STATE_WITH_2_FAMILIES, { tableName: 'Case Review' })
+  const familiesExport = caseReviewExportUrls.find(({ name }) => name === 'Families')
+  const familiesData = familiesExport.getRawData(STATE_WITH_2_FAMILIES)
+  const family2 = familiesData.find(f => f.familyGuid === 'F011652_2')
+
+  const row = familiesExport.processRow(family2)
+  // F011652_2 has no internal case review summary/notes set, so stripMarkdown falls back to ''
+  expect(row[row.length - 2]).toEqual('')
+  expect(row[row.length - 1]).toEqual('')
+})

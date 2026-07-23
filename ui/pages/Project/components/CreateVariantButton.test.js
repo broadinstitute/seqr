@@ -70,6 +70,30 @@ test('opens the manual SNV modal and exercises the form field callbacks', () => 
   expect(zygosityField.prop('format')(undefined)).toBeUndefined()
 })
 
+test('exercises the tags form field format/parse/validate callbacks', () => {
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    savedVariantFamilies: { F011652_1: { loaded: true } },
+    modal: { 'F011652_1-addVariant-Variant': { open: true } },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <CreateVariantButtons family={FAMILY} />
+    </Provider>,
+  )
+
+  const tagsField = wrapper.find('ForwardRef(Field)[name="tags"]').first()
+
+  expect(tagsField.prop('format')([{ name: 'Review' }])).toEqual(['Review'])
+  expect(tagsField.prop('format')(undefined)).toEqual([])
+
+  expect(tagsField.prop('parse')(['Review'])).toEqual([{ name: 'Review' }])
+  expect(tagsField.prop('parse')(undefined)).toEqual([])
+
+  expect(tagsField.prop('validate')(['Review'])).toBeUndefined()
+  expect(tagsField.prop('validate')([])).toEqual('Required')
+})
+
 test('opens the manual SV modal and exercises the form field callbacks', () => {
   const store = configureStore({
     ...STATE_WITH_2_FAMILIES,
