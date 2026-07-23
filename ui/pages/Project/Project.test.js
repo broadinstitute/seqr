@@ -6,12 +6,8 @@ import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { MemoryRouter, Route } from 'react-router-dom'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { getLastFetchUrl } from 'shared/utils/testHelpers'
 import Project from './Project'
-
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
 
 jest.mock('./components/ProjectPageUI', () => () => <div>ProjectPageUI</div>)
 jest.mock('./components/CaseReview', () => () => <div>CaseReview</div>)
@@ -39,10 +35,6 @@ const renderProject = (path, { project, loading } = {}) => {
   )
 }
 
-beforeEach(() => {
-  HttpRequestHelper.mockClear()
-})
-
 test('loads the current project on mount and unloads it on unmount', () => {
   const state = {
     currentProjectGuid: PROJECT_GUID,
@@ -58,9 +50,7 @@ test('loads the current project on mount and unloads it on unmount', () => {
     </Provider>,
   )
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    `/api/project/${PROJECT_GUID}/details`, expect.any(Function), expect.any(Function),
-  )
+  expect(getLastFetchUrl()).toEqual(`/api/project/${PROJECT_GUID}/details?`)
 
   wrapper.unmount()
 

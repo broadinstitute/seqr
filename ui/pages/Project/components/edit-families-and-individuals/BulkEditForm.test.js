@@ -6,25 +6,13 @@ import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
 import { INDIVIDUAL_ID_EXPORT_DATA, INDIVIDUAL_CORE_EXPORT_DATA, FILE_FIELD_NAME } from 'shared/utils/constants'
+import { flushAll, getLastFetchUrl, getLastFetchBody } from 'shared/utils/testHelpers'
 import { EditFamiliesBulkForm, EditIndividualsBulkForm, EditIndividualMetadataBulkForm } from './BulkEditForm'
 import { FAMILY_BULK_EDIT_EXPORT_DATA } from '../../constants'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
 // jsdom does not implement createObjectURL; BulkUploadForm's template download links need it
 global.URL.createObjectURL = jest.fn()
-
-let lastPostUrl
-let lastPostBody
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation(url => ({
-    get: jest.fn(),
-    post: jest.fn((body) => {
-      lastPostUrl = url
-      lastPostBody = body
-      return Promise.resolve()
-    }),
-  })),
-}))
 
 configure({ adapter: new Adapter() })
 
@@ -64,7 +52,7 @@ test('renders analyst-only optional fields for an analyst user', () => {
   expect(wrapper.text()).toContain(lastField.header)
 })
 
-test('submits the uploaded file value on form submission', () => {
+test('submits the uploaded file value on form submission', async () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
@@ -73,10 +61,11 @@ test('submits the uploaded file value on form submission', () => {
   )
 
   const uploadedFileId = 'file123'
-  wrapper.find('FormWrapper').prop('onSubmit')({ [FILE_FIELD_NAME]: uploadedFileId })
+  await wrapper.find('FormWrapper').prop('onSubmit')({ [FILE_FIELD_NAME]: uploadedFileId })
+  await flushAll()
 
-  expect(lastPostUrl).toEqual(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/edit_families`)
-  expect(lastPostBody).toEqual(uploadedFileId)
+  expect(getLastFetchUrl()).toEqual(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/edit_families`)
+  expect(getLastFetchBody()).toEqual(uploadedFileId)
 })
 
 test('renders individuals bulk form with the individual ID required columns', () => {
@@ -125,7 +114,7 @@ test('renders individual metadata bulk form', () => {
   })
 })
 
-test('submits the uploaded file id on individual metadata form submission', () => {
+test('submits the uploaded file id on individual metadata form submission', async () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
@@ -134,9 +123,10 @@ test('submits the uploaded file id on individual metadata form submission', () =
   )
 
   const uploadedFileId = 'file456'
-  wrapper.find('FormWrapper').prop('onSubmit')({ [FILE_FIELD_NAME]: { uploadedFileId } })
+  await wrapper.find('FormWrapper').prop('onSubmit')({ [FILE_FIELD_NAME]: { uploadedFileId } })
+  await flushAll()
 
-  expect(lastPostUrl).toEqual(
+  expect(getLastFetchUrl()).toEqual(
     `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/save_individuals_metadata_table/${uploadedFileId}`,
   )
 })

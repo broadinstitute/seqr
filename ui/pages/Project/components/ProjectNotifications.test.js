@@ -4,85 +4,58 @@ import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
 import { Provider } from 'react-redux'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { mockFetchResponse, flushAll, getLastFetchUrl } from 'shared/utils/testHelpers'
 import ProjectNotifications from './ProjectNotifications'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-let onSuccessCallback
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation((url, onSuccess) => {
-    onSuccessCallback = onSuccess
-    return { get: jest.fn() }
-  }),
-}))
-
 configure({ adapter: new Adapter() })
 
-test('renders unread notifications and a mark-as-read button', () => {
+const renderNotifications = async (responseJson) => {
+  mockFetchResponse(responseJson)
   const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <ProjectNotifications />
     </Provider>,
   )
+  await flushAll()
+  wrapper.update()
+  return wrapper
+}
 
-  onSuccessCallback({
+test('renders unread notifications and a mark-as-read button', async () => {
+  const wrapper = await renderNotifications({
     unreadNotifications: [{ id: 1, verb: 'added a note', timestamp: '2020-01-01T00:00:00Z' }],
     isSubscriber: true,
   })
-  wrapper.update()
 
   expect(wrapper.text()).toContain('added a note')
   expect(wrapper.find('ButtonLink[content="Mark all as read"]').exists()).toBe(true)
   expect(wrapper.find('ButtonLink[content="Subscribe"]').exists()).toBe(false)
 })
 
-test('renders a subscribe button and empty state when there are no notifications', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
-  const wrapper = mount(
-    <Provider store={store}>
-      <ProjectNotifications />
-    </Provider>,
-  )
-
-  onSuccessCallback({ unreadNotifications: [], isSubscriber: false })
-  wrapper.update()
+test('renders a subscribe button and empty state when there are no notifications', async () => {
+  const wrapper = await renderNotifications({ unreadNotifications: [], isSubscriber: false })
 
   expect(wrapper.text()).toContain('No new notifications')
   expect(wrapper.find('ButtonLink[content="Subscribe"]').exists()).toBe(true)
 })
 
-test('renders a show-read-notifications button when there are read notifications to show', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
-  const wrapper = mount(
-    <Provider store={store}>
-      <ProjectNotifications />
-    </Provider>,
-  )
-
-  onSuccessCallback({ unreadNotifications: [], readCount: 3, isSubscriber: true })
-  wrapper.update()
+test('renders a show-read-notifications button when there are read notifications to show', async () => {
+  const wrapper = await renderNotifications({ unreadNotifications: [], readCount: 3, isSubscriber: true })
 
   expect(wrapper.find('ButtonLink[content="Show 3 read notifications"]').exists()).toBe(true)
 })
 
-test('re-fetches with a new url path when a notification action button is clicked', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
-  const wrapper = mount(
-    <Provider store={store}>
-      <ProjectNotifications />
-    </Provider>,
-  )
-
-  onSuccessCallback({
+test('re-fetches with a new url path when a notification action button is clicked', async () => {
+  const wrapper = await renderNotifications({
     unreadNotifications: [{ id: 1, verb: 'added a note', timestamp: '2020-01-01T00:00:00Z' }],
     isSubscriber: true,
   })
-  wrapper.update()
 
   wrapper.find('ButtonLink[content="Mark all as read"]').find('button').simulate('click')
+  await flushAll()
   wrapper.update()
 
-  const lastUrl = HttpRequestHelper.mock.calls[HttpRequestHelper.mock.calls.length - 1][0]
-  expect(lastUrl).toContain('/mark_read')
+  expect(getLastFetchUrl()).toContain('/mark_read')
 })

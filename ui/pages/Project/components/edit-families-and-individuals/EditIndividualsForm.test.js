@@ -8,10 +8,6 @@ import { Provider } from 'react-redux'
 import EditIndividualsForm from './EditIndividualsForm'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
-
 configure({ adapter: new Adapter() })
 
 const configureStore = configureMockStore([thunk])

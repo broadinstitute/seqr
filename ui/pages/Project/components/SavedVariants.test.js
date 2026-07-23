@@ -9,7 +9,7 @@ import { MemoryRouter } from 'react-router-dom'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { updateVariantTags } from 'redux/rootReducer'
 import { REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { mockFetchResponse, flushAll, getLastFetchUrl } from 'shared/utils/testHelpers'
 import RoutedSavedVariants from './SavedVariants'
 import VariantTagTypeBar from './VariantTagTypeBar'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
@@ -19,13 +19,6 @@ const getLinkVariantsValidate = (wrapper) => {
   const { formFields } = wrapper.find(UpdateButton).props()
   return formFields.find(f => f.name === 'variantGuids').validate
 }
-
-// loadSavedVariants/loadFamilySavedVariants are thunks that call HttpRequestHelper; mock that
-// lower-level API call so mounting does not attempt a real network request
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  ...jest.requireActual('shared/utils/httpRequestHelper'),
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
 
 jest.mock('redux/rootReducer', () => ({
   ...jest.requireActual('redux/rootReducer'),
@@ -385,8 +378,7 @@ test('includes the hideKnownGeneForPhenotype filter for the discovery tag catego
   expect(wrapper.find('.filter-names').text().split(',')).toContain('hideKnownGeneForPhenotype')
 })
 
-test('loadVariants requests a single variant by guid when it is not already loaded', () => {
-  HttpRequestHelper.mockClear()
+test('loadVariants requests a single variant by guid when it is not already loaded', async () => {
   const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   mount(
     <Provider store={store}>
@@ -399,14 +391,12 @@ test('loadVariants requests a single variant by guid when it is not already load
   )
 
   mockLatestProps.loadVariants(mockLatestProps.match.params)
+  await flushAll()
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    '/api/project/R0237_1000_genomes_demo/saved_variants/SV_NOT_LOADED', expect.any(Function), expect.any(Function),
-  )
+  expect(getLastFetchUrl()).toContain('/api/project/R0237_1000_genomes_demo/saved_variants/SV_NOT_LOADED?')
 })
 
-test('loadVariants does not re-request a single variant that is already loaded', () => {
-  HttpRequestHelper.mockClear()
+test('loadVariants does not re-request a single variant that is already loaded', async () => {
   const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   mount(
     <Provider store={store}>
@@ -419,12 +409,12 @@ test('loadVariants does not re-request a single variant that is already loaded',
   )
 
   mockLatestProps.loadVariants(mockLatestProps.match.params)
+  await flushAll()
 
-  expect(HttpRequestHelper).not.toHaveBeenCalled()
+  expect(fetch).not.toHaveBeenCalled()
 })
 
-test('loadVariants does not re-request families whose saved variants are already loaded', () => {
-  HttpRequestHelper.mockClear()
+test('loadVariants does not re-request families whose saved variants are already loaded', async () => {
   const loadedState = {
     ...STATE_WITH_2_FAMILIES,
     savedVariantFamilies: { F011652_1: { loaded: true, noteVariants: true } },
@@ -439,12 +429,12 @@ test('loadVariants does not re-request families whose saved variants are already
   )
 
   mockLatestProps.loadVariants(mockLatestProps.match.params)
+  await flushAll()
 
-  expect(HttpRequestHelper).not.toHaveBeenCalled()
+  expect(fetch).not.toHaveBeenCalled()
 })
 
-test('loadVariants requests note variants for the "Has Notes" tag', () => {
-  HttpRequestHelper.mockClear()
+test('loadVariants requests note variants for the "Has Notes" tag', async () => {
   const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   mount(
     <Provider store={store}>
@@ -455,17 +445,14 @@ test('loadVariants requests note variants for the "Has Notes" tag', () => {
   )
 
   mockLatestProps.loadVariants(mockLatestProps.match.params)
+  await flushAll()
 
-  const callIndex = HttpRequestHelper.mock.calls.findIndex(
-    call => call[0] === '/api/project/R0237_1000_genomes_demo/saved_variants',
-  )
-  expect(callIndex).toBeGreaterThan(-1)
-  const getMock = HttpRequestHelper.mock.results[callIndex].value.get
-  expect(getMock).toHaveBeenCalledWith(expect.objectContaining({ includeNoteVariants: true }))
+  expect(getLastFetchUrl()).toContain('/api/project/R0237_1000_genomes_demo/saved_variants?')
+  expect(getLastFetchUrl()).toContain('includeNoteVariants=true')
 })
 
-test('receiving a single-variant response marks its families as loaded', () => {
-  HttpRequestHelper.mockClear()
+test('receiving a single-variant response marks its families as loaded', async () => {
+  mockFetchResponse({ familiesByGuid: { F011652_1: {} }, savedVariantsByGuid: {} })
   const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   mount(
     <Provider store={store}>
@@ -478,9 +465,7 @@ test('receiving a single-variant response marks its families as loaded', () => {
   )
 
   mockLatestProps.loadVariants(mockLatestProps.match.params)
-
-  const [, onSuccess] = HttpRequestHelper.mock.calls[HttpRequestHelper.mock.calls.length - 1]
-  onSuccess({ familiesByGuid: { F011652_1: {} }, savedVariantsByGuid: {} })
+  await flushAll()
 
   expect(store.getActions()).toContainEqual(
     expect.objectContaining({ updates: { F011652_1: { loaded: true, noteVariants: undefined } } }),

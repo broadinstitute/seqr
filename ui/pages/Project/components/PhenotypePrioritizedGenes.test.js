@@ -8,13 +8,6 @@ import { Provider } from 'react-redux'
 import PhenotypePrioritizedGenes from './PhenotypePrioritizedGenes'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-// Loading is triggered on mount via a thunk action creator; mock the underlying HTTP request so
-// mounting does not attempt a real network call
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  ...jest.requireActual('shared/utils/httpRequestHelper'),
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
-
 configure({ adapter: new Adapter() })
 
 test('renders the phenotype-prioritized gene table for an individual', () => {

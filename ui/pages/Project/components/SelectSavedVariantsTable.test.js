@@ -8,10 +8,6 @@ import { Provider } from 'react-redux'
 import SelectSavedVariantsTable, { GENES_COLUMN, VARIANT_POS_COLUMN, TAG_COLUMN } from './SelectSavedVariantsTable'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
-
 configure({ adapter: new Adapter() })
 
 const { alt, chrom, pos, ref, tagGuids, geneIds, variantGuid } = STATE_WITH_2_FAMILIES.savedVariantsByGuid.SV0000004_116042722_r0390_1000

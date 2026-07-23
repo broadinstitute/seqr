@@ -5,16 +5,9 @@ import configureStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { getLastFetchUrl, getLastFetchOptions, getLastFetchBody } from 'shared/utils/testHelpers'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
-
-// Loading is triggered on mount via a thunk action creator; mock the underlying HTTP request so
-// mounting does not attempt a real network call
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  ...jest.requireActual('shared/utils/httpRequestHelper'),
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
 
 configure({ adapter: new Adapter() })
 
@@ -52,12 +45,9 @@ test('dispatches an update when a gene list is removed', () => {
 
   wrapper.find('DispatchRequestButton').prop('onSubmit')()
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/delete_locus_lists`,
-    expect.any(Function),
-  )
-  const post = HttpRequestHelper.mock.results[HttpRequestHelper.mock.results.length - 1].value.post
-  expect(post).toHaveBeenCalledWith({ locusListGuids: ['LL00001_locus_list'], delete: true })
+  expect(getLastFetchUrl()).toEqual(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/delete_locus_lists`)
+  expect(getLastFetchOptions().method).toEqual('POST')
+  expect(getLastFetchBody()).toEqual({ locusListGuids: ['LL00001_locus_list'], delete: true })
 })
 
 test('renders no gene lists when the project has no locusListGuids', () => {

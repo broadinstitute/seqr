@@ -5,28 +5,9 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { mockFetchResponse, flushAll } from 'shared/utils/testHelpers'
 import EditDatasetsButton from './EditDatasetsButton'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
-
-let mockFailIndividualGuid = null
-const mockLoadMultipleData = jest.fn(() => () => () => Promise.resolve())
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation((url, onSuccess, onError) => ({
-    get: jest.fn(() => Promise.resolve()),
-    post: jest.fn((body) => {
-      if (onError && body.individualGuid === mockFailIndividualGuid) {
-        onError({ message: 'boom' })
-        return Promise.resolve()
-      }
-      if (onSuccess) {
-        onSuccess({})
-      }
-      return Promise.resolve()
-    }),
-  })),
-  loadMultipleData: (...args) => mockLoadMultipleData(...args),
-}))
 
 configure({ adapter: new Adapter() })
 
@@ -68,8 +49,6 @@ test('renders nothing for a regular user without workspace loading', () => {
 })
 
 test('renders the IGV and RNA panes and submits the IGV form for a data manager', () => {
-  mockFailIndividualGuid = null
-  HttpRequestHelper.mockClear()
   const store = configureStore(OPEN_MODAL_STATE)
   const wrapper = mount(
     <Provider store={store}>
@@ -90,12 +69,9 @@ test('renders the IGV and RNA panes and submits the IGV form for a data manager'
     },
     sampleType: 'RNA',
   }).then(() => {
-    expect(HttpRequestHelper).toHaveBeenCalledWith(
-      '/api/individual/I021476_na19678_1/update_igv_sample', expect.any(Function), expect.any(Function),
-    )
-    expect(HttpRequestHelper).toHaveBeenCalledWith(
-      '/api/individual/I021474_na19679_1/update_igv_sample', expect.any(Function), expect.any(Function),
-    )
+    const fetchedUrls = fetch.mock.calls.map(([url]) => url)
+    expect(fetchedUrls).toContain('/api/individual/I021476_na19678_1/update_igv_sample')
+    expect(fetchedUrls).toContain('/api/individual/I021474_na19679_1/update_igv_sample')
 
     wrapper.find('.menu .item').at(1).simulate('click')
     wrapper.update()
@@ -104,7 +80,7 @@ test('renders the IGV and RNA panes and submits the IGV form for a data manager'
 })
 
 test('surfaces an aggregated error when an IGV update fails', () => {
-  mockFailIndividualGuid = 'I021476_na19678_1'
+  mockFetchResponse({ error: 'boom' }, { ok: false, status: 400 })
   const store = configureStore(OPEN_MODAL_STATE)
   const wrapper = mount(
     <Provider store={store}>
@@ -127,8 +103,7 @@ test('surfaces an aggregated error when an IGV update fails', () => {
   )
 })
 
-test('submits the RNA form for a data manager', () => {
-  mockLoadMultipleData.mockClear()
+test('submits the RNA form for a data manager', async () => {
   const store = configureStore(OPEN_MODAL_STATE)
   const wrapper = mount(
     <Provider store={store}>
@@ -139,16 +114,13 @@ test('submits the RNA form for a data manager', () => {
   wrapper.find('.menu .item').at(1).simulate('click')
   wrapper.update()
 
+  mockFetchResponse({ info: [], warnings: [], sampleGuids: ['S1'], fileName: 'data.tsv' })
   const rnaFormWrapper = wrapper.find('FormWrapper')
-  rnaFormWrapper.prop('onSubmit')({ sampleGuids: ['S1'], fileName: 'data.tsv', dataType: 'E' })
+  await rnaFormWrapper.prop('onSubmit')({ sampleGuids: ['S1'], fileName: 'data.tsv', dataType: 'E' })
+  await flushAll()
 
-  expect(mockLoadMultipleData).toHaveBeenCalledWith(
-    `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/update_rna_seq`,
-    expect.any(Function),
-    expect.any(String),
-    expect.any(Function),
-    10,
-  )
+  expect(fetch.mock.calls[0][0]).toEqual(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/update_rna_seq`)
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ sampleGuids: ['S1'], fileName: 'data.tsv', dataType: 'E' })
 })
 
 test('renders RNA upload info and warning messages when present', () => {

@@ -7,14 +7,9 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { FAMILY_MAIN_FIELDS, FAMILY_DETAIL_FIELDS } from 'shared/utils/constants'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { flushAll } from 'shared/utils/testHelpers'
 import FamilyTable from './FamilyTable'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
-
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  ...jest.requireActual('shared/utils/httpRequestHelper'),
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
 
 configure({ adapter: new Adapter() })
 
@@ -103,7 +98,7 @@ test('renders an empty message when there are no visible families', () => {
   expect(wrapper.text()).toContain('0 families found')
 })
 
-test('loads export data when the export popup content is rendered', () => {
+test('loads export data when the export popup content is rendered', async () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
 
   const wrapper = mount(
@@ -117,17 +112,18 @@ test('loads export data when the export popup content is rendered', () => {
     </Provider>,
   )
 
-  HttpRequestHelper.mockClear()
+  fetch.mockClear()
 
   // Popup content is a portal only rendered on hover/click, so render its `content` prop directly
   const popupContent = wrapper.find('Popup[on="click"]').prop('content')
   shallow(popupContent)
+  await flushAll()
 
-  const requestedUrls = HttpRequestHelper.mock.calls.map(([url]) => url)
-  expect(requestedUrls).toContain(
-    `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/get_individuals`,
-  )
-  expect(requestedUrls).toContain(
-    `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/get_family_notes`,
-  )
+  const requestedUrls = fetch.mock.calls.map(([url]) => url)
+  expect(requestedUrls.some(
+    url => url.includes(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/get_individuals`),
+  )).toBe(true)
+  expect(requestedUrls.some(
+    url => url.includes(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/get_family_notes`),
+  )).toBe(true)
 })

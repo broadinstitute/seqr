@@ -5,17 +5,9 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { mockFetchResponse, getLastFetchUrl, getLastFetchBody } from 'shared/utils/testHelpers'
 import CreateVariantButtons from './CreateVariantButton'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
-
-let onSuccessCallback
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation((url, onSuccess) => {
-    onSuccessCallback = onSuccess
-    return { get: jest.fn(), post: jest.fn(() => Promise.resolve()) }
-  }),
-}))
 
 configure({ adapter: new Adapter() })
 
@@ -23,7 +15,7 @@ const configureStore = configureMockStore([thunk])
 
 const FAMILY = STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1
 
-test('renders manual variant and SV buttons when the project is editable', () => {
+test('renders manual variant and SV buttons when the project is editable', async () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
@@ -35,17 +27,14 @@ test('renders manual variant and SV buttons when the project is editable', () =>
   expect(wrapper.text()).toContain('Add Manual SV')
 
   const { onSubmit } = wrapper.findWhere(n => n.props().onSubmit && n.props().family).first().props()
-  expect(() => onSubmit({ chrom: '1' })).not.toThrow()
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    `/api/saved_variant/create_manual/${FAMILY.familyGuid}`, expect.any(Function),
-  )
-  expect(HttpRequestHelper.mock.results[HttpRequestHelper.mock.results.length - 1].value.post)
-    .toHaveBeenCalledWith({ chrom: '1' })
+  mockFetchResponse({ savedVariantsByGuid: { SV001: {} } })
+  const dispatchCountBeforeSuccess = store.getActions().length
+  await onSubmit({ chrom: '1' })
 
-  const dispatchedActions = store.getActions()
-  const dispatchCountBeforeSuccess = dispatchedActions.length
-  onSuccessCallback({ savedVariantsByGuid: { SV001: {} } })
+  expect(getLastFetchUrl()).toEqual(`/api/saved_variant/create_manual/${FAMILY.familyGuid}`)
+  expect(getLastFetchBody()).toEqual({ chrom: '1' })
+
   expect(store.getActions().length).toBe(dispatchCountBeforeSuccess + 1)
   expect(store.getActions()[dispatchCountBeforeSuccess]).toEqual(
     { type: 'RECEIVE_DATA', updatesById: { savedVariantsByGuid: { SV001: {} } } },

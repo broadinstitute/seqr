@@ -12,10 +12,6 @@ import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 // jsdom does not implement createObjectURL; the bulk form's template download links need it
 global.URL.createObjectURL = jest.fn()
 
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
-
 configure({ adapter: new Adapter() })
 
 const configureStore = configureMockStore([thunk])

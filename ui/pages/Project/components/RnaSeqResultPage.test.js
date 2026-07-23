@@ -9,13 +9,6 @@ import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import RnaSeqResultPage from './RnaSeqResultPage'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-// Loading is triggered on mount via a thunk action creator; mock the underlying HTTP request so
-// mounting does not attempt a real network call
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  ...jest.requireActual('shared/utils/httpRequestHelper'),
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
-
 // RnaSeqOutliers draws its scatterplot with d3 on mount, which the project's jest config stubs out
 // (see RnaSeqOutliers.test.js); it's covered by its own test in isolation, so double it here to
 // focus this test on RnaSeqResultPage's own tissue-selection/composition logic

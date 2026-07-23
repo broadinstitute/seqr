@@ -7,6 +7,7 @@ import { Provider } from 'react-redux'
 import { MemoryRouter, Router } from 'react-router-dom'
 import { createMemoryHistory } from 'history'
 import { CATEGORY_FAMILY_FILTERS } from 'shared/utils/constants'
+import { flushAll, getLastFetchUrl, getLastFetchBody } from 'shared/utils/testHelpers'
 import { UpdateAnalysisGroupButton, DeleteAnalysisGroupButton } from './AnalysisGroupButtons'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -15,19 +16,6 @@ import { STATE_WITH_2_FAMILIES } from '../fixtures'
 jest.mock('shared/components/panel/view-pedigree-image/PedigreeImagePanel', () => function MockPedigreeImagePanel() {
   return <div className="mock-pedigree-image" />
 })
-
-let lastPostUrl
-let lastPostBody
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation(url => ({
-    get: jest.fn(() => Promise.resolve()),
-    post: jest.fn((body) => {
-      lastPostUrl = url
-      lastPostBody = body
-      return Promise.resolve()
-    }),
-  })),
-}))
 
 const ANALYSIS_GROUP = {
   ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid.AG0000183_test_group, workspaceNamespace: undefined,
@@ -272,7 +260,7 @@ test('renders the AnVIL workspace fields for a static analysis group when the us
   expect(wrapper.find('ForwardRef(Field)[name="workspaceName"]').exists()).toBe(true)
 })
 
-test('submits a new static analysis group', () => {
+test('submits a new static analysis group', async () => {
   const store = configureStore([thunk])({
     ...STATE_WITH_2_FAMILIES,
     modal: { 'createAnalysisGroup-R0237_1000_genomes_demo': { open: true } },
@@ -286,12 +274,13 @@ test('submits a new static analysis group', () => {
   )
 
   wrapper.find('FormWrapper').prop('onSubmit')({ name: 'New Group', familyGuids: ['F011652_1'] })
+  await flushAll()
 
-  expect(lastPostUrl).toEqual('/api/project/R0237_1000_genomes_demo/analysis_groups/create')
-  expect(lastPostBody).toEqual({ name: 'New Group', familyGuids: ['F011652_1'] })
+  expect(getLastFetchUrl()).toEqual('/api/project/R0237_1000_genomes_demo/analysis_groups/create')
+  expect(getLastFetchBody()).toEqual({ name: 'New Group', familyGuids: ['F011652_1'] })
 })
 
-test('submits a new dynamic analysis group', () => {
+test('submits a new dynamic analysis group', async () => {
   const store = configureStore([thunk])({
     ...STATE_WITH_2_FAMILIES,
     modal: { 'createDynamicAnalysisGroup-R0237_1000_genomes_demo': { open: true } },
@@ -306,12 +295,13 @@ test('submits a new dynamic analysis group', () => {
 
   const criteria = { analysisStatus: ['Q'] }
   wrapper.find('FormWrapper').prop('onSubmit')({ name: 'Dynamic Group', criteria })
+  await flushAll()
 
-  expect(lastPostUrl).toEqual('/api/project/R0237_1000_genomes_demo/dynamic_analysis_groups/create')
-  expect(lastPostBody).toEqual({ name: 'Dynamic Group', criteria })
+  expect(getLastFetchUrl()).toEqual('/api/project/R0237_1000_genomes_demo/dynamic_analysis_groups/create')
+  expect(getLastFetchBody()).toEqual({ name: 'Dynamic Group', criteria })
 })
 
-test('submits an update to an existing analysis group', () => {
+test('submits an update to an existing analysis group', async () => {
   const editModalId = `editAnalysisGroup-${ANALYSIS_GROUP.analysisGroupGuid}`
   const store = configureStore([thunk])({
     ...STATE_WITH_2_FAMILIES,
@@ -326,14 +316,15 @@ test('submits an update to an existing analysis group', () => {
   )
 
   wrapper.find('FormWrapper').prop('onSubmit')({ ...ANALYSIS_GROUP, name: 'Updated Name' })
+  await flushAll()
 
-  expect(lastPostUrl).toEqual(
+  expect(getLastFetchUrl()).toEqual(
     `/api/project/R0237_1000_genomes_demo/analysis_groups/${ANALYSIS_GROUP.analysisGroupGuid}/update`,
   )
-  expect(lastPostBody).toEqual({ ...ANALYSIS_GROUP, name: 'Updated Name' })
+  expect(getLastFetchBody()).toEqual({ ...ANALYSIS_GROUP, name: 'Updated Name' })
 })
 
-test('dispatches a delete request for an existing analysis group', () => {
+test('dispatches a delete request for an existing analysis group', async () => {
   const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
@@ -344,9 +335,10 @@ test('dispatches a delete request for an existing analysis group', () => {
   )
 
   wrapper.find('DispatchRequestButton').first().prop('onSubmit')()
+  await flushAll()
 
-  expect(lastPostUrl).toEqual(
+  expect(getLastFetchUrl()).toEqual(
     `/api/project/R0237_1000_genomes_demo/analysis_groups/${ANALYSIS_GROUP.analysisGroupGuid}/delete`,
   )
-  expect(lastPostBody).toEqual({ ...ANALYSIS_GROUP, delete: true })
+  expect(getLastFetchBody()).toEqual({ ...ANALYSIS_GROUP, delete: true })
 })

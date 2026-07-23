@@ -7,13 +7,9 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { getLastFetchUrl, getLastFetchBody, flushAll } from 'shared/utils/testHelpers'
 import ProjectOverview from './ProjectOverview'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
-
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
 
 configure({ adapter: new Adapter() })
 
@@ -26,10 +22,6 @@ const renderProjectOverview = state => mount(
     </MemoryRouter>
   </Provider>,
 )
-
-beforeEach(() => {
-  HttpRequestHelper.mockClear()
-})
 
 test('divides content correctly by section for the current project', () => {
   const wrapper = renderProjectOverview(STATE_WITH_2_FAMILIES)
@@ -78,9 +70,7 @@ test('renders matchmaker submission details when the submissions modal is open',
   expect(dataTable.text()).toContain('5/9/2018')
   expect(wrapper.text()).toContain('1 removed submissions')
   expect(wrapper.find('[modalId="mmeContact"]').exists()).toBe(true)
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    `/api/project/${PROJECT_GUID}/get_mme_submissions`, expect.any(Function), expect.any(Function),
-  )
+  expect(getLastFetchUrl()).toEqual(`/api/project/${PROJECT_GUID}/get_mme_submissions?`)
 })
 
 test('renders family size histogram edge cases and the case review edit button', () => {
@@ -263,7 +253,7 @@ test('uses the analysis group workspace details when the group has its own works
   expect(wrapper.text()).toContain('anvil-analysis-group')
 })
 
-test('submits AnVIL workspace updates', () => {
+test('submits AnVIL workspace updates', async () => {
   const workspaceState = cloneDeep(STATE_WITH_2_FAMILIES)
   workspaceState.user.isPm = true
   workspaceState.user.isAnvil = true
@@ -273,26 +263,22 @@ test('submits AnVIL workspace updates', () => {
   const updateButton = wrapper.find('[modalId="editAnvilWorkspace"]').first()
   expect(updateButton.exists()).toBe(true)
   updateButton.prop('onSubmit')({ workspaceNamespace: 'new-namespace', workspaceName: 'new-workspace' })
+  await flushAll()
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    `/api/project/${PROJECT_GUID}/update_workspace`, expect.any(Function),
-  )
-  const { post } = HttpRequestHelper.mock.results[HttpRequestHelper.mock.results.length - 1].value
-  expect(post).toHaveBeenCalledWith({ workspaceNamespace: 'new-namespace', workspaceName: 'new-workspace' })
+  expect(getLastFetchUrl()).toEqual(`/api/project/${PROJECT_GUID}/update_workspace`)
+  expect(getLastFetchBody()).toEqual({ workspaceNamespace: 'new-namespace', workspaceName: 'new-workspace' })
 })
 
-test('submits a matchmaker contact to all submissions', () => {
+test('submits a matchmaker contact to all submissions', async () => {
   const wrapper = renderProjectOverview({ ...STATE_WITH_2_FAMILIES, modal: { mmeSubmissions: { open: true } } })
 
   const updateButton = wrapper.find('[modalId="mmeContact"]').first()
   expect(updateButton.exists()).toBe(true)
   updateButton.prop('onSubmit')({ contact: 'new-contact@broadinstitute.org' })
+  await flushAll()
 
-  expect(HttpRequestHelper).toHaveBeenCalledWith(
-    `/api/matchmaker/update_project_contact/${PROJECT_GUID}`, expect.any(Function),
-  )
-  const { post } = HttpRequestHelper.mock.results[HttpRequestHelper.mock.results.length - 1].value
-  expect(post).toHaveBeenCalledWith({ contact: 'new-contact@broadinstitute.org' })
+  expect(getLastFetchUrl()).toEqual(`/api/matchmaker/update_project_contact/${PROJECT_GUID}`)
+  expect(getLastFetchBody()).toEqual({ contact: 'new-contact@broadinstitute.org' })
 })
 
 test('shows a loading indicator when families or overview data is loading', () => {

@@ -7,14 +7,9 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { CASE_REVIEW_TABLE_NAME } from '../../constants'
 
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { flushAll, getLastFetchUrl, getLastFetchBody } from 'shared/utils/testHelpers'
 import IndividualRow from './IndividualRow'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
-
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  ...jest.requireActual('shared/utils/httpRequestHelper'),
-  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
-}))
 
 configure({ adapter: new Adapter() })
 
@@ -101,7 +96,7 @@ test('renders individual data details, removed MME status, and age details', () 
   expect(wrapper.text()).not.toContain('Imputed Population')
 })
 
-test('dispatches pedigree and IGV updates and renders parent/IGV select and gene fields when editing', () => {
+test('dispatches pedigree and IGV updates and renders parent/IGV select and gene fields when editing', async () => {
   const pedigreeModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_coreEdit_-_undefined`
   const igvModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_ IGVEdit_-_undefined`
   const rejectedGenesModalId = `edit_-_${TEST_INDIVIDUAL_GUID}_-_rejectedGenes_-_undefined`
@@ -151,26 +146,19 @@ test('dispatches pedigree and IGV updates and renders parent/IGV select and gene
 
   const pedigreeEdit = wrapper.find('Connect(FormWrapper)').filterWhere(n => n.prop('modalName') === pedigreeModalId)
   pedigreeEdit.first().prop('onSubmit')({ individualGuid: TEST_INDIVIDUAL_GUID, sex: 'M' })
+  await flushAll()
+
+  expect(getLastFetchUrl()).toEqual('/api/project/R0237_1000_genomes_demo/edit_individuals')
+  expect(getLastFetchBody()).toEqual(
+    expect.objectContaining({ individuals: [{ individualGuid: TEST_INDIVIDUAL_GUID, sex: 'M' }] }),
+  )
 
   const igvEdit = wrapper.find('Connect(FormWrapper)').filterWhere(n => n.prop('modalName') === igvModalId)
   igvEdit.first().prop('onSubmit')({ filePath: 'gs://test.cram' })
+  await flushAll()
 
-  const pedigreeCall = HttpRequestHelper.mock.calls.find(
-    ([url]) => url === '/api/project/R0237_1000_genomes_demo/edit_individuals',
-  )
-  const igvCall = HttpRequestHelper.mock.calls.find(
-    ([url]) => url === '/api/individual/undefined/update_igv_sample',
-  )
-  expect(pedigreeCall).toBeTruthy()
-  expect(igvCall).toBeTruthy()
-
-  const pedigreePost = HttpRequestHelper.mock.results[HttpRequestHelper.mock.calls.indexOf(pedigreeCall)].value.post
-  const igvPost = HttpRequestHelper.mock.results[HttpRequestHelper.mock.calls.indexOf(igvCall)].value.post
-
-  expect(pedigreePost).toHaveBeenCalledWith(
-    expect.objectContaining({ individuals: [{ individualGuid: TEST_INDIVIDUAL_GUID, sex: 'M' }] }),
-  )
-  expect(igvPost).toHaveBeenCalledWith({ filePath: 'gs://test.cram' })
+  expect(getLastFetchUrl()).toEqual('/api/individual/undefined/update_igv_sample')
+  expect(getLastFetchBody()).toEqual({ filePath: 'gs://test.cram' })
 })
 
 test('renders case review status without a last modified date or user', () => {

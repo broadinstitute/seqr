@@ -5,23 +5,13 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
+import {
+  mockFetchResponse, mockFetchRejection, flushAll, getLastFetchUrl, getLastFetchBody,
+} from 'shared/utils/testHelpers'
 import ProjectCollaborators from './ProjectCollaborators'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-let mockHttpRequestCalls
-jest.mock('shared/utils/httpRequestHelper', () => ({
-  ...jest.requireActual('shared/utils/httpRequestHelper'),
-  HttpRequestHelper: jest.fn().mockImplementation((url, onSuccess, onError) => {
-    mockHttpRequestCalls.push({ url, onSuccess, onError })
-    return { get: jest.fn(), post: jest.fn(() => Promise.resolve()) }
-  }),
-}))
-
 configure({ adapter: new Adapter() })
-
-beforeEach(() => {
-  mockHttpRequestCalls = []
-})
 
 const configureStore = configureMockStore([thunk])
 
@@ -123,7 +113,8 @@ test('renders collaborator groups and the AnVIL managed message', () => {
   expect(addButton.exists()).toBe(false)
 })
 
-test('fetches collaborators from the server for an analysis group without cached collaborators', () => {
+test('fetches collaborators from the server and dispatches on success for an analysis group without cached collaborators', async () => {
+  mockFetchResponse({ projectsByGuid: {} })
   const store = configureStore(STATE_WITH_2_FAMILIES)
 
   mount(
@@ -132,19 +123,31 @@ test('fetches collaborators from the server for an analysis group without cached
     </Provider>,
   )
 
-  expect(mockHttpRequestCalls).toHaveLength(1)
-  expect(mockHttpRequestCalls[0].url).toEqual(
-    '/api/project/R0237_1000_genomes_demo/analysis_groups/AG0000183_test_group/get_collaborators',
+  expect(getLastFetchUrl()).toEqual(
+    '/api/project/R0237_1000_genomes_demo/analysis_groups/AG0000183_test_group/get_collaborators?',
   )
 
-  store.clearActions()
-  mockHttpRequestCalls[0].onSuccess({ projectsByGuid: {} })
+  await flushAll()
+
   expect(store.getActions().some(action => action.type === 'RECEIVE_DATA')).toBe(true)
   expect(store.getActions().some(action => action.type === 'RECEIVE_PROJECT_COLLABORATORS')).toBe(true)
+})
 
-  store.clearActions()
-  mockHttpRequestCalls[0].onError(new Error('fail'))
-  expect(store.getActions()).toEqual([{ type: 'RECEIVE_PROJECT_COLLABORATORS', error: 'fail' }])
+test('dispatches an error action when fetching collaborators for an analysis group fails', async () => {
+  mockFetchRejection(new Error('fail'))
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+
+  mount(
+    <Provider store={store}>
+      <ProjectCollaborators analysisGroupGuid="AG0000183_test_group" />
+    </Provider>,
+  )
+
+  await flushAll()
+
+  expect(store.getActions().some(
+    action => action.type === 'RECEIVE_PROJECT_COLLABORATORS' && action.error === 'fail',
+  )).toBe(true)
 })
 
 test('renders the add collaborator group form and submits a new group', () => {
@@ -168,9 +171,8 @@ test('renders the add collaborator group form and submits a new group', () => {
   const addGroupButton = wrapper.find('[modalId="addCollaborator Group"]')
   expect(addGroupButton.exists()).toBe(true)
 
-  mockHttpRequestCalls.length = 0
   addGroupButton.prop('onSubmit')({ name: 'newGroup', hasEditPermissions: true })
 
-  expect(mockHttpRequestCalls).toHaveLength(1)
-  expect(mockHttpRequestCalls[0].url).toEqual('/api/project/R0237_1000_genomes_demo/collaboratorGroups/newGroup/update')
+  expect(getLastFetchUrl()).toEqual('/api/project/R0237_1000_genomes_demo/collaboratorGroups/newGroup/update')
+  expect(getLastFetchBody()).toEqual({ name: 'newGroup', hasEditPermissions: true })
 })
