@@ -81,3 +81,21 @@ test('uses analysis group tag type counts when an analysisGroupGuid is provided'
     '/project/R0237_1000_genomes_demo/saved_variants/analysis_group/AG0000183_test_group/Tier 1 - Phenotype not delineated',
   )
 })
+
+test('renders no summary rows when the analysis group has no matching families', () => {
+  const store = configureStore()({
+    ...STATE_WITH_2_FAMILIES,
+    familyTagTypeCounts: {
+      F011652_1: { Review: 2, 'Tier 1 - Phenotype not delineated': 1 },
+    },
+  })
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <VariantTags projectGuid="R0237_1000_genomes_demo" analysisGroupGuid="AG_DOES_NOT_EXIST" />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(wrapper.find('TagSummary').length).toEqual(0)
+})

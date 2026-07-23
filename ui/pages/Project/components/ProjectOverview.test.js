@@ -81,7 +81,7 @@ test('renders family size histogram edge cases and the case review edit button',
       familyGuid: 'F1',
       projectGuid: PROJECT_GUID,
       individualGuids: ['a1', 'a2', 'a3'],
-      parents: [{ maternalGuid: 'm1', paternalGuid: 'p1' }],
+      parents: [{ individualGuid: 'a3', maternalGuid: 'a2', paternalGuid: 'p1' }],
     },
     F1b: {
       familyGuid: 'F1b',
@@ -109,6 +109,22 @@ test('renders family size histogram edge cases and the case review edit button',
         { maternalGuid: 'm4', paternalGuid: 'p4' },
         { maternalGuid: 'm4', paternalGuid: 'p4' },
       ],
+    },
+    F5: {
+      familyGuid: 'F5',
+      projectGuid: PROJECT_GUID,
+      individualGuids: ['g1', 'g2'],
+      parents: [{ maternalGuid: 'm6' }],
+    },
+  }
+  familyState.datasetsByGuid = {
+    DS_SAMPLE_PARENT: {
+      datasetType: 'SNV_INDEL',
+      sampleType: 'WES',
+      projectGuid: PROJECT_GUID,
+      activeIndividuals: ['a3', 'a2'],
+      inactiveIndividuals: [],
+      loadedDate: '2020-01-01T12:00:00.000Z',
     },
   }
 
@@ -279,6 +295,39 @@ test('submits a matchmaker contact to all submissions', async () => {
 
   expect(getLastFetchUrl()).toEqual(`/api/matchmaker/update_project_contact/${PROJECT_GUID}`)
   expect(getLastFetchBody()).toEqual({ contact: 'new-contact@broadinstitute.org' })
+})
+
+test('handles missing rnaSampleCounts and datasets without active/inactive individuals lists', () => {
+  const noRnaCountsState = cloneDeep(STATE_WITH_2_FAMILIES)
+  delete noRnaCountsState.projectsByGuid[PROJECT_GUID].rnaSampleCounts
+  noRnaCountsState.datasetsByGuid.DS_NO_INDIVIDUALS = {
+    datasetType: 'SNV_INDEL',
+    sampleType: 'WES',
+    projectGuid: PROJECT_GUID,
+    loadedDate: '2020-02-01T12:00:00.000Z',
+  }
+
+  const wrapper = renderProjectOverview(noRnaCountsState)
+
+  expect(wrapper.find('Loader').exists()).toBe(false)
+  expect(wrapper.text()).not.toContain('RNA Expression Outlier Datasets')
+})
+
+test('handles mme submissions with no matching family and gene ids missing from genesById', () => {
+  const mmeState = cloneDeep(STATE_WITH_2_FAMILIES)
+  mmeState.mmeSubmissionsByGuid.MS_NO_FAMILY = {
+    submissionGuid: 'MS_NO_FAMILY',
+    individualGuid: 'I_NOT_IN_ANY_FAMILY',
+    createdDate: '2018-05-09T10:29:00.000Z',
+    submissionId: 'NO_FAMILY',
+  }
+  mmeState.mmeSubmissionsByGuid.MS021475_na19675_1.geneIds = ['ENSG00000228198', 'ENSG_UNKNOWN']
+
+  const wrapper = renderProjectOverview({ ...mmeState, modal: { mmeSubmissions: { open: true } } })
+
+  const dataTable = wrapper.find('DataTable').filterWhere(n => n.prop('idField') === 'submissionGuid')
+  expect(dataTable.exists()).toBe(true)
+  expect(dataTable.text()).not.toContain('NO_FAMILY')
 })
 
 test('shows a loading indicator when families or overview data is loading', () => {

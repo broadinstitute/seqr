@@ -8,6 +8,7 @@ import { Provider } from 'react-redux'
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import { mockFetchRejection, flushAll } from 'shared/utils/testHelpers'
 import RnaSeqResultPage from './RnaSeqResultPage'
+import { getTissueOptionsByIndividualGuid } from '../selectors'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 // RnaSeqOutliers draws its scatterplot with d3 on mount, which the project's jest config stubs out
@@ -148,4 +149,18 @@ test('computes plot locations for expression and splice junction outliers', () =
   expect(spliceConfig.getLocation({ chrom: '1', start: 1000, end: 2000 })).toEqual(
     `1:${1000 - RNASEQ_JUNCTION_PADDING}-${2000 + RNASEQ_JUNCTION_PADDING}`,
   )
+})
+
+test('getTissueOptionsByIndividualGuid handles missing rnaSeqDataByIndividual state and missing per-individual data', () => {
+  const { rnaSeqDataByIndividual, ...stateWithoutRnaSeqData } = STATE_WITH_2_FAMILIES
+  expect(getTissueOptionsByIndividualGuid(stateWithoutRnaSeqData)).toEqual({})
+
+  const missingIndividualDataState = {
+    ...STATE_WITH_2_FAMILIES,
+    rnaSeqDataByIndividual: {
+      ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual,
+      I_NO_RNASEQ_DATA: undefined,
+    },
+  }
+  expect(getTissueOptionsByIndividualGuid(missingIndividualDataState).I_NO_RNASEQ_DATA).toEqual([])
 })

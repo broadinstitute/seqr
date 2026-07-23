@@ -5,11 +5,13 @@ import configureStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
+import cloneDeep from 'lodash/cloneDeep'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { updateVariantTags } from 'redux/rootReducer'
 import { REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
 import { mockFetchResponse, mockFetchRejection, flushAll, getLastFetchUrl } from 'shared/utils/testHelpers'
+import { MME_TAG_NAME } from 'shared/utils/constants'
 import RoutedSavedVariants from './SavedVariants'
 import VariantTagTypeBar from './VariantTagTypeBar'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
@@ -520,4 +522,45 @@ test('dispatches an error action when the saved variants request fails', async (
   expect(store.getActions()).toContainEqual(
     expect.objectContaining({ type: 'RECEIVE_DATA', error: 'saved variants request failed' }),
   )
+})
+
+test('getSavedVariantTagTypeCountsByFamily counts mme submissions and de-dupes repeated tag names on a variant', () => {
+  const mmeTagState = cloneDeep(STATE_WITH_2_FAMILIES)
+  mmeTagState.savedVariantsByGuid.SV0000004_116042722_r0390_1000.mmeSubmissions = [{ submissionGuid: 'MS1' }]
+  mmeTagState.savedVariantsByGuid.SV0000004_116042722_r0390_1000.tagGuids.push('VT1726942_1248367227_r0390_101_dup')
+  mmeTagState.variantTagsByGuid.VT1726942_1248367227_r0390_101_dup = {
+    ...mmeTagState.variantTagsByGuid.VT1726942_1248367227_r0390_101,
+    tagGuid: 'VT1726942_1248367227_r0390_101_dup',
+  }
+
+  const store = configureStore([thunk])(mmeTagState)
+  mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(mockLatestProps.tagTypeCounts[MME_TAG_NAME]).toEqual(1)
+  expect(mockLatestProps.tagTypeCounts.Review).toEqual(3)
+})
+
+test('getProjectVariantSavedByOptions handles a family with no saved variants', () => {
+  const noVariantsState = cloneDeep(STATE_WITH_2_FAMILIES)
+  noVariantsState.familiesByGuid.F_NO_VARIANTS = {
+    ...noVariantsState.familiesByGuid.F011652_1,
+    familyGuid: 'F_NO_VARIANTS',
+  }
+
+  const store = configureStore([thunk])(noVariantsState)
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(wrapper.find('.saved-by-filter').exists()).toBe(true)
 })

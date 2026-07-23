@@ -146,3 +146,43 @@ test('dispatches an update to the families table filter state when a category fi
     updatesById: { R0237_1000_genomes_demo: { analysisStatus: ['ACCEPTED'] } },
   })
 })
+
+test('renders correctly when a family has no analysedBy list', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
+        analysedBy: undefined,
+      },
+    },
+  }
+  const wrapper = renderHeaderRow({ fields: [{ id: FAMILY_FIELD_ANALYSIS_STATUS }] }, state)
+
+  expect(wrapper.find('BaseFamilyTableFilter').exists()).toBe(true)
+})
+
+test('renders correctly when there is no families table filter state for the current project', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableFilterState: {},
+  }
+  const wrapper = renderHeaderRow({ fields: [{ id: FAMILY_FIELD_ANALYSIS_STATUS }] }, state)
+
+  expect(headerText(wrapper)).toEqual('Showing all 2 families')
+})
+
+test('filters visible families by matching saved variant tag types and excludes non-matching families', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableFilterState: { R0237_1000_genomes_demo: { savedVariants: ['Review'] } },
+    familyTagTypeCounts: {
+      F011652_1: { Review: 2 },
+      F011652_2: {},
+    },
+  }
+  const wrapper = renderHeaderRow({}, state)
+
+  expect(headerText(wrapper)).toEqual('Showing 1 out of 2 families')
+})

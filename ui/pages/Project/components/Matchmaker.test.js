@@ -4,8 +4,10 @@ import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
+import cloneDeep from 'lodash/cloneDeep'
 import { mockFetchResponse, mockFetchRejection, flushAll, getLastFetchUrl } from 'shared/utils/testHelpers'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
+import { getIndividualTaggedVariants, getMmeDefaultContactEmail } from '../selectors'
 import Matchmaker from './Matchmaker'
 
 configure({ adapter: new Adapter() })
@@ -485,4 +487,53 @@ test('cascades into a new mme search after successfully updating a submission', 
 
   expect(fetchedUrl('/api/matchmaker/get_mme_nodes')).toBe(true)
   expect(getLastFetchUrl()).toEqual('/api/matchmaker/finalize_mme_search/MS021475_na19675_1?incomingQueryGuid=q2')
+})
+
+test('getIndividualTaggedVariants falls back for families/variants with no tagged data', () => {
+  const noVariantsState = cloneDeep(STATE_WITH_2_FAMILIES)
+  noVariantsState.familiesByGuid.F_NO_VARIANTS = {
+    ...noVariantsState.familiesByGuid.F011652_2,
+    familyGuid: 'F_NO_VARIANTS',
+    individualGuids: ['I_NO_VARIANTS'],
+  }
+  noVariantsState.individualsByGuid.I_NO_VARIANTS = {
+    ...noVariantsState.individualsByGuid.I021475_na19675_2,
+    individualGuid: 'I_NO_VARIANTS',
+    familyGuid: 'F_NO_VARIANTS',
+  }
+
+  // no family in taggedVariants at all -> falls back to an empty list (line 331 fallback)
+  expect(getIndividualTaggedVariants(noVariantsState, { individualGuid: 'I_NO_VARIANTS' })).toEqual([])
+
+  // a variant tagged for the family but with no genotypes recorded for the individual at all
+  // (line 333 fallback)
+  const noGenotypesState = cloneDeep(noVariantsState)
+  noGenotypesState.savedVariantsByGuid.SV0000004_116042722_r0390_1000.genotypes = undefined
+  const taggedVariants = getIndividualTaggedVariants(noGenotypesState, { individualGuid: 'I021475_na19675_1' })
+  expect(taggedVariants.length).toBeGreaterThan(0)
+  expect(taggedVariants.find(v => v.variantGuid === 'SV0000004_116042722_r0390_1000').ab).toBeUndefined()
+})
+
+test('getMmeDefaultContactEmail handles missing gene lookups and phenotype list formatting', () => {
+  const contactEmailState = cloneDeep(STATE_WITH_2_FAMILIES)
+  contactEmailState.mmeResultsByGuid.MR0005038_HK018_0047.geneVariants = [{ geneId: 'ENSG_UNKNOWN' }]
+  contactEmailState.mmeSubmissionsByGuid.MS021475_na19675_1.geneVariants = [
+    { geneId: 'ENSG_UNKNOWN', variantGuid: 'SV0000004_116042722_r0390_1000' },
+  ]
+  contactEmailState.mmeSubmissionsByGuid.MS021475_na19675_1.phenotypes = [
+    { id: 'HP:1', label: 'Feature One', observed: 'yes' },
+    { id: 'HP:2', label: 'Feature Two', observed: 'yes' },
+    { id: 'HP:3', label: 'Feature Three', observed: 'yes' },
+  ]
+
+  const email = getMmeDefaultContactEmail(contactEmailState, { matchmakerResultGuid: 'MR0005038_HK018_0047' })
+  expect(email.subject).toContain('Patient 12531')
+  expect(email.body).toContain('feature one')
+  expect(email.body).toContain('and feature three')
+
+  const noPhenotypesState = cloneDeep(contactEmailState)
+  delete noPhenotypesState.mmeSubmissionsByGuid.MS021475_na19675_1.phenotypes
+  expect(
+    () => getMmeDefaultContactEmail(noPhenotypesState, { matchmakerResultGuid: 'MR0005038_HK018_0047' }),
+  ).not.toThrow()
 })

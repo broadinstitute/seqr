@@ -7,8 +7,10 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { FAMILY_MAIN_FIELDS, FAMILY_DETAIL_FIELDS } from 'shared/utils/constants'
 
+import cloneDeep from 'lodash/cloneDeep'
 import { flushAll } from 'shared/utils/testHelpers'
 import FamilyTable from './FamilyTable'
+import { getVisibleFamiliesInSortedOrder, getProjectExportUrls } from '../../selectors'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
 configure({ adapter: new Adapter() })
@@ -126,4 +128,45 @@ test('loads export data when the export popup content is rendered', async () => 
   expect(requestedUrls.some(
     url => url.includes(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/get_family_notes`),
   )).toBe(true)
+})
+
+test('getVisibleFamiliesInSortedOrder falls back to unsorted families when sort order is invalid or a family is missing a familyId', () => {
+  const invalidSortState = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'NOT_A_REAL_SORT_ORDER' },
+  }
+  const unsorted = getVisibleFamiliesInSortedOrder(invalidSortState, {})
+  expect(unsorted.length).toEqual(2)
+
+  const missingFamilyIdState = cloneDeep(STATE_WITH_2_FAMILIES)
+  delete missingFamilyIdState.familiesByGuid.F011652_1.familyId
+  const withMissingFamilyId = getVisibleFamiliesInSortedOrder(missingFamilyIdState, {})
+  expect(withMissingFamilyId.length).toEqual(2)
+})
+
+test('getProjectExportUrls produces raw family/individual/sample export data with and without a tableName', () => {
+  const exportUrls = getProjectExportUrls(STATE_WITH_2_FAMILIES, {})
+  const familiesData = exportUrls.find(({ name }) => name === 'Families').getRawData(STATE_WITH_2_FAMILIES)
+  // F011652_2 has family notes recorded (line 520 true branch), F011652_1 does not (false branch)
+  expect(familiesData.find(f => f.familyGuid === 'F011652_2').analysisNotes).toBeDefined()
+  expect(familiesData.find(f => f.familyGuid === 'F011652_1').analysisNotes).toBeUndefined()
+
+  const missingIndividualsState = cloneDeep(STATE_WITH_2_FAMILIES)
+  missingIndividualsState.familiesByGuid.F_NO_INDIVIDUALS = {
+    ...missingIndividualsState.familiesByGuid.F011652_1,
+    familyGuid: 'F_NO_INDIVIDUALS',
+    familyId: 'F_NO_INDIVIDUALS',
+    individualGuids: [],
+  }
+  const individualsData = exportUrls.find(({ name }) => name === 'Individuals').getRawData(missingIndividualsState)
+  // the family with no individuals contributes no rows (line 529 `|| []` fallback), so the
+  // total row count is unchanged from the original 2-family state
+  expect(individualsData.length).toEqual(6)
+
+  const samplesData = exportUrls.find(({ name }) => name === 'Samples').getRawData(STATE_WITH_2_FAMILIES)
+  expect(samplesData.length).toBeGreaterThan(0)
+
+  const caseReviewExportUrls = getProjectExportUrls(STATE_WITH_2_FAMILIES, { tableName: 'Case Review' })
+  expect(caseReviewExportUrls.find(({ name }) => name === 'Families').filename).toContain('case_review')
+  expect(exportUrls.find(({ name }) => name === 'Families').filename).not.toContain('case_review')
 })
