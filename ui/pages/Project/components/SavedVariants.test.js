@@ -8,6 +8,7 @@ import { MemoryRouter } from 'react-router-dom'
 
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { updateVariantTags } from 'redux/rootReducer'
+import { REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
 import RoutedSavedVariants from './SavedVariants'
 import VariantTagTypeBar from './VariantTagTypeBar'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
@@ -18,10 +19,11 @@ const getLinkVariantsValidate = (wrapper) => {
   return formFields.find(f => f.name === 'variantGuids').validate
 }
 
-jest.mock('../reducers', () => ({
-  ...jest.requireActual('../reducers'),
-  loadSavedVariants: () => ({ type: 'NOOP' }),
-  loadFamilySavedVariants: () => ({ type: 'NOOP' }),
+// loadSavedVariants/loadFamilySavedVariants are thunks that call HttpRequestHelper; mock that
+// lower-level API call so mounting does not attempt a real network request
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  ...jest.requireActual('shared/utils/httpRequestHelper'),
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
 }))
 
 jest.mock('redux/rootReducer', () => ({
@@ -52,7 +54,7 @@ jest.mock('shared/components/panel/variants/SavedVariants', () => function MockS
 configure({ adapter: new Adapter() })
 
 test('renders tag options built from the project variant tag types, grouped by category', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -67,7 +69,7 @@ test('renders tag options built from the project variant tag types, grouped by c
 })
 
 test('defaults to the "Show All" tag when there is no tag/variant in the route', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -80,7 +82,7 @@ test('defaults to the "Show All" tag when there is no tag/variant in the route',
 })
 
 test('uses the requested tag from the route', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/Excluded']}>
@@ -93,7 +95,7 @@ test('uses the requested tag from the route', () => {
 })
 
 test('renders a link-variants button for a family route when the project is editable', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
@@ -106,7 +108,7 @@ test('renders a link-variants button for a family route when the project is edit
 })
 
 test('renders no link-variants button when there is no family route', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -119,7 +121,7 @@ test('renders no link-variants button when there is no family route', () => {
 })
 
 test('renders the savedBy filter dropdown with options built from the project state', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -132,7 +134,7 @@ test('renders the savedBy filter dropdown with options built from the project st
 })
 
 test('getUpdateTagUrl updates the category filter and omits the tag segment for a category', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -150,7 +152,7 @@ test('getUpdateTagUrl updates the category filter and omits the tag segment for 
 })
 
 test('getUpdateTagUrl clears the category filter and includes the tag segment for a non-category tag', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
@@ -168,7 +170,7 @@ test('getUpdateTagUrl clears the category filter and includes the tag segment fo
 })
 
 test('loadVariants resets the page and only reloads when the initial load or the family selection changes', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
@@ -181,20 +183,20 @@ test('loadVariants resets the page and only reloads when the initial load or the
 
   // initial load: newParams is the same object reference as match.params
   mockLatestProps.loadVariants(match.params)
-  expect(store.getActions().filter(a => a.type === 'NOOP').length).toEqual(1)
+  expect(store.getActions().filter(a => a.type === REQUEST_SAVED_VARIANTS).length).toEqual(1)
   expect(store.getActions()).toContainEqual({ type: 'UPDATE_VARIANT_STATE', updates: { page: 1 } })
 
   // unchanged family selection, new object reference: page resets but no reload
   mockLatestProps.loadVariants({ ...match.params })
-  expect(store.getActions().filter(a => a.type === 'NOOP').length).toEqual(1)
+  expect(store.getActions().filter(a => a.type === REQUEST_SAVED_VARIANTS).length).toEqual(1)
 
   // changed family selection: reloads
   mockLatestProps.loadVariants({ ...match.params, familyGuid: 'F011652_2' })
-  expect(store.getActions().filter(a => a.type === 'NOOP').length).toEqual(2)
+  expect(store.getActions().filter(a => a.type === REQUEST_SAVED_VARIANTS).length).toEqual(2)
 })
 
 test('tableSummaryComponent renders the tag type bar and excludes tags based on the hide filters', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -220,7 +222,7 @@ test('tableSummaryComponent renders the tag type bar and excludes tags based on 
 })
 
 test('the link-variants form submits the selected variant guids and tags for the family', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
@@ -260,7 +262,7 @@ test('renders the link-variants form fields when the modal is open', () => {
 })
 
 test('the link-variants form validation requires 2+ variants in the same gene', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
@@ -292,7 +294,7 @@ test('the link-variants form validation requires 2+ variants in the same gene', 
 })
 
 test('loadVariants uses the analysis group families when there is no family in the route', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -321,7 +323,7 @@ test('tagOptions omits the category header for tags with no category and falls b
       },
     },
   }
-  const store = configureStore()(noCategoryState)
+  const store = configureStore([thunk])(noCategoryState)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -342,7 +344,7 @@ test('tagOptions omits the category header for tags with no category and falls b
       },
     },
   }
-  const noTagTypesStore = configureStore()(noTagTypesState)
+  const noTagTypesStore = configureStore([thunk])(noTagTypesState)
   const noTagTypesWrapper = mount(
     <Provider store={noTagTypesStore}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
@@ -355,7 +357,7 @@ test('tagOptions omits the category header for tags with no category and falls b
 })
 
 test('selects no tag when a specific variant is requested from the route', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter
@@ -370,7 +372,7 @@ test('selects no tag when a specific variant is requested from the route', () =>
 })
 
 test('includes the hideKnownGeneForPhenotype filter for the discovery tag category', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/CMG%20Discovery%20Tags']}>

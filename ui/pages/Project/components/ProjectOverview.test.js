@@ -2,16 +2,17 @@ import React from 'react'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
+import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import cloneDeep from 'lodash/cloneDeep'
 
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import ProjectOverview from './ProjectOverview'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-jest.mock('../reducers', () => ({
-  ...jest.requireActual('../reducers'),
-  loadMmeSubmissions: jest.fn(() => ({ type: 'MOCK_LOAD_MME_SUBMISSIONS' })),
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
 }))
 
 configure({ adapter: new Adapter() })
@@ -19,12 +20,16 @@ configure({ adapter: new Adapter() })
 const PROJECT_GUID = 'R0237_1000_genomes_demo'
 
 const renderProjectOverview = state => mount(
-  <Provider store={configureStore()(state)}>
+  <Provider store={configureStore([thunk])(state)}>
     <MemoryRouter>
       <ProjectOverview familiesLoading={false} overviewLoading={false} />
     </MemoryRouter>
   </Provider>,
 )
+
+beforeEach(() => {
+  HttpRequestHelper.mockClear()
+})
 
 test('divides content correctly by section for the current project', () => {
   const wrapper = renderProjectOverview(STATE_WITH_2_FAMILIES)
@@ -73,6 +78,9 @@ test('renders matchmaker submission details when the submissions modal is open',
   expect(dataTable.text()).toContain('5/9/2018')
   expect(wrapper.text()).toContain('1 removed submissions')
   expect(wrapper.find('[modalId="mmeContact"]').exists()).toBe(true)
+  expect(HttpRequestHelper).toHaveBeenCalledWith(
+    `/api/project/${PROJECT_GUID}/get_mme_submissions`, expect.any(Function), expect.any(Function),
+  )
 })
 
 test('renders family size histogram edge cases and the case review edit button', () => {
@@ -241,7 +249,7 @@ test('uses the analysis group workspace details when the group has its own works
   analysisGroupState.user.isAnvil = true
 
   const wrapper = mount(
-    <Provider store={configureStore()(analysisGroupState)}>
+    <Provider store={configureStore([thunk])(analysisGroupState)}>
       <MemoryRouter>
         <ProjectOverview
           familiesLoading={false}
@@ -257,7 +265,7 @@ test('uses the analysis group workspace details when the group has its own works
 
 test('shows a loading indicator when families or overview data is loading', () => {
   const wrapper = mount(
-    <Provider store={configureStore()(STATE_WITH_2_FAMILIES)}>
+    <Provider store={configureStore([thunk])(STATE_WITH_2_FAMILIES)}>
       <MemoryRouter>
         <ProjectOverview familiesLoading overviewLoading />
       </MemoryRouter>

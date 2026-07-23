@@ -13,13 +13,18 @@ import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 // jsdom does not implement createObjectURL; BulkUploadForm's template download links need it
 global.URL.createObjectURL = jest.fn()
 
-jest.mock('../../reducers', () => ({
-  ...jest.requireActual('../../reducers'),
-  loadIndividuals: () => ({ type: 'NOOP' }),
-  updateFamilies: jest.fn(() => () => Promise.resolve()),
+let lastPostUrl
+let lastPostBody
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  HttpRequestHelper: jest.fn().mockImplementation(url => ({
+    get: jest.fn(),
+    post: jest.fn((body) => {
+      lastPostUrl = url
+      lastPostBody = body
+      return Promise.resolve()
+    }),
+  })),
 }))
-
-const { updateFamilies } = jest.requireMock('../../reducers')
 
 configure({ adapter: new Adapter() })
 
@@ -70,7 +75,8 @@ test('submits the uploaded file value on form submission', () => {
   const uploadedFileId = 'file123'
   wrapper.find('FormWrapper').prop('onSubmit')({ [FILE_FIELD_NAME]: uploadedFileId })
 
-  expect(updateFamilies).toHaveBeenCalledWith(uploadedFileId)
+  expect(lastPostUrl).toEqual(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/edit_families`)
+  expect(lastPostBody).toEqual(uploadedFileId)
 })
 
 test('renders individuals bulk form with the individual ID required columns', () => {

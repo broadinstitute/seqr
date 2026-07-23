@@ -2,23 +2,23 @@ import React from 'react'
 import { mount, shallow, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
+import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { BrowserRouter } from 'react-router-dom'
 
 import AnalysisGroups from './AnalysisGroups'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-// Loading is triggered on mount via a thunk action creator; replace it with a no-op so mounting
-// does not attempt to make a real HTTP request or require additional reducer STATE_WITH_2_FAMILIES
-jest.mock('../reducers', () => ({
-  ...jest.requireActual('../reducers'),
-  loadCurrentProjectAnalysisGroups: () => ({ type: 'NOOP' }),
+// Loading is triggered on mount via a thunk action creator; mock the underlying HTTP request so
+// mounting does not attempt a real network call
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
 }))
 
 configure({ adapter: new Adapter() })
 
 test('renders the current project analysis group with its name and family count', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <BrowserRouter>
@@ -35,7 +35,7 @@ test('renders the current project analysis group with its name and family count'
 })
 
 test('renders only the requested analysis group when analysisGroupGuid is specified', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <BrowserRouter>
@@ -59,7 +59,7 @@ test('renders a sync icon and criteria fields for a dynamic analysis group', () 
       },
     },
   }
-  const store = configureStore()(criteriaState)
+  const store = configureStore([thunk])(criteriaState)
   const wrapper = mount(
     <Provider store={store}>
       <BrowserRouter>

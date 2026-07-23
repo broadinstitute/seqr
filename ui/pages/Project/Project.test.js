@@ -2,18 +2,15 @@ import React from 'react'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
+import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { MemoryRouter, Route } from 'react-router-dom'
 
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import Project from './Project'
 
-const mockLoadCurrentProject = jest.fn(() => ({ type: 'NOOP' }))
-const mockUnloadProject = jest.fn(() => ({ type: 'NOOP' }))
-
-jest.mock('./reducers', () => ({
-  ...jest.requireActual('./reducers'),
-  loadCurrentProject: (...args) => mockLoadCurrentProject(...args),
-  unloadProject: (...args) => mockUnloadProject(...args),
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
 }))
 
 jest.mock('./components/ProjectPageUI', () => () => <div>ProjectPageUI</div>)
@@ -32,7 +29,7 @@ const renderProject = (path, { project, loading } = {}) => {
     projectsByGuid: project ? { [PROJECT_GUID]: { projectGuid: PROJECT_GUID, ...project } } : {},
     projectDetailsLoading: { isLoading: !!loading },
   }
-  const store = configureStore()(state)
+  const store = configureStore([thunk])(state)
   return mount(
     <Provider store={store}>
       <MemoryRouter initialEntries={[path]}>
@@ -43,18 +40,32 @@ const renderProject = (path, { project, loading } = {}) => {
 }
 
 beforeEach(() => {
-  mockLoadCurrentProject.mockClear()
-  mockUnloadProject.mockClear()
+  HttpRequestHelper.mockClear()
 })
 
 test('loads the current project on mount and unloads it on unmount', () => {
-  const wrapper = renderProject(`/project/${PROJECT_GUID}/project_page`, { project: {} })
+  const state = {
+    currentProjectGuid: PROJECT_GUID,
+    projectsByGuid: { [PROJECT_GUID]: { projectGuid: PROJECT_GUID } },
+    projectDetailsLoading: { isLoading: false },
+  }
+  const store = configureStore([thunk])(state)
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={[`/project/${PROJECT_GUID}/project_page`]}>
+        <Route path="/project/:projectGuid" component={Project} />
+      </MemoryRouter>
+    </Provider>,
+  )
 
-  expect(mockLoadCurrentProject).toHaveBeenCalledWith(PROJECT_GUID)
+  expect(HttpRequestHelper).toHaveBeenCalledWith(
+    `/api/project/${PROJECT_GUID}/details`, expect.any(Function), expect.any(Function),
+  )
 
   wrapper.unmount()
 
-  expect(mockUnloadProject).toHaveBeenCalledTimes(1)
+  const actions = store.getActions()
+  expect(actions.some(action => action.newValue === null)).toBe(true)
 })
 
 test('renders a loader while the project is loading', () => {

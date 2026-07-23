@@ -2,14 +2,14 @@ import React from 'react'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
+import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
 import SelectSavedVariantsTable, { GENES_COLUMN, VARIANT_POS_COLUMN, TAG_COLUMN } from './SelectSavedVariantsTable'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-jest.mock('../reducers', () => ({
-  ...jest.requireActual('../reducers'),
-  loadFamilySavedVariants: () => ({ type: 'NOOP' }),
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
 }))
 
 configure({ adapter: new Adapter() })
@@ -26,7 +26,7 @@ const VARIANT = {
 }
 
 test('renders variant position, genes, and tags columns', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <SelectSavedVariantsTable
@@ -48,7 +48,7 @@ test('renders a deletion variant summary and handles missing genes', () => {
   const deletionVariant = {
     ...VARIANT, variantGuid: 'SV_deletion', alt: null, end: 116043000, genes: null,
   }
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <SelectSavedVariantsTable
@@ -65,7 +65,7 @@ test('renders a deletion variant summary and handles missing genes', () => {
 
 test('handles a null gene within a variant\'s genes list', () => {
   const variantWithNullGene = { ...VARIANT, variantGuid: 'SV_null_gene', genes: [null] }
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <SelectSavedVariantsTable
@@ -82,7 +82,7 @@ test('handles a null gene within a variant\'s genes list', () => {
 
 test('selects a row when clicked and calls onChange with the selection', () => {
   const onChange = jest.fn()
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <SelectSavedVariantsTable

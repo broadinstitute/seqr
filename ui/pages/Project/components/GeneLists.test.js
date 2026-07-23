@@ -5,21 +5,21 @@ import configureStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-// Loading is triggered on mount via a thunk action creator; replace it with a no-op so mounting
-// does not attempt to make a real HTTP request or require additional reducer STATE_WITH_2_FAMILIES
-jest.mock('../reducers', () => ({
-  ...jest.requireActual('../reducers'),
-  loadProjectLocusLists: () => ({ type: 'NOOP' }),
-  updateLocusLists: values => ({ type: 'UPDATE_LOCUS_LISTS', ...values }),
+// Loading is triggered on mount via a thunk action creator; mock the underlying HTTP request so
+// mounting does not attempt a real network call
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  ...jest.requireActual('shared/utils/httpRequestHelper'),
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
 }))
 
 configure({ adapter: new Adapter() })
 
 test('renders gene lists for the current project', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />
@@ -31,7 +31,7 @@ test('renders gene lists for the current project', () => {
 
 test('shows a loading indicator while gene lists are loading', () => {
   const loadingState = { ...STATE_WITH_2_FAMILIES, projectLocusListsLoading: { isLoading: true } }
-  const store = configureStore()(loadingState)
+  const store = configureStore([thunk])(loadingState)
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />
@@ -43,7 +43,7 @@ test('shows a loading indicator while gene lists are loading', () => {
 })
 
 test('dispatches an update when a gene list is removed', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />
@@ -52,10 +52,12 @@ test('dispatches an update when a gene list is removed', () => {
 
   wrapper.find('DispatchRequestButton').prop('onSubmit')()
 
-  const actions = store.getActions()
-  const updateAction = actions.find(action => action.type === 'UPDATE_LOCUS_LISTS')
-  expect(updateAction.locusListGuids).toEqual(['LL00001_locus_list'])
-  expect(updateAction.delete).toBe(true)
+  expect(HttpRequestHelper).toHaveBeenCalledWith(
+    `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/delete_locus_lists`,
+    expect.any(Function),
+  )
+  const post = HttpRequestHelper.mock.results[HttpRequestHelper.mock.results.length - 1].value.post
+  expect(post).toHaveBeenCalledWith({ locusListGuids: ['LL00001_locus_list'], delete: true })
 })
 
 test('renders no gene lists when the project has no locusListGuids', () => {
@@ -69,7 +71,7 @@ test('renders no gene lists when the project has no locusListGuids', () => {
       },
     },
   }
-  const store = configureStore()(stateWithNoLists)
+  const store = configureStore([thunk])(stateWithNoLists)
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />
@@ -96,7 +98,7 @@ test('shows a "Show More" link when there are more than 20 gene lists', () => {
       [locusListGuid]: { locusListGuid, name: `Gene List ${i}`, description: '', numEntries: 1 },
     }), {}),
   }
-  const store = configureStore()(stateWithManyLists)
+  const store = configureStore([thunk])(stateWithManyLists)
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />

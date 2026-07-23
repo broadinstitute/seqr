@@ -7,13 +7,13 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import { CASE_REVIEW_TABLE_NAME } from '../../constants'
 
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import IndividualRow from './IndividualRow'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
-jest.mock('../../reducers', () => ({
-  ...jest.requireActual('../../reducers'),
-  updateIndividuals: values => ({ type: 'UPDATE_INDIVIDUALS', ...values }),
-  updateIndividualIGV: values => ({ type: 'UPDATE_INDIVIDUAL_IGV', ...values }),
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  ...jest.requireActual('shared/utils/httpRequestHelper'),
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
 }))
 
 configure({ adapter: new Adapter() })
@@ -155,12 +155,22 @@ test('dispatches pedigree and IGV updates and renders parent/IGV select and gene
   const igvEdit = wrapper.find('Connect(FormWrapper)').filterWhere(n => n.prop('modalName') === igvModalId)
   igvEdit.first().prop('onSubmit')({ filePath: 'gs://test.cram' })
 
-  const actions = store.getActions()
-  const pedigreeAction = actions.find(action => action.type === 'UPDATE_INDIVIDUALS')
-  const igvAction = actions.find(action => action.type === 'UPDATE_INDIVIDUAL_IGV')
+  const pedigreeCall = HttpRequestHelper.mock.calls.find(
+    ([url]) => url === '/api/project/R0237_1000_genomes_demo/edit_individuals',
+  )
+  const igvCall = HttpRequestHelper.mock.calls.find(
+    ([url]) => url === '/api/individual/undefined/update_igv_sample',
+  )
+  expect(pedigreeCall).toBeTruthy()
+  expect(igvCall).toBeTruthy()
 
-  expect(pedigreeAction.individuals).toEqual([{ individualGuid: TEST_INDIVIDUAL_GUID, sex: 'M' }])
-  expect(igvAction.filePath).toBe('gs://test.cram')
+  const pedigreePost = HttpRequestHelper.mock.results[HttpRequestHelper.mock.calls.indexOf(pedigreeCall)].value.post
+  const igvPost = HttpRequestHelper.mock.results[HttpRequestHelper.mock.calls.indexOf(igvCall)].value.post
+
+  expect(pedigreePost).toHaveBeenCalledWith(
+    expect.objectContaining({ individuals: [{ individualGuid: TEST_INDIVIDUAL_GUID, sex: 'M' }] }),
+  )
+  expect(igvPost).toHaveBeenCalledWith({ filePath: 'gs://test.cram' })
 })
 
 test('renders case review status without a last modified date or user', () => {

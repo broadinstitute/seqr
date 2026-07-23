@@ -2,22 +2,23 @@ import React from 'react'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
+import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
 import PhenotypePrioritizedGenes from './PhenotypePrioritizedGenes'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-// Loading is triggered on mount via a thunk action creator; replace it with a no-op so mounting
-// does not attempt to make a real HTTP request or require additional reducer state
-jest.mock('../reducers', () => ({
-  ...jest.requireActual('../reducers'),
-  loadPhenotypeGeneScores: () => ({ type: 'NOOP' }),
+// Loading is triggered on mount via a thunk action creator; mock the underlying HTTP request so
+// mounting does not attempt a real network call
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  ...jest.requireActual('shared/utils/httpRequestHelper'),
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
 }))
 
 configure({ adapter: new Adapter() })
 
 test('renders the phenotype-prioritized gene table for an individual', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <PhenotypePrioritizedGenes individualGuid="I021476_na19678_1" familyGuid="F011652_1" />
@@ -39,7 +40,7 @@ test('renders the phenotype-prioritized gene table for an individual', () => {
 })
 
 test('renders without error for an individual with no phenotype-prioritized genes loaded', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <PhenotypePrioritizedGenes individualGuid="I021475_na19675_2" familyGuid="F011652_1" />

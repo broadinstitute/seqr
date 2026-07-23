@@ -2,17 +2,18 @@ import React from 'react'
 import { mount, configure } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
+import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import RnaSeqResultPage from './RnaSeqResultPage'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-// Loading is triggered on mount via a thunk action creator; replace it with a no-op so mounting
-// does not attempt to make a real HTTP request or require additional reducer state
-jest.mock('../reducers', () => ({
-  ...jest.requireActual('../reducers'),
-  loadRnaSeqData: () => ({ type: 'NOOP' }),
+// Loading is triggered on mount via a thunk action creator; mock the underlying HTTP request so
+// mounting does not attempt a real network call
+jest.mock('shared/utils/httpRequestHelper', () => ({
+  ...jest.requireActual('shared/utils/httpRequestHelper'),
+  HttpRequestHelper: jest.fn().mockImplementation(() => ({ get: jest.fn(), post: jest.fn() })),
 }))
 
 // RnaSeqOutliers draws its scatterplot with d3 on mount, which the project's jest config stubs out
@@ -25,7 +26,7 @@ jest.mock('./RnaSeqOutliers', () => function MockRnaSeqOutliers({ title }) {
 configure({ adapter: new Adapter() })
 
 test('renders a single tissue type as plain text and the outlier plot for it', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
@@ -58,7 +59,7 @@ test('renders a dropdown when there is more than one tissue/sequencing type', ()
       },
     },
   }
-  const store = configureStore()(multiTissueState)
+  const store = configureStore([thunk])(multiTissueState)
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
@@ -75,7 +76,7 @@ test('renders a dropdown when there is more than one tissue/sequencing type', ()
 })
 
 test('renders no splice junction outlier table when there is no significant junction data', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021474_na19679_1' } }} />
@@ -86,7 +87,7 @@ test('renders no splice junction outlier table when there is no significant junc
 })
 
 test('renders the splice junction outlier plot and table when there is significant junction data', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
@@ -99,7 +100,7 @@ test('renders the splice junction outlier plot and table when there is significa
 })
 
 test('computes plot locations for expression and splice junction outliers', () => {
-  const store = configureStore()(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />

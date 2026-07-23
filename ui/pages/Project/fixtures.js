@@ -1251,6 +1251,7 @@ export const STATE_WITH_2_FAMILIES = {
   },
   familyTagTypeCounts: {},
   loadedProjectChildEntities: {},
+  savedVariantFamilies: {},
   modal: {},
   analysisGroupsLoading: { isLoading: false },
   familiesLoading: { isLoading: false },
