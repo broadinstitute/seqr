@@ -5,7 +5,7 @@ import configureStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
-import { getLastFetchUrl, getLastFetchOptions, getLastFetchBody } from 'shared/utils/testHelpers'
+import { getLastFetchUrl, getLastFetchOptions, getLastFetchBody, flushAll } from 'shared/utils/testHelpers'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -16,7 +16,7 @@ test('renders gene lists for the current project', () => {
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('ButtonLink').at(0).text()).toEqual('Known Genes')
@@ -28,7 +28,7 @@ test('shows a loading indicator while gene lists are loading', () => {
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('Dimmer').prop('active')).toBe(true)
@@ -40,7 +40,7 @@ test('dispatches an update when a gene list is removed', () => {
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />
-    </Provider>
+    </Provider>,
   )
 
   wrapper.find('DispatchRequestButton').prop('onSubmit')()
@@ -65,7 +65,7 @@ test('renders no gene lists when the project has no locusListGuids', () => {
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('GeneLists__ItemContainer').length).toBe(0)
@@ -92,7 +92,7 @@ test('shows a "Show More" link when there are more than 20 gene lists', () => {
   const wrapper = mount(
     <Provider store={store}>
       <GeneLists />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.find('GeneLists__ItemContainer').length).toBe(20)
@@ -115,7 +115,7 @@ test('renders the add gene lists button and modal form', () => {
   const wrapper = mount(
     <Provider store={store}>
       <AddGeneListsButton />
-    </Provider>
+    </Provider>,
   )
 
   expect(wrapper.text()).toContain('Add an existing Gene List to 1000 Genomes Demo or')
@@ -127,4 +127,23 @@ test('renders the add gene lists button and modal form', () => {
   expect(field.prop('parse')(undefined)).toEqual([])
   expect(field.prop('format')(['LL1', 'LL2'])).toEqual({ LL1: true, LL2: true })
   expect(field.prop('format')(undefined)).toEqual({})
+})
+
+test('submits the add gene lists form', async () => {
+  const stateWithOpenModal = {
+    ...STATE_WITH_2_FAMILIES,
+    modal: { 'add-gene-list-R0237_1000_genomes_demo': { open: true } },
+  }
+  const store = configureStore([thunk])(stateWithOpenModal)
+  const wrapper = mount(
+    <Provider store={store}>
+      <AddGeneListsButton />
+    </Provider>,
+  )
+
+  wrapper.find('FormWrapper').prop('onSubmit')({ locusListGuids: ['LL00002_locus_list'] })
+  await flushAll()
+
+  expect(getLastFetchUrl()).toEqual(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/add_locus_lists`)
+  expect(getLastFetchBody()).toEqual({ locusListGuids: ['LL00002_locus_list'] })
 })

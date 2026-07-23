@@ -319,6 +319,32 @@ test('does not re-fetch mme matches on mount when gene variants are already reco
   expect(fetchedUrl('/api/matchmaker/get_mme_matches/MS021475_na19675_1')).toBe(false)
 })
 
+test('dispatches an error action when fetching mme matches on mount fails', async () => {
+  const {
+    geneVariants, ...submissionWithoutGeneVariants
+  } = STATE_WITH_2_FAMILIES.mmeSubmissionsByGuid.MS021475_na19675_1
+  const store = configureStore({
+    ...STATE_WITH_2_FAMILIES,
+    mmeSubmissionsByGuid: {
+      ...STATE_WITH_2_FAMILIES.mmeSubmissionsByGuid,
+      MS021475_na19675_1: submissionWithoutGeneVariants,
+    },
+  })
+
+  mockFetchRejection(new Error('mme matches request failed'))
+
+  mount(
+    <Provider store={store}>
+      <Matchmaker match={MATCH_CREATE_SUBMISSION} />
+    </Provider>,
+  )
+  await flushAll()
+
+  expect(store.getActions()).toContainEqual(
+    expect.objectContaining({ type: 'RECEIVE_MME_MATCHES', error: 'mme matches request failed' }),
+  )
+})
+
 test('submits an mme submission status update', async () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
@@ -388,4 +414,75 @@ test('searches for new mme matches and finalizes the search', async () => {
   expect(fetchedUrl('/api/matchmaker/get_mme_nodes')).toBe(true)
   expect(fetchedUrl('/api/matchmaker/search_local_mme_matches/MS021475_na19675_1')).toBe(true)
   expect(getLastFetchUrl()).toEqual('/api/matchmaker/finalize_mme_search/MS021475_na19675_1?incomingQueryGuid=q1')
+})
+
+test('collects errors from each stage of an mme search and reports them when finalizing fails', async () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <Matchmaker match={MATCH_CREATE_SUBMISSION} />
+    </Provider>,
+  )
+
+  const { searchMme } = wrapper.findWhere(
+    n => n.props().searchMme && n.props().onSubmit,
+  ).first().props()
+
+  // queue responses/rejections in the exact order fetch() will be called across the chained
+  // requests: get_mme_nodes, the local match search, one search per remote node (one succeeds,
+  // one fails), and finally the finalize request itself failing
+  mockFetchResponse({ mmeNodes: ['node_ok', 'node_fail'] })
+  mockFetchRejection(new Error('local match search failed'))
+  mockFetchResponse({})
+  mockFetchRejection(new Error('node_fail search failed'))
+  mockFetchRejection(new Error('finalize request failed'))
+
+  searchMme()
+  await flushAll(12)
+
+  expect(fetchedUrl('/api/matchmaker/search_mme_matches/MS021475_na19675_1/node_ok')).toBe(true)
+  expect(fetchedUrl('/api/matchmaker/search_mme_matches/MS021475_na19675_1/node_fail')).toBe(true)
+  expect(store.getActions()).toContainEqual(
+    expect.objectContaining({ type: 'RECEIVE_MME_MATCHES', error: 'finalize request failed' }),
+  )
+})
+
+test('deletes an mme submission without cascading into a new search', async () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <Matchmaker match={MATCH_CREATE_SUBMISSION} />
+    </Provider>,
+  )
+
+  mockFetchResponse({ mmeSubmissionsByGuid: { MS021475_na19675_1: { deletedDate: '2020-01-01' } } })
+  wrapper.find('DispatchRequestButton').filterWhere(n => n.prop('buttonContent') === 'Delete Submission')
+    .first().prop('onSubmit')()
+  await flushAll()
+
+  expect(fetchedUrl('/api/matchmaker/get_mme_nodes')).toBe(false)
+})
+
+test('cascades into a new mme search after successfully updating a submission', async () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <Matchmaker match={MATCH_CREATE_SUBMISSION} />
+    </Provider>,
+  )
+
+  const { onSubmit } = wrapper.findWhere(
+    n => n.props().searchMme && n.props().onSubmit,
+  ).first().props()
+
+  // queue responses for the update itself, then the searchMmeMatches cascade it triggers on success
+  mockFetchResponse({ mmeSubmissionsByGuid: { MS021475_na19675_1: {} } })
+  mockFetchResponse({ mmeNodes: [] })
+  mockFetchResponse({ incomingQueryGuid: 'q2' })
+
+  await onSubmit({ comments: 'updated' })
+  await flushAll(12)
+
+  expect(fetchedUrl('/api/matchmaker/get_mme_nodes')).toBe(true)
+  expect(getLastFetchUrl()).toEqual('/api/matchmaker/finalize_mme_search/MS021475_na19675_1?incomingQueryGuid=q2')
 })

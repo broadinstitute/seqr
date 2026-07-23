@@ -5,9 +5,9 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
+import { flushAll, getLastFetchUrl, getLastFetchBody } from 'shared/utils/testHelpers'
 import { CASE_REVIEW_TABLE_NAME } from '../../constants'
 
-import { flushAll, getLastFetchUrl, getLastFetchBody } from 'shared/utils/testHelpers'
 import IndividualRow from './IndividualRow'
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
@@ -159,6 +159,15 @@ test('dispatches pedigree and IGV updates and renders parent/IGV select and gene
 
   expect(getLastFetchUrl()).toEqual('/api/individual/undefined/update_igv_sample')
   expect(getLastFetchBody()).toEqual({ filePath: 'gs://test.cram' })
+
+  // deleting an individual (the pedigree edit form's delete confirm) posts to the delete action
+  pedigreeEdit.first().prop('onSubmit')({ individualGuid: TEST_INDIVIDUAL_GUID, delete: true })
+  await flushAll()
+
+  expect(getLastFetchUrl()).toEqual('/api/project/R0237_1000_genomes_demo/delete_individuals')
+  expect(getLastFetchBody()).toEqual(
+    expect.objectContaining({ individuals: [{ individualGuid: TEST_INDIVIDUAL_GUID, delete: true }], delete: true }),
+  )
 })
 
 test('renders case review status without a last modified date or user', () => {
@@ -233,17 +242,16 @@ test('renders unknown age when neither birth year nor death year is known', () =
 })
 
 test('renders "Not Loaded" when no population is set', () => {
-
   const store = configureStore({
-      ...STATE_WITH_2_FAMILIES,
-      projectsByGuid: {
-        ...STATE_WITH_2_FAMILIES.projectsByGuid,
-        R0237_1000_genomes_demo: {
-          ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
-          isAnalystProject: true,
-        },
+    ...STATE_WITH_2_FAMILIES,
+    projectsByGuid: {
+      ...STATE_WITH_2_FAMILIES.projectsByGuid,
+      R0237_1000_genomes_demo: {
+        ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
+        isAnalystProject: true,
       },
-    })
+    },
+  })
 
   const wrapper = mount(
     <Provider store={store}>

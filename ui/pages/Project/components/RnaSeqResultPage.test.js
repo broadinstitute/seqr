@@ -6,6 +6,7 @@ import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
+import { mockFetchRejection, flushAll } from 'shared/utils/testHelpers'
 import RnaSeqResultPage from './RnaSeqResultPage'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -90,6 +91,47 @@ test('renders the splice junction outlier plot and table when there is significa
   expect(wrapper.find('GridColumn').length).toEqual(2)
   expect(wrapper.find('.mock-rna-seq-outliers').last().text()).toEqual('Splice Junction Outliers')
   expect(wrapper.find('DataTable').exists()).toBe(true)
+})
+
+test('does not re-request rna seq data when outliers include a non-significant entry and splice outliers are already loaded', async () => {
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+  mount(
+    <Provider store={store}>
+      <RnaSeqResultPage match={{ params: { individualGuid: 'I021474_na19679_1' } }} />
+    </Provider>,
+  )
+  await flushAll()
+
+  expect(fetch).not.toHaveBeenCalled()
+})
+
+test('requests rna seq data for an individual with none loaded yet', async () => {
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+
+  mount(
+    <Provider store={store}>
+      <RnaSeqResultPage match={{ params: { individualGuid: 'I021475_na19675_1' } }} />
+    </Provider>,
+  )
+  await flushAll()
+
+  expect(fetch.mock.calls.some(([url]) => url.startsWith('/api/individual/I021475_na19675_1/rna_seq_data'))).toBe(true)
+})
+
+test('dispatches an error action when the RNA-seq data request fails', async () => {
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+  mockFetchRejection(new Error('rna seq data request failed'))
+
+  mount(
+    <Provider store={store}>
+      <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
+    </Provider>,
+  )
+  await flushAll()
+
+  expect(store.getActions()).toContainEqual(
+    expect.objectContaining({ type: 'RECEIVE_DATA', error: 'rna seq data request failed' }),
+  )
 })
 
 test('computes plot locations for expression and splice junction outliers', () => {

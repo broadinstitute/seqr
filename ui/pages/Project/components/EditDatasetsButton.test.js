@@ -5,7 +5,7 @@ import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 
-import { mockFetchResponse, flushAll } from 'shared/utils/testHelpers'
+import { mockFetchResponse, mockFetchRejection, flushAll } from 'shared/utils/testHelpers'
 import EditDatasetsButton from './EditDatasetsButton'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -99,6 +99,30 @@ test('surfaces an aggregated error when an IGV update fails', () => {
     () => { throw new Error('expected onSubmit to reject') },
     (e) => {
       expect(e.body.errors[0]).toContain('Error updating NA19678: boom')
+    },
+  )
+})
+
+test('falls back to the exception message when an IGV update fails without a response body', () => {
+  mockFetchRejection(new Error('network down'))
+  const store = configureStore(OPEN_MODAL_STATE)
+  const wrapper = mount(
+    <Provider store={store}>
+      <EditDatasetsButton user={{ isDataManager: true }} />
+    </Provider>,
+  )
+
+  const igvFormWrapper = wrapper.find('FormWrapper')
+  return igvFormWrapper.prop('onSubmit')({
+    mappingFile: {
+      updates: [
+        { individualGuid: 'I021476_na19678_1', individualId: 'NA19678' },
+      ],
+    },
+  }).then(
+    () => { throw new Error('expected onSubmit to reject') },
+    (e) => {
+      expect(e.body.errors[0]).toContain('Error updating NA19678: network down')
     },
   )
 })

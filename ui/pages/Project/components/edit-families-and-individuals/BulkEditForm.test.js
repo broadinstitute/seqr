@@ -101,6 +101,23 @@ test('renders analyst-only optional fields for individuals bulk form for an anal
   })
 })
 
+test('submits the uploaded file id on individuals bulk form submission', async () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <EditIndividualsBulkForm modalName="bulkEditIndividuals" />
+    </Provider>,
+  )
+
+  const uploadedFileId = 'file789'
+  await wrapper.find('FormWrapper').prop('onSubmit')({ [FILE_FIELD_NAME]: { uploadedFileId } })
+  await flushAll()
+
+  expect(getLastFetchUrl()).toEqual(
+    `/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/save_individuals_table/${uploadedFileId}`,
+  )
+})
+
 test('renders individual metadata bulk form', () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(

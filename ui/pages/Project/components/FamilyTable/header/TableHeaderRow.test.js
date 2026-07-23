@@ -101,6 +101,29 @@ test('dispatches an update to the families table state when the search filter ch
   })
 })
 
+test('dispatches a case review table state update when the table is the case review table', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <table>
+        <TableHeaderRow
+          tableName={CASE_REVIEW_TABLE_NAME}
+          familiesTableState={STATE_WITH_2_FAMILIES.caseReviewTableState}
+          visibleFamiliesCount={1}
+          totalFamiliesCount={2}
+        />
+      </table>
+    </Provider>,
+  )
+
+  wrapper.find('input[placeholder="Search..."]').simulate('change', { target: { value: 'foo' } })
+
+  expect(store.getActions()).toContainEqual({
+    type: 'UPDATE_CASE_REVIEW_TABLE_STATE',
+    updates: { familiesSearch: 'foo' },
+  })
+})
+
 test('dispatches an update to the families table filter state when a category filter changes', () => {
   const store = configureStore(STATE_WITH_2_FAMILIES)
   const wrapper = mount(

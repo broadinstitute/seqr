@@ -9,7 +9,7 @@ import { MemoryRouter } from 'react-router-dom'
 import UpdateButton from 'shared/components/buttons/UpdateButton'
 import { updateVariantTags } from 'redux/rootReducer'
 import { REQUEST_SAVED_VARIANTS } from 'redux/utils/reducerUtils'
-import { mockFetchResponse, flushAll, getLastFetchUrl } from 'shared/utils/testHelpers'
+import { mockFetchResponse, mockFetchRejection, flushAll, getLastFetchUrl } from 'shared/utils/testHelpers'
 import RoutedSavedVariants from './SavedVariants'
 import VariantTagTypeBar from './VariantTagTypeBar'
 import SelectSavedVariantsTable from './SelectSavedVariantsTable'
@@ -469,5 +469,55 @@ test('receiving a single-variant response marks its families as loaded', async (
 
   expect(store.getActions()).toContainEqual(
     expect.objectContaining({ updates: { F011652_1: { loaded: true, noteVariants: undefined } } }),
+  )
+})
+
+test('loadVariants does not re-request already-loaded families derived from the project when there is no route family/analysis group', async () => {
+  const loadedFamiliesState = {
+    ...STATE_WITH_2_FAMILIES,
+    projectsByGuid: {
+      ...STATE_WITH_2_FAMILIES.projectsByGuid,
+      R0237_1000_genomes_demo: {
+        ...STATE_WITH_2_FAMILIES.projectsByGuid.R0237_1000_genomes_demo,
+        familiesLoaded: true,
+      },
+    },
+    savedVariantFamilies: {
+      F011652_1: { loaded: true, noteVariants: false },
+      F011652_2: { loaded: true, noteVariants: false },
+    },
+  }
+  const store = configureStore([thunk])(loadedFamiliesState)
+  mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  mockLatestProps.loadVariants(mockLatestProps.match.params)
+  await flushAll()
+
+  expect(fetch).not.toHaveBeenCalled()
+})
+
+test('dispatches an error action when the saved variants request fails', async () => {
+  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+  mockFetchRejection(new Error('saved variants request failed'))
+
+  mount(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={['/project/R0237_1000_genomes_demo/saved_variants/family/F011652_1']}>
+        <RoutedSavedVariants match={{ url: '/project/R0237_1000_genomes_demo/saved_variants' }} />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  mockLatestProps.loadVariants(mockLatestProps.match.params)
+  await flushAll()
+
+  expect(store.getActions()).toContainEqual(
+    expect.objectContaining({ type: 'RECEIVE_DATA', error: 'saved variants request failed' }),
   )
 })
