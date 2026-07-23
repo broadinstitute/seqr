@@ -38,3 +38,8 @@ Single test: `npx jest path/to/File.test.js`. Coverage threshold 40% lines/state
 - Module aliases via `babel-plugin-module-resolver`: `shared -> ./shared/`, `pages -> ./pages/`.
 - Semantic UI React + `styled-components`. Codebase is mostly JS/JSX; **new files should be written in TypeScript**.
 - Jest + Enzyme, colocated `*.test.js`. Prefer deep-rendering connected components over shallow-rendering unconnected ones in tests.
+
+
+## Development Notes
+
+Never delete a file that is not in source control without confirming first
