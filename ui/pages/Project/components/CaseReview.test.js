@@ -7,8 +7,20 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import CaseReviewTable from './CaseReview'
 
-import { getCaseReviewStatusCounts } from '../selectors' // TODO
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
+
+const CASE_REVIEW_STATUS_COUNTS = [
+  {'color': '#2196F3', 'count': 4, 'name': 'In Review', 'value': 'I'},
+  {'color': '#fddb28', 'count': 0, 'name': 'Uncertain', 'value': 'U'},
+  {'color': '#8BC34A', 'count': 2, 'name': 'Accepted', 'value': 'A'},
+  {'color': '#4f5cb3', 'count': 0, 'name': 'Not Accepted', 'value': 'R'},
+  {'color': '#F44336', 'count': 0, 'name': 'More Info Needed', 'value': 'Q'},
+  {'color': '#996699', 'count': 0, 'name': 'Pending Results and Records', 'value': 'P'},
+  {'color': '#3827c1', 'count': 0, 'name': 'NMI Review', 'value': 'N'},
+  {'color': '#990099', 'count': 0, 'name': 'Waitlist', 'value': 'W'},
+  {'color': '#eb7f2f', 'count': 0, 'name': 'Lost To Follow-Up', 'value': 'L'},
+  {'color': '#6c6d85', 'count': 0, 'name': 'Inactive', 'value': 'V'},
+]
 
 configure({ adapter: new Adapter() })
 
@@ -24,10 +36,12 @@ test('renders the accepted families and the individual status summary', () => {
       </MemoryRouter>
     </Provider>,
   )
-
-  expect(wrapper.find('HorizontalStackedBar').exists()).toBe(true)
-  expect(wrapper.text()).toContain('Individual Statuses:')
   expect(wrapper.find('FamilyTableRow').length).toEqual(2)
+  expect(wrapper.text()).toContain('Individual Statuses:')
+  
+  const headerStatus = wrapper.find('HorizontalStackedBar')
+  expect(headerStatus.exists()).toBe(true)
+  expect(headerStatus.prop('data')).toEqual(CASE_REVIEW_STATUS_COUNTS)
 
   // Export data is properly rendered
   const popupWrapper = shallow( wrapper.find('Popup[on="click"]').prop('content'))
@@ -43,8 +57,7 @@ test('renders the accepted families and the individual status summary', () => {
   expect(row[row.length - 1]).toEqual('')
 })
 
-test('getCaseReviewStatusCounts excludes individuals belonging to a different project', () => {
-  const baseCounts = getCaseReviewStatusCounts(STATE_WITH_2_FAMILIES)
+test('case review status counts exclude individuals belonging to a different project', () => {
   const otherProjectState = {
     ...STATE_WITH_2_FAMILIES,
     individualsByGuid: {
@@ -58,7 +71,13 @@ test('getCaseReviewStatusCounts excludes individuals belonging to a different pr
     },
   }
 
-  const updatedCounts = getCaseReviewStatusCounts(otherProjectState)
+  const wrapper = mount(
+    <Provider store={configureStore(otherProjectState)}>
+      <MemoryRouter>
+        <CaseReviewTable />
+      </MemoryRouter>
+    </Provider>,
+  )
 
-  expect(updatedCounts).toEqual(baseCounts)
+  expect(wrapper.find('HorizontalStackedBar').prop('data')).toEqual(CASE_REVIEW_STATUS_COUNTS)
 })
