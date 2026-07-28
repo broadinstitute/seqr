@@ -10,7 +10,6 @@ import { FAMILY_MAIN_FIELDS, FAMILY_DETAIL_FIELDS } from 'shared/utils/constants
 import cloneDeep from 'lodash/cloneDeep'
 import { flushAll } from 'shared/utils/testHelpers'
 import FamilyTable from './FamilyTable'
-import { getVisibleFamiliesInSortedOrder, getProjectExportUrls } from '../../selectors'  // TODO
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
 configure({ adapter: new Adapter() })
@@ -85,7 +84,7 @@ test('loads export data when the export popup content is rendered', async () => 
 
   // Popup content is a portal only rendered on hover/click, so render its `content` prop directly
   const popupContent = wrapper.find('Popup[on="click"]').prop('content')
-  shallow(popupContent)
+  const popupWrapper = shallow(popupContent)
   await flushAll()
 
   const requestedUrls = fetch.mock.calls.map(([url]) => url)
@@ -95,6 +94,27 @@ test('loads export data when the export popup content is rendered', async () => 
   expect(requestedUrls.some(
     url => url.includes(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/get_family_notes`),
   )).toBe(true)
+
+  const exportUrls = popupWrapper.root().prop('downloads')
+  expect(exportUrls.find(({ name }) => name === 'Families').filename).not.toContain('case_review')
+  const familiesData = exportUrls.find(({ name }) => name === 'Families').getRawData(STATE_WITH_2_FAMILIES)
+  expect(familiesData.find(f => f.familyGuid === 'F011652_2').analysisNotes).toBeDefined()
+  expect(familiesData.find(f => f.familyGuid === 'F011652_1').analysisNotes).toBeUndefined()
+
+  const missingIndividualsState = cloneDeep(STATE_WITH_2_FAMILIES)
+  missingIndividualsState.familiesByGuid.F_NO_INDIVIDUALS = {
+    ...missingIndividualsState.familiesByGuid.F011652_1,
+    familyGuid: 'F_NO_INDIVIDUALS',
+    familyId: 'F_NO_INDIVIDUALS',
+    individualGuids: [],
+  }
+  const individualsData = exportUrls.find(({ name }) => name === 'Individuals').getRawData(missingIndividualsState)
+  // the family with no individuals contributes no rows, so the
+  // total row count is unchanged from the original 2-family state
+  expect(individualsData.length).toEqual(6)
+
+  const samplesData = exportUrls.find(({ name }) => name === 'Samples').getRawData(STATE_WITH_2_FAMILIES)
+  expect(samplesData.length).toBeGreaterThan(0)
 })
 
 test('falls back to unsorted families when sort order is invalid or a family is missing a familyId', () => {
@@ -199,33 +219,6 @@ test('sorts visible families by review status changed date, handling missing ind
   expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
 })
 
-test('getProjectExportUrls produces raw family/individual/sample export data with and without a tableName', () => {
-  const exportUrls = getProjectExportUrls(STATE_WITH_2_FAMILIES, {})
-  const familiesData = exportUrls.find(({ name }) => name === 'Families').getRawData(STATE_WITH_2_FAMILIES)
-  // F011652_2 has family notes recorded (line 520 true branch), F011652_1 does not (false branch)
-  expect(familiesData.find(f => f.familyGuid === 'F011652_2').analysisNotes).toBeDefined()
-  expect(familiesData.find(f => f.familyGuid === 'F011652_1').analysisNotes).toBeUndefined()
-
-  const missingIndividualsState = cloneDeep(STATE_WITH_2_FAMILIES)
-  missingIndividualsState.familiesByGuid.F_NO_INDIVIDUALS = {
-    ...missingIndividualsState.familiesByGuid.F011652_1,
-    familyGuid: 'F_NO_INDIVIDUALS',
-    familyId: 'F_NO_INDIVIDUALS',
-    individualGuids: [],
-  }
-  const individualsData = exportUrls.find(({ name }) => name === 'Individuals').getRawData(missingIndividualsState)
-  // the family with no individuals contributes no rows (line 529 `|| []` fallback), so the
-  // total row count is unchanged from the original 2-family state
-  expect(individualsData.length).toEqual(6)
-
-  const samplesData = exportUrls.find(({ name }) => name === 'Samples').getRawData(STATE_WITH_2_FAMILIES)
-  expect(samplesData.length).toBeGreaterThan(0)
-
-  const caseReviewExportUrls = getProjectExportUrls(STATE_WITH_2_FAMILIES, { tableName: 'Case Review' })
-  expect(caseReviewExportUrls.find(({ name }) => name === 'Families').filename).toContain('case_review')
-  expect(exportUrls.find(({ name }) => name === 'Families').filename).not.toContain('case_review')
-})
-
 test('formats family export field values, including notes, firstSample, analysisStatus, assignedAnalyst, and analysedBy', () => {
   const state = cloneDeep(STATE_WITH_2_FAMILIES)
   state.familiesByGuid.F011652_1.analysisStatus = 'NOT_A_REAL_ANALYSIS_STATUS'
@@ -237,7 +230,10 @@ test('formats family export field values, including notes, firstSample, analysis
     { createdBy: 'user2', dataType: 'SV', lastModifiedDate: '2021-01-01T01:00:00.000Z' },
   ]
 
-  const exportUrls = getProjectExportUrls(state, {})
+  const wrapper = renderTable(state)
+  const popupWrapper = shallow( wrapper.find('Popup[on="click"]').prop('content'))
+  const exportUrls = popupWrapper.root().prop('downloads')
+
   const familiesExport = exportUrls.find(({ name }) => name === 'Families')
   const familiesData = familiesExport.getRawData(state)
 
@@ -269,16 +265,4 @@ test('formats family export field values, including notes, firstSample, analysis
   // analysisNotes is absent for F011652_1 and present (formatted) for F011652_2
   expect(analysisNotes1).toEqual('')
   expect(analysisNotes2).toEqual('A note;Another note')
-})
-
-test('formats case review family export fields including internal notes', () => {
-  const caseReviewExportUrls = getProjectExportUrls(STATE_WITH_2_FAMILIES, { tableName: 'Case Review' })
-  const familiesExport = caseReviewExportUrls.find(({ name }) => name === 'Families')
-  const familiesData = familiesExport.getRawData(STATE_WITH_2_FAMILIES)
-  const family2 = familiesData.find(f => f.familyGuid === 'F011652_2')
-
-  const row = familiesExport.processRow(family2)
-  // F011652_2 has no internal case review summary/notes set, so stripMarkdown falls back to ''
-  expect(row[row.length - 2]).toEqual('')
-  expect(row[row.length - 1]).toEqual('')
 })
