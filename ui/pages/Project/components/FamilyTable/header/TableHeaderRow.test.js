@@ -7,7 +7,7 @@ import { Provider } from 'react-redux'
 import { FAMILY_FIELD_ID, FAMILY_FIELD_ANALYSIS_STATUS, FAMILY_FIELD_SAVED_VARIANTS } from 'shared/utils/constants'
 import TableHeaderRow from './TableHeaderRow'
 import { CASE_REVIEW_TABLE_NAME } from '../../../constants'
-import { getVisibleFamiliesInSortedOrder } from '../../../selectors'
+import { getVisibleFamiliesInSortedOrder } from '../../../selectors'  // TODO
 
 import { STATE_WITH_2_FAMILIES } from '../../../fixtures'
 

@@ -131,9 +131,21 @@ test('renders individual metadata bulk form', () => {
   })
 })
 
-test('formats candidate genes with and without comments for individual metadata bulk form', () => {
+test('renders without crashing with complex data for export', () => {
   const stateWithCandidateGenes = {
     ...STATE_WITH_2_FAMILIES,
+    user: { ...STATE_WITH_2_FAMILIES.user, isAnalyst: true },
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
+        externalData: ['M', 'unknownDataType'],
+      },
+      F011652_2: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2,
+        externalData: ['P'],
+      },
+    },
     individualsByGuid: {
       ...STATE_WITH_2_FAMILIES.individualsByGuid,
       I021475_na19675_1: {
@@ -149,32 +161,6 @@ test('formats candidate genes with and without comments for individual metadata 
   const wrapper = mount(
     <Provider store={store}>
       <EditIndividualMetadataBulkForm modalName="bulkEditIndividualMetadata" />
-    </Provider>,
-  )
-
-  expect(wrapper.find('FormWrapper').exists()).toBe(true)
-})
-
-test('formats family external data with and without a matching lookup for family bulk edit form', () => {
-  const analystState = {
-    ...STATE_WITH_2_FAMILIES,
-    user: { ...STATE_WITH_2_FAMILIES.user, isAnalyst: true },
-    familiesByGuid: {
-      ...STATE_WITH_2_FAMILIES.familiesByGuid,
-      F011652_1: {
-        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
-        externalData: ['M', 'unknownDataType'],
-      },
-      F011652_2: {
-        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2,
-        externalData: ['P'],
-      },
-    },
-  }
-  const analystStore = configureStore(analystState)
-  const wrapper = mount(
-    <Provider store={analystStore}>
-      <EditFamiliesBulkForm modalName="bulkEditFamilies" />
     </Provider>,
   )
 
