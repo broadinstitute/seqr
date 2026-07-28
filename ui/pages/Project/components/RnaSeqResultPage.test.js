@@ -8,7 +8,6 @@ import { Provider } from 'react-redux'
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import { mockFetchRejection, flushAll } from 'shared/utils/testHelpers'
 import RnaSeqResultPage from './RnaSeqResultPage'
-import { getTissueOptionsByIndividualGuid } from '../selectors'  // TODO
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 // RnaSeqOutliers draws its scatterplot with d3 on mount, which the project's jest config stubs out
@@ -151,16 +150,13 @@ test('computes plot locations for expression and splice junction outliers', () =
   )
 })
 
-test('getTissueOptionsByIndividualGuid handles missing rnaSeqDataByIndividual state and missing per-individual data', () => {
-  const { rnaSeqDataByIndividual, ...stateWithoutRnaSeqData } = STATE_WITH_2_FAMILIES
-  expect(getTissueOptionsByIndividualGuid(stateWithoutRnaSeqData)).toEqual({})
+test('renders empty page missing per-individual data', () => {
+  const store = configureStore([thunk])({ ...STATE_WITH_2_FAMILIES, rnaSeqDataByIndividual: {} } )
+  const wrapper = mount(
+    <Provider store={store}>
+      <RnaSeqResultPage match={{ params: { individualGuid: 'I021476_na19678_1' } }} />
+    </Provider>,
+  )
 
-  const missingIndividualDataState = {
-    ...STATE_WITH_2_FAMILIES,
-    rnaSeqDataByIndividual: {
-      ...STATE_WITH_2_FAMILIES.rnaSeqDataByIndividual,
-      I_NO_RNASEQ_DATA: undefined,
-    },
-  }
-  expect(getTissueOptionsByIndividualGuid(missingIndividualDataState).I_NO_RNASEQ_DATA).toEqual([])
+  expect(wrapper.text()).toEqual('Error 404: Page Not Found')
 })
