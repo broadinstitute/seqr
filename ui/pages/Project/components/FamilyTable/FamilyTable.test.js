@@ -17,19 +17,19 @@ configure({ adapter: new Adapter() })
 
 const configureStore = configureMockStore([thunk])
 
-test('toggles compact/full family details', () => {
-  const store = configureStore(STATE_WITH_2_FAMILIES)
+const renderTable = state => mount(
+  <Provider store={configureStore(state)}>
+    <MemoryRouter>
+      <FamilyTable
+        detailFields={FAMILY_DETAIL_FIELDS}
+        noDetailFields={FAMILY_MAIN_FIELDS}
+      />
+    </MemoryRouter>
+  </Provider>,
+)
 
-  const wrapper = mount(
-    <Provider store={store}>
-      <MemoryRouter>
-        <FamilyTable
-          detailFields={FAMILY_DETAIL_FIELDS}
-          noDetailFields={FAMILY_MAIN_FIELDS}
-        />
-      </MemoryRouter>
-    </Provider>,
-  )
+test('toggles compact/full family details', () => {
+  const wrapper = renderTable(STATE_WITH_2_FAMILIES)
 
   // the family name field is always rendered in addition to the toggled field set
   const NAME_FIELD_COUNT = 1
@@ -61,18 +61,7 @@ test('renders a loading indicator while families are loading', () => {
     ...STATE_WITH_2_FAMILIES,
     familiesLoading: { isLoading: true },
   }
-  const store = configureStore(loadingState)
-
-  const wrapper = mount(
-    <Provider store={store}>
-      <MemoryRouter>
-        <FamilyTable
-          detailFields={FAMILY_DETAIL_FIELDS}
-          noDetailFields={FAMILY_MAIN_FIELDS}
-        />
-      </MemoryRouter>
-    </Provider>,
-  )
+  const wrapper = renderTable(loadingState)
 
   expect(wrapper.find('Loader').exists()).toBe(true)
   expect(wrapper.find('FamilyTableRow').length).toEqual(0)
@@ -83,36 +72,14 @@ test('renders an empty message when there are no visible families', () => {
     ...STATE_WITH_2_FAMILIES,
     familiesByGuid: {},
   }
-  const store = configureStore(emptyState)
-
-  const wrapper = mount(
-    <Provider store={store}>
-      <MemoryRouter>
-        <FamilyTable
-          detailFields={FAMILY_DETAIL_FIELDS}
-          noDetailFields={FAMILY_MAIN_FIELDS}
-        />
-      </MemoryRouter>
-    </Provider>,
-  )
+  const wrapper = renderTable(emptyState)
 
   expect(wrapper.find('FamilyTableRow').length).toEqual(0)
   expect(wrapper.text()).toContain('0 families found')
 })
 
 test('loads export data when the export popup content is rendered', async () => {
-  const store = configureStore(STATE_WITH_2_FAMILIES)
-
-  const wrapper = mount(
-    <Provider store={store}>
-      <MemoryRouter>
-        <FamilyTable
-          detailFields={FAMILY_DETAIL_FIELDS}
-          noDetailFields={FAMILY_MAIN_FIELDS}
-        />
-      </MemoryRouter>
-    </Provider>,
-  )
+  const wrapper = renderTable(STATE_WITH_2_FAMILIES)
 
   fetch.mockClear()
 
@@ -130,18 +97,106 @@ test('loads export data when the export popup content is rendered', async () => 
   )).toBe(true)
 })
 
-test('getVisibleFamiliesInSortedOrder falls back to unsorted families when sort order is invalid or a family is missing a familyId', () => {
+test('falls back to unsorted families when sort order is invalid or a family is missing a familyId', () => {
   const invalidSortState = {
     ...STATE_WITH_2_FAMILIES,
     familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'NOT_A_REAL_SORT_ORDER' },
   }
-  const unsorted = getVisibleFamiliesInSortedOrder(invalidSortState, {})
-  expect(unsorted.length).toEqual(2)
+  const wrapper = renderTable(invalidSortState)
+  expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
 
   const missingFamilyIdState = cloneDeep(STATE_WITH_2_FAMILIES)
   delete missingFamilyIdState.familiesByGuid.F011652_1.familyId
-  const withMissingFamilyId = getVisibleFamiliesInSortedOrder(missingFamilyIdState, {})
-  expect(withMissingFamilyId.length).toEqual(2)
+  const missingIdWrapper = renderTable(missingFamilyIdState)
+  expect(missingIdWrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
+})
+
+
+test('sorts visible families by date loaded, falling back when a family has no loaded dataset', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'DATA_LOADED_DATE' },
+  }
+  const wrapper = renderTable(state)
+  expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_2', 'F011652_1'])
+
+
+  const firstLoadedState = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'DATA_FIRST_LOADED_DATE' },
+  }
+  const firstLoadedWrapper = renderTable(firstLoadedState)
+  expect(firstLoadedWrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_2', 'F011652_1'])
+
+})
+
+test('sorts visible families by analysis status, falling back when the status is not in the lookup', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: { ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1, analysisStatus: 'NOT_A_REAL_STATUS' },
+    },
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'SORT_BY_ANALYSIS_STATUS' },
+  }
+  const wrapper = renderTable(state)
+  expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
+})
+
+test('sorts visible families by analysed date, only counting SNP analysedBy entries and falling back when there are none', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
+        analysedBy: [
+          { dataType: 'SNP', lastModifiedDate: '2020-01-01T01:00:00.000Z', createdBy: 'user1' },
+          { dataType: 'SV', lastModifiedDate: '2022-01-01T01:00:00.000Z', createdBy: 'user2' },
+        ],
+      },
+      F011652_2: { ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2, analysedBy: [] },
+    },
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'SORT_BY_ANALYSED_DATE' },
+  }
+  const wrapper = renderTable(state)
+  expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
+})
+
+test('sorts visible families by review status changed date, handling missing individuals and comparing multiple modified dates', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familiesByGuid: {
+      ...STATE_WITH_2_FAMILIES.familiesByGuid,
+      F011652_1: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_1,
+        individualGuids: ['MISSING_INDIVIDUAL_GUID', 'I021476_na19678_1', 'I021474_na19679_1'],
+        caseReviewStatusLastModified: '2010-01-01T01:00:00.000Z',
+      },
+      F011652_2: {
+        ...STATE_WITH_2_FAMILIES.familiesByGuid.F011652_2,
+        individualGuids: [],
+        caseReviewStatusLastModified: undefined,
+      },
+    },
+    individualsByGuid: {
+      ...STATE_WITH_2_FAMILIES.individualsByGuid,
+      I021476_na19678_1: {
+        ...STATE_WITH_2_FAMILIES.individualsByGuid.I021476_na19678_1,
+        caseReviewStatusLastModifiedDate: '2018-01-01T01:00:00.000Z',
+      },
+      I021474_na19679_1: {
+        ...STATE_WITH_2_FAMILIES.individualsByGuid.I021474_na19679_1,
+        caseReviewStatusLastModifiedDate: '2019-01-01T01:00:00.000Z',
+      },
+    },
+    familyTableState: {
+      ...STATE_WITH_2_FAMILIES.familyTableState,
+      familiesSortOrder: 'REVIEW_STATUS_CHANGED_DATE',
+    },
+  }
+  const wrapper = renderTable(state)
+  expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
 })
 
 test('getProjectExportUrls produces raw family/individual/sample export data with and without a tableName', () => {
