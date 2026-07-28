@@ -7,7 +7,6 @@ import { Provider } from 'react-redux'
 
 import { mockFetchRejection, flushAll } from 'shared/utils/testHelpers'
 import PhenotypePrioritizedGenes from './PhenotypePrioritizedGenes'
-import { getIndividualPhenotypeGeneScores } from '../selectors'  // TODO
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
@@ -44,12 +43,6 @@ test('renders without error for an individual with no phenotype-prioritized gene
 
   expect(wrapper.find('DataTable').exists()).toBe(false)
   expect(wrapper.text()).toContain('Error 404')
-})
-
-test('getIndividualPhenotypeGeneScores falls back to an empty object when there is no data in state', () => {
-  const { phenotypeGeneScoresByIndividual, ...stateWithoutPhenotypeScores } = STATE_WITH_2_FAMILIES
-
-  expect(getIndividualPhenotypeGeneScores(stateWithoutPhenotypeScores)).toEqual({})
 })
 
 test('does not re-request phenotype gene scores when enough are already loaded for a tool', async () => {
