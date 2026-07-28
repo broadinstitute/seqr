@@ -154,11 +154,11 @@ test('dispatches pedigree and IGV updates and renders parent/IGV select and gene
   )
 
   const igvEdit = wrapper.find('Connect(FormWrapper)').filterWhere(n => n.prop('modalName') === igvModalId)
-  igvEdit.first().prop('onSubmit')({ filePath: 'gs://test.cram' })
+  igvEdit.first().prop('onSubmit')({ individualGuid: TEST_INDIVIDUAL_GUID, filePath: 'gs://test.cram' })
   await flushAll()
 
-  expect(getLastFetchUrl()).toEqual('/api/individual/undefined/update_igv_sample')
-  expect(getLastFetchBody()).toEqual({ filePath: 'gs://test.cram' })
+  expect(getLastFetchUrl()).toEqual('/api/individual/I021475_na19675_1/update_igv_sample')
+  expect(getLastFetchBody()).toEqual({ individualGuid: TEST_INDIVIDUAL_GUID, filePath: 'gs://test.cram' })
 
   // deleting an individual (the pedigree edit form's delete confirm) posts to the delete action
   pedigreeEdit.first().prop('onSubmit')({ individualGuid: TEST_INDIVIDUAL_GUID, delete: true })
