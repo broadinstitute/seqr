@@ -8,7 +8,7 @@ import { Provider } from 'react-redux'
 import { RNASEQ_JUNCTION_PADDING } from 'shared/utils/constants'
 import { mockFetchRejection, flushAll } from 'shared/utils/testHelpers'
 import RnaSeqResultPage from './RnaSeqResultPage'
-import { getTissueOptionsByIndividualGuid } from '../selectors'
+import { getTissueOptionsByIndividualGuid } from '../selectors'  // TODO
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 // RnaSeqOutliers draws its scatterplot with d3 on mount, which the project's jest config stubs out

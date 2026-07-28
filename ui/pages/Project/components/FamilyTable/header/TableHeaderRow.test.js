@@ -178,10 +178,6 @@ test('filters visible families by matching saved variant tag types and excludes 
   const state = {
     ...STATE_WITH_2_FAMILIES,
     familyTableFilterState: { R0237_1000_genomes_demo: { savedVariants: ['Review'] } },
-    familyTagTypeCounts: {
-      F011652_1: { Review: 2 },
-      F011652_2: {},
-    },
   }
   const wrapper = renderHeaderRow({}, state)
 

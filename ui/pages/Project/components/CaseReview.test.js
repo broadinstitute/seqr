@@ -7,7 +7,7 @@ import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
 import CaseReviewTable from './CaseReview'
 
-import { getCaseReviewStatusCounts } from '../selectors'
+import { getCaseReviewStatusCounts } from '../selectors' // TODO
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })

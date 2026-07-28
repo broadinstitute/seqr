@@ -10,7 +10,7 @@ import { FAMILY_MAIN_FIELDS, FAMILY_DETAIL_FIELDS } from 'shared/utils/constants
 import cloneDeep from 'lodash/cloneDeep'
 import { flushAll } from 'shared/utils/testHelpers'
 import FamilyTable from './FamilyTable'
-import { getVisibleFamiliesInSortedOrder, getProjectExportUrls } from '../../selectors'
+import { getVisibleFamiliesInSortedOrder, getProjectExportUrls } from '../../selectors'  // TODO
 import { STATE_WITH_2_FAMILIES } from '../../fixtures'
 
 configure({ adapter: new Adapter() })

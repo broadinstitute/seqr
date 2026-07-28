@@ -134,11 +134,9 @@ test('renders a generic breadcrumb id section on the family page', () => {
 })
 
 test('falls back to an empty analysis group name in the breadcrumb', () => {
-  const state = cloneDeep(STATE_WITH_2_FAMILIES)
-  delete state.analysisGroupsByGuid.AG0000183_test_group.name
   const wrapper = renderPageHeader({
-    match: { url: '/project/R0237_1000_genomes_demo/analysis_group/AG0000183_test_group', params: { breadcrumb: 'analysis_group', breadcrumbId: 'AG0000183_test_group' } },
-  }, state)
+    match: { url: '/project/R0237_1000_genomes_demo/analysis_group/AG0000181_test_group_2', params: { breadcrumb: 'analysis_group', breadcrumbId: 'AG0000181_test_group_2' } },
+  })
 
   expect(wrapper.find('Breadcrumb').text()).toContain('Analysis Group:')
 })

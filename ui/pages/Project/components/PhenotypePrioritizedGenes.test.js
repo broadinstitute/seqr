@@ -7,7 +7,7 @@ import { Provider } from 'react-redux'
 
 import { mockFetchRejection, flushAll } from 'shared/utils/testHelpers'
 import PhenotypePrioritizedGenes from './PhenotypePrioritizedGenes'
-import { getIndividualPhenotypeGeneScores } from '../selectors'
+import { getIndividualPhenotypeGeneScores } from '../selectors'  // TODO
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })

@@ -50,13 +50,7 @@ test('does not show a help icon for tag types without a description', () => {
 })
 
 test('uses analysis group tag type counts when an analysisGroupGuid is provided', () => {
-  const store = configureStore()({
-    ...STATE_WITH_2_FAMILIES,
-    familyTagTypeCounts: {
-      F011652_1: { Review: 2, 'Tier 1 - Phenotype not delineated': 1 },
-      F011652_2: { Excluded: 5 },
-    },
-  })
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter>
@@ -83,12 +77,7 @@ test('uses analysis group tag type counts when an analysisGroupGuid is provided'
 })
 
 test('renders no summary rows when the analysis group has no matching families', () => {
-  const store = configureStore()({
-    ...STATE_WITH_2_FAMILIES,
-    familyTagTypeCounts: {
-      F011652_1: { Review: 2, 'Tier 1 - Phenotype not delineated': 1 },
-    },
-  })
+  const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
     <Provider store={store}>
       <MemoryRouter>

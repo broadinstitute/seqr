@@ -1249,7 +1249,10 @@ export const STATE_WITH_2_FAMILIES = {
       numEntries: 5,
     },
   },
-  familyTagTypeCounts: {},
+  familyTagTypeCounts: {
+    F011652_1: { Review: 2, 'Tier 1 - Phenotype not delineated': 1 },
+    F011652_2: { Excluded: 1 },
+  },
   loadedProjectChildEntities: {},
   savedVariantFamilies: {},
   modal: {},

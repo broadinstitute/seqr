@@ -7,7 +7,7 @@ import { Provider } from 'react-redux'
 import cloneDeep from 'lodash/cloneDeep'
 import { mockFetchResponse, mockFetchRejection, flushAll, getLastFetchUrl } from 'shared/utils/testHelpers'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
-import { getIndividualTaggedVariants, getMmeDefaultContactEmail } from '../selectors'
+import { getIndividualTaggedVariants, getMmeDefaultContactEmail } from '../selectors' // TODO
 import Matchmaker from './Matchmaker'
 
 configure({ adapter: new Adapter() })
