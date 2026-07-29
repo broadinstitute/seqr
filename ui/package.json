@@ -137,7 +137,7 @@
         "lines": 55,
         "statements": 50
       },
-      "pages/Project/components/**/*.{js,jsx}": {
+      "pages/Project/**/*.{js,jsx}": {
         "branches": 95,
         "functions": 95,
         "lines": 100,

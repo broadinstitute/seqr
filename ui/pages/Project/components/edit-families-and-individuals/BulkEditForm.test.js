@@ -165,6 +165,13 @@ test('renders without crashing with complex data for export', () => {
   )
 
   expect(wrapper.find('FormWrapper').exists()).toBe(true)
+
+  const familyFormWrapper = mount(
+    <Provider store={store}>
+      <EditFamiliesBulkForm modalName="bulkEditFamilies" />
+    </Provider>,
+  )
+  expect(familyFormWrapper.find('FormWrapper').exists()).toBe(true)
 })
 
 test('submits the uploaded file id on individual metadata form submission', async () => {
