@@ -174,11 +174,29 @@ test('getMmeDefaultContactEmail', () => {
   }
   expect(getMmeDefaultContactEmail(missingDetailState, { matchmakerResultGuid: 'MS12345_missing_data' })).toEqual(missingDataEmail)
 
-  missingDetailState.mmeResultsByGuid.MS12345_missing_data.geneVariants = [
-    { geneId: 'ENSG_UNKNOWN' },
-    { geneId: 'ENSG_UNKNOWN', variantGuid: 'SV0000004_116042722_r0390_1000' },
-  ]
-  expect(getMmeDefaultContactEmail(missingDetailState, { matchmakerResultGuid: 'MS12345_missing_data' })).toEqual(missingDataEmail)
+  expect(getMmeDefaultContactEmail({
+    ...missingDetailState,
+    mmeSubmissionsByGuid: {
+      ...missingDetailState.mmeSubmissionsByGuid,
+      MS021475_na19675_1: {
+        ...missingDetailState.mmeSubmissionsByGuid.MS021475_na19675_1,
+        geneVariants:  [missingDetailState.mmeSubmissionsByGuid.MS021475_na19675_1.geneVariants[0]],
+      }
+    },
+    mmeResultsByGuid: {
+      ...missingDetailState.mmeResultsByGuid,
+      MS12345_missing_data: {
+        ...missingDetailState.mmeResultsByGuid.MS12345_missing_data,
+        geneVariants: [
+          { geneId: 'ENSG_UNKNOWN' },
+          { geneId: 'ENSG_UNKNOWN', variantGuid: 'SV0000004_116042722_r0390_1000' },
+        ],
+      }
+    }
+  }, { matchmakerResultGuid: 'MS12345_missing_data' })).toEqual({
+    ...missingDataEmail,
+    body: missingDataEmail.body.slice(0, 219).replace('variants', 'a variant') + missingDataEmail.body.slice(279),
+  })
 })
 
 test('getIndividualPhenotypeGeneScores', () => {

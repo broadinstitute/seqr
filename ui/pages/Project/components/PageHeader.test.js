@@ -120,6 +120,20 @@ test('renders an rnaseq_results breadcrumb subsection with the individual id', (
   })
 
   expect(wrapper.find('Breadcrumb').text()).toContain('RNAseq: NA19678')
+
+  const noIdWrapper = renderPageHeader({
+    match: {
+      url: '/project/R0237_1000_genomes_demo/family_page/F011652_1/rnaseq_results/I12345',
+      params: {
+        breadcrumb: 'family_page',
+        breadcrumbId: 'F011652_1',
+        breadcrumbIdSection: 'rnaseq_results',
+        breadcrumbIdSubsection: 'I12345',
+      },
+    },
+  })
+
+  expect(noIdWrapper.find('Breadcrumb').text()).toEqual('Project1000 Genomes DemoFamily: 1RNAseq: ')
 })
 
 test('renders a generic breadcrumb id section on the family page', () => {

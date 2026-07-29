@@ -75,6 +75,17 @@ test('renders an empty message when there are no visible families', () => {
 
   expect(wrapper.find('FamilyTableRow').length).toEqual(0)
   expect(wrapper.text()).toContain('0 families found')
+
+  // Popup content is a portal only rendered on hover/click, so render its `content` prop directly
+  const popupContent = wrapper.find('Popup[on="click"]').prop('content')
+  const popupWrapper = shallow(popupContent)
+  const exportUrls = popupWrapper.root().prop('downloads')
+  const familiesData = exportUrls.find(({ name }) => name === 'Families').getRawData(emptyState)
+  expect(familiesData).toEqual([])
+  const individualsData = exportUrls.find(({ name }) => name === 'Individuals').getRawData(emptyState)
+  expect(individualsData).toEqual([])
+  const samplesData = exportUrls.find(({ name }) => name === 'Samples').getRawData(emptyState)
+  expect(samplesData).toEqual([])
 })
 
 test('loads export data when the export popup content is rendered', async () => {
@@ -236,6 +247,7 @@ test('filters family table', () => {
   const state = {
     ...STATE_WITH_2_FAMILIES,
     familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSearch: '1' },
+    familyTableFilterState: {},
   }
   const wrapper = renderTable(state)
   const familyRows = wrapper.find('FamilyTableRow')
