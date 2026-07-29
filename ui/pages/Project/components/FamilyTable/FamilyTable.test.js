@@ -129,12 +129,19 @@ test('loads export data when the export popup content is rendered', async () => 
 })
 
 test('falls back to unsorted families when sort order is invalid or a family is missing a familyId', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: '' },
+  }
+  const wrapper = renderTable(state)
+  expect(wrapper.find('FamilyTableRow').length).toEqual(2)
+
   const invalidSortState = {
     ...STATE_WITH_2_FAMILIES,
     familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'NOT_A_REAL_SORT_ORDER' },
   }
-  const wrapper = renderTable(invalidSortState)
-  expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
+  const invalidWrapper = renderTable(invalidSortState)
+  expect(invalidWrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
 
   const missingFamilyIdState = cloneDeep(STATE_WITH_2_FAMILIES)
   delete missingFamilyIdState.familiesByGuid.F011652_1.familyId

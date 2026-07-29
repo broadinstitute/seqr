@@ -180,7 +180,7 @@ test('getMmeDefaultContactEmail', () => {
       ...missingDetailState.mmeSubmissionsByGuid,
       MS021475_na19675_1: {
         ...missingDetailState.mmeSubmissionsByGuid.MS021475_na19675_1,
-        geneVariants:  [missingDetailState.mmeSubmissionsByGuid.MS021475_na19675_1.geneVariants[0]],
+        geneVariants: [{ geneId: 'ENSG_UNKNOWN', variantGuid: 'SV0000004_116042722_r0390_1000' }],
       }
     },
     mmeResultsByGuid: {
@@ -195,7 +195,7 @@ test('getMmeDefaultContactEmail', () => {
     }
   }, { matchmakerResultGuid: 'MS12345_missing_data' })).toEqual({
     ...missingDataEmail,
-    body: missingDataEmail.body.slice(0, 219).replace('variants', 'a variant') + missingDataEmail.body.slice(279),
+    body: missingDataEmail.body.slice(0, 219).replace('variants in OR2M3', 'a variant in ') + missingDataEmail.body.slice(279),
   })
 })
 
@@ -214,4 +214,6 @@ test('getIndividualPhenotypeGeneScores', () => {
       },
     ],
   })
+
+  expect(getIndividualPhenotypeGeneScores({ ...STATE_WITH_2_FAMILIES, phenotypeGeneScoresByIndividual: null })).toEqual({})
 })
