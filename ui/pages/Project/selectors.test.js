@@ -142,6 +142,37 @@ test('getMmeDefaultContactEmail', () => {
     subject: 'OR2M3 Matchmaker Exchange connection (NA19675_1)',
     body: 'Dear James Crowley,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring variants in OR2M3. Our patient has a homozygous frameshift variant 22:45919065 TTTC>T (hg19) (c.862delC/p.Leu288SerfsTer10), a copy number deletion 1:248367227-248369100 (hg19) (CN=0) and presents with childhood onset short-limb short stature and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
   })
+
+  const missingDetailState = {
+    ...STATE_WITH_2_FAMILIES,
+    mmeResultsByGuid: {
+      ...STATE_WITH_2_FAMILIES.mmeResultsByGuid,
+      MS12345_missing_data: {
+        id: 12345, submissionGuid: 'MS021475_na19675_1', patient: {
+          contact: {
+              href: "mailto:test_2@test.com",
+              institution: "Data Center",
+              name: "Test User"
+          },
+          id: "54321"
+      },
+      },
+    },
+  }
+  const missingDataEmail = {
+    matchmakerResultGuid: 'MS12345_missing_data',
+    patientId: '54321',
+    to: 'test_2@test.com,test@test.com,test@broadinstitute.org',
+    subject: 'Patient 54321 Matchmaker Exchange connection (NA19675_1)',
+    body: 'Dear Test User,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring variants in OR2M3. Our patient has a homozygous frameshift variant 22:45919065 TTTC>T (hg19) (c.862delC/p.Leu288SerfsTer10), a copy number deletion 1:248367227-248369100 (hg19) (CN=0) and presents with childhood onset short-limb short stature and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
+  }
+  expect(getMmeDefaultContactEmail(missingDetailState, { matchmakerResultGuid: 'MS12345_missing_data' })).toEqual(missingDataEmail)
+
+  missingDetailState.mmeResultsByGuid.MS12345_missing_data.geneVariants = [
+    { geneId: 'ENSG_UNKNOWN' },
+    { geneId: 'ENSG_UNKNOWN', variantGuid: 'SV0000004_116042722_r0390_1000' },
+  ]
+  expect(getMmeDefaultContactEmail(missingDetailState, { matchmakerResultGuid: 'MS12345_missing_data' })).toEqual(missingDataEmail)
 })
 
 test('getIndividualPhenotypeGeneScores', () => {
