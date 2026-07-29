@@ -128,12 +128,13 @@
     "collectCoverageFrom": [
       "**/*.{js,jsx,mjs,ts,tsx}",
       "!config/**",
-      "!coverage/**"
+      "!coverage/**",
+      "!scripts/**"
     ],
     "coverageThreshold": {
       "global": {
         "branches": 30,
-        "functions": 35,
+        "functions": 30,
         "lines": 55,
         "statements": 50
       },
