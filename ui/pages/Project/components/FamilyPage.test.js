@@ -46,6 +46,7 @@ test('renders discovery genes and disables search when data is not loaded, with 
         workspaceName: undefined,
       },
     },
+    familyTagTypeCounts: {},
   }
   const store = configureStore(state)
 
