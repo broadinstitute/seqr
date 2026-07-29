@@ -116,13 +116,19 @@ test('renders family size histogram edge cases and the case review edit button',
       individualGuids: ['g1', 'g2'],
       parents: [{ maternalGuid: 'm6' }],
     },
+    F6: {
+      familyGuid: 'F6',
+      projectGuid: PROJECT_GUID,
+      individualGuids: ['g6'],
+      parents: [{ individualGuid: 'g6', paternalGuid: 'p6' }],
+    },
   }
   familyState.datasetsByGuid = {
     DS_SAMPLE_PARENT: {
       datasetType: 'SNV_INDEL',
       sampleType: 'WES',
       projectGuid: PROJECT_GUID,
-      activeIndividuals: ['a3', 'a2'],
+      activeIndividuals: ['a3', 'a2', 'g6'],
       inactiveIndividuals: [],
       loadedDate: '2020-01-01T12:00:00.000Z',
     },
