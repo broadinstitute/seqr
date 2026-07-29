@@ -250,11 +250,22 @@ test('sorts visible families by review status changed date, handling missing ind
   expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
 })
 
-test('filters family table', () => {
+test('filters family table by search', () => {
   const state = {
     ...STATE_WITH_2_FAMILIES,
     familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSearch: '1' },
     familyTableFilterState: {},
+  }
+  const wrapper = renderTable(state)
+  const familyRows = wrapper.find('FamilyTableRow')
+  expect(familyRows.length).toEqual(1)
+  expect(familyRows.first().prop('familyGuid')).toEqual('F011652_1')
+})
+
+test('filters family table by filters', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableFilterState: { R0237_1000_genomes_demo: { savedVariants: ['Review'] } }
   }
   const wrapper = renderTable(state)
   const familyRows = wrapper.find('FamilyTableRow')

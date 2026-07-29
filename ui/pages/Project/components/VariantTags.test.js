@@ -76,6 +76,24 @@ test('uses analysis group tag type counts when an analysisGroupGuid is provided'
   )
 })
 
+
+test('renders no summary rows when the analysis group has no matching tags', () => {
+  const store = configureStore()({
+    ...STATE_WITH_2_FAMILIES,
+    familyTagTypeCounts: {},
+  })
+
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <VariantTags projectGuid="R0237_1000_genomes_demo" analysisGroupGuid="AG0000183_test_group" />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(wrapper.find('TagSummary').length).toEqual(0)
+})
+
 test('renders no summary rows when the analysis group has no matching families', () => {
   const store = configureStore()(STATE_WITH_2_FAMILIES)
   const wrapper = mount(
@@ -87,4 +105,25 @@ test('renders no summary rows when the analysis group has no matching families',
   )
 
   expect(wrapper.find('TagSummary').length).toEqual(0)
+
+  const noFamilyAgStore = configureStore()({
+    ...STATE_WITH_2_FAMILIES,
+    analysisGroupsByGuid: {
+      AG0000183_test_group: {
+        ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid.AG0000183_test_group,
+        familyGuids: null,
+      }
+    }
+  })
+
+  const noFamilyAgWrapper = mount(
+    <Provider store={noFamilyAgStore}>
+      <MemoryRouter>
+        <VariantTags projectGuid="R0237_1000_genomes_demo" analysisGroupGuid="AG0000183_test_group" />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  expect(noFamilyAgWrapper.find('TagSummary').length).toEqual(0)
+
 })

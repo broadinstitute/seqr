@@ -30,6 +30,7 @@ test('renders the visible/total family count and search filter', () => {
   const state = {
     ...STATE_WITH_2_FAMILIES,
     familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSearch: '1' },
+    familyTableFiltersByProject: null,
   }
   const wrapper = renderHeaderRow({}, state)
 

@@ -546,7 +546,7 @@ test('getSavedVariantTagTypeCountsByFamily counts mme submissions and de-dupes r
   expect(mockLatestProps.tagTypeCounts.Review).toEqual(3)
 })
 
-test('getProjectVariantSavedByOptions handles a family with no saved variants', () => {
+test('saved variant options handles a family with no saved variants', () => {
   const noVariantsState = cloneDeep(STATE_WITH_2_FAMILIES)
   noVariantsState.familiesByGuid.F_NO_VARIANTS = {
     ...noVariantsState.familiesByGuid.F011652_1,
