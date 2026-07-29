@@ -148,6 +148,12 @@ test('sorts visible families by date loaded, falling back when a family has no l
   const firstLoadedWrapper = renderTable(firstLoadedState)
   expect(firstLoadedWrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_2', 'F011652_1'])
 
+  const addedDateSortState = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSortOrder: 'FAMILY_ADDED_DATE' },
+  }
+  const addedDateSortWrapper = renderTable(addedDateSortState)
+  expect(addedDateSortWrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_2', 'F011652_1'])
 })
 
 test('sorts visible families by analysis status, falling back when the status is not in the lookup', () => {

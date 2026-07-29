@@ -50,6 +50,15 @@ test('renders the accepted families and the individual status summary', () => {
   expect(familiesExport.filename).toContain('case_review')
   const familiesData = familiesExport.getRawData(STATE_WITH_2_FAMILIES)
   const family2 = familiesData.find(f => f.familyGuid === 'F011652_2')
+  const individualsExport = caseReviewExportUrls.find(({ name }) => name === 'Individuals')
+  const individualsData = individualsExport.getRawData(STATE_WITH_2_FAMILIES)
+  expect(individualsData.length).toEqual(6)
+  const individual = individualsData.find(i => i.individualGuid === 'I021475_na19675_1')
+  expect(individualsExport.processRow(individual)).toEqual([
+    '1', 'NA19675', undefined, undefined, 'Male', 'Affected', '', 'No',
+    'HP:0001324 (Muscle weakness)', 'HP:0001631 (Defect in the atrial septum)', 'In Review',
+    '2016-12-05T10:29:00.000Z', 'test user', '',
+  ])
 
   const row = familiesExport.processRow(family2)
   // F011652_2 has no internal case review summary/notes set, so stripMarkdown falls back to ''

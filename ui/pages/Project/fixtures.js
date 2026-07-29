@@ -163,6 +163,7 @@ export const STATE_WITH_2_FAMILIES = {
         'I021474_na19679_1',
         'I021475_na19675_1',
       ],
+      createdDate: '2016-12-05T10:28:00.000Z',
       detailsLoaded: true,
       analysisNotes: 'added note',
       analysisSummary: '',
@@ -185,6 +186,7 @@ export const STATE_WITH_2_FAMILIES = {
         'I021475_na19675_2',
       ],
       externalData: [],
+      createdDate: '2018-12-05T10:28:00.000Z',
     },
   },
   familyNotesByGuid: {
