@@ -145,6 +145,12 @@ test('getMmeDefaultContactEmail', () => {
 
   const missingDetailState = {
     ...STATE_WITH_2_FAMILIES,
+    mmeSubmissionsByGuid: {
+      MS021475_na19675_1: {
+        ...STATE_WITH_2_FAMILIES.mmeSubmissionsByGuid.MS021475_na19675_1,
+        phenotypes: STATE_WITH_2_FAMILIES.mmeSubmissionsByGuid.MS021475_na19675_1.phenotypes.map(p => ({ ...p, observed: 'yes' })),
+      }
+    },
     mmeResultsByGuid: {
       ...STATE_WITH_2_FAMILIES.mmeResultsByGuid,
       MS12345_missing_data: {
@@ -164,7 +170,7 @@ test('getMmeDefaultContactEmail', () => {
     patientId: '54321',
     to: 'test_2@test.com,test@test.com,test@broadinstitute.org',
     subject: 'Patient 54321 Matchmaker Exchange connection (NA19675_1)',
-    body: 'Dear Test User,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring variants in OR2M3. Our patient has a homozygous frameshift variant 22:45919065 TTTC>T (hg19) (c.862delC/p.Leu288SerfsTer10), a copy number deletion 1:248367227-248369100 (hg19) (CN=0) and presents with childhood onset short-limb short stature and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
+    body: 'Dear Test User,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring variants in OR2M3. Our patient has a homozygous frameshift variant 22:45919065 TTTC>T (hg19) (c.862delC/p.Leu288SerfsTer10), a copy number deletion 1:248367227-248369100 (hg19) (CN=0) and presents with childhood onset short-limb short stature, abnormality of nervous system physiology, and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
   }
   expect(getMmeDefaultContactEmail(missingDetailState, { matchmakerResultGuid: 'MS12345_missing_data' })).toEqual(missingDataEmail)
 

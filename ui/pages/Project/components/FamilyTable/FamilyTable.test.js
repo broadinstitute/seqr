@@ -187,6 +187,13 @@ test('sorts visible families by analysed date, only counting SNP analysedBy entr
   }
   const wrapper = renderTable(state)
   expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
+
+  const filteredState = {
+    ...state,
+    familyTableState: { ...state.familyTableState, familiesSearch: 'user2' },
+  }
+  const filteredWrapper = renderTable(filteredState)
+  expect(filteredWrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1'])
 })
 
 test('sorts visible families by review status changed date, handling missing individuals and comparing multiple modified dates', () => {
@@ -223,6 +230,17 @@ test('sorts visible families by review status changed date, handling missing ind
   }
   const wrapper = renderTable(state)
   expect(wrapper.find('FamilyTableRow').map(content => content.prop('familyGuid'))).toEqual(['F011652_1', 'F011652_2'])
+})
+
+test('filters family table', () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    familyTableState: { ...STATE_WITH_2_FAMILIES.familyTableState, familiesSearch: '1' },
+  }
+  const wrapper = renderTable(state)
+  const familyRows = wrapper.find('FamilyTableRow')
+  expect(familyRows.length).toEqual(1)
+  expect(familyRows.first().prop('familyGuid')).toEqual('F011652_1')
 })
 
 test('formats family export field values, including notes, firstSample, analysisStatus, assignedAnalyst, and analysedBy', () => {
