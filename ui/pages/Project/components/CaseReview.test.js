@@ -1,5 +1,5 @@
 import React from 'react'
-import {mount, configure, shallow} from 'enzyme'
+import { mount, configure, shallow } from 'enzyme'
 import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureMockStore from 'redux-mock-store'
 import thunk from 'redux-thunk'

@@ -1130,7 +1130,7 @@ export const STATE_WITH_2_FAMILIES = {
       omimPhenotypes: [],
     },
     ENSG00000164458: {
-      geneId: 'ENSG00000272333',
+      geneId: 'ENSG00000164458',
       geneSymbol: 'TBXT',
       constraints: {},
       cnSensitivity: {},
