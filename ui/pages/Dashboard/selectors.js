@@ -29,8 +29,10 @@ export const getVisibleProjects = createSelector(
   (projectsByGuid, projectCategoriesByGuid, analysisGroupsByGuid, projectFilter) => {
     const filterFunc = createProjectFilter(projectFilter)
     const visibleProjects = [
-      ...Object.values(projectsByGuid),
-      ...Object.values(analysisGroupsByGuid).filter(({ projectGuid }) => projectGuid && !projectsByGuid[projectGuid]),
+      ...Object.values(projectsByGuid).filter(({ partialAccess }) => !partialAccess),
+      ...Object.values(analysisGroupsByGuid).filter(
+        ({ projectGuid }) => projectGuid && (!projectsByGuid[projectGuid] || projectsByGuid[projectGuid].partialAccess),
+      ),
     ].filter(filterFunc)
     return visibleProjects.map((project) => {
       const projectCategories = (project.projectCategoryGuids || []).map(

@@ -34,7 +34,7 @@ const AnalysisGroups = React.memo(({ projectGuid, load, loading, analysisGroupsB
             />
           )) : (
             <div>
-              <b>{`${ag.familyGuids.length} Families`}</b>
+              <b>{`${ag.familyGuids?.length} Families`}</b>
               <br />
               <i>{ag.description}</i>
               {ag.workspaceName && (
