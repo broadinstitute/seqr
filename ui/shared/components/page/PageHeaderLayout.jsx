@@ -33,14 +33,14 @@ export const useSeqrTitle = title => useTitle(`seqr: ${snakecaseToTitlecase(titl
 
 const PageHeaderLayout = React.memo(({
   entity, entityGuid, breadcrumb, breadcrumbId, breadcrumbIdSections, title, entityLinkPath, entityGuidLinkPath,
-  entityLinks, button, description, entityLinkDisabled,
+  entityLinks, button, description, entityGuidLinkDisabled,
 }) => {
   let breadcrumbSections = [
     { content: snakecaseToTitlecase(entity), link: entityLinkPath === undefined ? `/${entity}` : entityLinkPath },
   ]
   if (entityGuid) {
     breadcrumbSections.push(
-      { content: title || entityGuid, link: entityLinkDisabled ? null : `/${entity}/${entityGuid}${entityGuidLinkPath ? `/${entityGuidLinkPath}` : ''}` },
+      { content: title || entityGuid, link: entityGuidLinkDisabled ? null : `/${entity}/${entityGuid}${entityGuidLinkPath ? `/${entityGuidLinkPath}` : ''}` },
     )
   }
   if (breadcrumbIdSections) {
@@ -125,7 +125,7 @@ PageHeaderLayout.propTypes = {
   entityLinks: PropTypes.arrayOf(PropTypes.object),
   button: PropTypes.node,
   description: PropTypes.string,
-  entityLinkDisabled: PropTypes.bool,
+  entityGuidLinkDisabled: PropTypes.bool,
 }
 
 export default PageHeaderLayout
