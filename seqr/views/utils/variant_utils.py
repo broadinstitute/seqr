@@ -488,7 +488,7 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
         xpos_end = variant.pop('xposEnd')
         variants_by_id[variant['variantId']] = {
             **variants_by_id[variant['variantId']],
-            **variant,
+            **{k: v for k, v in variant.items() if k not in {'variantGuid', 'tagGuids', 'functionalDataGuids', 'noteGuids'}},
             'familyGuids': variant['familyGuids'] + variants_by_id[variant['variantId']].get('familyGuids', []),
             'genotypes': {**variant['genotypes'], **variants_by_id[variant['variantId']].get('genotypes', {})},
         }
