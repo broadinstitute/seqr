@@ -29,7 +29,6 @@ test('log out is inside the user dropdown rather than a top level menu item', ()
   const wrapper = shallow(<PageHeaderComponent user={USER} />)
 
   const logoutLinks = wrapper.findWhere(node => node.prop('href') === '/logout')
-  // Make sure its of length one
   expect(logoutLinks).toHaveLength(1)
   expect(logoutLinks.first().name()).toEqual('DropdownItem')
 })
@@ -38,7 +37,6 @@ test('logged out users are offered a log in link and no user dropdown', () => {
   const wrapper = shallow(<PageHeaderComponent user={{}} />)
 
   expect(wrapper.findWhere(node => node.prop('href') === '/logout')).toHaveLength(0)
-  // Make sure there isnt a length because were logged out
   expect(wrapper.find('Dropdown')).toHaveLength(0)
   expect(wrapper.findWhere(node => node.prop('href') === LOCAL_LOGIN_URL)).toHaveLength(1)
 })

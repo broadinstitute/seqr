@@ -17,41 +17,22 @@ const HeaderMenu = styled(Menu)`
   padding-left: 100px;
   padding-right: 100px;
 
-  /* 
-    @elanfisher:
-    The nav items need ~1780px at the default gutters, so on smaller screens
-    or when the page is zoomed the right hand items (eg. "Log out") were
-    clipped and thus occluded. Shifted the gutters and search box and then allowed 
-    the bar to wrap rather than overflow.
-  */
   @media (max-width: 1800px) {
     padding-left: 24px;
     padding-right: 24px;
   }
 
-  /*
-    @elanfisher: 
-    Flexbox wraps before it shrinks, so only allow wrapping once the search box
-    has run out of room to give. Above this the bar stays on one line. 
-  */
   @media (max-width: 1400px) {
     flex-wrap: wrap;
   }
+`
 
-  /* 
-    @elanfisher:
-    Keep the search box at its full 350px whenever it fits, and let it be the
-    first thing to give way when it does not. The basis and max are 382px,
-    350px of search plus the menu item's own 2 x 16px padding, so users who
-    were never short of space see exactly the previous layout.
-  */
-  .item.awesomebar {
-    flex: 0 1 382px;
-    min-width: 216px;
-    max-width: 382px;
-  }
+const AwesomeBarMenuItem = styled(Menu.Item)`
+  flex: 0 1 382px !important;
+  min-width: 216px;
+  max-width: 382px;
 
-  .item.awesomebar .ui.search {
+  .ui.search {
     width: 100%;
   }
 `
@@ -69,8 +50,7 @@ const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit, lastFeature
         <Menu.Item key="summary_data" as={Link} to="/summary_data" content="Summary Data" />,
         (user.isAnalyst || user.isPm) ? <Menu.Item key="report" as={Link} to="/report" content="Reports" /> : null,
         (user.isDataManager || user.isPm) ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
-        // @elanfisher: Made the searchbar flex properly rather than be fixed at 350px.
-        <Menu.Item key="awesomebar" className="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
+        <AwesomeBarMenuItem key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></AwesomeBarMenuItem>,
       ] : null }
       <Menu.Item key="spacer" position="right" />
       <Menu.Item key="feature_updates">
@@ -98,8 +78,6 @@ const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit, lastFeature
               formFields={USER_NAME_FIELDS}
               onSubmit={onSubmit}
             />
-            {/* @elanfisher: I moved the "Log Out" button into this drop down as it seemed
-            to fit a bit nicer here and reduce the header clutter. */}
             <Dropdown.Item as="a" href="/logout" icon="sign out" text="Log out" />
           </Dropdown.Menu>
         </Dropdown>,
