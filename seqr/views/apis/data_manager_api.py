@@ -228,12 +228,8 @@ def get_loaded_projects(request, genome_version, sample_type, dataset_type):
         except ValueError as e:
             return create_json_response({'error': str(e)}, status=400)
         projects = projects.filter(guid__in=project_samples.keys())
-    if dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS:
-        exclude_sample_type = Dataset.SAMPLE_TYPE_WES if sample_type == Dataset.SAMPLE_TYPE_WGS else Dataset.SAMPLE_TYPE_WGS
-        # Include projects with either the matched sample type OR with no loaded data
-        projects = projects.exclude(family__individual__active_datasets__sample_type=exclude_sample_type)
-    else:
-        # All other data types can only be loaded to projects which already have loaded data
+    if dataset_type != Dataset.DATASET_TYPE_VARIANT_CALLS:
+        # All other data types can only be loaded to projects which already have loaded data for the given sample type
         projects = projects.filter(family__individual__active_datasets__sample_type=sample_type)
 
     projects = projects.distinct().order_by('name').values('name', projectGuid=F('guid'), dataTypeLastLoaded=Max(
