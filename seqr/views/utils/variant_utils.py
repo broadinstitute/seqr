@@ -478,6 +478,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
 
     return response
 
+OMIT_AGGREGATE_FIELDS = {'variantGuid', 'tagGuids', 'functionalDataGuids', 'noteGuids'}
+
 def _get_clickhouse_variant_annotations(variants, genome_version):
     variant_keys_by_genome_version_dataset_type = defaultdict(lambda: defaultdict(set))
     variants_by_id = defaultdict(dict)
@@ -488,7 +490,7 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
         xpos_end = variant.pop('xposEnd')
         variants_by_id[variant['variantId']] = {
             **variants_by_id[variant['variantId']],
-            **{k: v for k, v in variant.items() if k not in {'variantGuid', 'tagGuids', 'functionalDataGuids', 'noteGuids'}},
+            **{k: v for k, v in variant.items() if k not in OMIT_AGGREGATE_FIELDS},
             'familyGuids': variant['familyGuids'] + variants_by_id[variant['variantId']].get('familyGuids', []),
             'genotypes': {**variant['genotypes'], **variants_by_id[variant['variantId']].get('genotypes', {})},
         }
