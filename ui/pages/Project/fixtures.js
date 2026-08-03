@@ -651,7 +651,6 @@ export const STATE_WITH_2_FAMILIES = {
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_1"],
-      functionalDataGuids: [],
       genomeVersion: "37",
       genotypes: {
         I021475_na19675_1: {
@@ -698,14 +697,11 @@ export const STATE_WITH_2_FAMILIES = {
         lofFilter: "", lofFlags: "SINGLE_EXON", proteinPosition: "287", symbol: "OR2M3", geneId: 'ENSG00000228198',
         majorConsequence: 'frameshift_variant', transcriptId: 'ENST00000456743'
       }]},
-      noteGuids: ['VN0727076_116042722_r0390_1000'],
       origAltAlleles: ["T"],
       pos: 45919065,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "TTTC",
-      tagGuids: ['VT1726942_1248367227_r0390_101'],
       variantId: "22-45919065-TTTC-T",
-      variantGuid: "SV0000004_116042722_r0390_1000",
       xpos: 22045919065,
     },
     "1-248367227-TC-T": {
@@ -754,22 +750,18 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverChrom: "",
       liftedOverGenomeVersion: "38",
       liftedOverPos: "",
-      noteGuids: [],
       origAltAlleles: ["T"],
       mainTranscriptId: 'ENST00000262738',
       transcripts: {ENSG00000228198: [{transcriptId: 'ENST00000262738',  majorConsequence: 'missense_variant'}]},
       pos: 248367227,
       ref: "TC",
-      tagGuids: ["VT1726942_1248367227_r0390_100", "VT1708635_1248367227_r0390_100"],
       variantId: "1-248367227-TC-T",
-      variantGuid: "SV0000002_1248367227_r0390_100",
       xpos: 1248367227,
     },
     "batch_123_DEL": {
       alt: null,
       chrom: "1",
       familyGuids: ["F011652_1"],
-      functionalDataGuids: [],
       genomeVersion: "37",
       geneIds: ['ENSG00000228198', 'ENSG00000164458'],
       genotypes: {
@@ -790,7 +782,6 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverChrom: "",
       liftedOverGenomeVersion: "38",
       liftedOverPos: "",
-      noteGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
       pos: 248367227,
       end: 248369100,
@@ -804,7 +795,6 @@ export const STATE_WITH_2_FAMILIES = {
       },
       predictions: { strvctvre: '0.272' },
       ref: null,
-      tagGuids: [],
       transcripts: {
         ENSG00000164458: [
           {
@@ -818,7 +808,6 @@ export const STATE_WITH_2_FAMILIES = {
         ],
       },
       variantId: "batch_123_DEL",
-      variantGuid: "SV0000002_SV48367227_r0390_100",
       xpos: 1248367227,
     },
     "22-248367227-C-T": {
@@ -826,7 +815,6 @@ export const STATE_WITH_2_FAMILIES = {
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_2"],
-      functionalDataGuids: [],
       genomeVersion: "37",
       genotypes: {
         I021475_na19675_1: {
@@ -869,14 +857,11 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverPos: "",
       mainTranscriptId: null,
       transcripts: {},
-      noteGuids: [],
       origAltAlleles: ["T"],
       pos: 248367227,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "C",
-      tagGuids: ['VT1726942_1248367227_r0390_102'],
       variantId: "22-248367227-C-T",
-      variantGuid: "SV0000003_2246859832_r0390_100",
       xpos: 22046859832,
     },
     "22-248367228-C-T": {
@@ -884,7 +869,6 @@ export const STATE_WITH_2_FAMILIES = {
       chrom: "22",
       clinvar: { clinsig: "", variantId: null },
       familyGuids: ["F011652_2"],
-      functionalDataGuids: [],
       genomeVersion: "37",
       genotypes: {
         I021475_na19675_1: {
@@ -927,14 +911,11 @@ export const STATE_WITH_2_FAMILIES = {
       liftedOverPos: "",
       mainTranscriptId: null,
       transcripts: {},
-      noteGuids: [],
       origAltAlleles: ["T"],
       pos: 248367228,
       projectGuid: 'R0237_1000_genomes_demo',
       ref: "C",
-      tagGuids: ['VT1726942_1248367227_r0390_102'],
       variantId: "22-248367228-C-T",
-      variantGuid: "SV0000005_2246859833_r0390_100",
       xpos: 22046859833,
     },
   },
