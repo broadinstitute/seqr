@@ -12,7 +12,19 @@ import { STATE_WITH_2_FAMILIES } from '../fixtures'
 configure({ adapter: new Adapter() })
 
 test('renders the current project analysis group with its name and family count', () => {
-  const store = configureStore([thunk])(STATE_WITH_2_FAMILIES)
+  const store = configureStore([thunk])({
+    ...STATE_WITH_2_FAMILIES,
+    analysisGroupsByGuid: {
+      ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid,
+      AG0000184_test_group_2: {
+        ...STATE_WITH_2_FAMILIES.analysisGroupsByGuid.AG0000183_test_group,
+        analysisGroupGuid: 'AG0000184_test_group_2',
+        name: 'Test No Access Group',
+        workspaceName: null,
+        workspaceNamespace: null,
+      },
+    },
+  })
   const wrapper = mount(
     <Provider store={store}>
       <BrowserRouter>
@@ -22,9 +34,12 @@ test('renders the current project analysis group with its name and family count'
   )
 
   expect(wrapper.find('a[href="/project/R0237_1000_genomes_demo/analysis_group/AG0000183_test_group"]').text()).toEqual('Test Group')
+  expect(wrapper.find('StyledComponents__SectionHeader').text()).toEqual('Access Groups')
+  expect(wrapper.text()).toEqual('Test No Access GroupAccess GroupsTest Group')
+
 
   // Popup content is a portal only rendered on hover, so render its `content` prop directly
-  const popupContent = wrapper.find('Popup').prop('content')
+  const popupContent = wrapper.find('Popup').last().prop('content')
   expect(shallow(popupContent).text()).toContain('1 Families')
 })
 

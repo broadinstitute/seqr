@@ -29,7 +29,7 @@ test('renders the project sections and the families table', () => {
 
   const sectionHeaders = wrapper.find('StyledComponents__SectionHeader').map(header => header.text())
   expect(sectionHeaders).toEqual([
-    'Analysis Groups', 'Gene Lists', 'Overview', 'Variant Tags', 'Notifications', 'Collaborators', 'Families',
+    'Analysis Groups', 'Access Groups', 'Gene Lists', 'Overview', 'Variant Tags', 'Notifications', 'Collaborators', 'Families',
   ])
   expect(wrapper.find('FamilyTableRow').length).toEqual(2)
 })
