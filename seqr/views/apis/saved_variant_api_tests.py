@@ -180,9 +180,9 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         self.assertSetEqual(set(variants.keys()), {'21-3343353-GAGA-G'})
         variant = variants['21-3343353-GAGA-G']
         variant_fields = {
-            *SAVED_VARIANT_FIELDS, 'mainTranscriptId',  'genomeVersion', 'tagGuids', 'functionalDataGuids', 'noteGuids',
-            'genotypes', 'transcripts', 'acmgClassification',
+            *SAVED_VARIANT_FIELDS, 'mainTranscriptId',  'genomeVersion', 'genotypes', 'transcripts', 'acmgClassification',
         }
+        variant_fields.remove('variantGuid')
         self.assertSetEqual(set(variant.keys()), variant_fields)
         self.assertListEqual(variant['familyGuids'], ['F000001_1'])
         self.assertSetEqual(set(variant['genotypes'].keys()), {'I000003_na19679', 'I000001_na19675', 'I000002_na19678'})
@@ -295,7 +295,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         variants = response.json()['savedVariantsByGuid']
         self.assertSetEqual(set(variants.keys()), {COMPOUND_HET_1_GUID, COMPOUND_HET_2_GUID})
         self.assertListEqual(variants[COMPOUND_HET_1_GUID]['tagGuids'], [])
-        self.assertListEqual(variant['noteGuids'], [])
+        self.assertListEqual(variants[COMPOUND_HET_1_GUID]['noteGuids'], [])
 
         # filter by variant guid
         response = self.client.get('{}{}'.format(url, VARIANT_GUID))
@@ -416,7 +416,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()), fields)
         self.assertSetEqual(set(response_json['variantsById']['1-248367227-TC-T'].keys()), {
             *variant_fields, *SAVED_VARIANT_DETAIL_FIELDS, 'discoveryTags', 'noAccessDiscoveryFamilies', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
-        })
+        } - {'variantGuid', 'tagGuids', 'functionalDataGuids', 'noteGuids'})
 
         self.mock_list_workspaces.assert_called_with(self.analyst_user)
         self.mock_get_ws_access_level.assert_any_call(

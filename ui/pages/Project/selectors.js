@@ -826,7 +826,7 @@ export const getPageHeaderEntityLinks = createSelector(
         null,
 
     }]
-    if (project.hasCaseReview) {
+    if (project.hasCaseReview && !project.partialAccess) {
       entityLinks.push({
         to: `/project/${project.projectGuid}/case_review`,
         content: 'Case Review',

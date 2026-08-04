@@ -140,7 +140,7 @@ export const getPairedSelectedSavedVariants = createSelector(
     const [variantFilter, pairedFilters] = projectVariants || summaryDataVariants
 
     let variants = Object.values(savedVariants).map(
-      variant => ({ ...variant, ...(variantsById[variant.variantId] || {}) }),
+      variant => ({ ...(variantsById[variant.variantId] || {}), ...variant }),
     )
     if (variantFilter) {
       variants = variants.filter(variantFilter)

@@ -72,6 +72,7 @@ const PageHeader = React.memo((
       entityGuidLinkPath="project_page"
       breadcrumb={breadcrumb}
       entityLinks={entityLinks}
+      entityGuidLinkDisabled={project.partialAccess}
       {...headerProps}
     />
   )
