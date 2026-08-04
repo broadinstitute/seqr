@@ -6,7 +6,7 @@
 // single microtask tick isn't always enough to let a dispatched action reach a mock store, so
 // flush a few ticks. Call this (possibly more than once) after triggering a request and before
 // asserting on dispatched actions or re-rendered UI.
-export const flushPromises = () => new Promise(setImmediate)
+export const flushPromises = () => new Promise(resolve => (typeof setImmediate === 'function' ? setImmediate(resolve) : setTimeout(resolve, 0)))
 
 export const flushAll = async (times = 4) => {
   for (let i = 0; i < times; i += 1) {

@@ -22,7 +22,7 @@ test('renders a bar section per tag type with data, linked to the saved variants
     </MemoryRouter>
   )
 
-  // Only tag types with a non-zero count get a bar section (Tier 1 has count 0)
+  // Only tag types with a non-zero count get a bar section (Excluded has count 0)
   const barSections = wrapper.find('HorizontalStackedBar__BarSection')
   expect(barSections.length).toEqual(2)
   expect(barSections.at(0).prop('color')).toEqual('#668FE3')
