@@ -1067,12 +1067,10 @@ class BaseEntriesManager(SearchQuerySet):
     def _sample_family_q(cls, sample_type, families):
         return Q(family_guid__in=families)
 
-    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, exclude_projects=None, annotate_carriers=False, annotate_hom_alts=False, **kwargs):
+    def _search_call_data(self, entries, sample_data, inheritance_mode=None, inheritance_filter=None, qualityFilter=None, pathogenicity=None, annotate_carriers=False, annotate_hom_alts=False, **kwargs):
        multi_sample_type_families = None
        if sample_data:
            entries, multi_sample_type_families = self._filter_project_families(entries, sample_data)
-       elif exclude_projects:
-           entries = entries.exclude(project_guid__in=exclude_projects)
 
        inheritance_q = None
        quality_q = None

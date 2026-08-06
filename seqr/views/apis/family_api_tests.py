@@ -39,9 +39,12 @@ SAMPLE_GUIDS = ['S000129_na19675', 'S000130_na19678', 'S000131_na19679']
 
 class FamilyAPITest(object):
 
+    def _get_no_partial_access_response(self, url):
+        return self.client.get(url)
+
     def test_family_page_data(self):
         url = reverse(family_page_data, args=[FAMILY_GUID])
-        self.check_collaborator_login(url)
+        self.check_partial_access_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -124,7 +127,7 @@ class FamilyAPITest(object):
 
         # Test discovery omim options
         discovery_omim_url = reverse(family_page_data, args=['F000012_12'])
-        response = self.client.get(discovery_omim_url)
+        response = self._get_no_partial_access_response(discovery_omim_url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), response_keys)
@@ -219,7 +222,7 @@ class FamilyAPITest(object):
 
     def test_family_variant_tag_summary(self):
         url = reverse(family_variant_tag_summary, args=[FAMILY_GUID])
-        self.check_collaborator_login(url)
+        self.check_partial_access_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -365,7 +368,7 @@ class FamilyAPITest(object):
 
     def test_update_family_analysed_by(self):
         url = reverse(update_family_analysed_by, args=[FAMILY_GUID])
-        self.check_collaborator_login(url)
+        self.check_partial_access_login(url)
 
         # send request
         response = self.client.post(url, content_type='application/json', data=json.dumps({'dataType': 'SV'}))
@@ -374,7 +377,7 @@ class FamilyAPITest(object):
 
         self.assertListEqual(list(response_json.keys()), [FAMILY_GUID])
         self.assertEqual(len(response_json[FAMILY_GUID]['analysedBy']), 2)
-        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][1]['createdBy'], 'Test Collaborator User')
+        self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][1]['createdBy'], self.partial_access_user.first_name)
         self.assertEqual(response_json[FAMILY_GUID]['analysedBy'][1]['dataType'], 'SV')
 
     def test_update_family_analysis_groups(self):
@@ -423,7 +426,7 @@ class FamilyAPITest(object):
 
     def test_update_family_assigned_analyst(self):
         url = reverse(update_family_assigned_analyst, args=[FAMILY_GUID])
-        self.check_collaborator_login(url)
+        self.check_partial_access_login(url)
 
         # send invalid username (without permission)
         response = self.client.post(url, content_type='application/json',
@@ -450,7 +453,7 @@ class FamilyAPITest(object):
 
     def test_update_success_story_types(self):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
-        self.check_collaborator_login(url)
+        self.check_partial_access_login(url)
 
         response = self.client.post(url, content_type='application/json',
                                     data=json.dumps({'successStoryTypes': ['O', 'D']}))
@@ -476,7 +479,7 @@ class FamilyAPITest(object):
     @mock.patch('seqr.views.utils.json_to_orm_utils.timezone.now', lambda: datetime.strptime('2020-01-01', '%Y-%m-%d'))
     def test_update_family_fields(self):
         url = reverse(update_family_fields_handler, args=[FAMILY_GUID])
-        self.check_collaborator_login(url)
+        self.check_partial_access_login(url)
 
         self.reset_logs()
         body = {FAMILY_ID_FIELD: 'new_id', 'description': 'Updated description', 'analysis_status': 'C'}
@@ -487,9 +490,9 @@ class FamilyAPITest(object):
         self.assertEqual(response_json[FAMILY_GUID][FAMILY_ID_FIELD], '1')
         self.assertEqual(response_json[FAMILY_GUID]['displayName'], '1')
         self.assertEqual(response_json[FAMILY_GUID]['analysisStatus'], 'C')
-        self.assertEqual(response_json[FAMILY_GUID]['analysisStatusLastModifiedBy'], 'Test Collaborator User')
+        self.assertEqual(response_json[FAMILY_GUID]['analysisStatusLastModifiedBy'], self.partial_access_user.first_name)
         self.assertEqual(response_json[FAMILY_GUID]['analysisStatusLastModifiedDate'], '2020-01-01T00:00:00')
-        self.assert_json_logs(self.collaborator_user, [
+        self.assert_json_logs(self.partial_access_user, [
             ('update Family F000001_1', {'dbUpdate': {
                 'dbEntity': 'Family', 'entityId': 'F000001_1', 'updateType': 'update',
                 'updateFields': ['analysis_status', 'analysis_status_last_modified_by', 'analysis_status_last_modified_date', 'description'],
@@ -502,7 +505,7 @@ class FamilyAPITest(object):
         self.login_manager()
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()[FAMILY_GUID]['analysisStatusLastModifiedBy'], 'Test Collaborator User')
+        self.assertEqual(response.json()[FAMILY_GUID]['analysisStatusLastModifiedBy'], self.partial_access_user.first_name)
 
         # Test External AnVIL projects
         external_family_url = reverse(update_family_fields_handler, args=['F000014_14'])
@@ -607,7 +610,7 @@ class FamilyAPITest(object):
     def test_create_update_and_delete_family_note(self):
         # create the note
         create_note_url = reverse(create_family_note, args=[FAMILY_GUID])
-        self.check_collaborator_login(create_note_url)
+        self.check_partial_access_login(create_note_url)
 
         response = self.client.post(create_note_url, content_type='application/json', data=json.dumps({}))
         self.assertEqual(response.status_code, 400)
@@ -626,7 +629,7 @@ class FamilyAPITest(object):
         self.assertEqual(new_note_response['noteGuid'], new_note_guid)
         self.assertEqual(new_note_response['note'], 'new analysis note')
         self.assertEqual(new_note_response['noteType'], 'A')
-        self.assertEqual(new_note_response['createdBy'], 'Test Collaborator User')
+        self.assertEqual(new_note_response['createdBy'], self.partial_access_user.first_name)
 
         # update the note
         update_note_url = reverse(update_family_note, args=[FAMILY_GUID, new_note_guid])
@@ -651,24 +654,28 @@ class FamilyAPITest(object):
         response = self.client.post(delete_note_url, content_type='application/json')
         self.assertEqual(response.status_code, 403)
 
-        self.login_collaborator()
+        self.client.force_login(self.partial_access_user)
         response = self.client.post(delete_note_url, content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {'familyNotesByGuid': {new_note_guid: None}})
 
     def test_get_family_rna_seq_data(self):
         url = reverse(get_family_rna_seq_data, args=[FAMILY_GUID, 'ENSG00000135953'])
-        self.check_collaborator_login(url)
+
+        expected_response = {
+            'F': {'W': {'individualData': {'NA19675_1': 1.01}, 'myData': [1.01], 'rdgData': [1.01]}},
+            'M': {'T': {'individualData': {'NA19675_1': 8.38}, 'myData': [8.38], 'rdgData': [7.34, 8.38]}}
+        }
+        self.check_partial_access_login(url, expected_response)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-        expected_response = {
-            'F': {'W': {'individualData': {'NA19675_1': 1.01}, 'myData': [1.01]}},
-            'M': {'T': {'individualData': {'NA19675_1': 8.38}, 'myData': [8.38]}}
-        }
-        if self.INCLUDE_RDG_TPMS:
-            expected_response = {tissue: {k: {**v, 'rdgData': [*v['myData']]} for k, v in data.items()} for tissue, data in expected_response.items()}
+        expected_response['M']['T']['myData'].insert(0, 7.34)
+        if not self.INCLUDE_RDG_TPMS:
+            for type_data in expected_response.values():
+                for data in type_data.values():
+                    del data['rdgData']
         self.assertDictEqual(response.json(), expected_response)
 
         self.login_manager()
@@ -679,7 +686,7 @@ class FamilyAPITest(object):
 
     def test_get_family_phenotype_gene_scores(self):
         url = reverse(get_family_phenotype_gene_scores, args=[FAMILY_GUID])
-        self.check_collaborator_login(url)
+        self.check_partial_access_login(url)
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
@@ -726,10 +733,24 @@ class LocalFamilyAPITest(AuthenticationTestCase, FamilyAPITest):
     EXTERNAL_ANVIL_CAN_DELETE = False
     INCLUDE_RDG_TPMS = False
 
+    @property
+    def partial_access_user(self):
+        return self.collaborator_user
+
 
 class AnvilFamilyAPITest(AnvilAuthenticationTestCase, FamilyAPITest):
-    fixtures = ['users', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
+    fixtures = ['users', 'social_auth', '1kg_project', 'reference_data', 'clickhouse_saved_variants']
 
     EXTERNAL_ANVIL_CAN_DELETE = True
     INCLUDE_RDG_TPMS = True
+
+    @property
+    def partial_access_user(self):
+        return self.no_access_user
+
+    def _get_no_partial_access_response(self, url):
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        self.login_collaborator()
+        return super()._get_no_partial_access_response(url)
 

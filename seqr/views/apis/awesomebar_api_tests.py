@@ -19,10 +19,7 @@ class AwesomebarAPITest(object):
 
         response = self.client.get(url+"?q=1")
         self.assertEqual(response.status_code, 200)
-        # No objects returned as user has no access
-        self.assertSetEqual(
-            set(response.json()['matches'].keys()), {'genes'}
-        )
+        self._assert_expected_partial_access_matches(response.json()['matches'])
 
         self.login_collaborator()
         response = self.client.get(url + "?q=%201%20")
@@ -147,6 +144,12 @@ class AwesomebarAPITest(object):
 class LocalAwesomebarAPITest(AuthenticationTestCase, AwesomebarAPITest):
     fixtures = ['users', '1kg_project', 'reference_data']
 
+    def _assert_expected_partial_access_matches(self, matches):
+        # No objects returned as user has no access
+        self.assertSetEqual(
+            set(matches.keys()), {'genes'}
+        )
+
 
 # Test for permissions from AnVIL only
 class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
@@ -162,3 +165,37 @@ class AnvilAwesomebarAPITest(AnvilAuthenticationTestCase, AwesomebarAPITest):
         self.mock_list_workspaces.assert_has_calls(calls)
         self.assert_no_extra_anvil_calls()
         self.mock_get_ws_access_level.assert_not_called()
+
+    def _assert_expected_partial_access_matches(self, matches):
+        self.assertSetEqual(
+            set(matches.keys()), {'families', 'analysis_groups', 'individuals', 'genes'}
+        )
+
+        families = matches['families']['results']
+        self.assertEqual(len(families), 1)
+        self.assertDictEqual(families[0], {
+            'key': 'F000001_1',
+            'title': '1',
+            'description': '(1kg project nåme with uniçøde)',
+            'href': '/project/R0001_1kg/family_page/F000001_1',
+        })
+
+        individuals = matches['individuals']['results']
+        self.assertEqual(len(individuals), 3)
+        self.assertListEqual(
+            [i['title'] for i in individuals], ['NA19678', 'NA19679', 'NA19675_1'])
+        self.assertDictEqual(individuals[2], {
+            'key': 'I000001_na19675',
+            'title': 'NA19675_1',
+            'description': '(1kg project nåme with uniçøde: family 1)',
+            'href': '/project/R0001_1kg/family_page/F000001_1',
+        })
+
+        analysis_groups = matches['analysis_groups']['results']
+        self.assertEqual(len(analysis_groups), 1)
+        self.assertDictEqual(analysis_groups[0], {
+            'key': 'AG0000183_test_group',
+            'title': 'Test Group 1',
+            'description': '(1kg project nåme with uniçøde)',
+            'href': '/project/R0001_1kg/analysis_group/AG0000183_test_group',
+        })

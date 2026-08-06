@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 
 import orderBy from 'lodash/orderBy'
-import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getProjectExportUrls,
+import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getProjectExportUrls, getCurrentAnalysisGroup,
   getCaseReviewStatusCounts, getProjectAnalysisGroupFamiliesByGuid, getIndividualTaggedVariants,
   getDefaultMmeSubmission, getMmeResultsBySubmission, getMmeDefaultContactEmail, getIndividualPhenotypeGeneScores,
 } from './selectors'
@@ -85,6 +85,15 @@ test('getCaseReviewStatusCounts', () => {
 
 })
 
+test('getCurrentAnalysisGroup', () => {
+
+  const group = getCurrentAnalysisGroup(STATE_WITH_2_FAMILIES, { analysisGroupGuid: 'AG0000183_test_group' })
+  expect(group.analysisGroupGuid).toEqual('AG0000183_test_group')
+  expect(group.workspaceName).toEqual('anvil-analysis-group')
+
+  expect(getCurrentAnalysisGroup(STATE_WITH_2_FAMILIES)).toBe(undefined)
+})
+
 test('getProjectAnalysisGroupFamiliesByGuid', () => {
 
   const families = getProjectAnalysisGroupFamiliesByGuid(STATE_WITH_2_FAMILIES, { analysisGroupGuid: 'AG0000183_test_group' })
@@ -133,6 +142,62 @@ test('getMmeDefaultContactEmail', () => {
     subject: 'OR2M3 Matchmaker Exchange connection (NA19675_1)',
     body: 'Dear James Crowley,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring variants in OR2M3. Our patient has a homozygous frameshift variant 22:45919065 TTTC>T (hg19) (c.862delC/p.Leu288SerfsTer10), a copy number deletion 1:248367227-248369100 (hg19) (CN=0) and presents with childhood onset short-limb short stature and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
   })
+
+  const missingDetailState = {
+    ...STATE_WITH_2_FAMILIES,
+    mmeSubmissionsByGuid: {
+      MS021475_na19675_1: {
+        ...STATE_WITH_2_FAMILIES.mmeSubmissionsByGuid.MS021475_na19675_1,
+        phenotypes: STATE_WITH_2_FAMILIES.mmeSubmissionsByGuid.MS021475_na19675_1.phenotypes.map(p => ({ ...p, observed: 'yes' })),
+      }
+    },
+    mmeResultsByGuid: {
+      ...STATE_WITH_2_FAMILIES.mmeResultsByGuid,
+      MS12345_missing_data: {
+        id: 12345, submissionGuid: 'MS021475_na19675_1', patient: {
+          contact: {
+              href: "mailto:test_2@test.com",
+              institution: "Data Center",
+              name: "Test User"
+          },
+          id: "54321"
+      },
+      },
+    },
+  }
+  const missingDataEmail = {
+    matchmakerResultGuid: 'MS12345_missing_data',
+    patientId: '54321',
+    to: 'test_2@test.com,test@test.com,test@broadinstitute.org',
+    subject: 'Patient 54321 Matchmaker Exchange connection (NA19675_1)',
+    body: 'Dear Test User,\n\nWe recently matched with one of your patients in Matchmaker Exchange harboring variants in OR2M3. Our patient has a homozygous frameshift variant 22:45919065 TTTC>T (hg19) (c.862delC/p.Leu288SerfsTer10), a copy number deletion 1:248367227-248369100 (hg19) (CN=0) and presents with childhood onset short-limb short stature, abnormality of nervous system physiology, and flexion contracture. Would you be willing to share whether your patient\'s phenotype and genotype match with ours? We are very grateful for your help and look forward to hearing more.\n\nBest wishes,\nTest User',
+  }
+  expect(getMmeDefaultContactEmail(missingDetailState, { matchmakerResultGuid: 'MS12345_missing_data' })).toEqual(missingDataEmail)
+
+  expect(getMmeDefaultContactEmail({
+    ...missingDetailState,
+    mmeSubmissionsByGuid: {
+      ...missingDetailState.mmeSubmissionsByGuid,
+      MS021475_na19675_1: {
+        ...missingDetailState.mmeSubmissionsByGuid.MS021475_na19675_1,
+        geneVariants: [{ geneId: 'ENSG_UNKNOWN', variantGuid: 'SV0000004_116042722_r0390_1000' }],
+        phenotypes: null,
+      }
+    },
+    mmeResultsByGuid: {
+      ...missingDetailState.mmeResultsByGuid,
+      MS12345_missing_data: {
+        ...missingDetailState.mmeResultsByGuid.MS12345_missing_data,
+        geneVariants: [
+          { geneId: 'ENSG_UNKNOWN' },
+          { geneId: 'ENSG_UNKNOWN', variantGuid: 'SV0000004_116042722_r0390_1000' },
+        ],
+      }
+    }
+  }, { matchmakerResultGuid: 'MS12345_missing_data' })).toEqual({
+    ...missingDataEmail,
+    body: missingDataEmail.body.slice(0, 219).replace('variants in OR2M3', 'a variant in ') + missingDataEmail.body.slice(405),
+  })
 })
 
 test('getIndividualPhenotypeGeneScores', () => {
@@ -143,14 +208,13 @@ test('getIndividualPhenotypeGeneScores', () => {
         diseaseId: 'OMIM:618460',
         diseaseName: 'Khan-Khan-Katsanis syndrome',
         familyGuid: 'F011652_1',
-        gene: {
-          geneId: 'ENSG00000228198',
-          geneSymbol: 'OR2M3',
-        },
+        gene: STATE_WITH_2_FAMILIES.genesById.ENSG00000228198,
         rowId: 'ENSG00000228198-lirical-OMIM:618460',
         rank: 1,
         scores: { compositeLR: 0.066, post_test_probability: 0 },
       },
     ],
   })
+
+  expect(getIndividualPhenotypeGeneScores({ ...STATE_WITH_2_FAMILIES, phenotypeGeneScoresByIndividual: null })).toEqual({})
 })

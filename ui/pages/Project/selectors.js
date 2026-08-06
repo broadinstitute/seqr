@@ -88,6 +88,12 @@ export const getProjectAnalysisGroupsByGuid = createSelector(
   }),
 )
 
+export const getCurrentAnalysisGroup = createSelector(
+  getProjectAnalysisGroupsByGuid,
+  getAnalysisGroupGuid,
+  (analysisGroupsByGuid, analysisGroupGuid) => analysisGroupsByGuid[analysisGroupGuid],
+)
+
 export const getProjectAnalysisGroupFamiliesByGuid = createSelector(
   getProjectFamiliesByGuid,
   getCurrentAnalysisGroupFamilyGuids,
@@ -820,7 +826,7 @@ export const getPageHeaderEntityLinks = createSelector(
         null,
 
     }]
-    if (project.hasCaseReview) {
+    if (project.hasCaseReview && !project.partialAccess) {
       entityLinks.push({
         to: `/project/${project.projectGuid}/case_review`,
         content: 'Case Review',

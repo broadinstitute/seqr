@@ -353,6 +353,7 @@ class DataManagerAPITest(AirtableTest):
     PROJECTS = [PROJECT_GUID, NON_ANALYST_PROJECT_GUID]
     VCF_SAMPLES = VCF_SAMPLES
     SKIP_TDR = False
+    WES_LAST_LOADED = None
 
     def _test_request_proxy(self, host, url, proxy_path):
         response_args = {
@@ -459,7 +460,7 @@ class DataManagerAPITest(AirtableTest):
             'skipped_samples': 'NA19675_D3, NA20878',
             'sample_tissue_type': 'Muscle',
             'num_parsed_samples': 4,
-            'initial_model_count': 5,
+            'initial_model_count': 6,
             'deleted_count': 3,
             'parsed_file_data': RNA_TPM_SAMPLE_DATA,
             'sample_guid': RNA_TPM_MUSCLE_SAMPLE_GUID,
@@ -1082,13 +1083,16 @@ class DataManagerAPITest(AirtableTest):
         snv_indel_url = snv_indel_url.replace('38', '37')
         response = self.client.get(snv_indel_url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projects': self.WGS_PROJECT_OPTIONS})
+        self.assertDictEqual(response.json(), {'projects': self.LOADED_PROJECT_OPTIONS})
         self._assert_expected_get_projects_requests()
 
-        # test projects with no data loaded are returned for any sample type
+        # test projects with matched type data loaded report the correct loaded data
         response = self.client.get(snv_indel_url.replace('WGS', 'WES'))
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projects': self.WES_PROJECT_OPTIONS})
+        self.assertDictEqual(response.json(), {'projects': [
+            {**self.LOADED_PROJECT_OPTIONS[0], 'dataTypeLastLoaded': self.WES_LAST_LOADED},
+            *self.LOADED_PROJECT_OPTIONS[1:],
+        ]})
 
         self._assert_expected_airtable_errors(url)
 
@@ -1347,11 +1351,11 @@ class LocalDataManagerAPITest(AuthenticationTestCase, DataManagerAPITest):
     LOCAL_WRITE_DIR = TRIGGER_CALLSET_DIR
     CALLSET_DIR = ''
     PROJECT_OPTION = PROJECT_OPTION
-    WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_OPTION]
-    WES_PROJECT_OPTIONS = [
-        {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': '2017-02-05T06:13:55.397Z'},
+    LOADED_PROJECT_OPTIONS = [
+        {'name': '1kg project nåme with uniçøde', 'projectGuid': 'R0001_1kg', 'dataTypeLastLoaded': None},
         EMPTY_PROJECT_OPTION,
     ]
+    WES_LAST_LOADED = '2017-02-05T06:13:55.397Z'
     PROJECT_OPTIONS = [{'projectGuid': 'R0001_1kg'}, PROJECT_OPTION]
     REQUEST_BODY = CORE_REQUEST_BODY
     SKIP_TDR = True
@@ -1484,8 +1488,7 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
     TRIGGER_CALLSET_DIR = CALLSET_DIR
     LOCAL_WRITE_DIR = '/mock/tmp'
     PROJECT_OPTION = PROJECT_SAMPLES_OPTION
-    WGS_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
-    WES_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
+    LOADED_PROJECT_OPTIONS = [EMPTY_PROJECT_SAMPLES_OPTION]
     PROJECT_OPTIONS = [
         {'projectGuid': 'R0001_1kg', 'sampleIds': ['NA19675_1', 'NA19678', 'NA19679', 'HG00732', 'HG00733']},
         PROJECT_SAMPLES_OPTION,

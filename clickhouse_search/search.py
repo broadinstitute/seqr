@@ -64,31 +64,34 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
         except InvalidDatasetTypeException:
             continue
 
+        sample_data = sample_data_by_dataset_type[dataset_type]
+        exclude_dt_keys = (exclude_keys or {}).get(dataset_type)
+        dataset_results = []
+
+        if sample_data:
+            logger.info(f'Loading {dataset_type} data for {sample_data["num_families"]} families', user)
+
+            if inheritance_mode != COMPOUND_HET:
+                dataset_results += _get_search_results(
+                    entry_qs, variants_qs, sample_data, inheritance_mode=inheritance_mode, exclude_keys=exclude_dt_keys, **search, **parsed_filters,
+                )
+
+            run_x_linked_male_search = has_x_linked and not (inheritance_mode == X_LINKED_RECESSIVE and sample_data.get('samples'))
+            if run_x_linked_male_search:
+                dataset_results += _get_x_linked_male_search_results(
+                    entry_qs, variants_qs, dataset_type, user, sample_data, exclude_keys=exclude_dt_keys,
+                    **search, **parsed_filters,
+                )
+
         if dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS and no_access_project_genome_version:
             results += _get_no_access_search_results(
                 entry_qs, variants_qs, has_comp_het, user, **search, **parsed_filters,
-                exclude_projects=sample_data_by_dataset_type[dataset_type].get('project_guids'), inheritance_mode=inheritance_mode,
+                exclude_keys=[r['key'] for r in dataset_results] + (exclude_dt_keys or []), inheritance_mode=inheritance_mode,
             )
             searched_dataset_types.add(dataset_type)
 
-        sample_data = sample_data_by_dataset_type[dataset_type]
         if not sample_data:
             continue
-
-        logger.info(f'Loading {dataset_type} data for {sample_data["num_families"]} families', user)
-
-        dataset_results = []
-        if inheritance_mode != COMPOUND_HET:
-            dataset_results += _get_search_results(
-                entry_qs, variants_qs, sample_data, inheritance_mode=inheritance_mode, exclude_keys=(exclude_keys or {}).get(dataset_type), **search, **parsed_filters,
-            )
-
-        run_x_linked_male_search = has_x_linked and not (inheritance_mode == X_LINKED_RECESSIVE and sample_data.get('samples'))
-        if run_x_linked_male_search:
-            dataset_results += _get_x_linked_male_search_results(
-                entry_qs, variants_qs, dataset_type, user, sample_data, exclude_keys=(exclude_keys or {}).get(dataset_type),
-                **search, **parsed_filters,
-            )
 
         if has_comp_het:
             dataset_results += _get_data_type_comp_het_results_queryset(

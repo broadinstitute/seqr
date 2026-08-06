@@ -16,7 +16,7 @@ DASHBOARD_PROJECT_FIELDS.remove('canEdit')
 EXPECTED_DASHBOARD_PROJECT = {
     'numIndividuals': 14,
     'numFamilies': 11,
-    'sampleTypeCounts': {'RNA': 1, 'WES': 13},
+    'sampleTypeCounts': {'RNA': 2, 'WES': 13},
     'numVariantTags': 4,
     'analysisStatusCounts': {'ES': 1, 'Q': 9, 'S_ng': 1},
     **{k: mock.ANY for k in PROJECT_FIELDS if k != 'canEdit'},
@@ -25,6 +25,7 @@ EXPECTED_DASHBOARD_PROJECT = {
 
 @mock.patch('seqr.views.utils.permissions_utils.safe_redis_get_json')
 class DashboardPageTest(object):
+    PARTIAL_ACCESS_GROUPS = {}
 
     @mock.patch('seqr.views.utils.permissions_utils.safe_redis_set_json')
     def test_dashboard_page_data(self, mock_set_redis, mock_get_redis):
@@ -34,14 +35,22 @@ class DashboardPageTest(object):
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(response.json(), {'projectsByGuid': {}, 'projectCategoriesByGuid': {}})
+        self.assertDictEqual(response.json(), {
+            'projectsByGuid': {}, 'projectCategoriesByGuid': {}, 'analysisGroupsByGuid': self.PARTIAL_ACCESS_GROUPS,
+        })
+        mock_get_redis.assert_called_with('project_analysis_groups__test_user_no_access')
+        mock_set_redis.assert_called_with(
+            'project_analysis_groups__test_user_no_access',
+            [[], list(self.PARTIAL_ACCESS_GROUPS.keys()) if self.PARTIAL_ACCESS_GROUPS else None],
+            expire=300,
+        )
 
         self.login_collaborator()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {'projectsByGuid', 'projectCategoriesByGuid'})
+        self.assertSetEqual(set(response_json.keys()), {'projectsByGuid', 'projectCategoriesByGuid', 'analysisGroupsByGuid'})
         self.assertSetEqual(
             set(next(iter(response_json['projectCategoriesByGuid'].values())).keys()),
             {'created_by_id', 'created_date', 'guid', 'id', 'last_modified_date', 'name'}
@@ -53,9 +62,11 @@ class DashboardPageTest(object):
         self.assertSetEqual({p['userIsCreator'] for p in response_json['projectsByGuid'].values()}, {False})
         self.assertFalse(any('userCanDelete' in p for p in response_json['projectsByGuid'].values()))
         self.assertDictEqual(response_json['projectsByGuid']['R0001_1kg'], EXPECTED_DASHBOARD_PROJECT)
-        mock_get_redis.assert_called_with('projects__test_user_collaborator')
+        self.assertDictEqual(response_json['analysisGroupsByGuid'], {})
+        mock_get_redis.assert_called_with('project_analysis_groups__test_user_collaborator')
+        cached_ag_guids = [] if self.PARTIAL_ACCESS_GROUPS else None
         mock_set_redis.assert_called_with(
-            'projects__test_user_collaborator', list(response_json['projectsByGuid'].keys()), expire=300)
+            'project_analysis_groups__test_user_collaborator', [list(response_json['projectsByGuid'].keys()), cached_ag_guids], expire=300)
 
         self.login_manager()
         response = self.client.get(url)
@@ -77,15 +88,15 @@ class DashboardPageTest(object):
         self.assertFalse(response_json['projectsByGuid']['R0002_empty']['userIsCreator'])
         self.assertTrue(response_json['projectsByGuid']['R0001_1kg']['userIsCreator'])
         self.assertFalse(response_json['projectsByGuid']['R0003_test']['userIsCreator'])
-        mock_get_redis.assert_called_with('projects__test_user')
-        mock_set_redis.assert_called_with('projects__test_user', list(response_json['projectsByGuid'].keys()), expire=300)
+        mock_get_redis.assert_called_with('project_analysis_groups__test_user')
+        mock_set_redis.assert_called_with('project_analysis_groups__test_user', [list(response_json['projectsByGuid'].keys()), cached_ag_guids], expire=300)
 
-        mock_get_redis.return_value = ['R0001_1kg']
+        mock_get_redis.return_value = [['R0001_1kg'], None]
         mock_set_redis.reset_mock()
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertSetEqual(set(response.json()['projectsByGuid'].keys()), {'R0001_1kg'})
-        mock_get_redis.assert_called_with('projects__test_user')
+        mock_get_redis.assert_called_with('project_analysis_groups__test_user')
         mock_set_redis.assert_not_called()
 
         mock_get_redis.reset_mock()
@@ -137,6 +148,22 @@ def assert_has_anvil_calls(self):
 class AnvilDashboardPageTest(AnvilAuthenticationTestCase, DashboardPageTest):
     fixtures = ['users', 'social_auth', '1kg_project']
     NUM_COLLABORATOR_PROJECTS = 2
+    PARTIAL_ACCESS_GROUPS = {
+        'AG0000183_test_group': {
+            'analysisGroupGuid': 'AG0000183_test_group',
+            'analysisStatusCounts': {'Q': 3},
+            'createdDate': '2018-08-09T18:53:24.207Z',
+            'description': 'A sample analysis group',
+            'name': 'Test Group 1',
+            'numFamilies': 3,
+            'numIndividuals': 5,
+            'numVariantTags': 3,
+            'projectGuid': 'R0001_1kg',
+            'sampleTypeCounts': {'RNA': 1, 'WES': 5},
+            'workspaceName': 'anvil-analysis-group',
+            'workspaceNamespace': 'my-seqr-billing',
+        },
+    }
 
     def test_dashboard_page_data(self, *args):
         super(AnvilDashboardPageTest, self).test_dashboard_page_data(*args)

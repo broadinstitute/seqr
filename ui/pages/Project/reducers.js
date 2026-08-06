@@ -63,7 +63,26 @@ export const loadProjectExportData = () => (dispatch, getState) => Promise.all([
 
 export const loadProjectOverview = () => loadCurrentProjectChildEntities('overview', REQUEST_PROJECT_OVERVIEW, RECEIVE_PROJECT_OVERVIEW)
 
-export const loadProjectCollaborators = () => loadCurrentProjectChildEntities('collaborators', REQUEST_PROJECT_COLLABORATORS, RECEIVE_PROJECT_COLLABORATORS)
+const loadAnalysisGroupCollaborators = analysisGroupGuid => (dispatch, getState) => {
+  const { currentProjectGuid, analysisGroupsByGuid } = getState()
+  if (!analysisGroupsByGuid[analysisGroupGuid]?.collaborators) {
+    dispatch({ type: REQUEST_PROJECT_COLLABORATORS })
+    new HttpRequestHelper(`/api/project/${currentProjectGuid}/analysis_groups/${analysisGroupGuid}/get_collaborators`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        dispatch({ type: RECEIVE_PROJECT_COLLABORATORS })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_PROJECT_COLLABORATORS, error: e.message })
+      }).get()
+  }
+}
+
+export const loadProjectAnalysisGroupCollaborators = analysisGroupGuid => (
+  analysisGroupGuid ? loadAnalysisGroupCollaborators(analysisGroupGuid) : loadCurrentProjectChildEntities(
+    'collaborators', REQUEST_PROJECT_COLLABORATORS, RECEIVE_PROJECT_COLLABORATORS,
+  )
+)
 
 export const loadCurrentProjectAnalysisGroups = () => (dispatch, getState) => {
   const { currentProjectGuid } = getState()

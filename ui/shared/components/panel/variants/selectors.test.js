@@ -95,11 +95,11 @@ test('getIndividualGeneDataByFamilyGene', () => {
     F011652_1: {
       rnaSeqData: {
         ENSG00000228198: [
-          { individualName: 'NA19678', isSignificant: true, pValue: 0.0004 },
-          { individualName: 'NA19679_1', isSignificant: true, pValue: 0.01 },
+          { geneId: 'ENSG00000228198', individualName: 'NA19678', isSignificant: true, pValue: 0.0004, zScore: -5, tissueType: 'M', sequencingType: 'T' },
+          { geneId: 'ENSG00000228198', individualName: 'NA19679_1', isSignificant: true, pValue: 0.01 },
         ],
         ENSG00000164458: [
-          { individualName: 'NA19678', isSignificant: true, pValue: 0.0073 },
+          { geneId: 'ENSG00000164458', individualName: 'NA19678', isSignificant: true, pValue: 0.0073, zScore: 20, tissueType: 'M', sequencingType: 'T' },
         ],
       },
       phenotypeGeneScores: {
@@ -117,7 +117,7 @@ test('getIndividualGeneDataByFamilyGene', () => {
     },
     F011652_2: {
       rnaSeqData: {
-        ENSG00000228198: [{ individualName: 'NA19678_2', isSignificant: true, pValue: 0.0214 }],
+        ENSG00000228198: [{ geneId: 'ENSG00000228198', individualName: 'NA19678_2', isSignificant: true, pValue: 0.0214 }],
       },
     },
   })

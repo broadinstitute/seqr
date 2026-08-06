@@ -2,7 +2,7 @@ from collections import defaultdict
 from datetime import datetime
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.models import User
-from django.db.models import CharField, F, Value
+from django.db.models import CharField, F, Q, Value
 from django.db.models.functions import Coalesce, Concat, JSONObject, NullIf
 import json
 
@@ -22,7 +22,8 @@ from seqr.utils.logging_utils import SeqrLogger
 from seqr.views.utils.orm_to_json_utils import get_json_for_matchmaker_submissions, get_json_for_saved_variants,\
     add_individual_hpo_details, INDIVIDUAL_DISPLAY_NAME_EXPR, AIP_TAG_TYPE
 from seqr.views.utils.permissions_utils import analyst_required, user_is_analyst, get_project_guids_user_can_view, \
-    login_and_policies_required, get_project_and_check_view_permission, get_internal_projects
+    login_and_policies_required, get_project_analysis_groups_and_check_view_permission, get_internal_projects, \
+    get_project_analysis_group_guids_user_can_view
 from seqr.views.utils.anvil_metadata_utils import parse_anvil_metadata, anvil_export_airtable_fields, FAMILY_ROW_TYPE, SUBJECT_ROW_TYPE, DISCOVERY_ROW_TYPE
 from seqr.views.utils.variant_utils import get_variants_response, bulk_create_tagged_variants, get_saved_variant_annotations, DISCOVERY_CATEGORY
 from settings import SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL
@@ -34,8 +35,11 @@ MAX_SAVED_VARIANTS = 10000
 
 @login_and_policies_required
 def mme_details(request):
-    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True).filter(
-        individual__family__project__guid__in=get_project_guids_user_can_view(request.user))
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+    access_filter = Q(individual__family__project__guid__in=project_guids)
+    if analysis_group_guids:
+        access_filter |= Q(individual__family__analysisgroup__guid__in=analysis_group_guids)
+    submissions = MatchmakerSubmission.objects.filter(deleted_date__isnull=True).filter(access_filter)
 
     hpo_ids, gene_ids, submission_gene_variants = get_mme_gene_phenotype_ids_for_submissions(
         submissions, get_gene_variants=True)
@@ -108,7 +112,11 @@ def saved_variants_page(request, tag):
         for tt in tag_types:
             saved_variant_models = saved_variant_models.filter(varianttag__variant_tag_type=tt).distinct()
 
-    saved_variant_models = saved_variant_models.filter(family__project__guid__in=get_project_guids_user_can_view(request.user))
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+    access_filter = Q(family__project__guid__in=project_guids)
+    if analysis_group_guids:
+        access_filter |= Q(family__analysisgroup__guid__in=analysis_group_guids)
+    saved_variant_models = saved_variant_models.filter(access_filter)
 
     if gene:
         saved_variant_models = saved_variant_models.filter(gene_ids__overlap=[gene])
@@ -125,8 +133,11 @@ def saved_variants_page(request, tag):
 
 @login_and_policies_required
 def hpo_summary_data(request, hpo_id):
-    data = Individual.objects.filter(
-        family__project__guid__in=get_project_guids_user_can_view(request.user),
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+    access_filter = Q(family__project__guid__in=project_guids)
+    if analysis_group_guids:
+        access_filter |= Q(family__analysisgroup__guid__in=analysis_group_guids)
+    data = Individual.objects.filter(access_filter).filter(
         features__contains=[{'id': hpo_id}],
     ).order_by('id').values(
         'features', individualGuid=F('guid'), displayName=INDIVIDUAL_DISPLAY_NAME_EXPR, familyId=F('family__family_id'),
@@ -293,25 +304,34 @@ ALL_PROJECTS = 'all'
 GREGOR_CATEGORY = 'gregor'
 
 
-def _get_metadata_projects(request, project_guid):
+def _get_metadata_context(request, project_guid):
     is_analyst = user_is_analyst(request.user)
     is_all_projects = project_guid == ALL_PROJECTS
     include_airtable = 'true' in request.GET.get('includeAirtable', '') and AirtableSession.is_airtable_enabled() and is_analyst and not is_all_projects
     if is_all_projects:
-        projects = get_internal_projects() if is_analyst else Project.objects.filter(
-            guid__in=get_project_guids_user_can_view(request.user))
+        if is_analyst:
+            individual_filter = Q(family__project__in=get_internal_projects())
+        else:
+            project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+            individual_filter = Q(family__project__guid__in=project_guids)
+            if analysis_group_guids:
+                individual_filter |= Q(family__analysisgroup__guid__in=analysis_group_guids)
     elif project_guid == GREGOR_CATEGORY:
         if not is_analyst:
             raise PermissionDenied()
-        projects = Project.objects.filter(projectcategory__name__iexact=GREGOR_CATEGORY)
+        individual_filter = Q(family__project__projectcategory__name__iexact=GREGOR_CATEGORY)
     else:
-        projects = [get_project_and_check_view_permission(project_guid, request.user)]
-    return projects, include_airtable
+        project, analysis_groups = get_project_analysis_groups_and_check_view_permission(project_guid, request.user)
+        if analysis_groups:
+            individual_filter = Q(family__analysisgroup__in=analysis_groups)
+        else:
+            individual_filter = Q(family__project=project)
+    return individual_filter, include_airtable
 
 
 @login_and_policies_required
 def individual_metadata(request, project_guid):
-    projects, include_airtable = _get_metadata_projects(request, project_guid)
+    individual_filter, include_airtable = _get_metadata_context(request, project_guid)
 
     family_rows_by_id = {}
     rows_by_subject_family_id = defaultdict(dict)
@@ -351,10 +371,11 @@ def individual_metadata(request, project_guid):
             rows_by_subject_family_id[(row['participant_id'], family_id)].update(row)
 
     parse_anvil_metadata(
-        projects, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
+        None, request.user, _add_row, max_loaded_date=request.GET.get('loadedBefore'),
         include_family_sample_metadata=True,
         omit_airtable=not include_airtable,
         mme_value=Value('Yes'),
+        individual_filter=individual_filter,
         get_additional_individual_fields=lambda individual, airtable_metadata, has_dbgap_submission, maternal_ids, paternal_ids: {
             'Collaborator': (airtable_metadata or {}).get('Collaborator'),
             'individual_guid': individual.guid,

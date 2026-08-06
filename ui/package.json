@@ -49,7 +49,7 @@
     "mini-css-extract-plugin": "^2.3.0",
     "object-assign": "4.1.1",
     "patch-package": "^8.0.1",
-    "postcss": "^8.5.10",
+    "postcss": "^8.5.23",
     "postcss-flexbugs-fixes": "^5.0.2",
     "postcss-loader": "^6.1.1",
     "promise": "8.0.1",
@@ -64,7 +64,7 @@
     "typescript": "^5.2.2",
     "webpack": "^5.94.0",
     "webpack-bundle-analyzer": "^4.5.0",
-    "webpack-dev-server": "^4.7.3",
+    "webpack-dev-server": "^5.2.6",
     "webpack-manifest-plugin": "^4.0.2",
     "whatwg-fetch": "2.0.3"
   },
@@ -126,10 +126,30 @@
   },
   "jest": {
     "collectCoverageFrom": [
-      "src/**/*.{js,jsx,mjs,ts,tsx}"
+      "**/*.{js,jsx,mjs,ts,tsx}",
+      "!config/**",
+      "!coverage/**",
+      "!scripts/**"
     ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 30,
+        "functions": 30,
+        "lines": 55,
+        "statements": 50
+      },
+      "pages/Project/**/*.{js,jsx}": {
+        "branches": 95,
+        "functions": 95,
+        "lines": 100,
+        "statements": -2
+      }
+    },
     "setupFiles": [
       "<rootDir>/config/polyfills.js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/config/jest/setupTests.js"
     ],
     "snapshotSerializers": [
       "enzyme-to-json/serializer"
@@ -150,8 +170,9 @@
     "moduleNameMapper": {
       "igv": "<rootDir>/config/jest/fileTransform.js",
       "jsoneditor-react": "<rootDir>/config/jest/fileTransform.js",
-      "d3": "<rootDir>/config/jest/fileTransform.js",
+      "d3": "<rootDir>/config/jest/fakeD3.js",
       "pedigreejs": "<rootDir>/config/jest/fileTransform.js",
+      "react-markdown": "<rootDir>/config/jest/reactMarkdownMock.js",
       "^react-native$": "react-native-web"
     },
     "moduleFileExtensions": [

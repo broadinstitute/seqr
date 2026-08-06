@@ -684,6 +684,13 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
         self._test_errors(url, ['uploadedFileId', 'fullDataPath', 'vcfSamples'], TEST_WORKSPACE_NAME, has_existing_data=True)
 
+        # Test loading data from empty ped file
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA[:1]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertListEqual(response_json['errors'], ['No samples found in the pedigree file'])
+
         # Test Individual ID exists in an omitted family and missing loaded samples
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + INVALID_ADDED_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
@@ -723,7 +730,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
             'F000001_1', 'F000015_21', 'F000006_6', 'F000013_13', 'F000005_5', 'F000009_9', 'F000008_8', 'F000004_4',
             'F000002_2', 'F000003_3',
         })
-        self.assertEqual(list(response_json['familyNotesByGuid'].keys()), ['FAN000004_21_c_a_new_family'])
+        self.assertEqual(list(response_json['familyNotesByGuid'].keys()), ['FAN000005_21_c_a_new_family'])
 
         self._assert_valid_operation(Project.objects.get(guid=PROJECT1_GUID))
 

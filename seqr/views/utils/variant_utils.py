@@ -19,7 +19,7 @@ from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_child_entities, get_json_for_locus_lists, \
     get_json_for_queryset, get_json_for_rna_seq_outliers, get_json_for_saved_variants_with_tags, _get_json_for_families, \
     get_json_for_matchmaker_submissions
-from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst, get_project_guids_user_can_view
+from seqr.views.utils.permissions_utils import has_case_review_permissions, user_is_analyst, get_project_analysis_group_guids_user_can_view
 from seqr.views.utils.project_context_utils import add_project_tag_types, add_families_context
 from settings import REDIS_SERVICE_HOSTNAME, REDIS_SERVICE_PORT
 
@@ -363,9 +363,13 @@ def _parse_discovery_tags(variants_by_id, family_guids, user):
             variant['discoveryTags'] = []
             variant['noAccessDiscoveryFamilies'] = len(discovery_families)
 
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(user)
+    family_filter = Q(project__guid__in=project_guids)
+    if analysis_group_guids:
+        family_filter |= Q(analysisgroup__guid__in=analysis_group_guids)
     discovery_families_by_guid = {
-        f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(
-            guid__in=discovery_family_guids, project__guid__in=get_project_guids_user_can_view(user),
+        f['familyGuid']: f for f in _get_json_for_families(Family.objects.filter(family_filter).filter(
+            guid__in=discovery_family_guids,
         ).exclude(guid__in=family_guids))
     }
     if not discovery_families_by_guid:
@@ -474,6 +478,8 @@ def get_variants_response(request, saved_variants, response_variants=None, add_a
 
     return response
 
+OMIT_AGGREGATE_FIELDS = {'variantGuid', 'tagGuids', 'functionalDataGuids', 'noteGuids'}
+
 def _get_clickhouse_variant_annotations(variants, genome_version):
     variant_keys_by_genome_version_dataset_type = defaultdict(lambda: defaultdict(set))
     variants_by_id = defaultdict(dict)
@@ -484,7 +490,7 @@ def _get_clickhouse_variant_annotations(variants, genome_version):
         xpos_end = variant.pop('xposEnd')
         variants_by_id[variant['variantId']] = {
             **variants_by_id[variant['variantId']],
-            **variant,
+            **{k: v for k, v in variant.items() if k not in OMIT_AGGREGATE_FIELDS},
             'familyGuids': variant['familyGuids'] + variants_by_id[variant['variantId']].get('familyGuids', []),
             'genotypes': {**variant['genotypes'], **variants_by_id[variant['variantId']].get('genotypes', {})},
         }

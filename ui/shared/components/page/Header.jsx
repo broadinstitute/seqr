@@ -16,6 +16,25 @@ import AwesomeBar from './AwesomeBar'
 const HeaderMenu = styled(Menu)`
   padding-left: 100px;
   padding-right: 100px;
+
+  @media (max-width: 1800px) {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  @media (max-width: 1400px) {
+    flex-wrap: wrap;
+  }
+`
+
+const AwesomeBarMenuItem = styled(Menu.Item)`
+  flex: 0 1 382px !important;
+  min-width: 216px;
+  max-width: 382px;
+
+  .ui.search {
+    width: 100%;
+  }
 `
 
 const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit, lastFeatureUpdate }) => {
@@ -31,7 +50,7 @@ const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit, lastFeature
         <Menu.Item key="summary_data" as={Link} to="/summary_data" content="Summary Data" />,
         (user.isAnalyst || user.isPm) ? <Menu.Item key="report" as={Link} to="/report" content="Reports" /> : null,
         (user.isDataManager || user.isPm) ? <Menu.Item key="data_management" as={Link} to="/data_management" content="Data Management" /> : null,
-        <Menu.Item key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></Menu.Item>,
+        <AwesomeBarMenuItem key="awesomebar" fitted="vertically"><AwesomeBar newWindow inputwidth="350px" /></AwesomeBarMenuItem>,
       ] : null }
       <Menu.Item key="spacer" position="right" />
       <Menu.Item key="feature_updates">
@@ -59,9 +78,9 @@ const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit, lastFeature
               formFields={USER_NAME_FIELDS}
               onSubmit={onSubmit}
             />
+            <Dropdown.Item as="a" href="/logout" icon="sign out" text="Log out" />
           </Dropdown.Menu>
         </Dropdown>,
-        <Menu.Item key="logout" as="a" href="/logout">Log out</Menu.Item>,
       ] :
       <Menu.Item as="a" href={loginUrl}>Log in</Menu.Item> }
     </HeaderMenu>

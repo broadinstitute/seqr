@@ -1,18 +1,18 @@
 import { createSelector } from 'reselect'
 
-import { getProjectsByGuid, getProjectCategoriesByGuid } from 'redux/selectors'
+import { getAnalysisGroupsByGuid, getProjectsByGuid, getProjectCategoriesByGuid } from 'redux/selectors'
 import { SHOW_ALL, SHOW_DEMO } from './constants'
 
 export const getProjectFilter = state => state.projectsTableState.filter
 
-export const createProjectFilter = (projectsByGuid, projectFilter) => (projectGuid) => {
+export const createProjectFilter = projectFilter => (project) => {
   if (projectFilter === SHOW_ALL) {
     return true
   }
   if (projectFilter === SHOW_DEMO) {
-    return projectsByGuid[projectGuid].isDemo
+    return project.isDemo
   }
-  return projectsByGuid[projectGuid].projectCategoryGuids.indexOf(projectFilter) > -1
+  return project.projectCategoryGuids?.indexOf(projectFilter) > -1
 }
 
 /**
@@ -24,13 +24,18 @@ export const createProjectFilter = (projectsByGuid, projectFilter) => (projectGu
 export const getVisibleProjects = createSelector(
   getProjectsByGuid,
   getProjectCategoriesByGuid,
+  getAnalysisGroupsByGuid,
   getProjectFilter,
-  (projectsByGuid, projectCategoriesByGuid, projectFilter) => {
-    const filterFunc = createProjectFilter(projectsByGuid, projectFilter)
-    const visibleProjectGuids = Object.keys(projectsByGuid).filter(filterFunc)
-    return visibleProjectGuids.map((projectGuid) => {
-      const project = projectsByGuid[projectGuid]
-      const projectCategories = project.projectCategoryGuids.map(
+  (projectsByGuid, projectCategoriesByGuid, analysisGroupsByGuid, projectFilter) => {
+    const filterFunc = createProjectFilter(projectFilter)
+    const visibleProjects = [
+      ...Object.values(projectsByGuid).filter(({ partialAccess }) => !partialAccess),
+      ...Object.values(analysisGroupsByGuid).filter(
+        ({ projectGuid }) => projectGuid && (!projectsByGuid[projectGuid] || projectsByGuid[projectGuid].partialAccess),
+      ),
+    ].filter(filterFunc)
+    return visibleProjects.map((project) => {
+      const projectCategories = (project.projectCategoryGuids || []).map(
         guid => (projectCategoriesByGuid[guid] && projectCategoriesByGuid[guid].name) || guid,
       )
       return { ...project, projectCategories }

@@ -132,6 +132,9 @@ class AuthenticationTestMixin(object):
     def check_require_login_no_policies(self, url, **request_kwargs):
         self._check_login(url, self.NO_POLICY_USER, **request_kwargs)
 
+    def check_partial_access_login(self, url, partial_access_response=None, request_data=None):
+        self.check_collaborator_login(url, request_data=request_data)
+
     def check_collaborator_login(self, url, **request_kwargs):
         self._check_login(url, self.COLLABORATOR, **request_kwargs)
 
@@ -305,6 +308,7 @@ TEST_WORKSPACE_NAME1 = 'anvil-project 1000 Genomes Demo'
 TEST_EMPTY_PROJECT_WORKSPACE = 'empty'
 TEST_NO_PROJECT_WORKSPACE_NAME = 'anvil-no-project-workspace1'
 TEST_NO_PROJECT_WORKSPACE_NAME2 = 'anvil-no-project-workspace2'
+TEST_ANALYSIS_GROUP_WORKSPACE_NAME = 'anvil-analysis-group'
 EXT_WORKSPACE_NAMESPACE = 'ext-data'
 EXT_WORKSPACE_NAME = 'anvil-non-analyst-project 1000 Genomes Demo'
 
@@ -460,6 +464,22 @@ ANVIL_WORKSPACES = [{
         'authorizationDomain': [],
         'bucketName': 'test_bucket'
     },
+}, {
+    'workspace_namespace': TEST_WORKSPACE_NAMESPACE,
+    'workspace_name': TEST_ANALYSIS_GROUP_WORKSPACE_NAME,
+    'public': False,
+    'acl': {
+        'test_user_no_access@test.com': {
+            "accessLevel": "READER",
+            "pending": False,
+            "canShare": False,
+            "canCompute": False
+        },
+    },
+    'workspace': {
+        'authorizationDomain': [],
+        'bucketName': 'test_bucket'
+    },
 },
 ]
 
@@ -595,6 +615,21 @@ class AnvilAuthenticationTestMixin(AuthenticationTestMixin):
         self.mock_get_groups.assert_not_called()
         self.mock_get_group_members.assert_not_called()
 
+    def check_partial_access_login(self, url, partial_access_response=None, request_data=None):
+        self.check_require_login(url)
+
+        if not partial_access_response:
+            return
+
+        if request_data:
+            response = self.client.post(url, content_type='application/json', data=json.dumps(request_data))
+        else:
+            response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), partial_access_response)
+
+        self.login_collaborator()
+
 
 class AnvilAuthenticationTestCase(DifferentDbTransactionSupportMixin, AnvilAuthenticationTestMixin, TestCase):
 
@@ -644,7 +679,7 @@ PROJECT_FIELDS = {
     'userIsCreator', 'consentCode', 'isAnalystProject', 'vlmContactEmail', 'recoveryEmail', 'restrictSharing',
 }
 
-ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids'}
+ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'description', 'name', 'projectGuid', 'familyGuids', 'workspaceNamespace', 'workspaceName'}
 DYNAMIC_ANALYSIS_GROUP_FIELDS = {'analysisGroupGuid', 'criteria', 'name', 'projectGuid'}
 
 SUMMARY_FAMILY_FIELDS = {

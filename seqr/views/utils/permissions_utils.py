@@ -2,17 +2,18 @@ from django.contrib.auth.decorators import user_passes_test, login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.db.models.functions import Concat
-from django.db.models import Value, TextField
+from django.db.models import Q, Value, TextField
 from guardian.shortcuts import get_objects_for_user
 
-from seqr.models import Project, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, AnalysisGroup, CAN_VIEW, CAN_EDIT
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.terra_api_utils import is_anvil_authenticated, user_get_workspace_acl, list_anvil_workspaces,\
     anvil_enabled, user_get_workspace_access_level, get_anvil_group_members, user_get_anvil_groups, \
     WRITER_ACCESS_LEVEL, OWNER_ACCESS_LEVEL, PROJECT_OWNER_ACCESS_LEVEL, CAN_SHARE_PERM
 from settings import API_LOGIN_REQUIRED_URL, ANALYST_USER_GROUP, PM_USER_GROUP, INTERNAL_NAMESPACES, \
-    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL
+    TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS, SEQR_PRIVACY_VERSION, SEQR_TOS_VERSION, API_POLICY_REQUIRED_URL, \
+    GOOGLE_LOGIN_REQUIRED_URL
 from typing import Callable, Optional
 
 logger = SeqrLogger(__name__)
@@ -91,6 +92,16 @@ def active_user_has_policies_and_passes_test(user_permission_test_func: Callable
     return decorator
 
 
+anvil_auth_required = user_passes_test(is_anvil_authenticated, login_url=GOOGLE_LOGIN_REQUIRED_URL)
+
+def anvil_auth_and_policies_required(wrapped_func=None, policy_url=API_POLICY_REQUIRED_URL):
+    def decorator(view_func):
+        return login_and_policies_required(anvil_auth_required(view_func), login_url=GOOGLE_LOGIN_REQUIRED_URL, policy_url=policy_url)
+    if wrapped_func:
+        return decorator(wrapped_func)
+    return decorator
+
+
 analyst_required = active_user_has_policies_and_passes_test(user_is_analyst)
 data_manager_required = active_user_has_policies_and_passes_test(user_is_data_manager)
 pm_required = active_user_has_policies_and_passes_test(user_is_pm)
@@ -112,6 +123,23 @@ def get_internal_projects():
 
 def get_project_and_check_edit_permission(project_guid, user):
     return _get_project_and_check_permissions(project_guid, user, check_project_edit_permission)
+
+def get_project_analysis_groups_and_check_view_permission(project_guid, user):
+    project = Project.objects.get(guid=project_guid)
+    if _has_project_view_permission(project, user):
+        return project, None
+
+    if is_anvil_authenticated(user):
+        analysis_group_ids = [
+            id for id, workspace_namespace, workspace_name in project.analysisgroup_set.filter(
+                workspace_namespace__isnull=False,
+            ).values_list('id', 'workspace_namespace', 'workspace_name')
+            if _has_workspace_perm(user, CAN_VIEW, workspace_namespace, workspace_name)
+        ]
+        if analysis_group_ids:
+            return project, project.analysisgroup_set.filter(id__in=analysis_group_ids)
+
+    raise PermissionDenied(f'{user} does not have sufficient permissions for {project}')
 
 def get_project_and_check_view_permission(project_guid, user):
     return _get_project_and_check_permissions(project_guid, user, _check_project_view_permission)
@@ -153,8 +181,7 @@ def _map_anvil_seqr_permission(anvil_permission):
     return CAN_VIEW if access_level == 'READER' else None
 
 
-
-def has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
+def _has_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
     kwargs = {'meta_fields': meta_fields } if meta_fields else {}
     workspace_permission = user_get_workspace_access_level(user, namespace, name, **kwargs)
     if not workspace_permission:
@@ -167,8 +194,14 @@ def has_workspace_perm(user, permission_level, namespace, name, can_share=False,
     return workspace_permission if meta_fields else True
 
 
+def is_valid_anvil_workspace(request_json, user):
+    namespace = request_json.get('workspaceNamespace')
+    name = request_json.get('workspaceName')
+    return bool(name and namespace and _has_workspace_perm(user, CAN_EDIT, namespace, name))
+
+
 def check_workspace_perm(user, permission_level, namespace, name, can_share=False, meta_fields=None):
-    workspace_meta = has_workspace_perm(user, permission_level, namespace, name, can_share, meta_fields)
+    workspace_meta = _has_workspace_perm(user, permission_level, namespace, name, can_share, meta_fields)
     if workspace_meta:
         return workspace_meta
 
@@ -197,7 +230,13 @@ def _has_project_view_permission(project, user):
     return _has_project_permissions(project, user, CAN_VIEW)
 
 def has_family_view_permission(family, user):
-    return _has_project_view_permission(family.project, user)
+    if _has_project_view_permission(family.project, user):
+        return True
+    if is_anvil_authenticated(user):
+        for ag in family.analysisgroup_set.filter(workspace_namespace__isnull=False):
+            if _has_workspace_perm(user, CAN_VIEW, ag.workspace_namespace, ag.workspace_name):
+                return True
+    return False
 
 def _has_project_permissions(project, user, permission_level):
     return user_is_data_manager(user) or _user_project_permission(user, permission_level, project)
@@ -205,7 +244,7 @@ def _has_project_permissions(project, user, permission_level):
 
 def _user_project_permission(user, permission_level, project):
     if anvil_enabled():
-        return has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
+        return _has_workspace_perm(user, permission_level, project.workspace_namespace, project.workspace_name)
     return user.has_perm(permission_level, project)
 
 
@@ -241,41 +280,52 @@ def check_user_created_object_permissions(obj, user):
     raise PermissionDenied("{user} does not have edit permissions for {object}".format(user=user, object=obj))
 
 
-def _get_all_can_view_project_guids_set(user):
-    return set(get_project_guids_user_can_view(user, limit_data_manager=False))
-
-
 def check_families_view_permission(families, user):
-    no_access_projects = set(families.values_list('project__guid', flat=True).distinct()) - _get_all_can_view_project_guids_set(user)
-    if no_access_projects:
-        raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_projects)}")
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(user, limit_data_manager=False)
+    access_q = Q(project__guid__in=project_guids)
+    if analysis_group_guids:
+        access_q |= Q(analysisgroup__guid__in=analysis_group_guids)
+    no_access_families = families.exclude(access_q)
+    if no_access_families:
+        raise PermissionDenied(f"{user} does not have sufficient permissions for {','.join(no_access_families.values_list('guid', flat=True))}")
 
 
 def check_locus_list_permissions(locus_list, user):
     if locus_list.is_public or _is_user_created_object(locus_list, user):
         return
     access_projects = set(locus_list.projects.values_list('guid', flat=True)).intersection(
-        _get_all_can_view_project_guids_set(user)
+        set(get_project_guids_any_family_user_can_view(user))
     )
     if not access_projects:
         raise PermissionDenied(f'{user} does not have view permissions for {locus_list}')
 
 
-def get_project_guids_user_can_view(user, limit_data_manager=True):
+def get_project_guids_any_family_user_can_view(user):
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(user)
+    additional_project_guids = AnalysisGroup.objects.filter(guid__in=analysis_group_guids).values_list('project__guid', flat=True) \
+        if analysis_group_guids else []
+    return project_guids + list(additional_project_guids)
+
+
+def get_project_analysis_group_guids_user_can_view(user, limit_data_manager=True):
     if user_is_data_manager(user) and not limit_data_manager:
-        return list(Project.objects.values_list('guid', flat=True))
+        return list(Project.objects.values_list('guid', flat=True)), []
 
-    cache_key = 'projects__{}'.format(user)
-    project_guids = safe_redis_get_json(cache_key)
-    if project_guids is not None:
-        return project_guids
+    cache_key = 'project_analysis_groups__{}'.format(user)
+    cached_results = safe_redis_get_json(cache_key)
+    if cached_results is not None:
+        return cached_results
 
+    analysis_group_guids = None
     if is_anvil_authenticated(user):
         workspaces = ['/'.join([ws['workspace']['namespace'], ws['workspace']['name']]) for ws in
                       list_anvil_workspaces(user)]
         projects = Project.objects.annotate(
             workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
         ).filter(workspace__in=workspaces)
+        analysis_group_guids = sorted(AnalysisGroup.objects.exclude(project__in=projects).annotate(
+            workspace=Concat('workspace_namespace', Value('/', output_field=TextField()), 'workspace_name')
+        ).filter(workspace__in=workspaces, workspace_namespace__isnull=False).values_list('guid', flat=True))
     else:
         projects = get_objects_for_user(user, CAN_VIEW, Project)
 
@@ -283,8 +333,13 @@ def get_project_guids_user_can_view(user, limit_data_manager=True):
 
     project_guids = [p.guid for p in projects.distinct().only('guid')]
 
-    safe_redis_set_json(cache_key, sorted(project_guids), expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
+    safe_redis_set_json(cache_key, [sorted(project_guids), analysis_group_guids], expire=TERRA_WORKSPACE_CACHE_EXPIRE_SECONDS)
 
+    return project_guids, analysis_group_guids
+
+
+def get_project_guids_user_can_view(user):
+    project_guids, _ = get_project_analysis_group_guids_user_can_view(user)
     return project_guids
 
 

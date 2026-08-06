@@ -140,5 +140,5 @@ jobs:
         working-directory: ./ui
       - run: npm run lint
         working-directory: ./ui
-      - run: npm test
+      - run: npm test -- --coverage
         working-directory: ./ui
