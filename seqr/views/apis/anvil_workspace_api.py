@@ -226,6 +226,9 @@ def _validate_expected_samples(vcf_samples, loaded_sample_types, loaded_individu
         else:
             errors.append('New data cannot be added to this project until the previously requested data is loaded')
 
+    if not record_family_ids:
+        errors.append('No samples found in the pedigree file')
+
     missing_vcf_samples = set(record_family_ids.keys()) - set(vcf_samples)
     if missing_vcf_samples:
         errors.append(

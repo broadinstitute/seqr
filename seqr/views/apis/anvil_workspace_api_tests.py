@@ -684,6 +684,13 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         url = reverse(add_workspace_data, args=[PROJECT1_GUID])
         self._test_errors(url, ['uploadedFileId', 'fullDataPath', 'vcfSamples'], TEST_WORKSPACE_NAME, has_existing_data=True)
 
+        # Test loading data from empty ped file
+        self.mock_load_file.return_value = LOAD_SAMPLE_DATA[:1]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
+        self.assertEqual(response.status_code, 400)
+        response_json = response.json()
+        self.assertListEqual(response_json['errors'], ['No samples found in the pedigree file'])
+
         # Test Individual ID exists in an omitted family and missing loaded samples
         self.mock_load_file.return_value = LOAD_SAMPLE_DATA + INVALID_ADDED_SAMPLE_DATA
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
