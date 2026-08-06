@@ -14,7 +14,8 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_with_tags, get_json_for_variant_note, \
     get_json_for_saved_variants_child_entities, get_json_for_gene_notes_by_gene_id, STRUCTURED_METADATA_TAG_TYPES
 from seqr.views.utils.permissions_utils import get_project_analysis_groups_and_check_view_permission, check_project_edit_permission, \
-    login_and_policies_required, check_family_view_permission, check_families_view_permission
+    login_and_policies_required, check_family_view_permission, check_user_created_object_permissions, \
+    has_project_edit_permission
 from seqr.views.utils.variant_utils import get_variants_response, parse_saved_variant_json, DISCOVERY_CATEGORY
 
 
@@ -183,11 +184,17 @@ def _create_variant_note(saved_variants, note_json, user):
     return note, response
 
 
+def _check_user_can_edit_object(family, user, obj):
+    check_family_view_permission(family, user)
+    if not has_project_edit_permission(family.project, user):
+        check_user_created_object_permissions(obj, user)
+
+
 @login_and_policies_required
 def update_variant_note_handler(request, variant_guids, note_guid):
     note = VariantNote.objects.get(guid=note_guid)
-    families = Family.objects.filter(id__in=note.saved_variants.values_list('family_id', flat=True))
-    check_families_view_permission(families, request.user)
+    family = Family.objects.get(id__in=note.saved_variants.values_list('family_id', flat=True))
+    _check_user_can_edit_object(family, request.user, note)
     request_json = json.loads(request.body)
     update_model_from_json(note, request_json, user=request.user, allow_unknown_keys=True)
 
@@ -203,8 +210,8 @@ def update_variant_note_handler(request, variant_guids, note_guid):
 def delete_variant_note_handler(request, variant_guids, note_guid):
     variant_guids = variant_guids.split(',')
     note = VariantNote.objects.get(guid=note_guid)
-    families = Family.objects.filter(id__in=note.saved_variants.values_list('family_id', flat=True))
-    check_families_view_permission(families, request.user)
+    family = Family.objects.get(id__in=note.saved_variants.values_list('family_id', flat=True))
+    _check_user_can_edit_object(family, request.user, note)
     note.delete_model(request.user, user_can_delete=True)
 
     saved_variants_by_guid = {}
@@ -242,7 +249,7 @@ def update_variant_acmg_classification_handler(request, variant_guid):
 
 def _update_variant_acmg_classification(request, variant_guid):
     saved_variant = SavedVariant.objects.get(guid=variant_guid)
-    check_family_view_permission(saved_variant.family, request.user)
+    _check_user_can_edit_object(saved_variant.family, request.user, saved_variant)
 
     request_json = json.loads(request.body)
     variant = request_json.get('variant')
@@ -269,6 +276,7 @@ def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_t
     family_guid = request_json.pop('familyGuid')
     family = Family.objects.get(guid=family_guid)
     check_family_view_permission(family, request.user)
+    can_edit = has_project_edit_permission(family.project, request.user)
 
     all_variant_guids = set(variant_guids.split(','))
     saved_variants = SavedVariant.objects.filter(guid__in=all_variant_guids)
@@ -279,9 +287,9 @@ def _update_variant_tag_models(request, variant_guids, tag_key, model_cls, get_t
 
     tag_type = tag_key.lower().rstrip('s')
     updated_data = request_json.get(tag_key, [])
-    deleted_guids, has_discovery_update, has_excluded_update = _delete_removed_tags(saved_variants, all_variant_guids, updated_data, request.user, tag_type, protected_tag_types)
+    deleted_guids, has_discovery_update, has_excluded_update = _delete_removed_tags(saved_variants, all_variant_guids, updated_data, request.user, can_edit, tag_type, protected_tag_types)
 
-    _update_tags(saved_variants, request_json, request.user, tag_key, model_cls, get_tag_create_data, has_discovery_update=has_discovery_update, has_excluded_update=has_excluded_update)
+    _update_tags(saved_variants, request_json, request.user, tag_key, model_cls, get_tag_create_data, has_discovery_update=has_discovery_update, has_excluded_update=has_excluded_update, can_edit=can_edit)
 
     saved_variant_id_map = {sv.id: sv.guid for sv in saved_variants}
     tags, variant_tag_map = get_json_for_saved_variants_child_entities(model_cls, saved_variant_id_map)
@@ -309,13 +317,15 @@ def _get_tag_set(saved_variant, tag_type):
     return getattr(saved_variant, 'variant{}_set'.format(tag_type))
 
 
-def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, tag_type, protected_tag_types):
+def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, can_edit, tag_type, protected_tag_types):
     existing_tag_guids = [tag['tagGuid'] for tag in tag_updates if tag.get('tagGuid')]
     deleted_tag_guids = []
     tag_set = _get_tag_set(saved_variants[0], tag_type)
     remove_tags = tag_set.exclude(guid__in=existing_tag_guids)
     if protected_tag_types:
         remove_tags = remove_tags.exclude(variant_tag_type__name__in=protected_tag_types)
+    if not can_edit:
+        remove_tags = remove_tags.filter(created_by=user)
     track_updates = tag_type == 'tag'
     has_discovery_update = False
     has_excluded_update = False
@@ -332,12 +342,13 @@ def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, t
     return deleted_tag_guids, has_discovery_update, has_excluded_update
 
 
-def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=VariantTag, get_tag_create_data=_get_tag_type_create_data, has_discovery_update=False, has_excluded_update=False):
+def _update_tags(saved_variants, tags_json, user, tag_key='tags', model_cls=VariantTag, get_tag_create_data=_get_tag_type_create_data, has_discovery_update=False, has_excluded_update=False, can_edit=False):
     tags = tags_json.get(tag_key, [])
     for tag in tags:
         if tag.get('tagGuid'):
             model = model_cls.objects.get(guid=tag.get('tagGuid'))
-            update_model_from_json(model, tag, user=user, allow_unknown_keys=True)
+            if can_edit or model.created_by == user:
+                update_model_from_json(model, tag, user=user, allow_unknown_keys=True)
         else:
             create_data = get_tag_create_data(tag, saved_variants=saved_variants)
             if 'variant_tag_type' in create_data:
