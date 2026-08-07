@@ -580,8 +580,12 @@ class IndividualRow extends React.PureComponent {
     const { displayName, sex, affected, createdDate } = individual
 
     // only show active or first/ last inactive samples
-    const loadedDatasets = (datasets || []).reverse().filter(
-      ({ isActive }, i) => isActive || i === 0 || i === datasets.length - 1,
+    const ascLoadedDatasets = (datasets || []).reverse()
+    const maxByDatasetType = new Set(
+      Object.values(ascLoadedDatasets.reduce((acc, { datasetType }, i) => ({ ...acc, [datasetType]: i }), {}))
+    )
+    const loadedDatasets = ascLoadedDatasets.filter(
+      ({ isActive }, i) => isActive || i === 0 || maxByDatasetType.has(i),
     )
 
     const leftContent = (
