@@ -857,7 +857,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         self._assert_expected_requests(variables, project, num_samples=14 if test_add_data else 3, status='Loading')
         self.assert_expected_airtable_headers(-1)
 
-        sample_summary = '13 new and 7 re-loaded' if test_add_data else '3 new'
+        sample_summary = '7 new and 7 re-loaded' if test_add_data else '3 new'
         self.mock_slack.assert_called_with(
             SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL,
             self._success_slack_message(project, sample_summary, genome_version, variables),
@@ -961,7 +961,7 @@ Loading pipeline should be triggered with:
         self.mock_slack.assert_has_calls([
             mock.call(SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL, slack_message_on_failure),
             mock.call(SEQR_SLACK_ANVIL_DATA_LOADING_CHANNEL, self._success_slack_message(
-                project, '3 new' if sample_type == 'WES' else '5 new and 1 re-loaded', genome_version, variables, sample_type,
+                project, '3 new' if sample_type == 'WES' else '4 new and 1 re-loaded', genome_version, variables, sample_type,
             )),
         ])
         self._assert_expected_requests(
