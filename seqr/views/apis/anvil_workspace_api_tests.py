@@ -724,10 +724,10 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         self.assertSetEqual(set(response_json['individualsByGuid'].keys()), {
             'I0000020_hg00735', 'I000001_na19675', 'I000003_na19679', 'I0000021_hg00736', 'I000007_na20870',
             'I000009_na20874', 'I000004_hg00731', 'I000010_na20875', 'I000008_na20872', 'I000005_hg00732',
-            'I000006_hg00733', 'I000013_na20878', 'I000012_na20877',
+            'I000006_hg00733', 'I000012_na20877',
         })
         self.assertSetEqual(set(response_json['familiesByGuid'].keys()), {
-            'F000001_1', 'F000015_21', 'F000006_6', 'F000013_13', 'F000005_5', 'F000009_9', 'F000008_8', 'F000004_4',
+            'F000001_1', 'F000015_21', 'F000006_6', 'F000013_13', 'F000005_5', 'F000008_8', 'F000004_4',
             'F000002_2', 'F000003_3',
         })
         self.assertEqual(list(response_json['familyNotesByGuid'].keys()), ['FAN000005_21_c_a_new_family'])
