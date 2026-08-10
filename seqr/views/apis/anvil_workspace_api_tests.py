@@ -42,7 +42,7 @@ LOAD_SAMPLE_DATA_ALL_PENDING = LOAD_SAMPLE_DATA + [
 ]
 
 LOAD_SAMPLE_DATA_ALL_PENDING_PROJECT_2 = LOAD_SAMPLE_DATA + [
-    ["11", "NA20885", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
+    ["11", "NA20885", "", "", "", "Male", "Affected", "HP:0011675;HP:0001508", "some noted data", ""],
     ["12", "NA20888", "", "", "", "Male", "Affected", "HP:0001508", "", ""],
 ]
 
