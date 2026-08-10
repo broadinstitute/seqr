@@ -32,16 +32,6 @@ class VlmTestCase(AioHTTPTestCase):
     @aioresponses(passthrough=['http://127.0.0.1'])
     async def test_match(self, mocked_responses):
         response = {
-            'beaconHandovers': [
-                {
-                    'handoverType': {
-                        'id': 'TestVLM',
-                        'label': 'TestVLM browser',
-                    },
-                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=1-38724419-T-G',
-                    'email': None,
-                }
-            ],
             'meta': {
                 'apiVersion': 'v1.0',
                 'beaconId': 'com.gnx.beacon.v2',
@@ -51,10 +41,6 @@ class VlmTestCase(AioHTTPTestCase):
                         'schema': 'ga4gh-beacon-variant-v2.0.0',
                     }
                 ]
-            },
-            'responseSummary': {
-                'exists': True,
-                'total': 7,
             },
             'response': {
                 'resultSets': [
@@ -90,16 +76,6 @@ class VlmTestCase(AioHTTPTestCase):
             }
         }
         only_37_response = {
-            'beaconHandovers': [
-                {
-                    'handoverType': {
-                        'id': 'TestVLM',
-                        'label': 'TestVLM browser',
-                    },
-                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=37&variantId=7-143270172-A-G',
-                    'email': None,
-                }
-            ],
             'meta': {
                 'apiVersion': 'v1.0',
                 'beaconId': 'com.gnx.beacon.v2',
@@ -109,10 +85,6 @@ class VlmTestCase(AioHTTPTestCase):
                         'schema': 'ga4gh-beacon-variant-v2.0.0',
                     }
                 ]
-            },
-            'responseSummary': {
-                'exists': True,
-                'total': 1,
             },
             'response': {
                 'resultSets': [
@@ -148,16 +120,6 @@ class VlmTestCase(AioHTTPTestCase):
             }
         }
         empty_response = {
-            'beaconHandovers': [
-                {
-                    'handoverType': {
-                        'id': 'TestVLM',
-                        'label': 'TestVLM browser',
-                    },
-                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=7-143270172-A-G',
-                    'email': None,
-                }
-            ],
             'meta': {
                 'apiVersion': 'v1.0',
                 'beaconId': 'com.gnx.beacon.v2',
@@ -167,10 +129,6 @@ class VlmTestCase(AioHTTPTestCase):
                         'schema': 'ga4gh-beacon-variant-v2.0.0',
                     }
                 ]
-            },
-            'responseSummary': {
-                'exists': False,
-                'total': 0,
             },
             'response': {
                 'resultSets': [
@@ -226,16 +184,6 @@ class VlmTestCase(AioHTTPTestCase):
         })
 
         response = {
-            'beaconHandovers': [
-                {
-                    'handoverType': {
-                        'id': 'TestVLM',
-                        'label': 'TestVLM browser',
-                    },
-                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=1-38724419-T-G',
-                    'email': None,
-                }
-            ],
             'meta': {
                 'apiVersion': 'v1.0',
                 'beaconId': 'com.gnx.beacon.v2',
@@ -246,10 +194,6 @@ class VlmTestCase(AioHTTPTestCase):
                     }
                 ]
             },
-            'responseSummary': {
-                'exists': True,
-                'total': 5,
-            },
             'response': {
                 'resultSets': [
                     {
@@ -258,7 +202,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'setType': 'Family',
                         'resultsCount': 5,
                         'results': [{
-                            'id': 'F_0',
+                            'id': 'I_0_1',
                             'pedigree': {
                                  'persons': [{
                                      'affected_status': 'UNAFFECTED',
@@ -374,7 +318,123 @@ class VlmTestCase(AioHTTPTestCase):
                             }],
                             'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
                         }, {
-                            'id': 'F_1',
+                            'id': 'I_0_0',
+                            'pedigree': {
+                                'persons': [{
+                                    'affected_status': 'UNAFFECTED',
+                                    'family_id': 'F_0',
+                                    'individual_id': 'I_0_0',
+                                    'maternal_id': '0',
+                                    'paternal_id': '0',
+                                    'sex': 'MALE',
+                                }, {
+                                    'affected_status': 'AFFECTED',
+                                    'family_id': 'F_0',
+                                    'individual_id': 'I_0_1',
+                                    'maternal_id': '0',
+                                    'paternal_id': '0',
+                                    'sex': 'OTHER_SEX',
+                                }],
+                            },
+                            'proband': {
+                                'id': 'I_0_0',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'disease': {'id': 'OMIM:615123', 'label': 'Immunodeficiency 38'},
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000135', 'label': 'heterozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'REJECTED',
+                                            'subject_or_biosample_id': 'I_0_0',
+                                        }],
+                                    },
+                                    'id': 'I_0_0',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [],
+                                'subject': {
+                                    'id': 'I_0_0',
+                                    'sex': 'MALE',
+                                },
+                                'meta_data': {
+                                    'submitted_by': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }, {
+                                        'id': 'omim',
+                                        'iriPrefix': 'https://www.omim.org/entry/',
+                                        'name': 'Online Mendelian Inheritance in Man',
+                                        'namespacePrefix': 'OMIM',
+                                        'url': 'https://www.omim.org',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
+                                    }],
+                                },
+                            },
+                            'relatives': [{
+                                'id': 'I_0_1',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'disease': {'id': 'OMIM:615123', 'label': 'Immunodeficiency 38'},
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000136', 'label': 'homozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'REJECTED',
+                                            'subject_or_biosample_id': 'I_0_1',
+                                        }],
+                                    },
+                                    'id': 'I_0_1',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [
+                                    {'id': 'HP:0002011', 'label': 'Morphological central nervous system abnormality'},
+                                    {'id': 'HP:0011675', 'label': 'Arrhythmia'},
+                                ],
+                                'subject': {
+                                    'id': 'I_0_1',
+                                    'sex': 'OTHER_SEX',
+                                },
+                                'meta_data': {
+                                    'submitted_by': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }, {
+                                        'id': 'hp',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/HP_',
+                                        'name': 'Human Phenotype Ontology',
+                                        'namespacePrefix': 'HP',
+                                        'url': 'http://purl.obolibrary.org/obo/hp.owl',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
+                                    }, {
+                                        'id': 'omim',
+                                        'iriPrefix': 'https://www.omim.org/entry/',
+                                        'name': 'Online Mendelian Inheritance in Man',
+                                        'namespacePrefix': 'OMIM',
+                                        'url': 'https://www.omim.org',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
+                                    }],
+                                },
+                            }],
+                            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
+                        }, {
+                            'id': 'I_1_0',
                             'pedigree': {
                                 'persons': [{
                                     'affected_status': 'AFFECTED',
@@ -441,7 +501,7 @@ class VlmTestCase(AioHTTPTestCase):
                             'relatives': [],
                             'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
                         }, {
-                            'id': 'F_2',
+                            'id': 'I_2_0',
                             'pedigree': {
                                 'persons': [{
                                     'affected_status': 'MISSING',
@@ -539,7 +599,105 @@ class VlmTestCase(AioHTTPTestCase):
                             }],
                             'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
                         }, {
-                            'id': 'F_3',
+                            'id': 'I_2_1',
+                            'pedigree': {
+                                'persons': [{
+                                    'affected_status': 'MISSING',
+                                    'family_id': 'F_2',
+                                    'individual_id': 'I_2_0',
+                                    'maternal_id': '0',
+                                    'paternal_id': '0',
+                                    'sex': 'UNKNOWN_SEX',
+                                }, {
+                                    'affected_status': 'MISSING',
+                                    'family_id': 'F_2',
+                                    'individual_id': 'I_2_1',
+                                    'maternal_id': '0',
+                                    'paternal_id': '0',
+                                    'sex': 'FEMALE',
+                                }],
+                            },
+                            'proband': {
+                                'id': 'I_2_1',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'disease': {'id': 'MONDO:0044970', 'label': 'mitochondrial disease'},
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000136', 'label': 'homozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'CANDIDATE',
+                                            'subject_or_biosample_id': 'I_2_1',
+                                        }],
+                                    },
+                                    'id': 'I_2_1',
+                                    'progress_status': 'SOLVED',
+                                }],
+                                'phenotypic_features': [],
+                                'subject': {
+                                    'id': 'I_2_1',
+                                    'sex': 'FEMALE',
+                                },
+                                'meta_data': {
+                                    'submitted_by': 'test@broadinstitute.org,vlm@broadinstitute.org',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }, {
+                                        'id': 'mondo',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/MONDO_',
+                                        'name': 'Mondo Disease Ontology',
+                                        'namespacePrefix': 'MONDO',
+                                        'url': 'http://purl.obolibrary.org/obo/mondo.owl',
+                                        'version': datetime.now().strftime('%Y-%m-%d'),
+                                    }],
+                                },
+                            },
+                            'relatives': [{
+                                'id': 'I_2_0',
+                                'interpretations': [{
+                                    'diagnosis': {
+                                        'genomic_interpretations': [{
+                                            'call': {
+                                                'variation_descriptor': {
+                                                    'allelic_state': {'id': 'GENO:0000135', 'label': 'heterozygous'},
+                                                },
+                                            },
+                                            'interpretation_status': 'CANDIDATE',
+                                            'subject_or_biosample_id': 'I_2_0',
+                                        }],
+                                    },
+                                    'id': 'I_2_0',
+                                    'progress_status': 'UNKNOWN_PROGRESS',
+                                }],
+                                'phenotypic_features': [],
+                                'subject': {
+                                    'id': 'I_2_0',
+                                    'sex': 'UNKNOWN_SEX',
+                                },
+                                'meta_data': {
+                                    'submitted_by': '',
+                                    'phenopacket_schema_version': '2.0',
+                                    'resources': [{
+                                        'id': 'geno',
+                                        'iriPrefix': 'http://purl.obolibrary.org/obo/GENO_',
+                                        'name': 'GENO ontology',
+                                        'namespacePrefix': 'GENO',
+                                        'url': 'http://purl.obolibrary.org/obo/geno.owl',
+                                        'version': '2026-02-02',
+                                    }],
+                                },
+                            }],
+                            'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
+                        }, {
+                            'id': 'I_3_0',
                             'pedigree': {
                                 'persons': [{
                                     'affected_status': 'AFFECTED',
@@ -589,7 +747,7 @@ class VlmTestCase(AioHTTPTestCase):
                             'relatives': [],
                             'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
                         }, {
-                            'id': 'F_4',
+                            'id': 'I_4_0',
                             'pedigree': {
                                 'persons': [{
                                     'affected_status': 'AFFECTED',
@@ -643,16 +801,6 @@ class VlmTestCase(AioHTTPTestCase):
             }
         }
         only_37_response = {
-            'beaconHandovers': [
-                {
-                    'handoverType': {
-                        'id': 'TestVLM',
-                        'label': 'TestVLM browser',
-                    },
-                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=37&variantId=7-143270172-A-G',
-                    'email': None,
-                }
-            ],
             'meta': {
                 'apiVersion': 'v1.0',
                 'beaconId': 'com.gnx.beacon.v2',
@@ -663,10 +811,6 @@ class VlmTestCase(AioHTTPTestCase):
                     }
                 ]
             },
-            'responseSummary': {
-                'exists': True,
-                'total': 1,
-            },
             'response': {
                 'resultSets': [
                     {
@@ -675,7 +819,7 @@ class VlmTestCase(AioHTTPTestCase):
                         'setType': 'Family',
                         'resultsCount': 1,
                         'results': [{
-                            'id': 'F_0',
+                            'id': 'I_0_0',
                             'pedigree': {
                                  'persons': [{
                                      'affected_status': 'AFFECTED',
@@ -747,16 +891,6 @@ class VlmTestCase(AioHTTPTestCase):
             }
         }
         empty_response = {
-            'beaconHandovers': [
-                {
-                    'handoverType': {
-                        'id': 'TestVLM',
-                        'label': 'TestVLM browser',
-                    },
-                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=7-143270172-A-G',
-                    'email': None,
-                }
-            ],
             'meta': {
                 'apiVersion': 'v1.0',
                 'beaconId': 'com.gnx.beacon.v2',
@@ -766,10 +900,6 @@ class VlmTestCase(AioHTTPTestCase):
                         'schema': 'phenopacket-2.0',
                     }
                 ]
-            },
-            'responseSummary': {
-                'exists': False,
-                'total': 0,
             },
             'response': {
                 'resultSets': [
@@ -801,7 +931,24 @@ class VlmTestCase(AioHTTPTestCase):
         async with self.client.request('GET', f'/vlm/{path}?assemblyId=GRCh38&referenceName=1&start=38724419&referenceBases=T&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
-        self.assertDictEqual(resp_json, response)
+        full_response = {
+            'beaconHandovers': [
+                {
+                    'handoverType': {
+                        'id': 'TestVLM',
+                        'label': 'TestVLM browser',
+                    },
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=1-38724419-T-G',
+                    'email': None,
+                }
+            ],
+            'responseSummary': {
+                'exists': True,
+                'total': 7,
+            },
+            **response,
+        }
+        self.assertDictEqual(resp_json, full_response)
         mocked_responses.assert_called_with(
             'https://vlm-auth.us.auth0.com/oauth/token',
             method='POST',
@@ -819,22 +966,55 @@ class VlmTestCase(AioHTTPTestCase):
         async with self.client.request('GET', f'/vlm/{path}?assemblyId=GRCh37&referenceName=1&start=39190091&referenceBases=T&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
-        self.assertDictEqual(resp_json, response)
+        self.assertDictEqual(resp_json, full_response)
 
+        full_only_37_response = {
+            'beaconHandovers': [
+                {
+                    'handoverType': {
+                        'id': 'TestVLM',
+                        'label': 'TestVLM browser',
+                    },
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=37&variantId=7-143270172-A-G',
+                    'email': None,
+                }
+            ],
+            'responseSummary': {
+                'exists': True,
+                'total': 1,
+            },
+            **only_37_response,
+        }
         async with self.client.request('GET', f'/vlm/{path}?assemblyId=hg19&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
-        self.assertDictEqual(resp_json, only_37_response)
+        self.assertDictEqual(resp_json, full_only_37_response)
 
         async with self.client.request('GET', f'/vlm/{path}?assemblyId=GRCh38&referenceName=chr7&start=143573079&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
-        self.assertDictEqual(resp_json, only_37_response)
+        self.assertDictEqual(resp_json, full_only_37_response)
 
         async with self.client.request('GET', f'/vlm/{path}?assemblyId=hg38&referenceName=chr7&start=143270172&referenceBases=A&alternateBases=G', headers=headers) as resp:
             self.assertEqual(resp.status, 200)
             resp_json = await resp.json()
-        self.assertDictEqual(resp_json, empty_response)
+        self.assertDictEqual(resp_json, {
+            'beaconHandovers': [
+                {
+                    'handoverType': {
+                        'id': 'TestVLM',
+                        'label': 'TestVLM browser',
+                    },
+                    'url': 'https://test-seqr.org/variant_lookup?genomeVersion=38&variantId=7-143270172-A-G',
+                    'email': None,
+                }
+            ],
+            'responseSummary': {
+                'exists': False,
+                'total': 0,
+            },
+            **empty_response,
+        })
 
     @aioresponses(passthrough=['http://127.0.0.1'])
     async def test_match_error(self, mocked_responses):
