@@ -565,13 +565,10 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         patcher = mock.patch('seqr.utils.add_data_utils.logger')
         self.mock_add_data_utils_logger = patcher.start()
         self.addCleanup(patcher.stop)
-        patcher = mock.patch('seqr.views.apis.anvil_workspace_api.load_uploaded_file')
-        self.mock_load_file = patcher.start()
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA
-        self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.utils.file_utils.subprocess.Popen')
         self.mock_subprocess = patcher.start()
         self.mock_subprocess.return_value.wait.return_value = 0
+        self.mock_subprocess.return_value.stdout = [json.dumps(LOAD_SAMPLE_DATA).encode('utf-8')]
         self.addCleanup(patcher.stop)
         patcher = mock.patch('seqr.views.utils.export_utils.TemporaryDirectory')
         mock_tempdir = patcher.start()
@@ -596,6 +593,9 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
 
         super().setUp()
 
+    def _set_load_file_iter(self, data):
+        self.mock_subprocess.return_value.stdout = [json.dumps(data).encode('utf-8')]
+
     @mock.patch('seqr.models.Family._compute_guid', lambda family: f'F_{family.family_id}_{family.project.workspace_name[17:]}')
     @mock.patch('seqr.models.Project._compute_guid', lambda project: f'P_{project.name}')
     @responses.activate
@@ -612,8 +612,8 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
 
         # Test valid operation
         responses.calls.reset()
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA
-        self.mock_subprocess.return_value.wait.side_effect = [0, 1, 0]
+        self._set_load_file_iter(LOAD_SAMPLE_DATA)
+        self.mock_subprocess.return_value.wait.side_effect = [0, 0, 1, 0]
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 200)
         project = Project.objects.get(workspace_namespace=TEST_WORKSPACE_NAMESPACE, workspace_name=TEST_NO_PROJECT_WORKSPACE_NAME)
@@ -685,14 +685,14 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         self._test_errors(url, ['uploadedFileId', 'fullDataPath', 'vcfSamples'], TEST_WORKSPACE_NAME, has_existing_data=True)
 
         # Test loading data from empty ped file
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA[:1]
+        self._set_load_file_iter(LOAD_SAMPLE_DATA[:1])
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(response_json['errors'], ['No samples found in the pedigree file'])
 
         # Test Individual ID exists in an omitted family and missing loaded samples
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA + INVALID_ADDED_SAMPLE_DATA
+        self._set_load_file_iter(LOAD_SAMPLE_DATA + INVALID_ADDED_SAMPLE_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
@@ -705,7 +705,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         ])
 
         # Test project still has pending loading
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA
+        self._set_load_file_iter(LOAD_SAMPLE_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
@@ -714,8 +714,8 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         ])
 
         # Test a valid operation
-        self.mock_subprocess.return_value.wait.side_effect = [0, 1, 0]
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_ALL_PENDING
+        self.mock_subprocess.return_value.wait.side_effect = [0, 0, 1, 0]
+        self._set_load_file_iter(LOAD_SAMPLE_DATA_ALL_PENDING)
         mock_compute_indiv_guid.side_effect = ['I0000020_hg00735', 'I0000021_hg00736']
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY_ADD_DATA))
         self.assertEqual(response.status_code, 200)
@@ -734,7 +734,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
 
         self._assert_valid_operation(Project.objects.get(guid=PROJECT1_GUID))
 
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_ALL_PENDING_PROJECT_2
+        self._set_load_file_iter(LOAD_SAMPLE_DATA_ALL_PENDING_PROJECT_2)
         mock_compute_indiv_guid.side_effect = ['I0000021_na19675_1', 'I0000022_na19678', 'I0000023_hg00735']
         url = reverse(add_workspace_data, args=[PROJECT2_GUID])
         self._test_mv_file_and_triggering_loading_exception(
@@ -749,20 +749,20 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
         self.mock_get_ws_access_level.assert_called_with(self.manager_user, TEST_WORKSPACE_NAMESPACE, workspace_name)
 
         # test missing columns
-        self.mock_load_file.return_value = [['family', 'individual'], ['1', '2']]
+        self._set_load_file_iter([['family', 'individual'], ['1', '2']])
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(response_json['errors'], ['Missing required columns: Affected, HPO Terms, Sex'])
 
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA + MISSING_REQUIRED_SAMPLE_DATA
+        self._set_load_file_iter(LOAD_SAMPLE_DATA + MISSING_REQUIRED_SAMPLE_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
         self.assertListEqual(response_json['errors'], ['Missing Sex in row #4', 'Missing Affected in row #4'])
 
         # test sample data error and missing samples
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA + BAD_SAMPLE_DATA
+        self._set_load_file_iter(LOAD_SAMPLE_DATA + BAD_SAMPLE_DATA)
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
@@ -780,7 +780,7 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
             'NA19681 has invalid HPO terms: HP:0100258',
         ])
 
-        self.mock_load_file.return_value = LOAD_SAMPLE_DATA_NO_AFFECTED
+        self._set_load_file_iter(LOAD_SAMPLE_DATA_NO_AFFECTED)
         response = self.client.post(url, content_type='application/json', data=json.dumps(REQUEST_BODY))
         self.assertEqual(response.status_code, 400)
         response_json = response.json()
@@ -834,11 +834,13 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
 
         gs_path = f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/'
         self.mock_subprocess.assert_has_calls([
+            mock.call(f'gsutil ls gs://seqr-scratch-temp/temp_upload_test_temp_file_id.json.gz', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call().wait(),
+            mock.call(f'gsutil cat gs://seqr-scratch-temp/temp_upload_test_temp_file_id.json.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call(f'gsutil mv {TEMP_PATH}/* {gs_path}',  stdout=-1, stderr=-2, shell=True), # nosec
             mock.call().wait(),
             mock.call('gsutil ls gs://seqr-loading-temp/v3.1/db_id_to_gene_id.csv.gz', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
-            mock.call().stdout.__iter__(),
             mock.call(f'gsutil mv {TEMP_PATH}/* gs://seqr-loading-temp/v3.1/',  stdout=-1, stderr=-2, shell=True), # nosec
             mock.call().wait(),
         ])
@@ -913,11 +915,11 @@ Pedigree files have been uploaded to gs://seqr-loading-temp/v3.1/{genome_version
 Loading pipeline is triggered with:
 ```{json.dumps(variables, indent=4)}```"""
 
-    @staticmethod
-    def _raise_move_file_error(command, *args, **kwargs):
+    def _raise_move_file_error(self, command, *args, **kwargs):
         mock_subprocess = mock.MagicMock()
-        mock_subprocess.wait.return_value = 1 if 'pedigrees' in command else 0
-        mock_subprocess.stdout = [b'Something wrong while moving the file.']
+        is_mv_pedigree_command = 'pedigrees' in command
+        mock_subprocess.wait.return_value = 1 if is_mv_pedigree_command else 0
+        mock_subprocess.stdout = [b'Something wrong while moving the file.'] if is_mv_pedigree_command else self.mock_subprocess.return_value.stdout
         return mock_subprocess
 
     def _test_mv_file_and_triggering_loading_exception(self, url, workspace, sample_data, genome_version, request_body, num_samples=None, sample_type='WES'):
