@@ -192,7 +192,7 @@ async def _get_match_detail_results(match: list[tuple], lift_match: Optional[lis
             results += [{
                 'id': phenopacket['id'],
                 'proband': phenopacket,
-                'relatives': [p for p in phenopackets if p != phenopacket],
+                'relatives': [p for p in phenopackets if p is not phenopacket],
                 'pedigree': {'persons': pedigree},
                 'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
             } for phenopacket in phenopackets]
