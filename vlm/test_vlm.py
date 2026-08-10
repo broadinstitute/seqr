@@ -166,7 +166,7 @@ class VlmTestCase(AioHTTPTestCase):
                 'exists': True,
                 'id': 'TestVLM',
                 'setType': 'Family',
-                'resultsCount': 5,
+                'resultsCount': 7,
                 'results': [{
                     'id': 'I_0_0',
                     'pedigree': {
