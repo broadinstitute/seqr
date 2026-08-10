@@ -834,9 +834,9 @@ class LoadAnvilDataAPITest(AnvilAuthenticationTestCase, AirtableTest):
 
         gs_path = f'gs://seqr-loading-temp/v3.1/{genome_version}/SNV_INDEL/pedigrees/WES/'
         self.mock_subprocess.assert_has_calls([
-            mock.call(f'gsutil ls gs://seqr-scratch-temp/temp_upload_test_temp_file_id.json.gz', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call('gsutil ls gs://seqr-scratch-temp/temp_upload_test_temp_file_id.json.gz', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call().wait(),
-            mock.call(f'gsutil cat gs://seqr-scratch-temp/temp_upload_test_temp_file_id.json.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True),  # nosec
+            mock.call('gsutil cat gs://seqr-scratch-temp/temp_upload_test_temp_file_id.json.gz | gunzip -c -q - ', stdout=-1, stderr=-2, shell=True),  # nosec
             mock.call(f'gsutil mv {TEMP_PATH}/* {gs_path}',  stdout=-1, stderr=-2, shell=True), # nosec
             mock.call().wait(),
             mock.call('gsutil ls gs://seqr-loading-temp/v3.1/db_id_to_gene_id.csv.gz', stdout=-1, stderr=-2, shell=True),  # nosec
