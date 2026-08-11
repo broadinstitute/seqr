@@ -1,0 +1,76 @@
+<clickhouse>
+    <user_files_path>/</user_files_path>
+
+    <profiles>
+        <default>
+          <!-- Necessary for application logic, seqr search will not work otherwise -->
+          <flatten_nested>0</flatten_nested>
+          <join_use_nulls>1</join_use_nulls>
+
+          <!-- Added to enable clean staging of large projects that may exceed the default (50GB) -->
+          <max_partition_size_to_drop>300000000000</max_partition_size_to_drop>
+          <max_table_size_to_drop>300000000000</max_table_size_to_drop>
+
+          <!-- Enabled fast count for EmbeddedRocksDB engine -->
+          <optimize_trivial_approximate_count_query>1</optimize_trivial_approximate_count_query>
+
+          <!-- Reduces the memory bloat of the dictionary group by. -->
+          <max_bytes_ratio_before_external_group_by>0.1</max_bytes_ratio_before_external_group_by>
+          <max_bytes_ratio_before_external_sort>0.1</max_bytes_ratio_before_external_sort>
+
+          <!-- Necessary to stop reference data views from re-building on server restart -->
+          <stop_refreshable_materialized_views_on_startup>1</stop_refreshable_materialized_views_on_startup>
+          
+          <!-- Allows creation of MVs before other tables -->
+          <allow_materialized_view_with_bad_select>1</allow_materialized_view_with_bad_select>
+          
+          <!-- Major version bump from 25 to 26 led to failed tests for unknown reasaons -->
+          <enable_join_runtime_filters>0</enable_join_runtime_filters>
+        </default>
+    </profiles>
+
+    <users>
+        <default>
+            <password>default_password</password>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+
+            <profile>default</profile>
+            <quota>default</quota>
+
+            <access_management>1</access_management>
+            <named_collection_control>1</named_collection_control>
+        </default>
+    </users>
+
+    <!-- Config that is used when server is run without config file. -->
+    <logger>
+        <level>trace</level>
+        <console>true</console>
+        <formatting>json</formatting>
+    </logger>
+
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+    <mysql_port>9004</mysql_port>
+    <postgresql_port>9005</postgresql_port>
+    <path>./</path>
+
+    <mlock_executable>true</mlock_executable>
+
+    <quotas>
+        <default/>
+    </quotas>
+    <query_log>
+        <database>system</database>
+        <table>query_log</table>
+        <engine>Engine = MergeTree PARTITION BY event_date ORDER BY event_time TTL event_date + INTERVAL 30 day</engine>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+        <max_size_rows>1048576</max_size_rows>
+        <reserved_size_rows>8192</reserved_size_rows>
+        <buffer_size_rows_flush_threshold>524288</buffer_size_rows_flush_threshold>
+        <flush_on_crash>false</flush_on_crash>
+    </query_log>
+
+</clickhouse>
