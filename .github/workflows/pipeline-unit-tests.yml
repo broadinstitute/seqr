@@ -60,7 +60,7 @@ jobs:
             **/uv.lock
             **/pyproject.toml
       - name: Sync dependencies (prod + dataproc)
-        run: uv sync --locked  --project loading_pipeline
+        run: uv sync --locked  --project loading_pipeline --inexact
       - name: Check Ruff Format
         run: uv run ruff format --check loading_pipeline --diff --project loading_pipeline
       - name: Check Ruff
