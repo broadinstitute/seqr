@@ -1,0 +1,11 @@
+{
+  "command": [
+    "bash",
+    "-c",
+    "/vep GRCh38 --warning_file STDERR --format vcf -json --hgvs --biotype --canonical --mane --minimal --numbers --regulatory --allele_number --no_stats --cache --offline --assembly GRCh38 --fasta /opt/vep/.vep/Homo_sapiens.GRCh38.dna.primary_assembly.fa.gz --check_ref --dont_skip --plugin LoF,loftee_path:/plugins,gerp_bigwig:/opt/vep/.vep/gerp_conservation_scores.homo_sapiens.GRCh38.bw,human_ancestor_fa:/opt/vep/.vep/human_ancestor.fa.gz,conservation_file:/opt/vep/.vep/loftee.sql --plugin UTRAnnotator,file=/opt/vep/.vep/uORF_5UTR_GRCh38_PUBLIC.txt --plugin SpliceRegion,Extended --plugin AlphaMissense,file=/opt/vep/.vep/AlphaMissense_hg38.tsv.gz --dir_plugins /plugins -o STDOUT | sed s/5utr/fiveutr/g"
+  ],
+  "env": {
+    "PERL5LIB": "/plugins"
+  },
+  "vep_json_schema": "Struct{input:String,check_ref:String,most_severe_consequence:String,motif_feature_consequences:Array[Struct{consequence_terms:Array[String],motif_feature_id:String}],regulatory_feature_consequences:Array[Struct{biotype:String,consequence_terms:Array[String],regulatory_feature_id:String}],transcript_consequences:Array[Struct{amino_acids:String,biotype:String,canonical:Int32,codons:String,consequence_terms:Array[String],exon:String,gene_id:String,hgvsc:String,hgvsp:String,intron:String,mane_select:String,mane_plus_clinical:String,transcript_id:String,lof:String,lof_flags:String,lof_filter:String,lof_info:String,existing_inframe_oorfs:Int32,existing_outofframe_oorfs:Int32,existing_uorfs:Int32,fiveutr_consequence:String,fiveutr_annotation:Dict[String,Struct{type:String,KozakContext:String,KozakStrength:String,DistanceToCDS:String,CapDistanceToStart:String,DistanceToStop:String,Evidence:String,AltStop:String,AltStopDistanceToCDS:String,FrameWithCDS:String,StartDistanceToCDS:String,newSTOPDistanceToCDS:String,alt_type:String,alt_type_length:String,ref_StartDistanceToCDS:String,ref_type:String,ref_type_length:String}],am_pathogenicity:Float32,spliceregion:Array[String]}]}"
+}
