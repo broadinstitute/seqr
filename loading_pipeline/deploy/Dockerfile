@@ -19,7 +19,7 @@ ENV VIRTUAL_ENV="/.venv"
 # to mismatches between the uv:python3.11-alpine and hail docker python environments.
 RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml uv.lock .
+COPY loading_pipeline/pyproject.toml loading_pipeline/uv.lock .
 RUN uv sync --group prod --no-group dev --locked
 
 # Application Code
