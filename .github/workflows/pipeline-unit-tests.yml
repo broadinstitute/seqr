@@ -64,9 +64,13 @@ jobs:
           cd loading_pipeline
           uv sync --locked
       - name: Check Ruff Format
-        run: uv run ruff format --check loading_pipeline --diff
+        run: |
+          cd loading_pipeline
+          uv run ruff format --check loading_pipeline --diff
       - name: Check Ruff
-        run: uv run ruff check --output-format github
+        run: |
+          cd loading_pipeline
+          uv run ruff check --output-format github
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
         with:
