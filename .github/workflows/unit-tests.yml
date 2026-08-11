@@ -8,11 +8,15 @@ on:
       - master
       - dev
     paths-ignore:
+      - 'loading_pipeline/**'
+      - '.github/workflows/*pipeline*.yaml'
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths-ignore:
+      - 'loading_pipeline/**'
+      - '.github/workflows/*pipeline*.yaml'
       - 'vlm/**'
       - '.github/workflows/*vlm*.yaml'
 
