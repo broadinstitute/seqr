@@ -3,11 +3,11 @@
 [![Code Build](https://github.com/broadinstitute/seqr-loading-pipelines/actions/workflows/unit-tests.yml/badge.svg?branch=main)](https://github.com/broadinstitute/seqr-loading-pipelines/actions/workflows/unit-tests.yml)
 [![Docker Build](https://github.com/broadinstitute/seqr-loading-pipelines/actions/workflows/prod-release.yml/badge.svg?branch=main)](https://github.com/broadinstitute/seqr-loading-pipelines/actions/workflows/prod-release.yml)
 
-*This repository contains pipelines and infrastructure for loading genomic data from VCF -> ClickHouse to support queries by the _seqr_ application*
+*This folder contains pipelines and infrastructure for loading genomic data from VCF -> ClickHouse to support queries by the _seqr_ application*
 
 ---
 
-## 📁 Repository Structure
+## 📁 Project Structure
 
 ### `loading_pipeline/api/`
 Contains the interface layer to the _seqr_ application.
@@ -50,8 +50,8 @@ The production pipeline runs with python `3.11`.
 
 ### Clone the repo and install python requirements
 ```bash
-git clone https://github.com/broadinstitute/seqr-loading-pipelines.git
-cd seqr-loading-pipelines
+git clone https://github.com/broadinstitute/seqr.git
+cd seqr/loading_pipeline
 RUN uv sync --group dev --locked
 ```
 
@@ -59,7 +59,7 @@ RUN uv sync --group dev --locked
 > **Note:** We are running ClickHouse `26.3.9-lts` in production.
 ```bash
 curl https://clickhouse.com/ | sh
-./clickhouse server --config-file=./seqr-loading-pipelines/loading_pipeline/var/clickhouse_config/test-clickhouse.xml
+./clickhouse server --config-file=./seqr/loading_pipeline/var/clickhouse_config/test-clickhouse.xml
 ```
 
 ### [Run the Tests](https://github.com/broadinstitute/seqr-loading-pipelines/blob/main/.github/workflows/unit-tests.yml#L66-L73)
