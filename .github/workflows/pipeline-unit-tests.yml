@@ -62,9 +62,9 @@ jobs:
       - name: Sync dependencies (prod + dataproc)
         run: uv sync --locked  --project loading_pipeline
       - name: Check Ruff Format
-        run: uv run ruff format --check loading_pipeline --diff
+        run: uv run ruff format --check loading_pipeline --diff --project loading_pipeline
       - name: Check Ruff
-        run: uv run ruff check --output-format github
+        run: uv run ruff check --output-format github --project loading_pipeline
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
         with:
