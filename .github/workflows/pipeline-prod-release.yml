@@ -1,0 +1,121 @@
+name: prod release
+on:
+  workflow_run:
+    workflows: ["Pipeline Unit Tests"]
+    types:
+      - completed
+    branches:
+      - master
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: build package
+        run: |
+          cd loading_pipeline
+          rm -rf dist/
+          python -m pip install build
+          python -m build
+
+      - name: authenticate to google cloud
+        id: "auth"
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: "${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
+          service_account: "${{ secrets.RUN_SA_EMAIL }}"
+
+      - name: "setup gcloud sdk"
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Copy files to release directory
+        shell: bash
+        run: |-
+          gcloud storage rm -r gs://seqr-pipeline-runner-builds/prod/latest/ || echo 'No latest release'
+          gcloud storage cp loading_pipeline/bin/* gs://seqr-pipeline-runner-builds/prod/latest/bin/
+          gcloud storage cp loading_pipeline/dist/*.whl gs://seqr-pipeline-runner-builds/prod/latest/pyscripts.zip
+          gcloud storage cp loading_pipeline/bin/* gs://seqr-pipeline-runner-builds/prod/${{ github.event.workflow_run.head_sha }}/bin/
+          gcloud storage cp loading_pipeline/dist/*.whl gs://seqr-pipeline-runner-builds/prod/${{ github.event.workflow_run.head_sha }}/pyscripts.zip
+          gcloud storage cp -r loading_pipeline/var/vep/* gs://seqr-reference-data/vep/
+
+  docker:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+
+      - name: authenticate to google cloud
+        id: "auth"
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: "${{ secrets.WORKLOAD_IDENTITY_PROVIDER }}"
+          service_account: "${{ secrets.RUN_SA_EMAIL }}"
+
+      - name: "setup gcloud sdk"
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push images
+        run: |-
+          gcloud builds submit --quiet --substitutions="COMMIT_SHA=${{ github.event.workflow_run.head_sha }},_CUSTOM_BRANCH_TAG=latest" --config .cloudbuild/pipeline-docker.cloudbuild.yaml --gcs-log-dir=gs://seqr-github-actions-logs/logs .
+
+  helm_update:
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: broadinstitute/seqr-helm
+          ref: main
+          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
+          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+
+      - name: Get latest pipeline-runner version
+        uses: mikefarah/yq@v4.22.1
+        id: current
+        with:
+          cmd: >
+            yq -r '.version' charts/pipeline-runner/Chart.yaml
+
+      - name: Bump version
+        id: bump
+        uses: cbrgm/semver-bump-action@main
+        with:
+          current-version: ${{ steps.current.outputs.result }}
+          bump-level: minor
+
+      - name: Update appVersion and version in pipeline-runner Chart file
+        uses: mikefarah/yq@v4.22.1
+        with:
+          cmd: >
+            yq -i '
+            .appVersion = "${{ github.event.workflow_run.head_sha }}" |
+            .version = "${{ steps.bump.outputs.new_version }}"
+            ' charts/pipeline-runner/Chart.yaml
+
+      - name: Commit and Push changes
+        uses: Andro999b/push@v1.3
+        with:
+          repository: broadinstitute/seqr-helm
+          branch: main
+          github_token: ${{ secrets.SEQR_VERSION_UPDATE_TOKEN }}
+          author_email: ${{ github.actor }}@users.noreply.github.com
+          author_name: tgg-automation
+          message: "Update pipeline-runner chart appVersion to ${{ github.event.workflow_run.head_sha }}"
