@@ -197,7 +197,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
         call_command('reload_clinvar_all_variants')
         mock_logger.assert_called_with('Updating Clinvar ClickHouse tables to 2025-06-30 from 2025-06-23.')
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.all().count(), BATCH_SIZE * 2 + 10)
-        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, ClinvarAllVariantsSnvIndel.CLINVAR_DEFAULT_PATHOGENICITY)
+        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, 'No_pathogenic_assertion')
         self.assertIsNone(ClinvarAllVariantsSnvIndel.objects.first().gold_stars)
 
     @responses.activate
@@ -417,7 +417,7 @@ class ReloadClinvarAllVariantsTest(TestCase):
         )
         call_command('reload_clinvar_all_variants')
         self.assertEqual(ClinvarAllVariantsSnvIndel.objects.count(), 1)
-        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, ClinvarAllVariantsSnvIndel.CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY)
+        self.assertEqual(ClinvarAllVariantsSnvIndel.objects.first().pathogenicity, 'Conflicting_classifications_of_pathogenicity')
         mock_safe_post_to_slack.assert_called_with(
             SEQR_SLACK_DATA_ALERTS_NOTIFICATION_CHANNEL,
             'Successfully updated Clinvar ClickHouse tables to 2025-06-30.',
