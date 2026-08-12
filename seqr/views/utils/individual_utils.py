@@ -20,7 +20,7 @@ def _get_record_individual_id(record):
     return record.get(JsonConstants.PREVIOUS_INDIVIDUAL_ID_COLUMN) or record[JsonConstants.INDIVIDUAL_ID_COLUMN]
 
 
-def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_updated_individual_db_ids=False, get_created_counts=False, allow_features_update=False, skip_gt_stats_rebuild=False):
+def add_or_update_individuals_and_families(project, individual_records, user, get_update_json=True, get_individual_db_ids=False, get_created_counts=False, allow_features_update=False, skip_gt_stats_rebuild=False):
     updated_family_ids = set()
     updated_individuals = set()
     updated_affected = set()
@@ -55,11 +55,14 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
                 individual_id__in=[_get_record_individual_id(record) for record in individual_records]):
             individual_lookup[i.individual_id][i.family] = i
 
+    all_individuals = set()
     for record in individual_records:
-        created_individual = _update_from_record(
+        created_individual, individual_db_id = _update_from_record(
             record, user, families_by_id, individual_lookup, updated_family_ids, updated_individuals, updated_affected, updated_sex, updated_metadata, parent_updates, updated_note_ids, allow_features_update)
         if created_individual:
             num_created_individuals += 1
+        if get_individual_db_ids:
+            all_individuals.add(individual_db_id)
 
     for update in parent_updates:
         individual = update.pop('individual')
@@ -84,8 +87,8 @@ def add_or_update_individuals_and_families(project, individual_records, user, ge
     if get_update_json:
         pedigree_json = _get_updated_pedigree_json(updated_individuals, updated_family_models, updated_note_ids, user)
 
-    if get_updated_individual_db_ids:
-        return pedigree_json, {i.id for i in updated_individuals}
+    if get_individual_db_ids:
+        return pedigree_json, all_individuals
 
     if get_created_counts:
         return pedigree_json, num_created_families, num_created_individuals
@@ -161,7 +164,7 @@ def _update_from_record(record, user, families_by_id, individual_lookup, updated
         if family.pedigree_image:
             updated_family_ids.add(family.id)
 
-    return created_individual
+    return created_individual, individual.id
 
 
 def delete_individuals(project, individual_guids, user):

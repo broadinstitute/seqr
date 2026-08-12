@@ -1325,7 +1325,7 @@ class DataManagerAPITest(AirtableTest):
         self.check_data_manager_login(url)
 
         Project.objects.filter(guid=PROJECT_GUID).update(genome_version='38')
-        response = self.client.post(url, content_type='application/json', data=json.dumps({'family': 'F000002_2'}))
+        response = self.client.post(url, content_type='application/json', data=json.dumps({'family': 'F000002_2', 'datasetTypes': ['SNV_INDEL', 'SV']}))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), {
             'info': [
@@ -1340,6 +1340,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
             'project_guid': 'R0001_1kg',
             'family_guids': ['F000002_2'],
+            'dataset_types': ['SNV_INDEL', 'SV', 'GCNV'],
         })
 
 

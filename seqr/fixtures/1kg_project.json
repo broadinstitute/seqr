@@ -757,7 +757,7 @@
         "sex": "M",
         "affected": "A",
         "display_name": "",
-	"notes": "",
+        "features": [{"id": "HP:0001508"}],
         "case_review_status": "",
         "case_review_status_last_modified_date": null,
         "case_review_status_last_modified_by": null,
