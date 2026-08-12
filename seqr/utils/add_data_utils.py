@@ -63,7 +63,7 @@ def update_airtable_loading_tracking_status(project, status, additional_update=N
         update={'Status': status, **(additional_update or {})},
     )
 
-def trigger_delete_families_search(project, family_guids, user=None):
+def trigger_delete_families_search(project, family_guids, user=None, dataset_types=None):
     num_updated = 0
     updated_families = set()
     for dataset in Dataset.objects.filter(active_individuals__family__guid__in=family_guids).distinct():
@@ -80,6 +80,8 @@ def trigger_delete_families_search(project, family_guids, user=None):
         logger.info(message, user)
 
     variables = {'project_guid': project.guid, 'family_guids': family_guids}
+    if dataset_types:
+        variables['dataset_types'] = dataset_types
     _enqueue_pipeline_request('delete_families', variables, user)
     info.append('Triggered delete family data')
     return info
