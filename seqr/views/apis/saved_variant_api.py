@@ -321,7 +321,7 @@ def _delete_removed_tags(saved_variants, all_variant_guids, tag_updates, user, c
     existing_tag_guids = [tag['tagGuid'] for tag in tag_updates if tag.get('tagGuid')]
     deleted_tag_guids = []
     tag_set = _get_tag_set(saved_variants[0], tag_type)
-    remove_tags = tag_set.exclude(guid__in=existing_tag_guids)
+    remove_tags = tag_set.order_by('id').exclude(guid__in=existing_tag_guids)
     if protected_tag_types:
         remove_tags = remove_tags.exclude(variant_tag_type__name__in=protected_tag_types)
     if not can_edit:
