@@ -1,5 +1,3 @@
-from seqr.models import Individual
-
 MAX_VARIANTS = 10000
 
 XPOS_SORT_KEY = 'xpos'
@@ -7,10 +5,14 @@ PATHOGENICTY_SORT_KEY = 'pathogenicity'
 PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
 PRIORITIZED_GENE_SORT = 'prioritized_gene'
 
-AFFECTED = Individual.AFFECTED_STATUS_AFFECTED
-UNAFFECTED = Individual.AFFECTED_STATUS_UNAFFECTED
-MALE_SEXES = Individual.MALE_SEXES
-FEMALE_SEXES = Individual.FEMALE_SEXES
+# Mirrors seqr.models.Individual.AFFECTED_STATUS_AFFECTED/AFFECTED_STATUS_UNAFFECTED/MALE_SEXES/
+# FEMALE_SEXES - duplicated here (rather than imported) so that this module, and anything that
+# only needs these constants (e.g. clickhouse_search's migrations), doesn't have to import
+# seqr.models. Keep in sync with seqr/models.py's Individual class if those ever change.
+AFFECTED = 'A'
+UNAFFECTED = 'N'
+MALE_SEXES = ['M', 'XXY', 'XYY']
+FEMALE_SEXES = ['F', 'XXX', 'X0']
 
 ALT_ALT = 'alt_alt'
 REF_REF = 'ref_ref'
