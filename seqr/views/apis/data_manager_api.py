@@ -424,8 +424,11 @@ def trigger_delete_project(request):
 def trigger_delete_family(request):
     request_json = json.loads(request.body)
     family_guid = request_json.pop('family')
+    dataset_types = request_json.get('datasetTypes') or []
+    if Dataset.DATASET_TYPE_SV_CALLS in dataset_types:
+        dataset_types.append('GCNV')
     project = Project.objects.get(family__guid=family_guid)
-    info = trigger_delete_families_search(project, [family_guid], request.user)
+    info = trigger_delete_families_search(project, [family_guid], request.user, dataset_types)
     return create_json_response({'info': info})
 
 
