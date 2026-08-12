@@ -43,9 +43,6 @@ dev = [
 [tool.uv]
 exclude-dependencies = ["psycopg2-binary", "psycopg2"]
 
-[tool.uv.workspace]
-members = ["loading_pipeline/*"]
-
 [tool.setuptools]
 include-package-data = true
 
