@@ -1,10 +1,10 @@
 from clickhouse_backend import models
-from django.db.models import ForeignKey, OneToOneField, Func, CASCADE
+from django.db.models import ForeignKey, OneToOneField, CASCADE
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
-from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
+from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel, Projection
 from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvVariantsQuerySet, VariantsQuerySet, \
     VariantDetailsQuerySet
 from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi, \
@@ -13,14 +13,6 @@ from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
 from seqr.models import Dataset
 from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
-
-
-class Projection(Func):
-
-    def __init__(self, name, select='*', order_by=None):
-        self.name = name
-        self.select = select
-        self.order_by = order_by
 
 
 class BaseVariants(FixtureLoadableClickhouseModel):

@@ -30,21 +30,30 @@ to depend on from `loading_pipeline`'s minimal env.
 
 Per explicit direction: the settings module must configure **one** ClickHouse connection with
 **one** set of credentials — not the production split of a read-only `clickhouse` alias plus a
-privileged `clickhouse_write` alias. `DATABASES` will define a single alias (`clickhouse`) using
-one writer-capable credential (needed anyway, since migrations and test data inserts require write
+privileged `clickhouse_write` alias. `DATABASES` will define a single real alias using one
+writer-capable credential (needed anyway, since migrations and test data inserts require write
 access).
+
+That real alias must be named `clickhouse_write`, not `clickhouse`: `ClickHouseRouter.allow_migrate`
+(`clickhouse_search/models/__init__.py`) hardcodes `db == 'clickhouse_write'` for the
+`clickhouse_search` app, so only an alias literally named `clickhouse_write` is allowed to have
+migrations applied to it.
 
 Nuance to account for: `clickhouse_search/backend/base.py`'s `_dictionary_sql` looks up
 `DATABASES['clickhouse_write']['NAME']` (for ClickHouse-sourced dictionaries with a
 `clickhouse_query_template`) and `DATABASES[postgres_db]['NAME']` (default alias `'default'`, for
 Postgres-sourced dictionaries) purely to embed a database *name string* into generated DDL — not to
 open a second real connection. To keep this working without standing up a second live connection:
-- Give `'clickhouse_write'` a `TEST: {'MIRROR': 'clickhouse'}` config, so Django reuses the
-  `clickhouse` alias's actual test database instead of creating/tearing down a second one, while
-  the key is still present for the `NAME` lookup.
+- Give `'clickhouse'` a `TEST: {'MIRROR': 'clickhouse_write'}` config, so Django reuses the
+  `clickhouse_write` alias's actual test database instead of creating/tearing down a second one,
+  while the key is still present for the `NAME` lookup (used only by `backend/base.py`, not by our
+  own test code).
 - Give `'default'` a placeholder entry (e.g. `ENGINE: 'django.db.backends.dummy'`) purely so
   `DATABASES['default']['NAME']` resolves to a string — nothing in `loading_pipeline`'s tests
   actually connects to it, since there's no Postgres in this CI job.
+
+Test code (and the shared base class) uses `connections['clickhouse_write']` — the one alias
+Django actually creates/migrates a real test database for.
 
 ## Inventory of every ClickHouse-touching test
 
@@ -85,9 +94,9 @@ faking the whole schema).
 Every test currently calls `get_clickhouse_client()` (a raw `clickhouse_driver.Client`, see
 `lib/misc/clickhouse.py`) to run setup/assertion SQL directly. Once the schema is Django-managed,
 tests should execute their raw SQL through Django's own DB connection instead of a separate
-`clickhouse_driver.Client` instance — i.e. `django.db.connections['clickhouse'].cursor()` (the one
-alias defined per "Single connection / single set of credentials only" above), calling
-`cursor.execute(sql, params)` / `cursor.fetchall()`.
+`clickhouse_driver.Client` instance — i.e. `django.db.connections['clickhouse_write'].cursor()`
+(the one real alias defined per "Single connection / single set of credentials only" above),
+calling `cursor.execute(sql, params)` / `cursor.fetchall()`.
 
 This is purely a *client* swap for test code — tests keep writing raw SQL strings (no ORM/model
 queries), just executed via the Django connection so the tests exercise the same connection
@@ -117,10 +126,12 @@ note — this fixture rule is specifically about *repeated* setup-time data.
 
 | File | Change |
 |---|---|
-| `.github/workflows/pipeline-unit-tests.yml` | add a step creating a dummy `seqr_postgres_named_collection`; keep `CLICKHOUSE_DATABASE=test` |
+| `clickhouse_search/models/search_models.py`, `clickhouse_search/backend/table_models.py`, `clickhouse_search/migrations/0040_gnomadnoncodingconstraintdict.py` | move `Projection` from `search_models.py` to `backend/table_models.py`; update the migration's import accordingly (✅ done) |
+| `clickhouse_search/constants.py` | duplicate 4 constants out of `seqr.models.Individual` instead of importing it (✅ done) |
+| `.github/workflows/pipeline-unit-tests.yml` | keep `CLICKHOUSE_DATABASE=test`; no named-collection step needed anymore (no Postgres-sourced dictionaries are reachable via the minimal settings module in the first place - see note below) |
 | `loading_pipeline/pyproject.toml` | add `django`, `django-clickhouse-backend`, `pytest-django` dev deps; add `[tool.pytest.ini_options]` (`DJANGO_SETTINGS_MODULE`, `pythonpath`) |
 | **new** `loading_pipeline/lib/test/clickhouse_django/settings.py` | minimal Django settings: one real `clickhouse` alias (single credential set), `clickhouse_write` mirrored onto it via `TEST: {MIRROR: 'clickhouse'}`, a dummy `default` placeholder (NAME only, no real connection), `clickhouse_backend` + `clickhouse_search` apps, `ClickHouseRouter`; doubles as the shadow `settings` module `clickhouse_search/backend/base.py` bare-imports |
-| `lib/test/clickhouse_schema_testcase.py` | rewritten as the one shared base class: drop all manual DDL/SQL-file loading (schema now comes from real migrations via pytest-django), keep only the small external-sourced-dictionary overrides + per-test flush/truncate + staging-DB drop/create — all executed via `connections['clickhouse'].cursor()`; shared reference rows (e.g. gene-id/gnomAD source-table rows) loaded via Django `fixtures = [...]` instead of `INSERT` statements |
+| `lib/test/clickhouse_schema_testcase.py` | rewritten as the one shared base class: drop all manual DDL/SQL-file loading (schema now comes from real migrations via pytest-django), keep only the small external-sourced-dictionary overrides + per-test flush/truncate + staging-DB drop/create — all executed via `connections['clickhouse_write'].cursor()`; shared reference rows (e.g. gene-id/gnomAD source-table rows) loaded via Django `fixtures = [...]` instead of `INSERT` statements |
 | **delete** `loading_pipeline/var/test/test_clickhouse_schema.sql` | no longer needed |
 | **new** `loading_pipeline/lib/test/fixtures/*.json` | Django fixtures for the shared setup-time reference rows referenced above |
 | `lib/misc/clickhouse_test.py` | `ClickhouseTest` extends the shared base instead of hand-building its own schema; keeps only its fixture-data seeding (via the new Django fixtures, not bulk `INSERT`) and parquet-writing setup; all `get_clickhouse_client()` calls in the test body replaced with the Django connection cursor |

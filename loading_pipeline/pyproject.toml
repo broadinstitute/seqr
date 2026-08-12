@@ -33,6 +33,9 @@ dev = [
     "coverage>=7.2.2",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "pytest-django>=4.8.0",
+    "django==4.2.30", # matches the main seqr app's pinned version
+    "django-clickhouse-backend==1.6", # matches the main seqr app's pinned version
     "responses>=0.23.1",
     "ruff==0.11.3",
     "shellcheck-py>=0.10.0",
@@ -42,6 +45,15 @@ dev = [
 
 [tool.uv]
 exclude-dependencies = ["psycopg2-binary", "psycopg2"]
+
+[tool.pytest.ini_options]
+# `..` puts the repo root (which holds `clickhouse_search`/`clickhouse_backend`) on sys.path.
+# `lib/test/clickhouse_django` holds our minimal settings module, which needs to be importable
+# both as `DJANGO_SETTINGS_MODULE` and as the bare `settings` module that
+# `clickhouse_search/backend/base.py` imports directly; pytest prepends `pythonpath` entries to
+# sys.path, so it's found ahead of the (much heavier) repo-root `settings.py`.
+pythonpath = ["..", "lib/test/clickhouse_django"]
+DJANGO_SETTINGS_MODULE = "settings"
 
 [tool.setuptools]
 include-package-data = true

@@ -14,6 +14,14 @@ MATERIALIZED_VIEW_META_FIELDS = [
 DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db', 'clickhouse_query_template']
 
 
+class Projection(Func):
+
+    def __init__(self, name, select='*', order_by=None):
+        self.name = name
+        self.select = select
+        self.order_by = order_by
+
+
 class FixtureLoadableClickhouseModel(models.ClickhouseModel):
 
     def _save_table(
