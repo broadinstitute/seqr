@@ -170,9 +170,8 @@ async def _get_match_detail_results(match: list[tuple], lift_match: Optional[lis
     async with ClientSession(ONTOLOGY_API_URL) as session:
         for f_i, (samples, has_discovery, has_excluded) in enumerate(match + (lift_match or [])):
             family_id = f'F_{f_i}'
-            proband = None
-            relatives = []
             pedigree = []
+            phenopackets = []
             for s_i, (affected, sex, *sample) in enumerate(samples):
                 individual_id = f'I_{f_i}_{s_i}'
                 sex = SEX_LOOKUP.get(sex, 'OTHER_SEX')
@@ -188,22 +187,15 @@ async def _get_match_detail_results(match: list[tuple], lift_match: Optional[lis
                 phenopacket = await _format_phenopacket(
                     hpo_label_map, mondo_label_map, session, individual_id, has_discovery, has_excluded, sex, *sample,
                 )
-                if affected == 'A' and proband is None:
-                    proband = phenopacket
-                else:
-                    relatives.append(phenopacket)
+                phenopackets.append(phenopacket)
 
-            if not proband:
-                proband = relatives[0]
-                relatives = relatives[1:]
-
-            results.append({
-                'id': family_id,
-                'proband': proband,
-                'relatives': relatives,
+            results += [{
+                'id': phenopacket['id'],
+                'proband': phenopacket,
+                'relatives': [p for p in phenopackets if p is not phenopacket],
                 'pedigree': {'persons': pedigree},
                 'meta_data': {'phenopacket_schema_version': '2.0', 'resources': []},
-            })
+            } for phenopacket in phenopackets]
 
     result_sets = [
         (None, len(results), results),
