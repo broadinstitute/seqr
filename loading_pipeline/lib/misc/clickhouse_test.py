@@ -47,74 +47,94 @@ from loading_pipeline.lib.test.mocked_dataroot_testcase import MockedDatarootTes
 
 TEST_RUN_ID = 'manual__2025-05-07T17-20-59.702114+00-00'
 
-_FIVEUTR_ANNOTATION_TYPE = pa.struct([
-    ('AltStop', pa.string()),
-    ('AltStopDistanceToCDS', pa.int32()),
-    ('CapDistanceToStart', pa.int32()),
-    ('DistanceToCDS', pa.int32()),
-    ('DistanceToStop', pa.int32()),
-    ('Evidence', pa.bool_()),
-    ('FrameWithCDS', pa.string()),
-    ('KozakContext', pa.string()),
-    ('KozakStrength', pa.string()),
-    ('StartDistanceToCDS', pa.int32()),
-    ('alt_type', pa.string()),
-    ('alt_type_length', pa.int32()),
-    ('newSTOPDistanceToCDS', pa.int32()),
-    ('ref_StartDistanceToCDS', pa.int32()),
-    ('ref_type', pa.string()),
-    ('ref_type_length', pa.int32()),
-    ('type', pa.string()),
-])
-_UTRANNOTATOR_TYPE = pa.struct([
-    ('existingInframeOorfs', pa.int32()),
-    ('existingOutofframeOorfs', pa.int32()),
-    ('existingUorfs', pa.int32()),
-    ('fiveutrAnnotation', _FIVEUTR_ANNOTATION_TYPE),
-    ('fiveutrConsequence', pa.string()),
-])
-_TRANSCRIPT_TYPE = pa.struct([
-    ('alphamissense', pa.struct([('pathogenicity', pa.float64())])),
-    ('aminoAcids', pa.string()),
-    ('biotype', pa.string()),
-    ('canonical', pa.int32()),
-    ('codons', pa.string()),
-    ('consequenceTerms', pa.list_(pa.string())),
-    ('exon', pa.struct([('index', pa.int32()), ('total', pa.int32())])),
-    ('geneId', pa.string()),
-    ('hgvsc', pa.string()),
-    ('hgvsp', pa.string()),
-    ('intron', pa.struct([('index', pa.int32()), ('total', pa.int32())])),
-    ('loftee', pa.struct([('isLofNagnag', pa.bool_()), ('lofFilters', pa.list_(pa.string()))])),
-    ('majorConsequence', pa.string()),
-    ('manePlusClinical', pa.string()),
-    ('maneSelect', pa.string()),
-    ('refseqTranscriptId', pa.string()),
-    ('spliceregion', pa.struct([('extended_intronic_splice_region_variant', pa.bool_())])),
-    ('transcriptId', pa.string()),
-    ('transcriptRank', pa.int32()),
-    ('utrannotator', _UTRANNOTATOR_TYPE),
-])
-_MOTIF_CONSEQUENCE_TYPE = pa.struct([
-    ('consequenceTerms', pa.list_(pa.string())),
-    ('motifFeatureId', pa.string()),
-])
-_REGULATORY_CONSEQUENCE_TYPE = pa.struct([
-    ('biotype', pa.string()),
-    ('consequenceTerms', pa.list_(pa.string())),
-    ('regulatoryFeatureId', pa.string()),
-])
-VARIANT_DETAILS_SCHEMA = pa.schema([
-    ('key', pa.int64()),
-    ('variantId', pa.string()),
-    ('liftedOverChrom', pa.string()),
-    ('liftedOverPos', pa.int64()),
-    ('rsid', pa.string()),
-    ('CAID', pa.string()),
-    ('transcripts', pa.list_(_TRANSCRIPT_TYPE)),
-    ('sortedMotifFeatureConsequences', pa.list_(_MOTIF_CONSEQUENCE_TYPE)),
-    ('sortedRegulatoryFeatureConsequences', pa.list_(_REGULATORY_CONSEQUENCE_TYPE)),
-])
+_FIVEUTR_ANNOTATION_TYPE = pa.struct(
+    [
+        ('AltStop', pa.string()),
+        ('AltStopDistanceToCDS', pa.int32()),
+        ('CapDistanceToStart', pa.int32()),
+        ('DistanceToCDS', pa.int32()),
+        ('DistanceToStop', pa.int32()),
+        ('Evidence', pa.bool_()),
+        ('FrameWithCDS', pa.string()),
+        ('KozakContext', pa.string()),
+        ('KozakStrength', pa.string()),
+        ('StartDistanceToCDS', pa.int32()),
+        ('alt_type', pa.string()),
+        ('alt_type_length', pa.int32()),
+        ('newSTOPDistanceToCDS', pa.int32()),
+        ('ref_StartDistanceToCDS', pa.int32()),
+        ('ref_type', pa.string()),
+        ('ref_type_length', pa.int32()),
+        ('type', pa.string()),
+    ],
+)
+_UTRANNOTATOR_TYPE = pa.struct(
+    [
+        ('existingInframeOorfs', pa.int32()),
+        ('existingOutofframeOorfs', pa.int32()),
+        ('existingUorfs', pa.int32()),
+        ('fiveutrAnnotation', _FIVEUTR_ANNOTATION_TYPE),
+        ('fiveutrConsequence', pa.string()),
+    ],
+)
+_TRANSCRIPT_TYPE = pa.struct(
+    [
+        ('alphamissense', pa.struct([('pathogenicity', pa.float64())])),
+        ('aminoAcids', pa.string()),
+        ('biotype', pa.string()),
+        ('canonical', pa.int32()),
+        ('codons', pa.string()),
+        ('consequenceTerms', pa.list_(pa.string())),
+        ('exon', pa.struct([('index', pa.int32()), ('total', pa.int32())])),
+        ('geneId', pa.string()),
+        ('hgvsc', pa.string()),
+        ('hgvsp', pa.string()),
+        ('intron', pa.struct([('index', pa.int32()), ('total', pa.int32())])),
+        (
+            'loftee',
+            pa.struct(
+                [('isLofNagnag', pa.bool_()), ('lofFilters', pa.list_(pa.string()))],
+            ),
+        ),
+        ('majorConsequence', pa.string()),
+        ('manePlusClinical', pa.string()),
+        ('maneSelect', pa.string()),
+        ('refseqTranscriptId', pa.string()),
+        (
+            'spliceregion',
+            pa.struct([('extended_intronic_splice_region_variant', pa.bool_())]),
+        ),
+        ('transcriptId', pa.string()),
+        ('transcriptRank', pa.int32()),
+        ('utrannotator', _UTRANNOTATOR_TYPE),
+    ],
+)
+_MOTIF_CONSEQUENCE_TYPE = pa.struct(
+    [
+        ('consequenceTerms', pa.list_(pa.string())),
+        ('motifFeatureId', pa.string()),
+    ],
+)
+_REGULATORY_CONSEQUENCE_TYPE = pa.struct(
+    [
+        ('biotype', pa.string()),
+        ('consequenceTerms', pa.list_(pa.string())),
+        ('regulatoryFeatureId', pa.string()),
+    ],
+)
+VARIANT_DETAILS_SCHEMA = pa.schema(
+    [
+        ('key', pa.int64()),
+        ('variantId', pa.string()),
+        ('liftedOverChrom', pa.string()),
+        ('liftedOverPos', pa.int64()),
+        ('rsid', pa.string()),
+        ('CAID', pa.string()),
+        ('transcripts', pa.list_(_TRANSCRIPT_TYPE)),
+        ('sortedMotifFeatureConsequences', pa.list_(_MOTIF_CONSEQUENCE_TYPE)),
+        ('sortedRegulatoryFeatureConsequences', pa.list_(_REGULATORY_CONSEQUENCE_TYPE)),
+    ],
+)
 _FULL_TRANSCRIPT = {
     'alphamissense': {'pathogenicity': 0.5},
     'aminoAcids': 'S/L',
@@ -140,17 +160,31 @@ _FULL_TRANSCRIPT = {
         'existingOutofframeOorfs': None,
         'existingUorfs': None,
         'fiveutrAnnotation': {
-            'AltStop': None, 'AltStopDistanceToCDS': None, 'CapDistanceToStart': None,
-            'DistanceToCDS': 41, 'DistanceToStop': None, 'Evidence': None,
-            'FrameWithCDS': None, 'KozakContext': 'CGCATGC', 'KozakStrength': 'Weak',
-            'StartDistanceToCDS': None, 'alt_type': None, 'alt_type_length': None,
-            'newSTOPDistanceToCDS': None, 'ref_StartDistanceToCDS': None,
-            'ref_type': None, 'ref_type_length': None, 'type': 'OutOfFrame_oORF',
+            'AltStop': None,
+            'AltStopDistanceToCDS': None,
+            'CapDistanceToStart': None,
+            'DistanceToCDS': 41,
+            'DistanceToStop': None,
+            'Evidence': None,
+            'FrameWithCDS': None,
+            'KozakContext': 'CGCATGC',
+            'KozakStrength': 'Weak',
+            'StartDistanceToCDS': None,
+            'alt_type': None,
+            'alt_type_length': None,
+            'newSTOPDistanceToCDS': None,
+            'ref_StartDistanceToCDS': None,
+            'ref_type': None,
+            'ref_type_length': None,
+            'type': 'OutOfFrame_oORF',
         },
         'fiveutrConsequence': None,
     },
 }
-_FULL_MOTIF_CONSEQUENCE = {'consequenceTerms': ['TFBS_ablation'], 'motifFeatureId': 'ENSM00000123'}
+_FULL_MOTIF_CONSEQUENCE = {
+    'consequenceTerms': ['TFBS_ablation'],
+    'motifFeatureId': 'ENSM00000123',
+}
 _FULL_REGULATORY_CONSEQUENCE = {
     'biotype': 'enhancer',
     'consequenceTerms': ['regulatory_region_ablation'],
@@ -210,65 +244,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        # seqrdb_gene_ids/seqrdb_affected_status_dict are Postgres-sourced in production (see
-        # postgres_dicts.py) - no ClickHouse-side model backs them, so override with
-        # deterministic ClickHouse-sourced versions. Runs once for the class: inserting the
-        # `entries` fixture rows (loaded per-test, before setUp()) triggers
-        # entries_to_project_gt_stats_mv, which queries seqrdb_affected_status_dict.
         with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS {Env.CLICKHOUSE_DATABASE}.seqrdb_gene_ids_src (
-                    gene_id String,
-                    seqrdb_id UInt32
-                ) ENGINE = Memory;
-                """,
-            )
             cursor.execute(
                 f'INSERT INTO {Env.CLICKHOUSE_DATABASE}.`seqrdb_gene_ids_src` VALUES',
                 [('GENE1', 123), ('GENE2', 12), ('GENE3', 1)],
-            )
-            cursor.execute(
-                f"""
-                CREATE OR REPLACE DICTIONARY {Env.CLICKHOUSE_DATABASE}.seqrdb_gene_ids
-                (
-                    gene_id String,
-                    seqrdb_id UInt32
-                )
-                PRIMARY KEY gene_id
-                SOURCE(CLICKHOUSE(
-                    USER {Env.CLICKHOUSE_WRITER_USER} PASSWORD {Env.CLICKHOUSE_WRITER_PASSWORD}
-                    DB {Env.CLICKHOUSE_DATABASE} TABLE `seqrdb_gene_ids_src`
-                ))
-                LAYOUT(HASHED())
-                LIFETIME(0);
-                """,
-            )
-            cursor.execute(
-                f"""
-                CREATE TABLE IF NOT EXISTS {Env.CLICKHOUSE_DATABASE}.seqrdb_affected_status_dict_src (
-                    family_guid String,
-                    sampleId String,
-                    affected String
-                ) ENGINE = Memory;
-                """,
-            )
-            cursor.execute(
-                f"""
-                CREATE OR REPLACE DICTIONARY {Env.CLICKHOUSE_DATABASE}.seqrdb_affected_status_dict
-                (
-                    family_guid String,
-                    sampleId String,
-                    affected String
-                )
-                PRIMARY KEY family_guid, sampleId
-                SOURCE(CLICKHOUSE(
-                    USER {Env.CLICKHOUSE_WRITER_USER} PASSWORD {Env.CLICKHOUSE_WRITER_PASSWORD}
-                    DB {Env.CLICKHOUSE_DATABASE} TABLE `seqrdb_affected_status_dict_src`
-                ))
-                LAYOUT(COMPLEX_KEY_HASHED())
-                LIFETIME(0);
-                """,
             )
 
     def setUp(self):
