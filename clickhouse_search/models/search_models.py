@@ -453,7 +453,7 @@ class EntriesGcnv(BaseEntries):
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/GCNV/entries'
 
-class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
+class VariantDetailsGRCh37SnvIndel(FixtureLoadableClickhouseModel):
     ANNOTATION_CONSTANTS = VariantsGRCh37SnvIndel.ANNOTATION_CONSTANTS
 
     key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -470,7 +470,7 @@ class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
         db_table = 'GRCh37/SNV_INDEL/variants/details'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants_details', primary_key='key', flatten_nested=0)
 
-class VariantDetailsSnvIndel(models.ClickhouseModel):
+class VariantDetailsSnvIndel(FixtureLoadableClickhouseModel):
     TRANSCRIPTS_FIELDS = sorted([
         ('alphamissense', NamedTupleField([
             ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
