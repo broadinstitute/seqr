@@ -47,13 +47,8 @@ dev = [
 exclude-dependencies = ["psycopg2-binary", "psycopg2"]
 
 [tool.pytest.ini_options]
-# Order matters: `clickhouse_django` must precede `..`, or `import settings` resolves to the
-# repo-root `settings.py` instead of ours. `..` puts the repo root (clickhouse_search etc.) on
-# sys.path.
 pythonpath = ["lib/test/clickhouse_django", ".."]
 DJANGO_SETTINGS_MODULE = "settings"
-# Disable pytest-django's manage.py auto-discovery, which would otherwise re-shadow `settings`
-# with the main app's.
 django_find_project = false
 
 [tool.setuptools]

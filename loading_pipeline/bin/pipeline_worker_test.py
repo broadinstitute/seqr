@@ -104,34 +104,34 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         ) as f:
             self.assertEqual(f.read(), '')
 
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT COUNT(*)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
-                """,
-            )
-            annotations_count = cursor.fetchone()[0]
-            self.assertEqual(annotations_count, 30)
-            cursor.execute(
-                f"""
-                SELECT COUNT(*)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
-                """,
-            )
-            entries_count = cursor.fetchone()[0]
-            self.assertEqual(entries_count, 16)
-            cursor.execute(
-                f"""
-                SELECT sum(ac_wgs)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
-                """,
-            )
-            ac_wgs = cursor.fetchone()[0]
-            self.assertEqual(ac_wgs, 69)
+        cursor = connections['clickhouse_write'].cursor()
+        cursor.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
+            """,
+        )
+        annotations_count = cursor.fetchone()[0]
+        self.assertEqual(annotations_count, 30)
+        cursor.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
+            """,
+        )
+        entries_count = cursor.fetchone()[0]
+        self.assertEqual(entries_count, 16)
+        cursor.execute(
+            f"""
+            SELECT sum(ac_wgs)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
+            """,
+        )
+        ac_wgs = cursor.fetchone()[0]
+        self.assertEqual(ac_wgs, 69)
 
     @patch('loading_pipeline.lib.misc.slack._safe_post_to_slack')
     @patch('loading_pipeline.api.request_handlers.WriteClickhouseLoadSuccessFileTask')
