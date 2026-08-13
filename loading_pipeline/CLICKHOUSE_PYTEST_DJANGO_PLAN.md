@@ -152,3 +152,56 @@ specifics can't be verified ahead of time:
   `cursor.execute()`/`cursor.executemany()` on the Django ClickHouse backend, or need reshaping.
 
 These should be shaken out against a real CI run / local ClickHouse instance once implemented.
+
+## Deviations from this plan, found during implementation
+
+Verified against a live ClickHouse instance. Recorded here for reference; this plan document
+itself is not otherwise updated to match implementation.
+
+**`clickhouse_search/` changes beyond the two already noted above** (both cleared with the user
+before making them):
+- Moved `conditionally_refresh_reference_dataset` from `models/reference_data_models.py` to
+  `backend/table_models.py`, so migration 0040 doesn't need to import the live model modules (and
+  therefore `seqr.models.Dataset`/`seqr.utils.xpos_utils.CHROMOSOME_CHOICES`) just to reach one
+  helper function.
+- Added `conditionally_reload_dictionary` (`backend/table_models.py`) and edited migrations 0043
+  and 0044 to use it instead of hardcoded `RunSQL('SYSTEM RELOAD DICTIONARY ...')` - those forced
+  a real synchronous Postgres connection during `migrate`, which no environment here has. This
+  edits already-applied migration files, normally treated as an immutable historical record.
+
+**A production dependency change:** `clickhouse-driver` bumped `0.2.9` -> `0.2.10` in
+`loading_pipeline/pyproject.toml` (forced by `django-clickhouse-backend==1.6`'s own pin; matches
+the main app's version). Not test-only.
+
+**Bugs/gaps in this plan's own design, fixed - all confined to `loading_pipeline/`:**
+- `reference_data` needs its own dummy `DATABASES` alias; the plan only accounted for `default`
+  (`GeneIdDict`/`OmimDict` declare `postgres_db = 'reference_data'`).
+- `DATABASES['clickhouse_write']['TEST']['DEPENDENCIES']` must be `[]`, or Django raises
+  "Circular dependency in TEST[DEPENDENCIES]" (it assumes every alias depends on `default`).
+- The `pythonpath` ordering described in this plan's original settings-module writeup was
+  backwards; pytest builds `sys.path` in the *same* order as the `pythonpath` list, not reversed.
+- `django_find_project = false` is required - pytest-django's `manage.py` auto-discovery
+  otherwise force-inserts the repo root at `sys.path[0]`, re-shadowing `settings`.
+- `CLICKHOUSE_IN_MEMORY_DIR`/`CLICKHOUSE_DATA_DIR` must default to different paths, or two
+  `EmbeddedRocksDB` tables collide on the same file lock.
+- A stub `seqr` package (`lib/test/clickhouse_django/seqr/`) is needed - not anticipated anywhere
+  in this plan - because `clickhouse_search/backend/table_models.py` imports `SeqrLogger`, and
+  migration 0040 has a named dependency on a specific `seqr` migration.
+- The "no named-collection CI step needed" conclusion in this plan's own change-set table is
+  right, but the "Postgres/GCS-sourced dictionary wrinkle" section above is stale/wrong about why
+  - see the migration 0043/0044 edit above for the actual mechanism.
+
+**Explicit user-directed deviations from this plan's design:**
+- The shared base class does NOT keep "staging-DB drop/create" logic, contrary to this plan's
+  change-set table - `loading_pipeline`'s own production code already drops/creates the staging
+  DB defensively, so tests don't need to.
+- Per-test cleanup in the shared base class is a `_fixture_teardown` override that truncates all
+  live, non-`Dictionary`/`MaterializedView` tables directly via SQL - not Django's `flush` command,
+  which relies on `apps.get_models()` and finds nothing (no `clickhouse_search` model modules are
+  imported anywhere in `loading_pipeline`).
+
+**Unresolved tension, not yet acted on:** this plan calls for shared reference data (e.g.
+`seqrdb_gene_ids` source rows) to be loaded via Django fixtures (`loaddata`), which requires
+importing the real model classes being loaded - but the user has since directed that fully
+importing `clickhouse_search`'s live model modules is unacceptable for these tests. Needs
+resolution before the fixture-loading step is implemented.
