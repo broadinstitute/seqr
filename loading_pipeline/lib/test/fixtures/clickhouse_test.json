@@ -1,0 +1,265 @@
+[
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 1,
+        "fields": {
+            "key": 0,
+            "project_guid": "project_a",
+            "family_guid": "family_a1",
+            "sample_type": "WES",
+            "xpos": 123456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_a1", 2, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 2,
+        "fields": {
+            "key": 1,
+            "project_guid": "project_a",
+            "family_guid": "family_a2",
+            "sample_type": "WGS",
+            "xpos": 123456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_a2", 1, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 3,
+        "fields": {
+            "key": 2,
+            "project_guid": "project_a",
+            "family_guid": "family_a3",
+            "sample_type": "WGS",
+            "xpos": 133456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_a3", 2, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 4,
+        "fields": {
+            "key": 3,
+            "project_guid": "project_a",
+            "family_guid": "family_a4",
+            "sample_type": "WES",
+            "xpos": 133456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_a4", 0, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 5,
+        "fields": {
+            "key": 4,
+            "project_guid": "project_a",
+            "family_guid": "family_a5",
+            "sample_type": "WES",
+            "xpos": 133456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": true,
+            "geneId_ids": [0],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_a5", 0, null, null, null], ["sample_a6", 1, null, null, null], ["sample_a7", 0, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 6,
+        "fields": {
+            "key": 4,
+            "project_guid": "project_a",
+            "family_guid": "family_a6",
+            "sample_type": "WGS",
+            "xpos": 133456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_a8", 2, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 7,
+        "fields": {
+            "key": 0,
+            "project_guid": "project_b",
+            "family_guid": "family_b1",
+            "sample_type": "WES",
+            "xpos": 123456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_b4", 0, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 8,
+        "fields": {
+            "key": 1,
+            "project_guid": "project_b",
+            "family_guid": "family_b2",
+            "sample_type": "WES",
+            "xpos": 123456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_b5", 1, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 9,
+        "fields": {
+            "key": 2,
+            "project_guid": "project_b",
+            "family_guid": "family_b2",
+            "sample_type": "WES",
+            "xpos": 123456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_b5", 0, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 10,
+        "fields": {
+            "key": 3,
+            "project_guid": "project_b",
+            "family_guid": "family_b3",
+            "sample_type": "WES",
+            "xpos": 133456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_b6", 2, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 11,
+        "fields": {
+            "key": 4,
+            "project_guid": "project_b",
+            "family_guid": "family_b3",
+            "sample_type": "WES",
+            "xpos": 133456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": false,
+            "geneId_ids": [],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_b6", 2, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 12,
+        "fields": {
+            "key": 0,
+            "project_guid": "project_c",
+            "family_guid": "family_c1",
+            "sample_type": "WES",
+            "xpos": 123456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": true,
+            "geneId_ids": [1],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_c7", 0, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 13,
+        "fields": {
+            "key": 3,
+            "project_guid": "project_c",
+            "family_guid": "family_c2",
+            "sample_type": "WES",
+            "xpos": 123456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": true,
+            "geneId_ids": [1],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_c8", 0, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 14,
+        "fields": {
+            "key": 4,
+            "project_guid": "project_c",
+            "family_guid": "family_c3",
+            "sample_type": "WES",
+            "xpos": 133456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": true,
+            "geneId_ids": [1],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_c9", 2, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.entriessnvindel",
+        "pk": 15,
+        "fields": {
+            "key": 5,
+            "project_guid": "project_c",
+            "family_guid": "family_c4",
+            "sample_type": "WES",
+            "xpos": 133456789,
+            "is_gnomad_gt_5_percent": false,
+            "is_annotated_in_any_gene": true,
+            "geneId_ids": [1],
+            "filters": [],
+            "sign": 1,
+            "calls": [["sample_c9", 2, null, null, null]]
+        }
+    },
+    {
+        "model": "clickhouse_search.projectpartitionssnvindel",
+        "pk": "project_d",
+        "fields": {
+            "project_guid": "project_d",
+            "n_partitions": 2
+        }
+    }
+]
