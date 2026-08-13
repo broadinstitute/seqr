@@ -1,5 +1,9 @@
 import os
 
+from loading_pipeline.lib.test.clickhouse_django import (
+    dictionary_overrides,  # noqa: F401
+)
+
 FIXTURE_DIRS = [os.path.join(os.path.dirname(__file__), '..', 'fixtures')]
 
 INSTALLED_APPS = [
