@@ -261,5 +261,32 @@
             "project_guid": "project_d",
             "n_partitions": 2
         }
+    },
+    {
+        "model": "clickhouse_search.variantdetailssnvindel",
+        "pk": 1,
+        "fields": {
+            "key": 1,
+            "variant_id": "a",
+            "transcripts": []
+        }
+    },
+    {
+        "model": "clickhouse_search.variantdetailssnvindel",
+        "pk": 7,
+        "fields": {
+            "key": 7,
+            "variant_id": "c",
+            "transcripts": []
+        }
+    },
+    {
+        "model": "clickhouse_search.variantdetailssnvindel",
+        "pk": 10,
+        "fields": {
+            "key": 10,
+            "variant_id": "b",
+            "transcripts": []
+        }
     }
 ]
