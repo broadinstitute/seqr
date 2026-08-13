@@ -1,11 +1,4 @@
-"""Stub of `seqr.utils.logging_utils` - see `seqr/__init__.py` in this stub package for why.
-
-`SeqrLogger` is mirrored verbatim from the real `seqr/utils/logging_utils.py` (it's already
-dependency-free: stdlib `logging` plus this app's own `settings.DEPLOYMENT_TYPE`). Only
-`SeqrLogger` is reproduced, since it's the only symbol `clickhouse_search` actually imports from
-this module (`clickhouse_search/backend/table_models.py`).
-"""
-
+# Mirrors the real seqr.utils.logging_utils.SeqrLogger (dependency-free) - see seqr/__init__.py.
 import logging
 from typing import Optional
 
