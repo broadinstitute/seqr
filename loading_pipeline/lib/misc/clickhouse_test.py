@@ -318,7 +318,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
 
         df = pd.DataFrame(
             {
-                'key': [0, 3, 4],
+                'key': [10, 3, 4],
                 'project_guid': [
                     'project_d',
                     'project_d',
@@ -526,16 +526,21 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    ('project_a', 0, 'WES', 0, 1),
+                    ('project_a', 10, 'WES', 0, 1),
                     ('project_a', 1, 'WGS', 1, 0),
                     ('project_a', 2, 'WGS', 0, 1),
+                    ('project_a', 3, 'WES', 0, 0),
                     ('project_a', 4, 'WES', 1, 0),
                     ('project_a', 4, 'WGS', 0, 1),
+                    ('project_b', 10, 'WES', 0, 0),
                     ('project_b', 1, 'WES', 1, 0),
+                    ('project_b', 2, 'WES', 0, 0),
                     ('project_b', 3, 'WES', 0, 1),
                     ('project_b', 4, 'WES', 0, 1),
                     # project_gt_stats stages all projects, not just
                     # those requested for loading.
+                    ('project_c', 10, 'WES', 0, 0),
+                    ('project_c', 3, 'WES', 0, 0),
                     ('project_c', 4, 'WES', 0, 1),
                     ('project_c', 5, 'WES', 0, 1),
                 ],
@@ -555,7 +560,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    ('project_a', 0, 'WES', 0, 0),
+                    ('project_a', 10, 'WES', 0, 0),
                     ('project_a', 1, 'WGS', 1, 0),
                     ('project_a', 2, 'WGS', 0, 1),
                     ('project_a', 4, 'WES', 0, 0),
@@ -583,7 +588,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    ('project_a', 0, 'WES', 0, 0),
+                    ('project_a', 10, 'WES', 0, 0),
                     ('project_a', 1, 'WGS', 1, 0),
                     ('project_a', 2, 'WGS', 0, 1),
                     ('project_a', 4, 'WES', 0, 0),
@@ -593,7 +598,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     ('project_b', 4, 'WES', 0, 1),
                     ('project_c', 4, 'WES', 0, 1),
                     ('project_c', 5, 'WES', 0, 1),
-                    ('project_d', 0, 'WES', 0, 1),
+                    ('project_d', 10, 'WES', 0, 1),
                     ('project_d', 4, 'WES', 1, 0),
                 ],
             )
@@ -622,7 +627,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 cursor.fetchall(),
                 [
                     (
-                        0,
+                        10,
                         'project_b',
                         'family_b1',
                         123456789,
@@ -702,7 +707,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                         1,
                     ),
                     (
-                        0,
+                        10,
                         'project_d',
                         'family_d1',
                         123456789,
@@ -732,7 +737,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                         1,
                     ),
                     (
-                        0,
+                        10,
                         'project_c',
                         'family_c1',
                         123456789,
@@ -812,7 +817,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertEqual(
                 cursor.fetchall(),
                 [
-                    (0, 2, 0),
+                    (10, 2, 0),
                     (1, 1, 1),
                     (2, 0, 2),
                     (3, 2, 0),
@@ -827,6 +832,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_load_complete_run_snv_indel(self, mock_for_reference_genome_dataset_type):
+        self.maxDiff = None
         load_complete_run(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -846,7 +852,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    ('project_d', 0, 'WES', 0, 1),
+                    ('project_d', 10, 'WES', 0, 1),
                     ('project_d', 4, 'WES', 1, 0),
                 ],
             )
@@ -860,7 +866,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    (0, 2, 0),
+                    (10, 2, 0),
                     (4, 1, 0),
                 ],
             )
@@ -1104,38 +1110,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
     )
     def test_repartitioned_entries_table(self, mock_for_reference_genome_dataset_type):
         with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                REPLACE TABLE {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries` (
-                    `key` UInt32,
-                    `project_guid` LowCardinality(String),
-                    `family_guid` String,
-                    `xpos` UInt64 CODEC(Delta(8), ZSTD(1)),
-                    `sample_type` Enum8('WES' = 0, 'WGS' = 1),
-                    `is_gnomad_gt_5_percent` Boolean,
-                    `is_annotated_in_any_gene` Boolean DEFAULT length(geneId_ids) > 0,
-                    `geneId_ids` Array(UInt32),
-                    `calls` Array(
-                        Tuple(
-                            sampleId String,
-                            gt Nullable(Enum8('REF' = 0, 'HET' = 1, 'HOM' = 2)),
-                        )
-                    ),
-                    `sign` Int8,
-                    `n_partitions` UInt8 MATERIALIZED 2,
-                    `partition_id` UInt8 MATERIALIZED farmHash64(family_guid) % n_partitions,
-                    PROJECTION xpos_projection
-                    (
-                        SELECT *
-                        ORDER BY is_annotated_in_any_gene, xpos
-                    )
-                )
-                ENGINE = CollapsingMergeTree(sign)
-                PARTITION BY (project_guid, partition_id)
-                ORDER BY (project_guid, family_guid, key)
-                SETTINGS deduplicate_merge_projection_mode = 'rebuild';
-                """,
-            )
             load_complete_run(
                 ReferenceGenome.GRCh38,
                 DatasetType.SNV_INDEL,

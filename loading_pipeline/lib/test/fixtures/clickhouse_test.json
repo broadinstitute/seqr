@@ -3,7 +3,7 @@
         "model": "clickhouse_search.entriessnvindel",
         "pk": 1,
         "fields": {
-            "key": 0,
+            "key": 10,
             "project_guid": "project_a",
             "family_guid": "family_a1",
             "sample_type": "WES",
@@ -105,7 +105,7 @@
         "model": "clickhouse_search.entriessnvindel",
         "pk": 7,
         "fields": {
-            "key": 0,
+            "key": 10,
             "project_guid": "project_b",
             "family_guid": "family_b1",
             "sample_type": "WES",
