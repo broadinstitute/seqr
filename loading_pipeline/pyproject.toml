@@ -8,7 +8,7 @@ dependencies = [
     "gnomad==0.8.0",
     "aiofiles==24.1.0",
     "pydantic==2.8.2",
-    "clickhouse-driver==0.2.9",
+    "clickhouse-driver==0.2.10", # matches main seqr app's pinned version and django-clickhouse-backend's requirement
     "slacker==0.14.0",
     "ipykernel==6.29.2",  # matches pinned version in hail init_notebook.py
     "jupyter-console==6.6.3", # matches pinned version in hail init_notebook.py
@@ -50,10 +50,18 @@ exclude-dependencies = ["psycopg2-binary", "psycopg2"]
 # `..` puts the repo root (which holds `clickhouse_search`/`clickhouse_backend`) on sys.path.
 # `lib/test/clickhouse_django` holds our minimal settings module, which needs to be importable
 # both as `DJANGO_SETTINGS_MODULE` and as the bare `settings` module that
-# `clickhouse_search/backend/base.py` imports directly; pytest prepends `pythonpath` entries to
-# sys.path, so it's found ahead of the (much heavier) repo-root `settings.py`.
-pythonpath = ["..", "lib/test/clickhouse_django"]
+# `clickhouse_search/backend/base.py` imports directly. pytest builds sys.path by inserting each
+# `pythonpath` entry at position 0 in *reverse* list order, which nets out to sys.path holding
+# them in the same order given here - so `lib/test/clickhouse_django` must come first, ahead of
+# `..`, or `import settings` resolves to the much heavier repo-root `settings.py` instead of ours.
+pythonpath = ["lib/test/clickhouse_django", ".."]
 DJANGO_SETTINGS_MODULE = "settings"
+# pytest-django's `manage.py` auto-discovery walks up from cwd and, finding the main seqr app's
+# `manage.py` at the repo root, unconditionally inserts that directory at sys.path[0] - which
+# shadows our `settings` module with the main app's much heavier `settings.py`, undoing the
+# `pythonpath` ordering above. Disable it; our own `pythonpath` entries are all the path
+# configuration this suite needs.
+django_find_project = false
 
 [tool.setuptools]
 include-package-data = true

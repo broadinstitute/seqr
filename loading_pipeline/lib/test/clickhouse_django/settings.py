@@ -17,19 +17,21 @@ Only a single real ClickHouse connection/credential set is configured, on the `c
 alias. `ClickHouseRouter.allow_migrate` (in `clickhouse_search/models/__init__.py`) hardcodes
 `db == 'clickhouse_write'` for the `clickhouse_search` app, so migrations must run against an
 alias literally named `clickhouse_write` - that's the one Django actually creates/migrates a real
-test database for. `clickhouse` and `default` are present only because
+test database for. `clickhouse`, `default`, and `reference_data` are present only because
 `clickhouse_search/backend/base.py` looks up `DATABASES['clickhouse_write']['NAME']` /
-`DATABASES['default']['NAME']` to embed a database name string into generated dictionary DDL - not
-because either needs its own real connection:
+`DATABASES[postgres_db]['NAME']` (`postgres_db` defaults to `'default'`, but `GeneIdDict`/
+`OmimDict` in `clickhouse_search/models/postgres_dicts.py` declare `postgres_db = 'reference_data'`
+instead) to embed a database name string into generated dictionary DDL - not because any of them
+needs its own real connection:
   - `clickhouse` mirrors the `clickhouse_write` alias's test database (`TEST: {'MIRROR': ...}`),
     so Django doesn't create/destroy a second real test database for it.
-  - `default` is a `dummy` backend entry - it's never actually opened. pytest-django only calls
-    `create_test_db()` for aliases a given test's `databases` attribute names (see
-    `pytest_django.fixtures._get_databases_for_setup`); it does not unconditionally create every
-    alias in `DATABASES`. As long as every `TestCase` subclass in this suite declares
-    `databases = ['clickhouse_write']` (per the shared base class), `default` is never touched, so
-    the dummy backend never needs to support real connections - only `DATABASES['default']['NAME']`
-    ever gets read, purely as a string.
+  - `default` and `reference_data` are `dummy` backend entries - neither is ever actually opened.
+    pytest-django only calls `create_test_db()` for aliases a given test's `databases` attribute
+    names (see `pytest_django.fixtures._get_databases_for_setup`); it does not unconditionally
+    create every alias in `DATABASES`. As long as every `TestCase` subclass in this suite declares
+    `databases = ['clickhouse_write']` (per the shared base class), neither is ever touched, so the
+    dummy backend never needs to support real connections - only their `NAME` values ever get
+    read, purely as strings.
 
 Only `clickhouse_search`'s own migrations are permitted to run anywhere: `DATABASE_ROUTERS`
 appends a small catch-all router (`_NoOtherAppMigrationsRouter`, below) that vetoes migrations for
@@ -51,6 +53,10 @@ import os
 
 INSTALLED_APPS = [
     'clickhouse_backend',
+    # A stub, not the real `seqr` app - see `seqr/__init__.py` (in this same directory, shadowing
+    # the real app on sys.path) for why `clickhouse_search` needs *an* app named `seqr` present
+    # at all.
+    'seqr',
     'clickhouse_search',
 ]
 
@@ -79,8 +85,12 @@ USE_TZ = True
 SECRET_KEY = 'loading-pipeline-test'  # noqa: S105
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE', 'dev')
 PIPELINE_RUNNER_SERVER = os.environ.get('PIPELINE_RUNNER_SERVER', 'http://localhost')
-CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/tmp')  # noqa: S108
-CLICKHOUSE_DATA_DIR = os.environ.get('CLICKHOUSE_DATA_DIR', '/tmp')  # noqa: S108
+# These back separate `EmbeddedRocksDB`-engine tables (e.g. `annotations_memory` vs
+# `annotations_disk`) and must resolve to different paths - the same path for both causes a
+# RocksDB file-lock collision between those tables ("lock hold by current process") the moment
+# migrations try to create both.
+CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/tmp/loading_pipeline_test_clickhouse_in_memory')  # noqa: S108
+CLICKHOUSE_DATA_DIR = os.environ.get('CLICKHOUSE_DATA_DIR', '/tmp/loading_pipeline_test_clickhouse_data')  # noqa: S108
 
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'default')
 CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'default_password')
@@ -102,6 +112,12 @@ CLICKHOUSE_DB_CONFIG = {
     # `loading_pipeline.lib.core.environment.Env.CLICKHOUSE_DATABASE` already expects.
     'TEST': {
         'NAME': CLICKHOUSE_DATABASE_NAME,
+        # Django assumes any alias whose test-db signature differs from `default`'s implicitly
+        # depends on `default` (for cross-DB migration ordering) unless told otherwise. Since our
+        # tests only ever request `databases = ['clickhouse_write']` - `default` is never created
+        # - that implicit dependency can never resolve, raising "Circular dependency in
+        # TEST[DEPENDENCIES]". There are no real cross-database dependencies here, so declare none.
+        'DEPENDENCIES': [],
     },
 }
 
@@ -114,5 +130,13 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.dummy',
         'NAME': 'test_default_unused',
+    },
+    # `GeneIdDict`/`OmimDict` (`clickhouse_search/models/postgres_dicts.py`) declare
+    # `postgres_db = 'reference_data'` instead of the implicit `default` - same dummy-backend
+    # treatment as `default` above, needed purely so `DATABASES['reference_data']['NAME']`
+    # resolves to a string for `_dictionary_sql`'s generated DDL.
+    'reference_data': {
+        'ENGINE': 'django.db.backends.dummy',
+        'NAME': 'test_reference_data_unused',
     },
 }

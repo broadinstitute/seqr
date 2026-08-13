@@ -1,9 +1,11 @@
 from clickhouse_backend import models
 from django.db import connections
 from django.db.models import Func
+import requests
 
 from clickhouse_search.backend.fields import NamedTupleField
 from seqr.utils.logging_utils import SeqrLogger
+from settings import DATABASES, PIPELINE_RUNNER_SERVER
 
 logger = SeqrLogger(__name__)
 
@@ -12,6 +14,21 @@ MATERIALIZED_VIEW_META_FIELDS = [
     'to_table', 'source_table', 'source_sql', 'source_url', 'source_url_template', 'column_selects', 'refreshable', 'create_empty',
 ]
 DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db', 'clickhouse_query_template']
+
+
+def conditionally_refresh_reference_dataset(reference_dataset: str):
+    # NB: lives here, rather than in models/reference_data_models.py, specifically so that
+    # migrations depending on it don't need to import the (much heavier) live model definitions
+    # module - this is the only thing migrations need from it.
+    def inner(apps, schema_editor):
+        if DATABASES['default']['NAME'].startswith('test_'):
+            return
+        requests.post( # pragma: no cover
+            f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
+            json={"reference_dataset": reference_dataset},
+            timeout=60,
+        )
+    return inner
 
 
 class Projection(Func):

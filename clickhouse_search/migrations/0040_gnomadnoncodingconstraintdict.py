@@ -9,7 +9,7 @@ import django.db.models.deletion
 import django.db.models.manager
 import os
 
-from clickhouse_search.models.reference_data_models import conditionally_refresh_reference_dataset
+from clickhouse_search.backend.table_models import conditionally_refresh_reference_dataset
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
 CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
