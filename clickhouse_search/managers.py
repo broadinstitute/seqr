@@ -12,13 +12,14 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
     GroupArrayIntersect, If, MapLookup, NullIf, Plus, SubqueryJoin, SubqueryTable, Tuple, TupleConcat, Untuple, \
     IntDiv, Modulo, SplitByString, ArrayIndex, Multiply, IndexOf
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, DiscoveryVariantDict
-from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, MALE_SEXES, \
+from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
     EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_LIKELY_PATH_FILTER, \
     CLINVAR_CONFLICTING_P_LP, CLINVAR_CONFLICTING_NO_P, CLINVAR_CONFLICTING, PATH_FREQ_OVERRIDE_CUTOFF, \
     HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, \
-    X_LINKED_RECESSIVE_MALE_AFFECTED, FEMALE_SEXES, SV_ANNOTATION_TYPES
+    X_LINKED_RECESSIVE_MALE_AFFECTED, SV_ANNOTATION_TYPES
+from seqr.utils.constants import MALE_SEXES, FEMALE_SEXES
 from seqr.utils.xpos_utils import get_xpos, parse_variant_id, MIN_POS, MAX_POS, CHROMOSOME_CHOICES
 
 

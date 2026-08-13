@@ -112,7 +112,8 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
                 """,
             )
-            self.assertEqual(cursor.fetchone()[0], 30)
+            annotations_count = cursor.fetchone()[0]
+            self.assertEqual(annotations_count, 30)
             cursor.execute(
                 f"""
                 SELECT COUNT(*)
@@ -120,7 +121,8 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
                 """,
             )
-            self.assertEqual(cursor.fetchone()[0], 16)
+            entries_count = cursor.fetchone()[0]
+            self.assertEqual(entries_count, 16)
             cursor.execute(
                 f"""
                 SELECT sum(ac_wgs)
@@ -128,7 +130,8 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
                 """,
             )
-            self.assertEqual(cursor.fetchone()[0], 69)
+            ac_wgs = cursor.fetchone()[0]
+            self.assertEqual(ac_wgs, 69)
 
     @patch('loading_pipeline.lib.misc.slack._safe_post_to_slack')
     @patch('loading_pipeline.api.request_handlers.WriteClickhouseLoadSuccessFileTask')
