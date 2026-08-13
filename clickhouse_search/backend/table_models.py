@@ -31,6 +31,20 @@ def conditionally_refresh_reference_dataset(reference_dataset: str):
     return inner
 
 
+def conditionally_reload_dictionary(dictionary_name: str):
+    # Postgres-sourced dictionaries (SOURCE(POSTGRESQL(...))) are otherwise lazily loaded
+    # (LIFETIME(0), dictionaries_lazy_load default) - CREATE DICTIONARY alone never touches
+    # Postgres. An explicit `SYSTEM RELOAD DICTIONARY` forces a real, synchronous connection
+    # attempt though, which test environments with no real Postgres (e.g. loading_pipeline's)
+    # can't satisfy - so skip it under the same "test_"-prefix convention as
+    # `conditionally_refresh_reference_dataset` above.
+    def inner(apps, schema_editor):
+        if DATABASES['default']['NAME'].startswith('test_'):
+            return
+        schema_editor.execute(f'SYSTEM RELOAD DICTIONARY "{dictionary_name}"')
+    return inner
+
+
 class Projection(Func):
 
     def __init__(self, name, select='*', order_by=None):
