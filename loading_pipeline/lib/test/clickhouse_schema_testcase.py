@@ -16,6 +16,7 @@ class ClickhouseSchemaTestCase(TestCase):
                 """
                 SELECT name FROM system.tables
                 WHERE database = %(database)s AND engine NOT IN ('Dictionary', 'MaterializedView')
+                AND name != 'django_migrations'
                 """,
                 {'database': Env.CLICKHOUSE_DATABASE},
             )
