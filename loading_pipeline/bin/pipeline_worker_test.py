@@ -6,14 +6,12 @@ import hail as hl
 import hailtop.fs as hfs
 import luigi
 import luigi.worker
+from django.db import connections
 
 from loading_pipeline.bin.pipeline_worker import process_queue
 from loading_pipeline.lib.core import DatasetType, ReferenceGenome, SampleType
 from loading_pipeline.lib.core.environment import Env
-from loading_pipeline.lib.misc.clickhouse import (
-    ClickhouseReferenceDataset,
-    get_clickhouse_client,
-)
+from loading_pipeline.lib.misc.clickhouse import ClickhouseReferenceDataset
 from loading_pipeline.lib.paths import (
     clickhouse_load_success_file_path,
     loading_pipeline_deadletter_queue_dir,
@@ -106,31 +104,31 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         ) as f:
             self.assertEqual(f.read(), '')
 
-        client = get_clickhouse_client()
-        annotations_count = client.execute(
-            f"""
-            SELECT COUNT(*)
-            FROM
-            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
-            """,
-        )[0][0]
-        self.assertEqual(annotations_count, 30)
-        entries_count = client.execute(
-            f"""
-            SELECT COUNT(*)
-            FROM
-            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
-            """,
-        )[0][0]
-        self.assertEqual(entries_count, 16)
-        ac_wgs = client.execute(
-            f"""
-            SELECT sum(ac_wgs)
-            FROM
-            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
-            """,
-        )[0][0]
-        self.assertEqual(ac_wgs, 69)
+        with connections['clickhouse_write'].cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM
+                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
+                """,
+            )
+            self.assertEqual(cursor.fetchone()[0], 30)
+            cursor.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM
+                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
+                """,
+            )
+            self.assertEqual(cursor.fetchone()[0], 16)
+            cursor.execute(
+                f"""
+                SELECT sum(ac_wgs)
+                FROM
+                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
+                """,
+            )
+            self.assertEqual(cursor.fetchone()[0], 69)
 
     @patch('loading_pipeline.lib.misc.slack._safe_post_to_slack')
     @patch('loading_pipeline.api.request_handlers.WriteClickhouseLoadSuccessFileTask')

@@ -2,16 +2,14 @@ from unittest.mock import Mock, patch
 
 import hail as hl
 import luigi.worker
+from django.db import connections
 
 from loading_pipeline.lib.core import (
     DatasetType,
     ReferenceGenome,
 )
 from loading_pipeline.lib.core.environment import Env
-from loading_pipeline.lib.misc.clickhouse import (
-    ClickhouseReferenceDataset,
-    get_clickhouse_client,
-)
+from loading_pipeline.lib.misc.clickhouse import ClickhouseReferenceDataset
 from loading_pipeline.lib.paths import (
     variant_annotations_table_path,
 )
@@ -34,7 +32,6 @@ from loading_pipeline.lib.test.mocked_dataroot_testcase import (
     MockedDatarootTestCase,
 )
 
-TEST_SCHEMA = 'loading_pipeline/var/test/test_clickhouse_schema.sql'
 TEST_SNV_INDEL_ANNOTATIONS = (
     'loading_pipeline/var/test/exports/GRCh38/SNV_INDEL/annotations.ht'
 )
@@ -121,28 +118,28 @@ class LoadClickhouseVariantsTablesTaskTest(
         worker.run()
         self.assertTrue(task.complete())
 
-        client = get_clickhouse_client()
-        variants_count = client.execute(
-            f"""
-            SELECT COUNT(*)
-            FROM
-            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
-            """,
-        )[0][0]
-        self.assertEqual(variants_count, 2)
-        variant_details_count = client.execute(
-            f"""
-            SELECT COUNT(*)
-            FROM
-            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`
-            """,
-        )[0][0]
-        self.assertEqual(variant_details_count, 2)
-        key_lookups_count = client.execute(
-            f"""
-            SELECT COUNT(*)
-            FROM
-            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/key_lookup`
-            """,
-        )[0][0]
-        self.assertEqual(key_lookups_count, 2)
+        with connections['clickhouse_write'].cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM
+                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
+                """,
+            )
+            self.assertEqual(cursor.fetchone()[0], 2)
+            cursor.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM
+                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`
+                """,
+            )
+            self.assertEqual(cursor.fetchone()[0], 2)
+            cursor.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM
+                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/key_lookup`
+                """,
+            )
+            self.assertEqual(cursor.fetchone()[0], 2)
