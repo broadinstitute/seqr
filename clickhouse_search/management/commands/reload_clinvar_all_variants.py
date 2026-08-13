@@ -250,7 +250,7 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str, 
 
 def parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenumerated_value_alerts):
     from clickhouse_search.models.reference_data_models import ClinvarAllVariantsSnvIndel
-    
+
     for event, elem in ET.iterparse(gzipped_file, events=('start', 'end')):
         # Handle parsing the current date.
         if event == 'start' and elem.tag == 'ClinVarVariationRelease':
