@@ -118,31 +118,31 @@ class LoadClickhouseVariantsTablesTaskTest(
         worker.run()
         self.assertTrue(task.complete())
 
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT COUNT(*)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
-                """,
-            )
-            variants_count = cursor.fetchone()[0]
-            self.assertEqual(variants_count, 2)
-            cursor.execute(
-                f"""
-                SELECT COUNT(*)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`
-                """,
-            )
-            variant_details_count = cursor.fetchone()[0]
-            self.assertEqual(variant_details_count, 2)
-            cursor.execute(
-                f"""
-                SELECT COUNT(*)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/key_lookup`
-                """,
-            )
-            key_lookups_count = cursor.fetchone()[0]
-            self.assertEqual(key_lookups_count, 2)
+        cursor = connections['clickhouse_write'].cursor()
+        cursor.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
+            """,
+        )
+        variants_count = cursor.fetchone()[0]
+        self.assertEqual(variants_count, 2)
+        cursor.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`
+            """,
+        )
+        variant_details_count = cursor.fetchone()[0]
+        self.assertEqual(variant_details_count, 2)
+        cursor.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/key_lookup`
+            """,
+        )
+        key_lookups_count = cursor.fetchone()[0]
+        self.assertEqual(key_lookups_count, 2)
