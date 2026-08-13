@@ -244,6 +244,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        #  Postgres dicts are not managed by django in this test suite and therefore cannot be loaded from fixtures
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f'INSERT INTO {Env.CLICKHOUSE_DATABASE}.`seqrdb_gene_ids_src` VALUES',
