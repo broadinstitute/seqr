@@ -16,8 +16,6 @@ MATERIALIZED_VIEW_META_FIELDS = [
 DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db', 'clickhouse_query_template']
 
 
-# Lives here rather than in models/reference_data_models.py so migrations depending on it don't
-# need to import the much heavier live model definitions module.
 def conditionally_refresh_reference_dataset(reference_dataset: str):
     def inner(apps, schema_editor):
         if DATABASES['default']['NAME'].startswith('test_'):
