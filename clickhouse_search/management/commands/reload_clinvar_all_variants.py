@@ -199,7 +199,7 @@ def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], 
 
 def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str, unenumerated_value_alerts: Optional[list] = None) -> tuple[models.ClickhouseModel, models.ClickhouseModel, models.ClickhouseModel]:
     from clickhouse_search.models.reference_data_models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito
-    
+
     # Cannot use regular bool-falseyness here, as:
     # "An element with no child elements (even if it exists and has text) will be falsey."
     classified_record_node = elem.find('ClassifiedRecord')
