@@ -126,7 +126,8 @@ class LoadClickhouseVariantsTablesTaskTest(
                 {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
                 """,
             )
-            self.assertEqual(cursor.fetchone()[0], 2)
+            variants_count = cursor.fetchone()[0]
+            self.assertEqual(variants_count, 2)
             cursor.execute(
                 f"""
                 SELECT COUNT(*)
@@ -134,7 +135,8 @@ class LoadClickhouseVariantsTablesTaskTest(
                 {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`
                 """,
             )
-            self.assertEqual(cursor.fetchone()[0], 2)
+            variant_details_count = cursor.fetchone()[0]
+            self.assertEqual(variant_details_count, 2)
             cursor.execute(
                 f"""
                 SELECT COUNT(*)
@@ -142,4 +144,5 @@ class LoadClickhouseVariantsTablesTaskTest(
                 {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/key_lookup`
                 """,
             )
-            self.assertEqual(cursor.fetchone()[0], 2)
+            key_lookups_count = cursor.fetchone()[0]
+            self.assertEqual(key_lookups_count, 2)
