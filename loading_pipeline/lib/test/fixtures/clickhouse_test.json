@@ -269,8 +269,8 @@
             "key": 1,
             "variant_id": "a",
             "transcripts": [],
-            "sortedMotifFeatureConsequences": [],
-            "sortedRegulatoryFeatureConsequences": []
+            "sorted_motif_feature_consequences": [],
+            "sorted_regulatory_feature_consequences": []
         }
     },
     {
@@ -280,8 +280,8 @@
             "key": 7,
             "variant_id": "c",
             "transcripts": [],
-            "sortedMotifFeatureConsequences": [],
-            "sortedRegulatoryFeatureConsequences": []
+            "sorted_motif_feature_consequences": [],
+            "sorted_regulatory_feature_consequences": []
         }
     },
     {
@@ -291,8 +291,8 @@
             "key": 10,
             "variant_id": "b",
             "transcripts": [],
-            "sortedMotifFeatureConsequences": [],
-            "sortedRegulatoryFeatureConsequences": []
+            "sorted_motif_feature_consequences": [],
+            "sorted_regulatory_feature_consequences": []
         }
     }
 ]
