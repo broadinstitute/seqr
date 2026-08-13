@@ -1,18 +1,13 @@
+from seqr.utils.constants import AFFECTED_STATUS_AFFECTED as AFFECTED, AFFECTED_STATUS_UNAFFECTED as UNAFFECTED, \
+    MALE_SEXES, FEMALE_SEXES, SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, \
+    DATASET_TYPE_MITO_CALLS, GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+
 MAX_VARIANTS = 10000
 
 XPOS_SORT_KEY = 'xpos'
 PATHOGENICTY_SORT_KEY = 'pathogenicity'
 PATHOGENICTY_HGMD_SORT_KEY = 'pathogenicity_hgmd'
 PRIORITIZED_GENE_SORT = 'prioritized_gene'
-
-# Mirrors seqr.models.Individual.AFFECTED_STATUS_AFFECTED/AFFECTED_STATUS_UNAFFECTED/MALE_SEXES/
-# FEMALE_SEXES - duplicated here (rather than imported) so that this module, and anything that
-# only needs these constants (e.g. clickhouse_search's migrations), doesn't have to import
-# seqr.models. Keep in sync with seqr/models.py's Individual class if those ever change.
-AFFECTED = 'A'
-UNAFFECTED = 'N'
-MALE_SEXES = ['M', 'XXY', 'XYY']
-FEMALE_SEXES = ['F', 'XXX', 'X0']
 
 ALT_ALT = 'alt_alt'
 REF_REF = 'ref_ref'

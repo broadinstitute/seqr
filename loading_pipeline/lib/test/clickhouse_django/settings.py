@@ -8,6 +8,10 @@ heavier `settings.py`.
 
 import os
 
+# Shared Django fixtures (loaddata) for clickhouse_search-backed test data - see
+# lib/test/clickhouse_schema_testcase.py.
+FIXTURE_DIRS = [os.path.join(os.path.dirname(__file__), '..', 'fixtures')]
+
 INSTALLED_APPS = [
     'clickhouse_backend',
     'seqr',  # stub package (see seqr/__init__.py), not the real app
