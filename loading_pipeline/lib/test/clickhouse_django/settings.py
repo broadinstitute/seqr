@@ -40,11 +40,17 @@ DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE', 'dev')
 PIPELINE_RUNNER_SERVER = os.environ.get('PIPELINE_RUNNER_SERVER', 'http://localhost')
 # Must differ - EmbeddedRocksDB tables (annotations_memory vs annotations_disk) using the same
 # path deadlock on the same file lock.
-CLICKHOUSE_IN_MEMORY_DIR = os.environ.get('CLICKHOUSE_IN_MEMORY_DIR', '/tmp/loading_pipeline_test_clickhouse_in_memory')  # noqa: S108
-CLICKHOUSE_DATA_DIR = os.environ.get('CLICKHOUSE_DATA_DIR', '/tmp/loading_pipeline_test_clickhouse_data')  # noqa: S108
+CLICKHOUSE_IN_MEMORY_DIR = os.environ.get(
+    'CLICKHOUSE_IN_MEMORY_DIR', '/tmp/loading_pipeline_test_clickhouse_in_memory'
+)  # noqa: S108
+CLICKHOUSE_DATA_DIR = os.environ.get(
+    'CLICKHOUSE_DATA_DIR', '/tmp/loading_pipeline_test_clickhouse_data'
+)  # noqa: S108
 
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'default')
-CLICKHOUSE_WRITER_PASSWORD = os.environ.get('CLICKHOUSE_WRITER_PASSWORD', 'default_password')
+CLICKHOUSE_WRITER_PASSWORD = os.environ.get(
+    'CLICKHOUSE_WRITER_PASSWORD', 'default_password'
+)
 CLICKHOUSE_DATABASE_NAME = os.environ.get('CLICKHOUSE_DATABASE', 'seqr')
 
 CLICKHOUSE_DB_CONFIG = {
