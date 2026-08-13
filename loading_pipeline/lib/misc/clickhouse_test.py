@@ -47,6 +47,162 @@ from loading_pipeline.lib.test.mocked_dataroot_testcase import MockedDatarootTes
 
 TEST_RUN_ID = 'manual__2025-05-07T17-20-59.702114+00-00'
 
+_FIVEUTR_ANNOTATION_TYPE = pa.struct([
+    ('AltStop', pa.string()),
+    ('AltStopDistanceToCDS', pa.int32()),
+    ('CapDistanceToStart', pa.int32()),
+    ('DistanceToCDS', pa.int32()),
+    ('DistanceToStop', pa.int32()),
+    ('Evidence', pa.bool_()),
+    ('FrameWithCDS', pa.string()),
+    ('KozakContext', pa.string()),
+    ('KozakStrength', pa.string()),
+    ('StartDistanceToCDS', pa.int32()),
+    ('alt_type', pa.string()),
+    ('alt_type_length', pa.int32()),
+    ('newSTOPDistanceToCDS', pa.int32()),
+    ('ref_StartDistanceToCDS', pa.int32()),
+    ('ref_type', pa.string()),
+    ('ref_type_length', pa.int32()),
+    ('type', pa.string()),
+])
+_UTRANNOTATOR_TYPE = pa.struct([
+    ('existingInframeOorfs', pa.int32()),
+    ('existingOutofframeOorfs', pa.int32()),
+    ('existingUorfs', pa.int32()),
+    ('fiveutrAnnotation', _FIVEUTR_ANNOTATION_TYPE),
+    ('fiveutrConsequence', pa.string()),
+])
+_TRANSCRIPT_TYPE = pa.struct([
+    ('alphamissense', pa.struct([('pathogenicity', pa.float64())])),
+    ('aminoAcids', pa.string()),
+    ('biotype', pa.string()),
+    ('canonical', pa.int32()),
+    ('codons', pa.string()),
+    ('consequenceTerms', pa.list_(pa.string())),
+    ('exon', pa.struct([('index', pa.int32()), ('total', pa.int32())])),
+    ('geneId', pa.string()),
+    ('hgvsc', pa.string()),
+    ('hgvsp', pa.string()),
+    ('intron', pa.struct([('index', pa.int32()), ('total', pa.int32())])),
+    ('loftee', pa.struct([('isLofNagnag', pa.bool_()), ('lofFilters', pa.list_(pa.string()))])),
+    ('majorConsequence', pa.string()),
+    ('manePlusClinical', pa.string()),
+    ('maneSelect', pa.string()),
+    ('refseqTranscriptId', pa.string()),
+    ('spliceregion', pa.struct([('extended_intronic_splice_region_variant', pa.bool_())])),
+    ('transcriptId', pa.string()),
+    ('transcriptRank', pa.int32()),
+    ('utrannotator', _UTRANNOTATOR_TYPE),
+])
+_MOTIF_CONSEQUENCE_TYPE = pa.struct([
+    ('consequenceTerms', pa.list_(pa.string())),
+    ('motifFeatureId', pa.string()),
+])
+_REGULATORY_CONSEQUENCE_TYPE = pa.struct([
+    ('biotype', pa.string()),
+    ('consequenceTerms', pa.list_(pa.string())),
+    ('regulatoryFeatureId', pa.string()),
+])
+VARIANT_DETAILS_SCHEMA = pa.schema([
+    ('key', pa.int64()),
+    ('variantId', pa.string()),
+    ('liftedOverChrom', pa.string()),
+    ('liftedOverPos', pa.int64()),
+    ('rsid', pa.string()),
+    ('CAID', pa.string()),
+    ('transcripts', pa.list_(_TRANSCRIPT_TYPE)),
+    ('sortedMotifFeatureConsequences', pa.list_(_MOTIF_CONSEQUENCE_TYPE)),
+    ('sortedRegulatoryFeatureConsequences', pa.list_(_REGULATORY_CONSEQUENCE_TYPE)),
+])
+_FULL_TRANSCRIPT = {
+    'alphamissense': {'pathogenicity': 0.5},
+    'aminoAcids': 'S/L',
+    'biotype': 'protein_coding',
+    'canonical': 1,
+    'codons': 'tCg/tTg',
+    'consequenceTerms': ['missense_variant'],
+    'exon': {'index': 6, 'total': 14},
+    'geneId': 'ENSG00000187634',
+    'hgvsc': 'ENST00000616016.5:c.1049C>T',
+    'hgvsp': 'ENSP00000478421.2:p.Ser350Leu',
+    'intron': None,
+    'loftee': {'isLofNagnag': False, 'lofFilters': []},
+    'majorConsequence': 'missense_variant',
+    'manePlusClinical': None,
+    'maneSelect': 'NM_001385641.1',
+    'refseqTranscriptId': 'NM_001385641.1',
+    'spliceregion': {'extended_intronic_splice_region_variant': False},
+    'transcriptId': 'ENST00000616016',
+    'transcriptRank': 0,
+    'utrannotator': {
+        'existingInframeOorfs': None,
+        'existingOutofframeOorfs': None,
+        'existingUorfs': None,
+        'fiveutrAnnotation': {
+            'AltStop': None, 'AltStopDistanceToCDS': None, 'CapDistanceToStart': None,
+            'DistanceToCDS': 41, 'DistanceToStop': None, 'Evidence': None,
+            'FrameWithCDS': None, 'KozakContext': 'CGCATGC', 'KozakStrength': 'Weak',
+            'StartDistanceToCDS': None, 'alt_type': None, 'alt_type_length': None,
+            'newSTOPDistanceToCDS': None, 'ref_StartDistanceToCDS': None,
+            'ref_type': None, 'ref_type_length': None, 'type': 'OutOfFrame_oORF',
+        },
+        'fiveutrConsequence': None,
+    },
+}
+_FULL_MOTIF_CONSEQUENCE = {'consequenceTerms': ['TFBS_ablation'], 'motifFeatureId': 'ENSM00000123'}
+_FULL_REGULATORY_CONSEQUENCE = {
+    'biotype': 'enhancer',
+    'consequenceTerms': ['regulatory_region_ablation'],
+    'regulatoryFeatureId': 'ENSR00000123',
+}
+VARIANT_DETAILS_ROWS = [
+    {
+        'key': 1,
+        'variantId': '1-13-A-C',
+        'liftedOverChrom': '1',
+        'liftedOverPos': 13,
+        'rsid': 'rs123',
+        'CAID': 'CA123456',
+        'transcripts': [_FULL_TRANSCRIPT],
+        'sortedMotifFeatureConsequences': [_FULL_MOTIF_CONSEQUENCE],
+        'sortedRegulatoryFeatureConsequences': [_FULL_REGULATORY_CONSEQUENCE],
+    },
+    {
+        'key': 2,
+        'variantId': '2-14-A-T',
+        'liftedOverChrom': None,
+        'liftedOverPos': None,
+        'rsid': None,
+        'CAID': None,
+        'transcripts': [],
+        'sortedMotifFeatureConsequences': [],
+        'sortedRegulatoryFeatureConsequences': [],
+    },
+    {
+        'key': 3,
+        'variantId': 'Y-19-A-C',
+        'liftedOverChrom': None,
+        'liftedOverPos': None,
+        'rsid': None,
+        'CAID': None,
+        'transcripts': [],
+        'sortedMotifFeatureConsequences': [],
+        'sortedRegulatoryFeatureConsequences': [],
+    },
+    {
+        'key': 4,
+        'variantId': 'M-12-C-G',
+        'liftedOverChrom': None,
+        'liftedOverPos': None,
+        'rsid': None,
+        'CAID': None,
+        'transcripts': [],
+        'sortedMotifFeatureConsequences': [],
+        'sortedRegulatoryFeatureConsequences': [],
+    },
+]
+
 
 class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
     fixtures: ClassVar = ['clickhouse_test']
@@ -137,25 +293,19 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 ),
             )
 
-        df = pd.DataFrame(
-            {
-                'key': [1, 2, 3, 4],
-                'variantId': [
-                    '1-13-A-C',
-                    '2-14-A-T',
-                    'Y-19-A-C',
-                    'M-12-C-G',
-                ],
-                'transcripts': ['a', 'b', 'c', 'd'],
-            },
+        variant_details_table = pa.Table.from_pylist(
+            VARIANT_DETAILS_ROWS,
+            schema=VARIANT_DETAILS_SCHEMA,
         )
-        write_test_parquet(
-            df,
-            new_variant_details_parquet_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.SNV_INDEL,
-                TEST_RUN_ID,
-            ),
+        variant_details_path = new_variant_details_parquet_path(
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            TEST_RUN_ID,
+        )
+        os.makedirs(variant_details_path)
+        pq.write_table(
+            variant_details_table,
+            os.path.join(variant_details_path, 'test.parquet'),
         )
 
         df = pd.DataFrame(
@@ -303,10 +453,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
 
     def test_direct_insert_all_keys(self):
         with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f'INSERT INTO {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details` VALUES',
-                [(1, 'a', 'e'), (10, 'b', 'f'), (7, 'c', 'g')],
-            )
             direct_insert_all_keys(
                 ClickHouseTable.VARIANT_DETAILS,
                 TableNameBuilder(
@@ -316,17 +462,17 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 ),
             )
             cursor.execute(
-                f'SELECT * FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
+                f'SELECT key, variantId FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
             )
             self.assertEqual(
                 cursor.fetchall(),
                 [
-                    (1, '1-13-A-C', 'a'),
-                    (2, '2-14-A-T', 'b'),
-                    (3, 'Y-19-A-C', 'c'),
-                    (4, 'M-12-C-G', 'd'),
-                    (7, 'c', 'g'),
-                    (10, 'b', 'f'),
+                    (1, '1-13-A-C'),
+                    (2, '2-14-A-T'),
+                    (3, 'Y-19-A-C'),
+                    (4, 'M-12-C-G'),
+                    (7, 'c'),
+                    (10, 'b'),
                 ],
             )
 
