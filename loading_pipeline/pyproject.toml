@@ -113,6 +113,7 @@ inline-quotes = "single"
 ]
 '*migration*' = [
     'N999', # allow invalid module names
+    'RUF012', # Django migration classes' dependencies/operations are conventionally plain lists
 ]
 '*clickhouse*' = [
     'S608' # unsafe sql

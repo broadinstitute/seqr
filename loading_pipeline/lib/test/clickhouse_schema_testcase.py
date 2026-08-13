@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from django.db import connections
 from django.test import TestCase
 
@@ -5,7 +7,7 @@ from loading_pipeline.lib.core import Env
 
 
 class ClickhouseSchemaTestCase(TestCase):
-    databases = ['clickhouse_write']
+    databases: ClassVar = ['clickhouse_write']
 
     # Django's `flush` (the default TestCase teardown for backends without transaction support)
     # determines tables to flush from `apps.get_models()`, but nothing here imports
@@ -22,4 +24,4 @@ class ClickhouseSchemaTestCase(TestCase):
             )
             tables = [row[0] for row in cursor.fetchall()]
             for table in tables:
-                cursor.execute(f'TRUNCATE TABLE `{table}`')  # noqa: S608
+                cursor.execute(f'TRUNCATE TABLE `{table}`')

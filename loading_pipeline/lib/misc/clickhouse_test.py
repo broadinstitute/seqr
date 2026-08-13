@@ -1,4 +1,5 @@
 import os
+from typing import ClassVar
 from unittest.mock import patch
 
 import pandas as pd
@@ -48,7 +49,7 @@ TEST_RUN_ID = 'manual__2025-05-07T17-20-59.702114+00-00'
 
 
 class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
-    fixtures = ['clickhouse_test']
+    fixtures: ClassVar = ['clickhouse_test']
 
     @classmethod
     def setUpClass(cls):
