@@ -16,10 +16,9 @@ MATERIALIZED_VIEW_META_FIELDS = [
 DICTIONARY_META_FIELDS = ['layout', 'lifetime_max', 'postgres_query', 'postgres_db', 'clickhouse_query_template']
 
 
+# Lives here rather than in models/reference_data_models.py so migrations depending on it don't
+# need to import the much heavier live model definitions module.
 def conditionally_refresh_reference_dataset(reference_dataset: str):
-    # NB: lives here, rather than in models/reference_data_models.py, specifically so that
-    # migrations depending on it don't need to import the (much heavier) live model definitions
-    # module - this is the only thing migrations need from it.
     def inner(apps, schema_editor):
         if DATABASES['default']['NAME'].startswith('test_'):
             return
@@ -32,12 +31,6 @@ def conditionally_refresh_reference_dataset(reference_dataset: str):
 
 
 def conditionally_reload_dictionary(dictionary_name: str):
-    # Postgres-sourced dictionaries (SOURCE(POSTGRESQL(...))) are otherwise lazily loaded
-    # (LIFETIME(0), dictionaries_lazy_load default) - CREATE DICTIONARY alone never touches
-    # Postgres. An explicit `SYSTEM RELOAD DICTIONARY` forces a real, synchronous connection
-    # attempt though, which test environments with no real Postgres (e.g. loading_pipeline's)
-    # can't satisfy - so skip it under the same "test_"-prefix convention as
-    # `conditionally_refresh_reference_dataset` above.
     def inner(apps, schema_editor):
         if DATABASES['default']['NAME'].startswith('test_'):
             return
