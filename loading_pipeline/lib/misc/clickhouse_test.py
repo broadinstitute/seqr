@@ -834,7 +834,13 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         existing_gt_stats = cursor.fetchall()
         self.assertCountEqual(
             existing_gt_stats,
-            [],
+            [
+                (1, 1, 0, 0, 0, 0, 0),
+                (2, 0, 2, 0, 0, 1, 0),
+                (3, 2, 0, 0, 1, 0, 0),
+                (4, 5, 2, 0, 2, 1, 0),
+                (5, 2, 0, 0, 1, 0, 0),
+            ],
         )
         exchange_tables(
             table_name_builder,
