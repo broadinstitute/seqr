@@ -407,6 +407,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             )
 
     def test_direct_insert_all_keys(self):
+        cursor = connections['clickhouse_write'].cursor()
         direct_insert_all_keys(
             ClickHouseTable.VARIANT_DETAILS,
             TableNameBuilder(
@@ -415,21 +416,20 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 TEST_RUN_ID,
             ),
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f'SELECT key, variantId FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
-            )
-            self.assertEqual(
-                cursor.fetchall(),
-                [
-                    (1, '1-13-A-C'),
-                    (2, '2-14-A-T'),
-                    (3, 'Y-19-A-C'),
-                    (4, 'M-12-C-G'),
-                    (7, 'c'),
-                    (10, 'b'),
-                ],
-            )
+        cursor.execute(
+            f'SELECT key, variantId FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
+        )
+        self.assertEqual(
+            cursor.fetchall(),
+            [
+                (1, '1-13-A-C'),
+                (2, '2-14-A-T'),
+                (3, 'Y-19-A-C'),
+                (4, 'M-12-C-G'),
+                (7, 'c'),
+                (10, 'b'),
+            ],
+        )
 
         # ensure multiple calls are idempotent
         direct_insert_all_keys(
@@ -440,11 +440,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 TEST_RUN_ID,
             ),
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f'SELECT COUNT(*) FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
-            )
-            self.assertEqual(cursor.fetchone()[0], 6)
+        cursor.execute(
+            f'SELECT COUNT(*) FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
+        )
+        self.assertEqual(cursor.fetchone()[0], 6)
 
     @patch.object(
         ClickhouseReferenceDataset,
@@ -453,6 +452,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
     )
     def test_entries_insert_flow(self, mock_for_reference_genome_dataset_type):
         self.maxDiff = None # TODO
+        cursor = connections['clickhouse_write'].cursor()
         # Tests individual components of atomic_insert_entries, validating state after each step.
         table_name_builder = TableNameBuilder(
             ReferenceGenome.GRCh38,
@@ -482,28 +482,26 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 DatasetType.SNV_INDEL,
             ),
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT DISTINCT project_guid FROM {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/entries`
-                """,
-            )
-            staged_projects = cursor.fetchall()
+        cursor.execute(
+            f"""
+            SELECT DISTINCT project_guid FROM {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/entries`
+            """,
+        )
+        staged_projects = cursor.fetchall()
         self.assertCountEqual(
             [p[0] for p in staged_projects],
             ['project_a', 'project_b'],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
-                FROM
-                {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
-                FINAL
-                GROUP BY project_guid, key, sample_type
-                """,
-            )
-            staged_project_gt_stats = cursor.fetchall()
+        cursor.execute(
+            f"""
+            SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
+            FROM
+            {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
+            FINAL
+            GROUP BY project_guid, key, sample_type
+            """,
+        )
+        staged_project_gt_stats = cursor.fetchall()
         self.assertCountEqual(
             staged_project_gt_stats,
             [
@@ -530,17 +528,16 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             table_name_builder,
             ['family_a1', 'family_a5', 'family_a6'],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
-                FROM
-                {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
-                FINAL
-                GROUP BY project_guid, key, sample_type
-                """,
-            )
-            staged_project_gt_stats = cursor.fetchall()
+        cursor.execute(
+            f"""
+            SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
+            FROM
+            {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
+            FINAL
+            GROUP BY project_guid, key, sample_type
+            """,
+        )
+        staged_project_gt_stats = cursor.fetchall()
         self.assertCountEqual(
             staged_project_gt_stats,
             [
@@ -563,17 +560,16 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             table_name_builder,
             ['project_a', 'project_b', 'project_c'],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
-                FROM
-                {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
-                FINAL
-                GROUP BY project_guid, key, sample_type
-                """,
-            )
-            staged_project_gt_stats = cursor.fetchall()
+        cursor.execute(
+            f"""
+            SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
+            FROM
+            {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
+            FINAL
+            GROUP BY project_guid, key, sample_type
+            """,
+        )
+        staged_project_gt_stats = cursor.fetchall()
         self.assertCountEqual(
             staged_project_gt_stats,
             [
@@ -608,15 +604,14 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ),
             ['project_a', 'project_d'],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT COLUMNS('.*') EXCEPT(is_annotated_in_any_gene, is_gnomad_gt_5_percent)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
-                """,
-            )
-            new_entries = cursor.fetchall()
+        cursor.execute(
+            f"""
+            SELECT COLUMNS('.*') EXCEPT(is_annotated_in_any_gene, is_gnomad_gt_5_percent)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
+            """,
+        )
+        new_entries = cursor.fetchall()
         self.assertCountEqual(
             new_entries,
             [
@@ -802,15 +797,14 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 ),
             ],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT *
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
-                """,
-            )
-            existing_gt_stats = cursor.fetchall()
+        cursor.execute(
+            f"""
+            SELECT *
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
+            """,
+        )
+        existing_gt_stats = cursor.fetchall()
         self.assertCountEqual(
             existing_gt_stats,
             [],
@@ -822,40 +816,39 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 DatasetType.SNV_INDEL,
             ),
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT *
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
-                """,
-            )
-            new_gt_stats = cursor.fetchall()
+        cursor.execute(
+            f"""
+            SELECT *
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
+            """,
+        )
+        new_gt_stats = cursor.fetchall()
         self.assertCountEqual(new_gt_stats, [])
 
         reload_dictionaries(
             table_name_builder,
             ClickHouseDictionary.for_dataset_type(DatasetType.SNV_INDEL),
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT *
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
-                """,
-            )
-            self.assertEqual(
-                cursor.fetchall(),
-                [
-                    (10, 2, 0),
-                    (1, 1, 1),
-                    (2, 0, 2),
-                    (3, 2, 0),
-                    (4, 5, 0),
-                    (5, 2, 0),
-                ],
-            )
+        cursor.execute(
+            f"""
+            SELECT *
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
+            """,
+        )
+        new_gt_stats_post_reload = cursor.fetchall()
+        self.assertEqual(
+            new_gt_stats_post_reload,
+            [
+                (10, 2, 0),
+                (1, 1, 1),
+                (2, 0, 2),
+                (3, 2, 0),
+                (4, 5, 0),
+                (5, 2, 0),
+            ],
+        )
 
     @patch.object(
         ClickhouseReferenceDataset,
@@ -863,6 +856,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_load_complete_run_snv_indel(self, mock_for_reference_genome_dataset_type):
+        cursor = connections['clickhouse_write'].cursor()
         load_complete_run(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -870,110 +864,116 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ['project_d'],
             ['family_d1', 'family_d2'],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-               SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
-               FROM
-               {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
-               WHERE project_guid = 'project_d'
-               GROUP BY project_guid, key, sample_type
-               """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [
-                    ('project_d', 10, 'WES', 0, 1),
-                    ('project_d', 4, 'WES', 1, 0),
-                    ('project_d', 3, 'WES', 0, 0),
-                ],
-            )
-            cursor.execute(
-                f"""
-               SELECT *
-               FROM
-               {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
-               """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [
-                    (1, 1, 1, 0, 0, 0, 0),
-                    (2, 0, 2, 0, 0, 1, 0),
-                    (3, 2, 0, 0, 1, 0, 0),
-                    (4, 6, 2, 0, 2, 1, 0),
-                    (5, 2, 0, 0, 1, 0, 0),
-                    (10, 4, 0, 0, 2, 0, 0),
-                ],
-            )
-            cursor.execute(
-                f"""
-               SELECT *
-               FROM
-               {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
-               """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [
-                    (1, 1, 1, 0, 0, 0, 0),
-                    (2, 0, 2, 0, 0, 1, 0),
-                    (3, 2, 0, 0, 1, 0, 0),
-                    (4, 6, 2, 0, 2, 1, 0),
-                    (5, 2, 0, 0, 1, 0, 0),
-                    (10, 4, 0, 0, 2, 0, 0),
-                ],
-            )
-            cursor.execute(
-                f"""
-               SELECT *
-               FROM
-               {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
-               """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [
-                    (10, [], [], []),
-                    (11, [], [], []),
-                    (12, [], [], []),
-                    (13, [], [], []),
-                ],
-            )
-            cursor.execute(
-                f"""
-               SELECT *
-               FROM
-               {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_disk`
-               """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [
-                    (10, [], [], []),
-                    (11, [], [], []),
-                    (12, [], [], []),
-                    (13, [], [], []),
-                ],
-            )
-            cursor.execute(
-                f"""
-                           SELECT key, variantId
-                           FROM
-                           {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`
-                           """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [
-                    (10, '1-3-A-C'),
-                    (11, '2-4-A-T'),
-                    (12, 'Y-9-A-C'),
-                    (13, 'M-2-C-G'),
-                ],
-            )
+        cursor.execute(
+            f"""
+           SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
+           FROM
+           {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
+           WHERE project_guid = 'project_d'
+           GROUP BY project_guid, key, sample_type
+           """,
+        )
+        project_gt_stats = cursor.fetchall()
+        self.assertCountEqual(
+            project_gt_stats,
+            [
+                ('project_d', 10, 'WES', 0, 1),
+                ('project_d', 4, 'WES', 1, 0),
+                ('project_d', 3, 'WES', 0, 0),
+            ],
+        )
+        cursor.execute(
+            f"""
+           SELECT *
+           FROM
+           {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
+           """,
+        )
+        gt_stats = cursor.fetchall()
+        self.assertCountEqual(
+            gt_stats,
+            [
+                (1, 1, 1, 0, 0, 0, 0),
+                (2, 0, 2, 0, 0, 1, 0),
+                (3, 2, 0, 0, 1, 0, 0),
+                (4, 6, 2, 0, 2, 1, 0),
+                (5, 2, 0, 0, 1, 0, 0),
+                (10, 4, 0, 0, 2, 0, 0),
+            ],
+        )
+        cursor.execute(
+            f"""
+           SELECT *
+           FROM
+           {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
+           """,
+        )
+        gt_stats_dict = cursor.fetchall()
+        self.assertCountEqual(
+            gt_stats_dict,
+            [
+                (1, 1, 1, 0, 0, 0, 0),
+                (2, 0, 2, 0, 0, 1, 0),
+                (3, 2, 0, 0, 1, 0, 0),
+                (4, 6, 2, 0, 2, 1, 0),
+                (5, 2, 0, 0, 1, 0, 0),
+                (10, 4, 0, 0, 2, 0, 0),
+            ],
+        )
+        cursor.execute(
+            f"""
+           SELECT *
+           FROM
+           {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
+           """,
+        )
+        variants_memory = cursor.fetchall()
+        self.assertCountEqual(
+            variants_memory,
+            [
+                (10, [], [], []),
+                (11, [], [], []),
+                (12, [], [], []),
+                (13, [], [], []),
+            ],
+        )
+        cursor.execute(
+            f"""
+           SELECT *
+           FROM
+           {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_disk`
+           """,
+        )
+        variants_disk = cursor.fetchall()
+        self.assertCountEqual(
+            variants_disk,
+            [
+                (10, [], [], []),
+                (11, [], [], []),
+                (12, [], [], []),
+                (13, [], [], []),
+            ],
+        )
+        cursor.execute(
+            f"""
+                       SELECT key, variantId
+                       FROM
+                       {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`
+                       """,
+        )
+        variants_details = cursor.fetchall()
+        self.assertCountEqual(
+            variants_details,
+            [
+                (10, '1-3-A-C'),
+                (11, '2-4-A-T'),
+                (12, 'Y-9-A-C'),
+                (13, 'M-2-C-G'),
+            ],
+        )
 
     def test_load_complete_gcnv(self):
+        cursor = connections['clickhouse_write'].cursor()
         load_complete_run(
             ReferenceGenome.GRCh38,
             DatasetType.GCNV,
@@ -981,60 +981,59 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ['project_d'],
             ['family_d1', 'family_d2'],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-               SELECT COUNT(*)
-               FROM
-               {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/variants_memory`
-               """,
-            )
-            self.assertEqual(cursor.fetchone()[0], 4)
-            cursor.execute(
-                f"""
-               SELECT COUNT(*)
-               FROM
-               {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/variants_disk`
-               """,
-            )
-            self.assertEqual(cursor.fetchone()[0], 4)
-            cursor.execute(
-                f"""
-               SELECT COUNT(*)
-               FROM
-               {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/key_lookup`
-               """,
-            )
-            self.assertEqual(cursor.fetchone()[0], 4)
-            cursor.execute(
-                f"""
-               SELECT COUNT(*)
-               FROM
-               {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/entries`
-               """,
-            )
-            self.assertEqual(cursor.fetchone()[0], 3)
+        cursor.execute(
+            f"""
+           SELECT COUNT(*)
+           FROM
+           {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/variants_memory`
+           """,
+        )
+        self.assertEqual(cursor.fetchone()[0], 4)
+        cursor.execute(
+            f"""
+           SELECT COUNT(*)
+           FROM
+           {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/variants_disk`
+           """,
+        )
+        self.assertEqual(cursor.fetchone()[0], 4)
+        cursor.execute(
+            f"""
+           SELECT COUNT(*)
+           FROM
+           {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/key_lookup`
+           """,
+        )
+        self.assertEqual(cursor.fetchone()[0], 4)
+        cursor.execute(
+            f"""
+           SELECT COUNT(*)
+           FROM
+           {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/entries`
+           """,
+        )
+        self.assertEqual(cursor.fetchone()[0], 3)
 
     def test_delete_families(self):
+        cursor = connections['clickhouse_write'].cursor()
         table_name_builder = TableNameBuilder(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
             TEST_RUN_ID,
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT project_guid, sum(het_samples), sum(hom_samples)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
-                FINAL
-                GROUP BY project_guid
-                """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [('project_a', 2, 3), ('project_c', 0, 2), ('project_b', 1, 2)],
-            )
+        cursor.execute(
+            f"""
+            SELECT project_guid, sum(het_samples), sum(hom_samples)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
+            FINAL
+            GROUP BY project_guid
+            """,
+        )
+        self.assertCountEqual(
+            cursor.fetchall(),
+            [('project_a', 2, 3), ('project_c', 0, 2), ('project_b', 1, 2)],
+        )
 
         refresh_materialized_views(
             table_name_builder,
@@ -1043,15 +1042,14 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ),
             staging=False,
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT sum(ac_wes)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
-                """,
-            )
-            self.assertCountEqual(cursor.fetchall(), [(12,)])
+        cursor.execute(
+            f"""
+            SELECT sum(ac_wes)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
+            """,
+        )
+        self.assertCountEqual(cursor.fetchall(), [(12,)])
 
         delete_family_guids(
             ReferenceGenome.GRCh38,
@@ -1060,38 +1058,38 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             'project_a',
             ['family_a1', 'family_a2'],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT project_guid, sum(het_samples), sum(hom_samples)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
-                FINAL
-                GROUP BY project_guid
-                """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [('project_a', 1, 2), ('project_c', 0, 2), ('project_b', 1, 2)],
-            )
-            cursor.execute(
-                f"""
-                SELECT sum(ac_wes)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
-                """,
-            )
-            self.assertCountEqual(cursor.fetchall(), [(10,)])
-            cursor.execute(
-                f"""
-                SELECT sum(ac_wes)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
-                """,
-            )
-            self.assertCountEqual(cursor.fetchall(), [(10,)])
+        cursor.execute(
+            f"""
+            SELECT project_guid, sum(het_samples), sum(hom_samples)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
+            FINAL
+            GROUP BY project_guid
+            """,
+        )
+        self.assertCountEqual(
+            cursor.fetchall(),
+            [('project_a', 1, 2), ('project_c', 0, 2), ('project_b', 1, 2)],
+        )
+        cursor.execute(
+            f"""
+            SELECT sum(ac_wes)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
+            """,
+        )
+        self.assertCountEqual(cursor.fetchall(), [(10,)])
+        cursor.execute(
+            f"""
+            SELECT sum(ac_wes)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
+            """,
+        )
+        self.assertCountEqual(cursor.fetchall(), [(10,)])
 
     def test_rebuild_gt_stats(self):
+        cursor = connections['clickhouse_write'].cursor()
         table_name_builder = TableNameBuilder(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -1106,20 +1104,19 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             # partition_id) defaults to 0.
             {'project_guid': 'project_a', 'partition_id': 0},
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT project_guid, sum(het_samples), sum(hom_samples)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
-                WHERE project_guid IN ('project_a', 'project_b')
-                GROUP BY project_guid
-                """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [('project_a', 2, 3), ('project_b', 1, 2)],
-            )
+        cursor.execute(
+            f"""
+            SELECT project_guid, sum(het_samples), sum(hom_samples)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
+            WHERE project_guid IN ('project_a', 'project_b')
+            GROUP BY project_guid
+            """,
+        )
+        self.assertCountEqual(
+            cursor.fetchall(),
+            [('project_a', 2, 3), ('project_b', 1, 2)],
+        )
 
         refresh_materialized_views(
             table_name_builder,
@@ -1128,17 +1125,16 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ),
             staging=False,
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT sum(ac_wes), sum(ac_wgs)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
-                """,
-            )
-            # gt_stats has no project dimension (keyed globally by `key`), so project_c's rows
-            # (sharing key values with project_a/b in the fixture) also contribute here.
-            self.assertCountEqual(cursor.fetchall(), [(12, 5)])
+        cursor.execute(
+            f"""
+            SELECT sum(ac_wes), sum(ac_wgs)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
+            """,
+        )
+        # gt_stats has no project dimension (keyed globally by `key`), so project_c's rows
+        # (sharing key values with project_a/b in the fixture) also contribute here.
+        self.assertCountEqual(cursor.fetchall(), [(12, 5)])
 
         rebuild_gt_stats(
             ReferenceGenome.GRCh38,
@@ -1146,28 +1142,27 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             TEST_RUN_ID,
             ['project_a', 'project_b'],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT project_guid, sum(het_samples), sum(hom_samples)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
-                WHERE project_guid IN ('project_a', 'project_b')
-                GROUP BY project_guid
-                """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [('project_b', 1, 2)],
-            )
-            cursor.execute(
-                f"""
-                SELECT sum(ac_wes), sum(ac_wgs)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
-                """,
-            )
-            self.assertCountEqual(cursor.fetchall(), [(9, 0)])
+        cursor.execute(
+            f"""
+            SELECT project_guid, sum(het_samples), sum(hom_samples)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
+            WHERE project_guid IN ('project_a', 'project_b')
+            GROUP BY project_guid
+            """,
+        )
+        self.assertCountEqual(
+            cursor.fetchall(),
+            [('project_b', 1, 2)],
+        )
+        cursor.execute(
+            f"""
+            SELECT sum(ac_wes), sum(ac_wgs)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
+            """,
+        )
+        self.assertCountEqual(cursor.fetchall(), [(9, 0)])
 
     @patch.object(
         ClickhouseReferenceDataset,
@@ -1175,6 +1170,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_repartitioned_entries_table(self, mock_for_reference_genome_dataset_type):
+        cursor = connections['clickhouse_write'].cursor()
         load_complete_run(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -1182,21 +1178,20 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ['project_d'],
             ['family_d1', 'family_d2', 'family_d3'],
         )
-        with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT project_guid, sum(het_samples), sum(hom_samples)
-                FROM
-                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
-                GROUP BY project_guid
-                """,
-            )
-            self.assertCountEqual(
-                cursor.fetchall(),
-                [
-                    ('project_a', 2, 3),
-                    ('project_b', 1, 2),
-                    ('project_c', 0, 2),
-                    ('project_d', 1, 1),
-                ],
-            )
+        cursor.execute(
+            f"""
+            SELECT project_guid, sum(het_samples), sum(hom_samples)
+            FROM
+            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
+            GROUP BY project_guid
+            """,
+        )
+        self.assertCountEqual(
+            cursor.fetchall(),
+            [
+                ('project_a', 2, 3),
+                ('project_b', 1, 2),
+                ('project_c', 0, 2),
+                ('project_d', 1, 1),
+            ],
+        )
