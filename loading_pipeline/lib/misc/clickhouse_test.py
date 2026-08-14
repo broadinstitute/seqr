@@ -461,7 +461,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_entries_insert_flow(self, mock_for_reference_genome_dataset_type):
-        self.maxDiff = None  # TODO
         # Tests individual components of the atomic_insert_entries
         # to validate the state after each step.
         cursor = connections['clickhouse_write'].cursor()
