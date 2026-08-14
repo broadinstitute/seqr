@@ -119,30 +119,27 @@ class LoadClickhouseVariantsTablesTaskTest(
         self.assertTrue(task.complete())
 
         cursor = connections['clickhouse_write'].cursor()
-        cursor.execute(
+        variants_count = cursor.execute(
             f"""
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
             """,
-        )
-        variants_count = cursor.fetchone()[0]
+        ).fetchone()[0]
         self.assertEqual(variants_count, 2)
-        cursor.execute(
+        variant_details_count = cursor.execute(
             f"""
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`
             """,
-        )
-        variant_details_count = cursor.fetchone()[0]
+        ).fetchone()[0]
         self.assertEqual(variant_details_count, 2)
-        cursor.execute(
+        key_lookups_count = cursor.execute(
             f"""
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/key_lookup`
             """,
-        )
-        key_lookups_count = cursor.fetchone()[0]
+        ).fetchone()[0]
         self.assertEqual(key_lookups_count, 2)
