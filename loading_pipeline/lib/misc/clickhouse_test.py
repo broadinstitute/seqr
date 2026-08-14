@@ -47,94 +47,6 @@ from loading_pipeline.lib.test.mocked_dataroot_testcase import MockedDatarootTes
 
 TEST_RUN_ID = 'manual__2025-05-07T17-20-59.702114+00-00'
 
-_FIVEUTR_ANNOTATION_TYPE = pa.struct(
-    [
-        ('AltStop', pa.string()),
-        ('AltStopDistanceToCDS', pa.int32()),
-        ('CapDistanceToStart', pa.int32()),
-        ('DistanceToCDS', pa.int32()),
-        ('DistanceToStop', pa.int32()),
-        ('Evidence', pa.bool_()),
-        ('FrameWithCDS', pa.string()),
-        ('KozakContext', pa.string()),
-        ('KozakStrength', pa.string()),
-        ('StartDistanceToCDS', pa.int32()),
-        ('alt_type', pa.string()),
-        ('alt_type_length', pa.int32()),
-        ('newSTOPDistanceToCDS', pa.int32()),
-        ('ref_StartDistanceToCDS', pa.int32()),
-        ('ref_type', pa.string()),
-        ('ref_type_length', pa.int32()),
-        ('type', pa.string()),
-    ],
-)
-_UTRANNOTATOR_TYPE = pa.struct(
-    [
-        ('existingInframeOorfs', pa.int32()),
-        ('existingOutofframeOorfs', pa.int32()),
-        ('existingUorfs', pa.int32()),
-        ('fiveutrAnnotation', _FIVEUTR_ANNOTATION_TYPE),
-        ('fiveutrConsequence', pa.string()),
-    ],
-)
-_TRANSCRIPT_TYPE = pa.struct(
-    [
-        ('alphamissense', pa.struct([('pathogenicity', pa.float64())])),
-        ('aminoAcids', pa.string()),
-        ('biotype', pa.string()),
-        ('canonical', pa.int32()),
-        ('codons', pa.string()),
-        ('consequenceTerms', pa.list_(pa.string())),
-        ('exon', pa.struct([('index', pa.int32()), ('total', pa.int32())])),
-        ('geneId', pa.string()),
-        ('hgvsc', pa.string()),
-        ('hgvsp', pa.string()),
-        ('intron', pa.struct([('index', pa.int32()), ('total', pa.int32())])),
-        (
-            'loftee',
-            pa.struct(
-                [('isLofNagnag', pa.bool_()), ('lofFilters', pa.list_(pa.string()))],
-            ),
-        ),
-        ('majorConsequence', pa.string()),
-        ('manePlusClinical', pa.string()),
-        ('maneSelect', pa.string()),
-        ('refseqTranscriptId', pa.string()),
-        (
-            'spliceregion',
-            pa.struct([('extended_intronic_splice_region_variant', pa.bool_())]),
-        ),
-        ('transcriptId', pa.string()),
-        ('transcriptRank', pa.int32()),
-        ('utrannotator', _UTRANNOTATOR_TYPE),
-    ],
-)
-_MOTIF_CONSEQUENCE_TYPE = pa.struct(
-    [
-        ('consequenceTerms', pa.list_(pa.string())),
-        ('motifFeatureId', pa.string()),
-    ],
-)
-_REGULATORY_CONSEQUENCE_TYPE = pa.struct(
-    [
-        ('biotype', pa.string()),
-        ('consequenceTerms', pa.list_(pa.string())),
-        ('regulatoryFeatureId', pa.string()),
-    ],
-)
-VARIANT_DETAILS_SCHEMA = pa.schema(
-    [
-        ('key', pa.int64()),
-        ('variantId', pa.string()),
-        ('liftedOverChrom', pa.string()),
-        ('liftedOverPos', pa.int64()),
-        ('rsid', pa.string()),
-        ('CAID', pa.string()),
-        ('transcripts', pa.list_(_TRANSCRIPT_TYPE)),
-        ('sortedMotifFeatureConsequences', pa.list_(_MOTIF_CONSEQUENCE_TYPE)),
-        ('sortedRegulatoryFeatureConsequences', pa.list_(_REGULATORY_CONSEQUENCE_TYPE)),
-    ],
-)
 _FULL_TRANSCRIPT = {
     'alphamissense': {'pathogenicity': 0.5},
     'aminoAcids': 'S/L',
@@ -263,7 +175,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 DatasetType.SNV_INDEL,
                 TEST_RUN_ID,
             ),
-            VARIANT_DETAILS_SCHEMA,  # TODO needed?
         )
 
         # New Variants parquet.
