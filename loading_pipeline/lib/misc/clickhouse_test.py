@@ -522,6 +522,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
                 FROM
                 {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
+                FINAL
                 GROUP BY project_guid, key, sample_type
                 """,
             )
@@ -557,6 +558,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
                 FROM
                 {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
+                FINAL
                 GROUP BY project_guid, key, sample_type
                 """,
             )
@@ -587,6 +589,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
                 FROM
                 {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
+                FINAL
                 GROUP BY project_guid, key, sample_type
                 """,
             )
@@ -843,7 +846,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_load_complete_run_snv_indel(self, mock_for_reference_genome_dataset_type):
-        self.maxDiff = None
         load_complete_run(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -866,6 +868,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 [
                     ('project_d', 10, 'WES', 0, 1),
                     ('project_d', 4, 'WES', 1, 0),
+                    ('project_d', 3, 'WES', 0, 0),
                 ],
             )
             cursor.execute(
