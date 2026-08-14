@@ -1148,5 +1148,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             )
             self.assertCountEqual(
                 cursor.fetchall(),
-                [('project_a', 2, 3), ('project_b', 1, 2), ('project_c', 0, 2), ('project_d', 1, 1)],
+                [
+                    ('project_a', 2, 3),
+                    ('project_b', 1, 2),
+                    ('project_c', 0, 2),
+                    ('project_d', 1, 1),
+                ],
             )
