@@ -567,13 +567,13 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 [
                     ('project_a', 1, 'WGS', 1, 0),
                     ('project_a', 2, 'WGS', 0, 1),
-                    ('project_b', 10, 'WES', 0, 0)
+                    ('project_b', 10, 'WES', 0, 0),
                     ('project_b', 1, 'WES', 1, 0),
-                    ('project_b', 2, 'WES', 0, 0)
+                    ('project_b', 2, 'WES', 0, 0),
                     ('project_b', 3, 'WES', 0, 1),
                     ('project_b', 4, 'WES', 0, 1),
-                    ('project_c', 0, 'WES', 0, 0)
-                    ('project_c', 3, 'WES', 0, 0)
+                    ('project_c', 0, 'WES', 0, 0),
+                    ('project_c', 3, 'WES', 0, 0),
                     ('project_c', 4, 'WES', 0, 1),
                     ('project_c', 5, 'WES', 0, 1),
                 ],
