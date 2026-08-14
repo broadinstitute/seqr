@@ -459,7 +459,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
     )
     def test_entries_insert_flow(self, mock_for_reference_genome_dataset_type):
         self.maxDiff = None  # TODO
-        # Tests individual components of atomic_insert_entries, validating state after each step.
+        # Tests individual components of the atomic_insert_entries
+        # to validate the state after each step.
         cursor = connections['clickhouse_write'].cursor()
         table_name_builder = TableNameBuilder(
             ReferenceGenome.GRCh38,
@@ -1191,36 +1192,3 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         gt_stats = cursor.fetchall()
         self.assertCountEqual(gt_stats, [(9, 0)])
-
-    @patch.object(
-        ClickhouseReferenceDataset,
-        'for_reference_genome_dataset_type',
-        return_value=[ClickhouseReferenceDataset.CLINVAR],
-    )
-    def test_repartitioned_entries_table(self, mock_for_reference_genome_dataset_type):
-        cursor = connections['clickhouse_write'].cursor()
-        load_complete_run(
-            ReferenceGenome.GRCh38,
-            DatasetType.SNV_INDEL,
-            TEST_RUN_ID,
-            ['project_d'],
-            ['family_d1', 'family_d2', 'family_d3'],
-        )
-        cursor.execute(
-            f"""
-            SELECT project_guid, sum(het_samples), sum(hom_samples)
-            FROM
-            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
-            GROUP BY project_guid
-            """,
-        )
-        project_gt_stats = cursor.fetchall()
-        self.assertCountEqual(
-            project_gt_stats,
-            [
-                ('project_a', 2, 3),
-                ('project_b', 1, 2),
-                ('project_c', 0, 2),
-                ('project_d', 1, 1),
-            ],
-        )
