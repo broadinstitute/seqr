@@ -732,7 +732,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     123456789,
                     [],
                     [],
-                    [('sample_d1', 'REF', None, None, None), ('sample_d11', 'HOM', None, None, None)],
+                    [
+                        ('sample_d1', 'REF', None, None, None),
+                        ('sample_d11', 'HOM', None, None, None),
+                    ],
                     1,
                     1,
                     0,
@@ -1211,8 +1214,9 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             GROUP BY project_guid
             """,
         )
+        project_gt_stats = cursor.fetchall()
         self.assertCountEqual(
-            cursor.fetchall(),
+            project_gt_stats,
             [
                 ('project_a', 2, 3),
                 ('project_b', 1, 2),
