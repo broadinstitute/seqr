@@ -242,7 +242,12 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 'liftedOverPos': [13, None, None, None],
                 'rsid': ['rs123', None, None, None],
                 'CAID': ['CA123456', None, None, None],
-                'sortedMotifFeatureConsequences': [[_FULL_MOTIF_CONSEQUENCE], [], [], []],
+                'sortedMotifFeatureConsequences': [
+                    [_FULL_MOTIF_CONSEQUENCE],
+                    [],
+                    [],
+                    [],
+                ],
                 'sortedRegulatoryFeatureConsequences': [
                     [_FULL_REGULATORY_CONSEQUENCE],
                     [],
@@ -419,8 +424,9 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         cursor.execute(
             f'SELECT key, variantId FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
         )
+        ret = cursor.fetchall()
         self.assertEqual(
-            cursor.fetchall(),
+            ret,
             [
                 (1, '1-13-A-C'),
                 (2, '2-14-A-T'),
@@ -443,7 +449,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         cursor.execute(
             f'SELECT COUNT(*) FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
         )
-        self.assertEqual(cursor.fetchone()[0], 6)
+        ret = cursor.fetchone()
+        self.assertEqual(ret[0], 6)
 
     @patch.object(
         ClickhouseReferenceDataset,
@@ -451,9 +458,9 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_entries_insert_flow(self, mock_for_reference_genome_dataset_type):
-        self.maxDiff = None # TODO
-        cursor = connections['clickhouse_write'].cursor()
+        self.maxDiff = None  # TODO
         # Tests individual components of atomic_insert_entries, validating state after each step.
+        cursor = connections['clickhouse_write'].cursor()
         table_name_builder = TableNameBuilder(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -554,7 +561,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 ('project_c', 5, 'WES', 0, 1),
             ],
         )
-
         insert_new_entries(table_name_builder)
         optimize_entries(
             table_name_builder,
@@ -589,7 +595,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 ('project_d', 4, 'WES', 1, 0),
             ],
         )
-
         refresh_materialized_views(
             table_name_builder,
             ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
@@ -679,7 +684,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     1,
                     'project_a',
                     'family_a2',
-                    'WES',
+                    'WGS',
                     123456789,
                     [],
                     [('sample_a2', 'HET')],
@@ -809,7 +814,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             existing_gt_stats,
             [],
         )
-
         exchange_tables(
             table_name_builder,
             ClickHouseTable.for_dataset_type_atomic_entries_update_unpartitioned(
