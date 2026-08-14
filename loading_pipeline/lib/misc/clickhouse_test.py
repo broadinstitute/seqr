@@ -116,6 +116,9 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 f'INSERT INTO {Env.CLICKHOUSE_DATABASE}.`seqrdb_gene_ids_src` VALUES',
                 [('GENE1', 123), ('GENE2', 12), ('GENE3', 1)],
             )
+            cursor.execute(
+                f'SYSTEM RELOAD DICTIONARY {Env.CLICKHOUSE_DATABASE}.`seqrdb_gene_ids`',
+            )
 
     def setUp(self):
         super().setUp()
