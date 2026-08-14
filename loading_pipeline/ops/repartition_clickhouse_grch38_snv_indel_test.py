@@ -1,33 +1,37 @@
-import unittest
+from django.db import connections
 
 from loading_pipeline.lib.core.environment import Env
-from loading_pipeline.lib.misc.clickhouse import get_clickhouse_client
+from loading_pipeline.lib.test.clickhouse_schema_testcase import (
+    ClickhouseSchemaTestCase,
+)
 from loading_pipeline.ops.repartition_clickhouse_grch38_snv_indel import (
     REPARTITION_DATABASE_NAME,
     main,
 )
 
 
-class RepartitionGRCh38SnvIndelTest(unittest.TestCase):
+class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
     def setUp(self):
-        client = get_clickhouse_client()
-        client.execute(
-            f"""
-            DROP DATABASE IF EXISTS {Env.CLICKHOUSE_DATABASE}
-            PARALLEL WITH
-            DROP DATABASE IF EXISTS {REPARTITION_DATABASE_NAME};
-            """,
-        )
-        client.execute(
-            f"""
-            CREATE DATABASE {Env.CLICKHOUSE_DATABASE}
-            PARALLEL WITH
-            CREATE DATABASE {REPARTITION_DATABASE_NAME};
-        """,
-        )
-        client.execute(
-            f"""
-            CREATE TABLE {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries` (
+        super().setUp()
+        with connections['clickhouse_write'].cursor() as cursor:
+            cursor.execute(
+                f"""
+                DROP DATABASE IF EXISTS {REPARTITION_DATABASE_NAME};
+                """,
+            )
+            cursor.execute(
+                f"""
+                CREATE DATABASE {REPARTITION_DATABASE_NAME};
+                """,
+            )
+            cursor.execute(
+                f"""
+                DROP TABLE IF EXISTS {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`;
+                """,
+            )
+            cursor.execute(
+                f"""
+                CREATE TABLE {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries` (
                 `key` UInt32,
                 `project_guid` LowCardinality(String),
                 `family_guid` String,
