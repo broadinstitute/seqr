@@ -86,5 +86,5 @@ jobs:
           export CLICKHOUSE_OPTIMIZE_TABLE_WAIT_S=1
           export PYSPARK_SUBMIT_ARGS='--driver-memory 8G pyspark-shell'
           export CLICKHOUSE_DATABASE=test
-          uv run --project loading_pipeline pytest --cov=loading_pipeline --cov-report=term-missing -vv loading_pipeline
+          uv run --project loading_pipeline pytest --cov=loading_pipeline --cov-report=term-missing loading_pipeline
           uv run --project loading_pipeline coverage report --omit '*test*' --fail-under=85

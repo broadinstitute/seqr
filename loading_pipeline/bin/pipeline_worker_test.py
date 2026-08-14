@@ -105,32 +105,29 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertEqual(f.read(), '')
 
         cursor = connections['clickhouse_write'].cursor()
-        cursor.execute(
+        annotations_count = cursor.execute(
             f"""
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
             """,
-        )
-        annotations_count = cursor.fetchone()[0]
+        ).fetchone()[0]
         self.assertEqual(annotations_count, 30)
-        cursor.execute(
+        entries_count = cursor.execute(
             f"""
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
             """,
-        )
-        entries_count = cursor.fetchone()[0]
+        ).fetchone()[0]
         self.assertEqual(entries_count, 16)
-        cursor.execute(
+        ac_wgs = cursor.execute(
             f"""
             SELECT sum(ac_wgs)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
             """,
-        )
-        ac_wgs = cursor.fetchone()[0]
+        ).fetchone()[0]
         self.assertEqual(ac_wgs, 69)
 
     @patch('loading_pipeline.lib.misc.slack._safe_post_to_slack')
