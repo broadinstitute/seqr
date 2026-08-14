@@ -432,15 +432,15 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             )
 
     def test_direct_insert_all_keys(self):
+        direct_insert_all_keys(
+            ClickHouseTable.VARIANT_DETAILS,
+            TableNameBuilder(
+                ReferenceGenome.GRCh38,
+                DatasetType.SNV_INDEL,
+                TEST_RUN_ID,
+            ),
+        )
         with connections['clickhouse_write'].cursor() as cursor:
-            direct_insert_all_keys(
-                ClickHouseTable.VARIANT_DETAILS,
-                TableNameBuilder(
-                    ReferenceGenome.GRCh38,
-                    DatasetType.SNV_INDEL,
-                    TEST_RUN_ID,
-                ),
-            )
             cursor.execute(
                 f'SELECT key, variantId FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
             )
@@ -456,15 +456,16 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 ],
             )
 
-            # ensure multiple calls are idempotent
-            direct_insert_all_keys(
-                ClickHouseTable.VARIANT_DETAILS,
-                TableNameBuilder(
-                    ReferenceGenome.GRCh38,
-                    DatasetType.SNV_INDEL,
-                    TEST_RUN_ID,
-                ),
-            )
+        # ensure multiple calls are idempotent
+        direct_insert_all_keys(
+            ClickHouseTable.VARIANT_DETAILS,
+            TableNameBuilder(
+                ReferenceGenome.GRCh38,
+                DatasetType.SNV_INDEL,
+                TEST_RUN_ID,
+            ),
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f'SELECT COUNT(*) FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
             )
@@ -477,35 +478,35 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
     )
     def test_entries_insert_flow(self, mock_for_reference_genome_dataset_type):
         # Tests individual components of atomic_insert_entries, validating state after each step.
-        with connections['clickhouse_write'].cursor() as cursor:
-            table_name_builder = TableNameBuilder(
-                ReferenceGenome.GRCh38,
+        table_name_builder = TableNameBuilder(
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            TEST_RUN_ID,
+        )
+        create_staging_tables(
+            table_name_builder,
+            ClickHouseTable.for_dataset_type_atomic_entries_update(
                 DatasetType.SNV_INDEL,
-                TEST_RUN_ID,
-            )
-            create_staging_tables(
-                table_name_builder,
-                ClickHouseTable.for_dataset_type_atomic_entries_update(
-                    DatasetType.SNV_INDEL,
-                ),
-            )
-            create_staging_materialized_views(
-                table_name_builder,
-                ClickHouseMaterializedView.for_dataset_type_atomic_entries_update(
-                    DatasetType.SNV_INDEL,
-                ),
-            )
-            stage_existing_project_partitions(
-                table_name_builder,
-                [
-                    'project_a',
-                    'project_b',
-                    'project_d',  # Partition does not exist already.
-                ],
-                ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
-                    DatasetType.SNV_INDEL,
-                ),
-            )
+            ),
+        )
+        create_staging_materialized_views(
+            table_name_builder,
+            ClickHouseMaterializedView.for_dataset_type_atomic_entries_update(
+                DatasetType.SNV_INDEL,
+            ),
+        )
+        stage_existing_project_partitions(
+            table_name_builder,
+            [
+                'project_a',
+                'project_b',
+                'project_d',  # Partition does not exist already.
+            ],
+            ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
+                DatasetType.SNV_INDEL,
+            ),
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT DISTINCT project_guid FROM {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/entries`
@@ -539,16 +540,17 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     ('project_b', 4, 'WES', 0, 1),
                     # project_gt_stats stages all projects, not just
                     # those requested for loading.
-                    ('project_c', 10, 'WES', 0, 0),
+                    ('project_c', 0, 'WES', 0, 0),
                     ('project_c', 3, 'WES', 0, 0),
                     ('project_c', 4, 'WES', 0, 1),
                     ('project_c', 5, 'WES', 0, 1),
                 ],
             )
-            delete_existing_families_from_staging_entries(
-                table_name_builder,
-                ['family_a1', 'family_a5', 'family_a6'],
-            )
+        delete_existing_families_from_staging_entries(
+            table_name_builder,
+            ['family_a1', 'family_a5', 'family_a6'],
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
@@ -572,11 +574,13 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     ('project_c', 5, 'WES', 0, 1),
                 ],
             )
-            insert_new_entries(table_name_builder)
-            optimize_entries(
-                table_name_builder,
-                ['project_a', 'project_b', 'project_c'],
-            )
+
+        insert_new_entries(table_name_builder)
+        optimize_entries(
+            table_name_builder,
+            ['project_a', 'project_b', 'project_c'],
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
@@ -602,20 +606,22 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     ('project_d', 4, 'WES', 1, 0),
                 ],
             )
-            refresh_materialized_views(
-                table_name_builder,
-                ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
-                    DatasetType.SNV_INDEL,
-                ),
-                staging=True,
-            )
-            replace_project_partitions(
-                table_name_builder,
-                ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
-                    DatasetType.SNV_INDEL,
-                ),
-                ['project_a', 'project_d'],
-            )
+
+        refresh_materialized_views(
+            table_name_builder,
+            ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
+                DatasetType.SNV_INDEL,
+            ),
+            staging=True,
+        )
+        replace_project_partitions(
+            table_name_builder,
+            ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
+                DatasetType.SNV_INDEL,
+            ),
+            ['project_a', 'project_d'],
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT COLUMNS('.*') EXCEPT(is_annotated_in_any_gene, is_gnomad_gt_5_percent)
@@ -789,12 +795,14 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 cursor.fetchall(),
                 [],
             )
-            exchange_tables(
-                table_name_builder,
-                ClickHouseTable.for_dataset_type_atomic_entries_update_unpartitioned(
-                    DatasetType.SNV_INDEL,
-                ),
-            )
+
+        exchange_tables(
+            table_name_builder,
+            ClickHouseTable.for_dataset_type_atomic_entries_update_unpartitioned(
+                DatasetType.SNV_INDEL,
+            ),
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT *
@@ -803,10 +811,12 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 """,
             )
             self.assertCountEqual(cursor.fetchall(), [])
-            reload_dictionaries(
-                table_name_builder,
-                ClickHouseDictionary.for_dataset_type(DatasetType.SNV_INDEL),
-            )
+
+        reload_dictionaries(
+            table_name_builder,
+            ClickHouseDictionary.for_dataset_type(DatasetType.SNV_INDEL),
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT *
@@ -846,6 +856,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
                FROM
                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
+               WHERE PROJECT_GUID = 'project_d'
                GROUP BY project_guid, key, sample_type
                """,
             )
@@ -971,6 +982,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 SELECT project_guid, sum(het_samples), sum(hom_samples)
                 FROM
                 {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
+                FINAL
                 GROUP BY project_guid
                 """,
             )
@@ -978,13 +990,15 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 cursor.fetchall(),
                 [('project_a', 2, 3), ('project_c', 0, 2), ('project_b', 1, 2)],
             )
-            refresh_materialized_views(
-                table_name_builder,
-                ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
-                    DatasetType.SNV_INDEL,
-                ),
-                staging=False,
-            )
+
+        refresh_materialized_views(
+            table_name_builder,
+            ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
+                DatasetType.SNV_INDEL,
+            ),
+            staging=False,
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT sum(ac_wes)
@@ -993,18 +1007,21 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 """,
             )
             self.assertCountEqual(cursor.fetchall(), [(12,)])
-            delete_family_guids(
-                ReferenceGenome.GRCh38,
-                DatasetType.SNV_INDEL,
-                TEST_RUN_ID,
-                'project_a',
-                ['family_a1', 'family_a2'],
-            )
+
+        delete_family_guids(
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            TEST_RUN_ID,
+            'project_a',
+            ['family_a1', 'family_a2'],
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT project_guid, sum(het_samples), sum(hom_samples)
                 FROM
                 {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
+                FINAL
                 GROUP BY project_guid
                 """,
             )
@@ -1035,16 +1052,16 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             DatasetType.SNV_INDEL,
             TEST_RUN_ID,
         )
+        logged_query(  # DROP the partition from the non-staging entries to as a non-mv-impacting change.
+            f"""
+            ALTER TABLE {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
+            DROP PARTITION (%(project_guid)s, %(partition_id)s)
+            """,
+            # project_partitions_dict has no row for project_a, so n_partitions (and thus
+            # partition_id) defaults to 0.
+            {'project_guid': 'project_a', 'partition_id': 0},
+        )
         with connections['clickhouse_write'].cursor() as cursor:
-            logged_query(  # DROP the partition from the non-staging entries to as a non-mv-impacting change.
-                f"""
-                ALTER TABLE {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
-                DROP PARTITION (%(project_guid)s, %(partition_id)s)
-                """,
-                # project_partitions_dict has no row for project_a, so n_partitions (and thus
-                # partition_id) defaults to 0.
-                {'project_guid': 'project_a', 'partition_id': 0},
-            )
             cursor.execute(
                 f"""
                 SELECT project_guid, sum(het_samples), sum(hom_samples)
@@ -1058,13 +1075,15 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 cursor.fetchall(),
                 [('project_a', 2, 3), ('project_b', 1, 2)],
             )
-            refresh_materialized_views(
-                table_name_builder,
-                ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
-                    DatasetType.SNV_INDEL,
-                ),
-                staging=False,
-            )
+
+        refresh_materialized_views(
+            table_name_builder,
+            ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
+                DatasetType.SNV_INDEL,
+            ),
+            staging=False,
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT sum(ac_wes), sum(ac_wgs)
@@ -1075,12 +1094,14 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             # gt_stats has no project dimension (keyed globally by `key`), so project_c's rows
             # (sharing key values with project_a/b in the fixture) also contribute here.
             self.assertCountEqual(cursor.fetchall(), [(12, 5)])
-            rebuild_gt_stats(
-                ReferenceGenome.GRCh38,
-                DatasetType.SNV_INDEL,
-                TEST_RUN_ID,
-                ['project_a', 'project_b'],
-            )
+
+        rebuild_gt_stats(
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            TEST_RUN_ID,
+            ['project_a', 'project_b'],
+        )
+        with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f"""
                 SELECT project_guid, sum(het_samples), sum(hom_samples)
@@ -1109,14 +1130,14 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_repartitioned_entries_table(self, mock_for_reference_genome_dataset_type):
+        load_complete_run(
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            TEST_RUN_ID,
+            ['project_d'],
+            ['family_d1', 'family_d2', 'family_d3'],
+        )
         with connections['clickhouse_write'].cursor() as cursor:
-            load_complete_run(
-                ReferenceGenome.GRCh38,
-                DatasetType.SNV_INDEL,
-                TEST_RUN_ID,
-                ['project_d'],
-                ['family_d1', 'family_d2', 'family_d3'],
-            )
             cursor.execute(
                 f"""
                 SELECT project_guid, sum(het_samples), sum(hom_samples)
@@ -1127,5 +1148,5 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             )
             self.assertCountEqual(
                 cursor.fetchall(),
-                [('project_d', 1, 1)],
+                [('project_a', 2, 3), ('project_b', 1, 2), ('project_c', 0, 2), ('project_d', 1, 1)],
             )
