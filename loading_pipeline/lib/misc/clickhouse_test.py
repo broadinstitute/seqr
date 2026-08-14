@@ -627,7 +627,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     123456789,
                     [],
-                    [('sample_b4', 'REF')],
+                    [],
+                    [('sample_b4', 'REF', None, None, None)],
                     1,
                     1,
                     0,
@@ -639,7 +640,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     123456789,
                     [],
-                    [('sample_b5', 'HET')],
+                    [],
+                    [('sample_b5', 'HET', None, None, None)],
                     1,
                     1,
                     0,
@@ -651,7 +653,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     123456789,
                     [],
-                    [('sample_b5', 'REF')],
+                    [],
+                    [('sample_b5', 'REF', None, None, None)],
                     1,
                     1,
                     0,
@@ -663,7 +666,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     133456789,
                     [],
-                    [('sample_b6', 'HOM')],
+                    [],
+                    [('sample_b6', 'HOM', None, None, None)],
                     1,
                     1,
                     0,
@@ -675,7 +679,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     133456789,
                     [],
-                    [('sample_b6', 'HOM')],
+                    [],
+                    [('sample_b6', 'HOM', None, None, None)],
                     1,
                     1,
                     0,
@@ -687,7 +692,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WGS',
                     123456789,
                     [],
-                    [('sample_a2', 'HET')],
+                    [],
+                    [('sample_a2', 'HET', None, None, None)],
                     1,
                     1,
                     0,
@@ -699,7 +705,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WGS',
                     133456789,
                     [],
-                    [('sample_a3', 'HOM')],
+                    [],
+                    [('sample_a3', 'HOM', None, None, None)],
                     1,
                     1,
                     0,
@@ -711,7 +718,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     133456789,
                     [],
-                    [('sample_a4', 'REF')],
+                    [],
+                    [('sample_a4', 'REF', None, None, None)],
                     1,
                     1,
                     0,
@@ -723,7 +731,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     123456789,
                     [],
-                    [('sample_d1', 'REF'), ('sample_d11', 'HOM')],
+                    [],
+                    [('sample_d1', 'REF', None, None, None), ('sample_d11', 'HOM', None, None, None)],
                     1,
                     1,
                     0,
@@ -735,7 +744,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     123456789,
                     [123, 12],
-                    [('sample_d2', 'REF')],
+                    [],
+                    [('sample_d2', 'REF', None, None, None)],
                     1,
                     1,
                     0,
@@ -747,7 +757,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     123456789,
                     [1],
-                    [('sample_d3', 'HET')],
+                    [],
+                    [('sample_d3', 'HET', None, None, None)],
                     1,
                     1,
                     0,
@@ -759,7 +770,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     123456789,
                     [1],
-                    [('sample_c7', 'REF')],
+                    [],
+                    [('sample_c7', 'REF', None, None, None)],
                     1,
                     1,
                     0,
@@ -771,7 +783,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     123456789,
                     [1],
-                    [('sample_c8', 'REF')],
+                    [],
+                    [('sample_c8', 'REF', None, None, None)],
                     1,
                     1,
                     0,
@@ -783,7 +796,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     133456789,
                     [1],
-                    [('sample_c9', 'HOM')],
+                    [],
+                    [('sample_c9', 'HOM', None, None, None)],
                     1,
                     1,
                     0,
@@ -795,7 +809,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     133456789,
                     [1],
-                    [('sample_c9', 'HOM')],
+                    [],
+                    [('sample_c9', 'HOM', None, None, None)],
                     1,
                     1,
                     0,
@@ -829,7 +844,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         new_gt_stats = cursor.fetchall()
         self.assertCountEqual(new_gt_stats, [])
-
         reload_dictionaries(
             table_name_builder,
             ClickHouseDictionary.for_dataset_type(DatasetType.SNV_INDEL),
@@ -860,7 +874,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_load_complete_run_snv_indel(self, mock_for_reference_genome_dataset_type):
-        cursor = connections['clickhouse_write'].cursor()
         load_complete_run(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -868,6 +881,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ['project_d'],
             ['family_d1', 'family_d2'],
         )
+        cursor = connections['clickhouse_write'].cursor()
         cursor.execute(
             f"""
            SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
@@ -969,15 +983,16 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         self.assertCountEqual(
             variants_details,
             [
-                (10, '1-3-A-C'),
-                (11, '2-4-A-T'),
-                (12, 'Y-9-A-C'),
-                (13, 'M-2-C-G'),
+                (1, '1-13-A-C'),
+                (2, '2-14-A-T'),
+                (3, 'Y-19-A-C'),
+                (4, 'M-12-C-G'),
+                (7, 'c'),
+                (10, 'b'),
             ],
         )
 
     def test_load_complete_gcnv(self):
-        cursor = connections['clickhouse_write'].cursor()
         load_complete_run(
             ReferenceGenome.GRCh38,
             DatasetType.GCNV,
@@ -985,6 +1000,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ['project_d'],
             ['family_d1', 'family_d2'],
         )
+        cursor = connections['clickhouse_write'].cursor()
         cursor.execute(
             f"""
            SELECT COUNT(*)
@@ -992,7 +1008,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
            {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/variants_memory`
            """,
         )
-        self.assertEqual(cursor.fetchone()[0], 4)
+        variants_disk_count = cursor.fetchone()[0]
+        self.assertEqual(variants_disk_count, 4)
         cursor.execute(
             f"""
            SELECT COUNT(*)
@@ -1000,7 +1017,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
            {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/variants_disk`
            """,
         )
-        self.assertEqual(cursor.fetchone()[0], 4)
+        variants_disk_count = cursor.fetchone()[0]
+        self.assertEqual(variants_disk_count, 4)
         cursor.execute(
             f"""
            SELECT COUNT(*)
@@ -1008,7 +1026,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
            {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/key_lookup`
            """,
         )
-        self.assertEqual(cursor.fetchone()[0], 4)
+        key_lookup_count = cursor.fetchone()[0]
+        self.assertEqual(key_lookup_count, 4)
         cursor.execute(
             f"""
            SELECT COUNT(*)
@@ -1016,15 +1035,16 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
            {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/entries`
            """,
         )
-        self.assertEqual(cursor.fetchone()[0], 3)
+        entries_count = cursor.fetchone()[0]
+        self.assertEqual(entries_count, 3)
 
     def test_delete_families(self):
-        cursor = connections['clickhouse_write'].cursor()
         table_name_builder = TableNameBuilder(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
             TEST_RUN_ID,
         )
+        cursor = connections['clickhouse_write'].cursor()
         cursor.execute(
             f"""
             SELECT project_guid, sum(het_samples), sum(hom_samples)
@@ -1034,11 +1054,11 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             GROUP BY project_guid
             """,
         )
+        project_gt_stats = cursor.fetchall()
         self.assertCountEqual(
-            cursor.fetchall(),
+            project_gt_stats,
             [('project_a', 2, 3), ('project_c', 0, 2), ('project_b', 1, 2)],
         )
-
         refresh_materialized_views(
             table_name_builder,
             ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
@@ -1053,8 +1073,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
             """,
         )
-        self.assertCountEqual(cursor.fetchall(), [(12,)])
-
+        gt_stats = cursor.fetchall()
+        self.assertCountEqual(gt_stats, [(12,)])
         delete_family_guids(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -1071,8 +1091,9 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             GROUP BY project_guid
             """,
         )
+        project_gt_stats = cursor.fetchall()
         self.assertCountEqual(
-            cursor.fetchall(),
+            project_gt_stats,
             [('project_a', 1, 2), ('project_c', 0, 2), ('project_b', 1, 2)],
         )
         cursor.execute(
@@ -1082,7 +1103,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
             """,
         )
-        self.assertCountEqual(cursor.fetchall(), [(10,)])
+        gt_stats = cursor.fetchall()
+        self.assertCountEqual(gt_stats, [(10,)])
         cursor.execute(
             f"""
             SELECT sum(ac_wes)
@@ -1090,22 +1112,21 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
             """,
         )
-        self.assertCountEqual(cursor.fetchall(), [(10,)])
+        gt_stats_dict = cursor.fetchall()
+        self.assertCountEqual(gt_stats_dict, [(10,)])
 
     def test_rebuild_gt_stats(self):
-        cursor = connections['clickhouse_write'].cursor()
         table_name_builder = TableNameBuilder(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
             TEST_RUN_ID,
         )
+        cursor = connections['clickhouse_write'].cursor()
         logged_query(  # DROP the partition from the non-staging entries to as a non-mv-impacting change.
             f"""
             ALTER TABLE {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
             DROP PARTITION (%(project_guid)s, %(partition_id)s)
             """,
-            # project_partitions_dict has no row for project_a, so n_partitions (and thus
-            # partition_id) defaults to 0.
             {'project_guid': 'project_a', 'partition_id': 0},
         )
         cursor.execute(
@@ -1117,11 +1138,11 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             GROUP BY project_guid
             """,
         )
+        project_gt_stats = cursor.fetchall()
         self.assertCountEqual(
-            cursor.fetchall(),
+            project_gt_stats,
             [('project_a', 2, 3), ('project_b', 1, 2)],
         )
-
         refresh_materialized_views(
             table_name_builder,
             ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
@@ -1136,10 +1157,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
             """,
         )
-        # gt_stats has no project dimension (keyed globally by `key`), so project_c's rows
-        # (sharing key values with project_a/b in the fixture) also contribute here.
-        self.assertCountEqual(cursor.fetchall(), [(12, 5)])
-
+        gt_stats = cursor.fetchall()
+        self.assertCountEqual(gt_stats, [(12, 5)])
         rebuild_gt_stats(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -1155,8 +1174,9 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             GROUP BY project_guid
             """,
         )
+        project_gt_stats = cursor.fetchall()
         self.assertCountEqual(
-            cursor.fetchall(),
+            project_gt_stats,
             [('project_b', 1, 2)],
         )
         cursor.execute(
@@ -1166,7 +1186,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
             """,
         )
-        self.assertCountEqual(cursor.fetchall(), [(9, 0)])
+        gt_stats = cursor.fetchall()
+        self.assertCountEqual(gt_stats, [(9, 0)])
 
     @patch.object(
         ClickhouseReferenceDataset,
