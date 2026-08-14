@@ -9,12 +9,13 @@ on:
       - master
     paths:
       - 'loading_pipeline/**'
-      - '.github/workflows/*pipeline-release.yaml'
+      - '.github/workflows/pipeline-*-release.yaml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - 'loading_pipeline/**'
       - '.github/workflows/*pipeline*.yaml'
+      - 'clickhouse_search/migrations/*.py'
 
 permissions:
   contents: read
