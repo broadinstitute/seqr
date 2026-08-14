@@ -29,6 +29,8 @@ class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
                     `family_guid` String,
                     `is_annotated_in_any_gene` Boolean,
                     `sign` Int8,
+                    `sample_type` Enum8('WES' = 1, 'WGS' = 2) MATERIALIZED CAST(1, 'Enum8(\\'WES\\' = 1, \\'WGS\\' = 2)'),
+                    `calls` Array(Tuple(sampleId String, gt Nullable(Enum8('REF' = 0, 'HET' = 1, 'HOM' = 2)))) MATERIALIZED CAST([], 'Array(Tuple(sampleId String, gt Nullable(Enum8(\\'REF\\' = 0, \\'HET\\' = 1, \\'HOM\\' = 2))))'),
                     `n_partitions` UInt8 MATERIALIZED 2,
                     `partition_id` UInt8 MATERIALIZED farmHash64(family_guid) % n_partitions,
                     PROJECTION xpos_projection
