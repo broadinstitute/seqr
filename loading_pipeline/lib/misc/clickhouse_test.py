@@ -597,17 +597,19 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    ('project_a', 10, 'WES', 0, 0),
                     ('project_a', 1, 'WGS', 1, 0),
                     ('project_a', 2, 'WGS', 0, 1),
-                    ('project_a', 4, 'WES', 0, 0),
-                    ('project_a', 4, 'WGS', 0, 0),
+                    ('project_b', 10, 'WES', 0, 0),
                     ('project_b', 1, 'WES', 1, 0),
+                    ('project_b', 2, 'WES', 0, 0),
                     ('project_b', 3, 'WES', 0, 1),
                     ('project_b', 4, 'WES', 0, 1),
+                    ('project_c', 0, 'WES', 0, 0),
+                    ('project_c', 3, 'WES', 0, 0),
                     ('project_c', 4, 'WES', 0, 1),
                     ('project_c', 5, 'WES', 0, 1),
                     ('project_d', 10, 'WES', 0, 1),
+                    ('project_d', 3, 'WES', 0, 0),
                     ('project_d', 4, 'WES', 1, 0),
                 ],
             )
@@ -918,10 +920,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    (10, '1-3-A-C'),
-                    (11, '2-4-A-T'),
-                    (12, 'Y-9-A-C'),
-                    (13, 'M-2-C-G'),
+                    (10, [], [], []),
+                    (11, [], [], []),
+                    (12, [], [], []),
+                    (13, [], [], []),
                 ],
             )
             cursor.execute(
@@ -930,6 +932,22 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                FROM
                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_disk`
                """,
+            )
+            self.assertCountEqual(
+                cursor.fetchall(),
+                [
+                    (10, [], [], []),
+                    (11, [], [], []),
+                    (12, [], [], []),
+                    (13, [], [], []),
+                ],
+            )
+            cursor.execute(
+                f"""
+                           SELECT key, variantId
+                           FROM
+                           {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_details`
+                           """,
             )
             self.assertCountEqual(
                 cursor.fetchall(),
