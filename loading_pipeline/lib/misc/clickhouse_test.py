@@ -477,6 +477,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_entries_insert_flow(self, mock_for_reference_genome_dataset_type):
+        self.maxDiff = None
         # Tests individual components of atomic_insert_entries, validating state after each step.
         table_name_builder = TableNameBuilder(
             ReferenceGenome.GRCh38,
@@ -856,7 +857,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                SELECT project_guid, key, sample_type, sum(het_samples), sum(hom_samples)
                FROM
                {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/project_gt_stats`
-               WHERE PROJECT_GUID = 'project_d'
+               WHERE project_guid = 'project_d'
                GROUP BY project_guid, key, sample_type
                """,
             )
