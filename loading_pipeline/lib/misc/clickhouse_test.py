@@ -850,7 +850,13 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             """,
         )
         new_gt_stats = cursor.fetchall()
-        self.assertCountEqual(new_gt_stats, [])
+        self.assertCountEqual(new_gt_stats, [
+            (1, 1, 0, 0, 0, 0, 0),
+            (2, 0, 2, 0, 0, 1, 0),
+            (3, 2, 0, 0, 1, 0, 0),
+            (4, 5, 2, 0, 2, 1, 0),
+            (5, 2, 0, 0, 1, 0, 0),
+        ])
         reload_dictionaries(
             table_name_builder,
             ClickHouseDictionary.for_dataset_type(DatasetType.SNV_INDEL),
