@@ -565,14 +565,15 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    ('project_a', 10, 'WES', 0, 0),
                     ('project_a', 1, 'WGS', 1, 0),
                     ('project_a', 2, 'WGS', 0, 1),
-                    ('project_a', 4, 'WES', 0, 0),
-                    ('project_a', 4, 'WGS', 0, 0),
+                    ('project_b', 10, 'WES', 0, 0)
                     ('project_b', 1, 'WES', 1, 0),
+                    ('project_b', 2, 'WES', 0, 0)
                     ('project_b', 3, 'WES', 0, 1),
                     ('project_b', 4, 'WES', 0, 1),
+                    ('project_c', 0, 'WES', 0, 0)
+                    ('project_c', 3, 'WES', 0, 0)
                     ('project_c', 4, 'WES', 0, 1),
                     ('project_c', 5, 'WES', 0, 1),
                 ],
@@ -881,8 +882,12 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    (10, 2, 0),
-                    (4, 1, 0),
+                    (1, 1, 1, 0, 0, 0, 0),
+                    (2, 0, 2, 0, 0, 1, 0),
+                    (3, 2, 0, 0, 1, 0, 0),
+                    (4, 6, 2, 0, 2, 1, 0),
+                    (5, 2, 0, 0, 1, 0, 0),
+                    (10, 4, 0, 0, 2, 0, 0),
                 ],
             )
             cursor.execute(
@@ -895,8 +900,12 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             self.assertCountEqual(
                 cursor.fetchall(),
                 [
-                    (0, 2, 0),
-                    (4, 1, 0),
+                    (1, 1, 1, 0, 0, 0, 0),
+                    (2, 0, 2, 0, 0, 1, 0),
+                    (3, 2, 0, 0, 1, 0, 0),
+                    (4, 6, 2, 0, 2, 1, 0),
+                    (5, 2, 0, 0, 1, 0, 0),
+                    (10, 4, 0, 0, 2, 0, 0),
                 ],
             )
             cursor.execute(
