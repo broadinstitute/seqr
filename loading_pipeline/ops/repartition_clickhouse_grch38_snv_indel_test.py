@@ -50,7 +50,7 @@ class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
             ORDER BY (project_guid, family_guid, key)
             SETTINGS deduplicate_merge_projection_mode = 'rebuild';
             """,
-        )
+            )
         client.execute(
             f"""
             INSERT INTO {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
