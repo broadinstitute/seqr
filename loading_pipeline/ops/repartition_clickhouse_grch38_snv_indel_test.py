@@ -1,5 +1,3 @@
-from typing import ClassVar
-
 from django.db import connections
 
 from loading_pipeline.lib.core.environment import Env
@@ -18,26 +16,10 @@ _PRE_MIGRATION_ENTRIES_TABLE = (
 
 
 class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
-    # Fixture data for the properly migrated `GRCh38/SNV_INDEL/entries` table,
-    # loaded normally via the shared clickhouse schema/fixture setup.
-    fixtures: ClassVar = ['clickhouse_test']
-
-    def setUp(self):
-        super().setUp()
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
         with connections['clickhouse_write'].cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT key, project_guid, family_guid, is_annotated_in_any_gene, sign
-                FROM {_ENTRIES_TABLE}
-                """,
-            )
-            self.entries_rows = cursor.fetchall()
-
-            # This script exists to repartition entries tables that predate
-            # per-project subpartitioning, where `n_partitions` is a hardcoded
-            # value rather than sourced from `project_partitions_dict`. Swap
-            # the migrated entries table for one in that improper state,
-            # carrying over the fixture data, to exercise that behavior.
             cursor.execute(
                 f"""
                 CREATE TABLE {_PRE_MIGRATION_ENTRIES_TABLE}
@@ -61,44 +43,40 @@ class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
                 """,
             )
             cursor.execute(
-                f'INSERT INTO {_PRE_MIGRATION_ENTRIES_TABLE} VALUES',
-                self.entries_rows,
-            )
-            cursor.execute(
                 f'EXCHANGE TABLES {_ENTRIES_TABLE} AND {_PRE_MIGRATION_ENTRIES_TABLE}',
             )
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(cls):
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f'EXCHANGE TABLES {_ENTRIES_TABLE} AND {_PRE_MIGRATION_ENTRIES_TABLE}',
             )
             cursor.execute(f'DROP TABLE {_PRE_MIGRATION_ENTRIES_TABLE}')
-            cursor.execute(f'DROP DATABASE IF EXISTS {REPARTITION_DATABASE_NAME}')
-        super().tearDown()
+        super().tearDownClass()
 
-    def _partition_id(self, family_guid: str) -> int:
+    def setUp(self):
+        super().setUp()
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
-                'SELECT farmHash64(%(family_guid)s) %% 2',
-                {'family_guid': family_guid},
+                f"""
+                INSERT INTO {_ENTRIES_TABLE}
+                VALUES
+                (0, 'project_a', 'family_a1', 0, 1),
+                (1, 'project_a', 'family_a2', 0, 1),
+                (2, 'project_a', 'family_a3', 0, 1),
+                (0, 'project_b', 'family_b1', 0, 1),
+                (1, 'project_b', 'family_b2', 0, 1),
+                (2, 'project_b', 'family_b2', 0, 1),
+                (0, 'project_c', 'family_c1', 1, 1),
+                (3, 'project_c', 'family_c2', 1, 1),
+                """,
             )
-            return cursor.fetchone()[0]
 
-    def _expected_rows(self, project_guids):
-        return [
-            (
-                key,
-                project_guid,
-                family_guid,
-                is_annotated_in_any_gene,
-                sign,
-                2,
-                self._partition_id(family_guid),
-            )
-            for key, project_guid, family_guid, is_annotated_in_any_gene, sign in self.entries_rows
-            if not project_guids or project_guid in project_guids
-        ]
+    def tearDown(self):
+        with connections['clickhouse_write'].cursor() as cursor:
+            cursor.execute(f'DROP DATABASE IF EXISTS {REPARTITION_DATABASE_NAME}')
+        super().tearDown()
 
     def test_main_all_projects(self):
         main(1, [])
@@ -109,7 +87,19 @@ class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
                 FROM {REPARTITION_DATABASE_NAME}.`GRCh38/SNV_INDEL/repartitioned_entries`
                 """,
             )
-            self.assertCountEqual(cursor.fetchall(), self._expected_rows([]))
+            self.assertCountEqual(
+                cursor.fetchall(),
+                [
+                    (3, 'project_c', 'family_c2', True, 1, 2, 1),
+                    (0, 'project_b', 'family_b1', 0, 1, 2, 1),
+                    (1, 'project_b', 'family_b2', 0, 1, 2, 1),
+                    (2, 'project_b', 'family_b2', 0, 1, 2, 1),
+                    (2, 'project_a', 'family_a3', 0, 1, 2, 0),
+                    (0, 'project_a', 'family_a1', 0, 1, 2, 1),
+                    (1, 'project_a', 'family_a2', 0, 1, 2, 1),
+                    (0, 'project_c', 'family_c1', True, 1, 2, 0),
+                ],
+            )
 
     def test_main_one_project(self):
         main(1, ['project_a'])
@@ -122,5 +112,9 @@ class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
             )
             self.assertCountEqual(
                 cursor.fetchall(),
-                self._expected_rows(['project_a']),
+                [
+                    (2, 'project_a', 'family_a3', 0, 1, 2, 0),
+                    (0, 'project_a', 'family_a1', 0, 1, 2, 1),
+                    (1, 'project_a', 'family_a2', 0, 1, 2, 1),
+                ],
             )
