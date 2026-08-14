@@ -266,7 +266,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 DatasetType.SNV_INDEL,
                 TEST_RUN_ID,
             ),
-            VARIANT_DETAILS_SCHEMA,  # TODO needed?
+            VARIANT_DETAILS_SCHEMA,
         )
 
         # New Variants parquet.
@@ -771,7 +771,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     0,
                 ),
                 (
-                    10,
+                    0,
                     'project_c',
                     'family_c1',
                     'WES',
