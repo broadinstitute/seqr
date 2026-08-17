@@ -411,7 +411,7 @@ class ClickhouseReferenceDataset(StrEnum):
                 SELECT {ClickHouseTable.KEY_LOOKUP.key_field}
                 FROM {table_name_builder.src_table(ClickHouseTable.KEY_LOOKUP)}
             )
-            """,
+            """, # nosec B608
         )
         logged_query(
             f"""

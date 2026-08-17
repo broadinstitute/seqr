@@ -110,7 +110,7 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
-            """,
+            """, # nosec B608
         )
         annotations_count = cursor.fetchone()[0]
         self.assertEqual(annotations_count, 30)

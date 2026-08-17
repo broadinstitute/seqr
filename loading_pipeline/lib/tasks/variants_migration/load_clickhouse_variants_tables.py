@@ -102,7 +102,7 @@ class LoadClickhouseVariantsTablesTask(luigi.WrapperTask):
         max_key = logged_query(
             f"""
             SELECT max(key) FROM {table_name_builder.src_table(ClickHouseTable.VARIANTS_MEMORY)}
-            """,
+            """, # nosec B608
         )[0][0]
         return logged_query(
             f"""
