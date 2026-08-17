@@ -411,7 +411,7 @@ class ClickhouseReferenceDataset(StrEnum):
                 SELECT {ClickHouseTable.KEY_LOOKUP.key_field}
                 FROM {table_name_builder.src_table(ClickHouseTable.KEY_LOOKUP)}
             )
-            """, # nosec B608
+            """,  # nosec B608
         )
         logged_query(
             f"""
@@ -424,7 +424,7 @@ class ClickhouseReferenceDataset(StrEnum):
             INNER JOIN {table_name_builder.dst_table(ClickHouseTable.KEY_LOOKUP)} dst
             ON {ClickHouseTable.KEY_LOOKUP.join_condition}
             WHERE src.variantId IN {table_name_builder.staging_dst_prefix}/_tmp_loadable_variantIds`
-            """,
+            """,  # nosec B608
         )
         self.refresh_search(table_name_builder)
 

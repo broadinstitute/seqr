@@ -102,14 +102,14 @@ class LoadClickhouseVariantsTablesTask(luigi.WrapperTask):
         max_key = logged_query(
             f"""
             SELECT max(key) FROM {table_name_builder.src_table(ClickHouseTable.VARIANTS_MEMORY)}
-            """, # nosec B608
+            """,  # nosec B608
         )[0][0]
         return logged_query(
             f"""
             SELECT EXISTS (
                 SELECT 1 FROM {table_name_builder.dst_table(ClickHouseTable.VARIANTS_MEMORY)} where key = %(max_key)s
             )
-            """,
+            """,  # nosec B608
             {'max_key': max_key},
         )[0][0]
 
