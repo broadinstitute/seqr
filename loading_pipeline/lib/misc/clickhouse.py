@@ -704,7 +704,7 @@ def optimize_entries(
                 FROM {table_name_builder.staging_dst_table(ClickHouseTable.ENTRIES)}
                 WHERE sign = -1
             );
-            """,
+            """,  # nosec B608
         )[0][0]
 
         merges_running = logged_query(
@@ -838,7 +838,7 @@ def reload_dictionaries(
         logged_query(
             f"""
             SYSTEM RELOAD DICTIONARY {table_name_builder.dst_table(dictionary)}
-            """,
+            """,  # nosec B608
         )
 
 
@@ -858,7 +858,7 @@ def replace_project_partitions(
                 f"""
                 ALTER TABLE {table_name_builder.dst_table(clickhouse_table)}
                 REPLACE PARTITION %(partition)s FROM {table_name_builder.staging_dst_table(clickhouse_table)}
-                """,
+                """,  # nosec B608
                 {'partition': partition},
             )
 
@@ -873,7 +873,7 @@ def exchange_tables(
         logged_query(
             f"""
             EXCHANGE TABLES {table_name_builder.staging_dst_table(clickhouse_table)} AND {table_name_builder.dst_table(clickhouse_table)}
-            """,
+            """,  # nosec B608
         )
 
 
@@ -887,7 +887,7 @@ def direct_insert_annotations(
     logged_query(
         f"""
         CREATE DATABASE {STAGING_CLICKHOUSE_DATABASE}
-        """,
+        """,  # nosec B608
     )
     # NB: Unfortunately there's a bug(?) or inaccuracy if this is attempted without an intermediate
     # temporary table, likely due to writing to a table and joining against it at the same time.
@@ -899,7 +899,7 @@ def direct_insert_annotations(
             LEFT ANTI JOIN {dst_table} dst
             ON {ClickHouseTable.VARIANTS_MEMORY.join_condition}
         )
-        """,
+        """,  # nosec B608
     )
     for (
         clickhouse_table
@@ -913,14 +913,14 @@ def direct_insert_annotations(
             INSERT INTO {disk_backed_dst_table}
             SELECT {clickhouse_table.select_fields}
             FROM {disk_backed_src_table} WHERE {clickhouse_table.key_field} IN {table_name_builder.staging_dst_prefix}/_tmp_loadable_keys`
-            """,
+            """,  # nosec B608
         )
     logged_query(
         f"""
         INSERT INTO {dst_table}
         SELECT {ClickHouseTable.VARIANTS_MEMORY.select_fields}
         FROM {src_table} WHERE {ClickHouseTable.VARIANTS_MEMORY.key_field} IN {table_name_builder.staging_dst_prefix}/_tmp_loadable_keys`
-        """,
+        """,  # nosec B608
     )
     drop_staging_db()
 
@@ -942,7 +942,7 @@ def direct_insert_all_keys(
         SELECT {clickhouse_table.select_fields}
         FROM {src_table}
         {settings}
-        """,
+        """,  # nosec B608
     )
 
 
@@ -1078,7 +1078,7 @@ def delete_family_guids(
             WHERE project_guid = %(project_guid)s
             AND has(%(family_guids)s, family_guid)
         );
-        """,
+        """,  # nosec B608
         {'family_guids': family_guids, 'project_guid': project_guid},
     )[0][0]
     if not entries_exist:
@@ -1136,7 +1136,7 @@ def rebuild_gt_stats(
     max_key = logged_query(
         f"""
         SELECT max(key) FROM {table_name_builder.dst_table(ClickHouseTable.GT_STATS)}
-        """,
+        """,  # nosec B608
     )[0][0]
     if not max_key:
         msg = f'Skipping gt stats rebuild for empty dataset {reference_genome.value}/{dataset_type.value} {project_guids[:10]}...'
@@ -1172,7 +1172,7 @@ def rebuild_gt_stats(
             f"""
             ALTER TABLE {table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS)}
             DROP PARTITION %(partition)s
-            """,
+            """,  # nosec B608
             {'partition': partition},
         )
     select_statement = get_create_mv_statements(
