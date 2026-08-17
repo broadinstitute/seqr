@@ -128,7 +128,7 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             SELECT sum(ac_wgs)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
-            """,
+            """,  # nosec B608
         )
         ac_wgs = cursor.fetchone()[0]
         self.assertEqual(ac_wgs, 69)

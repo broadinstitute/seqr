@@ -142,7 +142,7 @@ class LoadClickhouseVariantsTablesTaskTest(
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/key_lookup`
-            """,
+            """,  # nosec B608
         )
         key_lookups_count = cursor.fetchone()[0]
         self.assertEqual(key_lookups_count, 2)

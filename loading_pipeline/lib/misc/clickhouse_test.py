@@ -545,7 +545,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/project_gt_stats`
             FINAL
             GROUP BY project_guid, key, sample_type
-            """,
+            """,  # nosec B608
         )
         staged_project_gt_stats = cursor.fetchall()
         self.assertCountEqual(

@@ -110,7 +110,7 @@ class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
                 f"""
                 SELECT *, n_partitions, partition_id
                 FROM {REPARTITION_DATABASE_NAME}.`GRCh38/SNV_INDEL/repartitioned_entries`
-                """,
+                """,  # nosec B608
             )
             self.assertCountEqual(
                 cursor.fetchall(),
