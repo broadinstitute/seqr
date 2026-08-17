@@ -632,7 +632,7 @@ def delete_existing_families_from_staging_entries(
         SELECT COLUMNS('.*') EXCEPT(sign, n_partitions, partition_id), -1 as sign
         FROM {table_name_builder.staging_dst_table(ClickHouseTable.ENTRIES)}
         WHERE family_guid in %(family_guids)s
-        """,
+        """,  # nosec B608
         {'family_guids': family_guids},
     )
 
