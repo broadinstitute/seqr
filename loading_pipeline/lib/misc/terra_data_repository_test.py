@@ -131,7 +131,7 @@ TDR_DATASETS = [
 @patch(
     'loading_pipeline.lib.misc.terra_data_repository.get_service_account_credentials',
     return_value=SimpleNamespace(
-        token='abcdefg',  # noqa: S106
+        token='abcdefg',  # noqa: S106 # nosec B106
     ),
 )
 class TerraDataRepositoryTest(unittest.TestCase):

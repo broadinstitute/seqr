@@ -72,7 +72,7 @@ class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
                 (2, 'project_b', 'family_b2', 0, 1),
                 (0, 'project_c', 'family_c1', 1, 1),
                 (3, 'project_c', 'family_c2', 1, 1),
-                """, # nosec B608
+                """,  # nosec B608
             )
 
     def tearDown(self):
@@ -87,7 +87,7 @@ class RepartitionGRCh38SnvIndelTest(ClickhouseSchemaTestCase):
                 f"""
                 SELECT *, n_partitions, partition_id
                 FROM {REPARTITION_DATABASE_NAME}.`GRCh38/SNV_INDEL/repartitioned_entries`
-                """,
+                """,  # nosec B608
             )
             self.assertCountEqual(
                 cursor.fetchall(),
