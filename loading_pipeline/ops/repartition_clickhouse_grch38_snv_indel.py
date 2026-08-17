@@ -62,7 +62,7 @@ def main(max_insert_threads: int, project_guids: list[str]):
         ENGINE = CollapsingMergeTree(sign)
         PARTITION BY (project_guid, partition_id)
         SETTINGS deduplicate_merge_projection_mode = 'rebuild'
-        """,
+        """, # nosec B608
     )
     if not project_guids:
         project_guids = [
@@ -70,7 +70,7 @@ def main(max_insert_threads: int, project_guids: list[str]):
             for x in logged_query(
                 f"""
             SELECT DISTINCT project_guid from {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
-            """,
+            """, # nosec B608
             )
         ]
     for project_guid in project_guids:

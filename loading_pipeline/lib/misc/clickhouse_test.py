@@ -425,7 +425,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ),
         )
         cursor.execute(
-            f'SELECT key, variantId FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
+            f'SELECT key, variantId FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`', # nosec B608
         )
         ret = cursor.fetchall()
         self.assertEqual(
@@ -450,7 +450,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ),
         )
         cursor.execute(
-            f'SELECT COUNT(*) FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`',
+            f'SELECT COUNT(*) FROM {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants/details`', # nosec B608
         )
         ret = cursor.fetchone()
         self.assertEqual(ret[0], 6)
@@ -495,7 +495,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         cursor.execute(
             f"""
             SELECT DISTINCT project_guid FROM {STAGING_CLICKHOUSE_DATABASE}.`{table_name_builder.run_id_hash}/GRCh38/SNV_INDEL/entries`
-            """,
+            """, # nosec B608
         )
         staged_projects = cursor.fetchall()
         self.assertCountEqual(

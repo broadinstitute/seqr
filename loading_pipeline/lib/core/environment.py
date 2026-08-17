@@ -4,7 +4,7 @@ from typing import Literal
 
 # NB: using os.environ.get inside the dataclass defaults gives a lint error.
 LOCAL_DISK_MOUNT_DIR = os.environ.get('LOCAL_DISK_MOUNT_DIR', '/var/seqr')
-HAIL_TMP_DIR = os.environ.get('HAIL_TMP_DIR', '/tmp')  # noqa: S108
+HAIL_TMP_DIR = os.environ.get('HAIL_TMP_DIR', '/tmp')  # noqa: S108 # nosec B108
 PIPELINE_DATA_DIR = os.environ.get(
     'PIPELINE_DATA_DIR',
     '/var/seqr/pipeline-data',

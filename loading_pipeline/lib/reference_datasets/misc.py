@@ -29,7 +29,7 @@ def compress_floats(ht: hl.Table):
 def generate_random_string(length=5):
     """Generates a random string of the specified length."""
     letters = string.ascii_letters + string.digits
-    return ''.join(random.choice(letters) for i in range(length))  # noqa: S311
+    return ''.join(random.choice(letters) for i in range(length))  # noqa: S311 # nosec B311
 
 
 def filter_contigs(ht, reference_genome: ReferenceGenome):
@@ -98,7 +98,7 @@ def copyfileobj(fsrc, fdst, decode_content, length=16 * 1024):
 
 @contextlib.contextmanager
 def download_zip_file(url, dataset_name: str, suffix='.zip', decode_content=False):
-    dir_ = f'/tmp/{generate_random_string()}/{dataset_name}'  # noqa: S108
+    dir_ = f'/tmp/{generate_random_string()}/{dataset_name}'  # noqa: S108 # nosec B108
     os.makedirs(dir_, exist_ok=True)
     with (
         tempfile.NamedTemporaryFile(

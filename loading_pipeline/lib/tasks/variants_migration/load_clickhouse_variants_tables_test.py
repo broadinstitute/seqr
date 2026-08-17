@@ -124,7 +124,7 @@ class LoadClickhouseVariantsTablesTaskTest(
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
-            """,
+            """, # nosec B608
         )
         variants_count = cursor.fetchone()[0]
         self.assertEqual(variants_count, 2)
