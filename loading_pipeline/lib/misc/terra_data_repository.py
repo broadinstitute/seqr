@@ -3,7 +3,6 @@ import re
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import google.cloud.bigquery
 from google.cloud import bigquery
 
 from loading_pipeline.lib.misc.gcp import get_service_account_credentials
@@ -58,7 +57,7 @@ def gen_bq_table_names() -> Generator[str]:
             yield f'{result["accessInformation"]["bigQuery"]["projectId"]}.{result["accessInformation"]["bigQuery"]["datasetName"]}'
 
 
-def bq_metrics_query(bq_table_name: str) -> google.cloud.bigquery.table.RowIterator:
+def bq_metrics_query(bq_table_name: str) -> bigquery.table.RowIterator:
     if not re.match(TABLE_NAME_VALIDATION_REGEX, bq_table_name):
         msg = f'{bq_table_name} does not match expected pattern'
         raise ValueError(msg)
