@@ -79,7 +79,7 @@ def _get_expr_for_formatted_hgvs(csq):
                 + protein_letters,
                 hl.delimit(
                     csq.amino_acids.split('').map(
-                        lambda pl: PROTEIN_LETTERS_1TO3.get(pl),
+                        PROTEIN_LETTERS_1TO3.get,
                     ),
                     '',
                 ),
@@ -193,7 +193,7 @@ def get_expr_for_vep_sorted_transcript_consequences_array(
                     c.consequence_terms.size() > 0,
                     hl.sorted(
                         c.consequence_terms,
-                        key=lambda t: TRANSCRIPT_CONSEQUENCE_TERM_RANK_LOOKUP.get(t),
+                        key=TRANSCRIPT_CONSEQUENCE_TERM_RANK_LOOKUP.get,
                     )[0],
                     hl.null(hl.tstr),
                 ),

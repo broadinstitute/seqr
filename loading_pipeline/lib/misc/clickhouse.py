@@ -686,7 +686,7 @@ def insert_new_entries(
         INSERT INTO {table_name_builder.staging_dst_table(ClickHouseTable.ENTRIES)} ({dst_list})
         SELECT {src_list}
         FROM {table_name_builder.src_table(ClickHouseTable.ENTRIES)}
-        """,
+        """,  # nosec B608
     )
 
 
