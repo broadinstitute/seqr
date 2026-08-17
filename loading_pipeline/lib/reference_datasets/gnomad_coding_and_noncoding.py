@@ -35,7 +35,6 @@ def get_ht(
         sorted_transaction_consequences=(
             get_expr_for_vep_sorted_transcript_consequences_array(
                 ht.vep,
-                omit_consequences=[],
             )
         ),
     )
