@@ -1205,7 +1205,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             SELECT sum(ac_wes), sum(ac_wgs)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats`
-            """,
+            """,  # nosec B608
         )
         gt_stats = cursor.fetchall()
         self.assertCountEqual(gt_stats, [(9, 0)])
