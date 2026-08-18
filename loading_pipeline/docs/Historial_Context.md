@@ -49,8 +49,6 @@ gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/20260421-125644-303855/new
 ```
 
 ### Residues from previous iterations.
-- Manual enumeration of consequence terms and SV/Mito types is no longer necessary.
-	- Was a performance enhancement for Hail backend that can be unrolled.
 - `complete()` methods are likely overcomplicated.
 	- Each task verifies completeness by running this method and if it returns `True`, skips execution.
 	- Necessary for performance, but as the pipeline has started doing less it is less necessary.
