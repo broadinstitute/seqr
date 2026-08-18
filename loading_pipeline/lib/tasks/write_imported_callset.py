@@ -30,7 +30,6 @@ class WriteImportedCallsetTask(BaseWriteTask):
             # with a different sex/relatedness flag.
             additional_row_fields = get_additional_row_fields(
                 mt,
-                self.reference_genome,
                 self.dataset_type,
                 self.skip_check_sex_and_relatedness,
             )
@@ -61,7 +60,6 @@ class WriteImportedCallsetTask(BaseWriteTask):
         )
         additional_row_fields = get_additional_row_fields(
             mt,
-            self.reference_genome,
             self.dataset_type,
             self.skip_check_sex_and_relatedness,
         )

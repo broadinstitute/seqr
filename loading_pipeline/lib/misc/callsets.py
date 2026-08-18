@@ -81,7 +81,6 @@ def get_callset_mt(
 
 def get_additional_row_fields(
     mt: hl.MatrixTable,
-    reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
     skip_check_sex_and_relatedness: bool,
 ):
