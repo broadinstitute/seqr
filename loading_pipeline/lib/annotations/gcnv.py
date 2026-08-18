@@ -3,14 +3,13 @@ from typing import Any
 import hail as hl
 
 from loading_pipeline.lib.annotations import expression_helpers, liftover
-from loading_pipeline.lib.annotations.enums import SV_CONSEQUENCE_RANKS, SV_TYPES
+from loading_pipeline.lib.annotations.enums import (
+    SV_CONSEQUENCE_RANKS,
+    SV_TYPES,
+    validated_enum_member,
+)
 from loading_pipeline.lib.core.definitions import ReferenceGenome
 from loading_pipeline.lib.misc.gcnv import parse_gcnv_genes
-
-SV_CONSEQUENCE_RANKS_LOOKUP = hl.dict(
-    hl.enumerate(SV_CONSEQUENCE_RANKS, index_first=False),
-)
-SV_TYPES_LOOKUP = hl.dict(hl.enumerate(SV_TYPES, index_first=False))
 
 
 def _start_and_end_equal(mt: hl.MatrixTable) -> hl.BooleanExpression:
@@ -139,12 +138,12 @@ def sorted_gene_consequences(
         ht.gene_ids.map(
             lambda gene: hl.Struct(
                 gene_id=gene,
-                major_consequence_id=hl.if_else(
+                major_consequence=hl.if_else(
                     ht.cg_genes.contains(gene),
-                    SV_CONSEQUENCE_RANKS_LOOKUP['COPY_GAIN'],
+                    'COPY_GAIN',
                     hl.or_missing(
                         ht.lof_genes.contains(gene),
-                        SV_CONSEQUENCE_RANKS_LOOKUP['LOF'],
+                        'LOF',
                     ),
                 ),
             ),
@@ -164,8 +163,8 @@ def strvctvre(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.struct(score=hl.parse_float32(ht.strvctvre_score))
 
 
-def sv_type_id(ht: hl.Table, **_: Any) -> hl.Expression:
-    return SV_TYPES_LOOKUP[ht.svtype]
+def sv_type(ht: hl.Table, **_: Any) -> hl.Expression:
+    return validated_enum_member(ht.svtype, SV_TYPES)
 
 
 def xpos(ht: hl.Table, reference_genome: ReferenceGenome, **_: Any) -> hl.Expression:

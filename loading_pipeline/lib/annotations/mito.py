@@ -2,15 +2,9 @@ from typing import Any
 
 import hail as hl
 
-from loading_pipeline.lib.annotations.enums import MITOTIP_PATHOGENICITIES
-
-MITOTIP_PATHOGENICITIES_LOOKUP = hl.dict(
-    hl.enumerate(MITOTIP_PATHOGENICITIES, index_first=False).extend(
-        # NB: adding missing values here allows us to
-        # hard fail if a mapped key is present and has an unexpected value
-        # but propagate missing values.
-        [(hl.missing(hl.tstr), hl.missing(hl.tint32))],
-    ),
+from loading_pipeline.lib.annotations.enums import (
+    MITOTIP_PATHOGENICITIES,
+    validated_enum_member,
 )
 
 
@@ -53,7 +47,7 @@ def mito_cn(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
 
 def mitotip(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.Struct(
-        trna_prediction_id=MITOTIP_PATHOGENICITIES_LOOKUP[ht.mitotip_trna_prediction],
+        trna_prediction=validated_enum_member(ht.mitotip_trna_prediction, MITOTIP_PATHOGENICITIES),
     )
 
 

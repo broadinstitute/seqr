@@ -8,6 +8,7 @@ from loading_pipeline.lib.annotations.enums import (
     SV_CONSEQUENCE_RANKS,
     SV_TYPE_DETAILS,
     SV_TYPES,
+    validated_enum_member,
 )
 from loading_pipeline.lib.core.definitions import ReferenceGenome
 
@@ -48,12 +49,6 @@ PREVIOUS_GENOTYPE_N_ALT_ALLELES = hl.dict(
 )
 
 
-SV_TYPES_LOOKUP = hl.dict(hl.enumerate(SV_TYPES, index_first=False))
-SV_TYPE_DETAILS_LOOKUP = hl.dict(hl.enumerate(SV_TYPE_DETAILS, index_first=False))
-SV_CONSEQUENCE_RANKS_LOOKUP = hl.dict(
-    hl.enumerate(SV_CONSEQUENCE_RANKS, index_first=False),
-)
-
 
 def _get_cpx_interval(
     x: hl.StringExpression,
@@ -64,7 +59,7 @@ def _get_cpx_interval(
     contig_pos = type_contig[1].split(':')
     pos = contig_pos[1].split('-')
     return hl.struct(
-        type_id=SV_TYPES_LOOKUP[type_contig[0]],
+        type=validated_enum_member(type_contig[0], SV_TYPES),
         start=hl.locus(
             contig_pos[0],
             hl.int32(pos[0]),
@@ -88,15 +83,15 @@ def alleles(ht: hl.Table, **_: Any) -> hl.ArrayExpression:
             'N',
             hl.if_else(
                 (
-                    hl.is_defined(ht.sv_type_detail_id)
-                    & (hl.array(SV_TYPES)[ht.sv_type_id] != 'CPX')
+                    hl.is_defined(ht.sv_type_detail)
+                    & (ht.sv_type != 'CPX')
                 ),
                 hl.format(
                     '<%s:%s>',
-                    hl.array(SV_TYPES)[ht.sv_type_id],
-                    hl.array(SV_TYPE_DETAILS)[ht.sv_type_detail_id],
+                    ht.sv_type,
+                    ht.sv_type_detail,
                 ),
-                hl.format('<%s>', hl.array(SV_TYPES)[ht.sv_type_id]),
+                hl.format('<%s>', ht.sv_type),
             ),
         ],
     )
@@ -108,7 +103,7 @@ def info(ht: hl.Table, **_: Any) -> hl.StructExpression:
         END=ht.start_locus.position,
         CHR2=ht.end_locus.contig,
         END2=ht.end_locus.position,
-        SVTYPE=hl.array(SV_TYPES)[ht.sv_type_id],
+        SVTYPE=ht.sv_type,
         SVLEN=ht.sv_len,
     )
 
@@ -220,9 +215,7 @@ def sorted_gene_consequences(
         ht[gene_col].map(
             lambda gene: hl.struct(
                 gene_id=gencode_gene_symbol_to_gene_id_mapping.get(gene),
-                major_consequence_id=SV_CONSEQUENCE_RANKS_LOOKUP[
-                    gene_col.replace(CONSEQ_PREDICTED_PREFIX, '', 1)  # noqa: B023
-                ],
+                major_consequence=gene_col.replace(CONSEQ_PREDICTED_PREFIX, '', 1),  # noqa: B023
             ),
         )
         for gene_col in CONSEQ_PREDICTED_GENE_COLS
@@ -238,17 +231,17 @@ def sv_len(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht['info.SVLEN']
 
 
-def sv_type_id(ht: hl.Table, **_: Any) -> hl.Expression:
-    return SV_TYPES_LOOKUP[_sv_types(ht)[0]]
+def sv_type(ht: hl.Table, **_: Any) -> hl.Expression:
+    return validated_enum_member(_sv_types(ht)[0], SV_TYPES)
 
 
-def sv_type_detail_id(ht: hl.Table, **_: Any) -> hl.Expression:
+def sv_type_detail(ht: hl.Table, **_: Any) -> hl.Expression:
     sv_types = _sv_types(ht)
     return hl.if_else(
         sv_types[0] == 'CPX',
-        SV_TYPE_DETAILS_LOOKUP[ht['info.CPX_TYPE']],
+        validated_enum_member(ht['info.CPX_TYPE'], SV_TYPE_DETAILS),
         hl.or_missing(
             (sv_types[0] == 'INS') & (hl.len(sv_types) > 1),
-            SV_TYPE_DETAILS_LOOKUP[sv_types[1]],
+            validated_enum_member(sv_types[1], SV_TYPE_DETAILS),
         ),
     )
