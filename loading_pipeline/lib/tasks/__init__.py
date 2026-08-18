@@ -1,3 +1,5 @@
+import luigi.util
+
 from loading_pipeline.lib.tasks.reference_data.updated_reference_dataset_parquet import (
     UpdatedReferenceDatasetParquetTask,
 )
