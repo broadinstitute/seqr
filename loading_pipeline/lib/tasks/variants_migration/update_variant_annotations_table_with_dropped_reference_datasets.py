@@ -48,7 +48,6 @@ class UpdateVariantAnnotationsTableWithDroppedReferenceDatasetsTask(
             key_type,
             key=key_type.fields,
             globals=hl.Struct(
-                enums=hl.Struct(),
                 updates=hl.empty_set(
                     hl.tstruct(
                         callset=hl.tstr,
@@ -85,6 +84,4 @@ class UpdateVariantAnnotationsTableWithDroppedReferenceDatasetsTask(
         ]:
             if field in ht.row:
                 ht = ht.drop(field)
-            if field in ht.enums:
-                ht = ht.annotate_globals(enums=ht.enums.drop(field))
         return ht
