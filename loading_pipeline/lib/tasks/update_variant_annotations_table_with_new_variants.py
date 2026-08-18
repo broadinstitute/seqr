@@ -81,7 +81,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTask(
                         remap_pedigree_hash=hl.tint32,
                     ),
                 ),
-                migrations=hl.empty_array(hl.tstr),
                 max_key_=hl.int64(-1),
             ),
         )
@@ -131,6 +130,5 @@ class UpdateVariantAnnotationsTableWithNewVariantsTask(
         return ht.select_globals(
             enums=new_variants_ht_globals.enums,
             updates=ht.updates.union(new_variants_ht_globals.updates),
-            migrations=ht.migrations,
             max_key_=ht.aggregate(hl.agg.max(ht.key_)),
         )

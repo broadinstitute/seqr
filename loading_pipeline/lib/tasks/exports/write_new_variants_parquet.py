@@ -39,24 +39,12 @@ class WriteNewVariantsParquetTask(BaseWriteParquetTask):
         )
 
     def requires(self) -> luigi.Task:
-        if (
-            self.dataset_type.export_all_callset_variants
-            # Special logic for the Clickhouse migration, forcing
-            # utilization of the project subsetted variants table
-            # that lives at the new variants table path.
-            and len(self.project_guids) > 0
-        ):
+        if self.dataset_type.export_all_callset_variants:
             return self.clone(UpdateVariantAnnotationsTableWithNewVariantsTask)
         return self.clone(WriteNewVariantsTableTask)
 
     def create_table(self) -> None:
-        if (
-            self.dataset_type.export_all_callset_variants
-            # Special logic for the Clickhouse migration, forcing
-            # utilization of the project subsetted variants table
-            # that lives at the new variants table path.
-            and len(self.project_guids) > 0
-        ):
+        if self.dataset_type.export_all_callset_variants:
             ht = hl.read_table(
                 variant_annotations_table_path(
                     self.reference_genome,

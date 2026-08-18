@@ -336,7 +336,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                             ),
                         ),
                     },
-                    migrations=[],
                     max_key_=29,
                     enums=hl.Struct(
                         sorted_motif_feature_consequences=hl.Struct(
@@ -491,7 +490,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                         ),
                         mitotip=hl.Struct(trna_prediction=MITOTIP_PATHOGENICITIES),
                     ),
-                    migrations=[],
                     max_key_=4,
                     updates={
                         hl.Struct(
@@ -580,7 +578,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                             major_consequence=SV_CONSEQUENCE_RANKS,
                         ),
                     ),
-                    migrations=[],
                     max_key_=12,
                     updates={
                         hl.Struct(
@@ -1033,7 +1030,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                             major_consequence=SV_CONSEQUENCE_RANKS,
                         ),
                     ),
-                    migrations=[],
                     max_key_=13,
                     updates={
                         hl.Struct(
@@ -1187,7 +1183,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                             major_consequence=SV_CONSEQUENCE_RANKS,
                         ),
                     ),
-                    migrations=[],
                     max_key_=1,
                     updates={
                         hl.Struct(
