@@ -286,13 +286,53 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
         self.assertCountEqual(
             ht.filter(
                 ht.locus.position <= 878809,  # noqa: PLR2004
-            ).sorted_transcript_consequences.consequence_term_ids.collect(),
+            ).sorted_transcript_consequences.consequence_terms.collect(),
             [
-                [[9], [23, 26], [23, 13, 26]],
-                [[9], [23, 26], [23, 13, 26]],
-                [[9], [23, 26], [23, 13, 26]],
-                [[9], [23, 26], [23, 13, 26]],
-                [[9], [23, 26], [23, 13, 26]],
+                [
+                    ['missense_variant'],
+                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'splice_donor_region_variant',
+                        'non_coding_transcript_variant',
+                    ],
+                ],
+                [
+                    ['missense_variant'],
+                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'splice_donor_region_variant',
+                        'non_coding_transcript_variant',
+                    ],
+                ],
+                [
+                    ['missense_variant'],
+                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'splice_donor_region_variant',
+                        'non_coding_transcript_variant',
+                    ],
+                ],
+                [
+                    ['missense_variant'],
+                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'splice_donor_region_variant',
+                        'non_coding_transcript_variant',
+                    ],
+                ],
+                [
+                    ['missense_variant'],
+                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'splice_donor_region_variant',
+                        'non_coding_transcript_variant',
+                    ],
+                ],
             ],
         )
         self.assertCountEqual(
