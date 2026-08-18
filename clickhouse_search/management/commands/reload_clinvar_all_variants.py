@@ -13,8 +13,6 @@ import tempfile
 from typing import Optional, Union
 
 from clickhouse_backend import models
-from clickhouse_search.models.reference_data_models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito, \
-    ClinvarMvGRCh37SnvIndel, ClinvarMvSnvIndel, ClinvarMvMito, ClinvarSearchMvGRCh37SnvIndel, ClinvarSearchMvSnvIndel, ClinvarSearchMvMito
 from clickhouse_search.constants import \
     CLINVAR_ASSERTIONS as CORE_CLINVAR_ASSERTIONS, CLINVAR_PATHOGENICITIES as CORE_CLINVAR_PATHOGENICITIES, CLINVAR_DEFAULT_PATHOGENICITY as CORE_CLINVAR_DEFAULT_PATHOGENICITY, \
     CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY as CORE_CLINVAR_CONFLICTING_CLASSICATIONS_OF_PATHOGENICITY
@@ -200,6 +198,8 @@ def parse_submitters_and_conditions(classified_record_node: xml) -> [list[str], 
     return submitters, conditions
 
 def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str, unenumerated_value_alerts: Optional[list] = None) -> tuple[models.ClickhouseModel, models.ClickhouseModel, models.ClickhouseModel]:
+    from clickhouse_search.models.reference_data_models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito
+
     # Cannot use regular bool-falseyness here, as:
     # "An element with no child elements (even if it exists and has text) will be falsey."
     classified_record_node = elem.find('ClassifiedRecord')
@@ -249,6 +249,8 @@ def extract_variant_info(elem: xml.etree.ElementTree.Element, new_version: str, 
         )
 
 def parse_clinvar_file(gzipped_file, existing_version_obj, model_to_batch, unenumerated_value_alerts):
+    from clickhouse_search.models.reference_data_models import ClinvarAllVariantsSnvIndel
+
     for event, elem in ET.iterparse(gzipped_file, events=('start', 'end')):
         # Handle parsing the current date.
         if event == 'start' and elem.tag == 'ClinVarVariationRelease':
@@ -286,6 +288,8 @@ class Command(BaseCommand):
     help = 'Reload all clinvar variants from weekly NCBI xml release'
 
     def handle(self, *args, **options):
+        from clickhouse_search.models.reference_data_models import ClinvarAllVariantsGRCh37SnvIndel, ClinvarAllVariantsSnvIndel, ClinvarAllVariantsMito, \
+        ClinvarMvGRCh37SnvIndel, ClinvarMvSnvIndel, ClinvarMvMito, ClinvarSearchMvGRCh37SnvIndel, ClinvarSearchMvSnvIndel, ClinvarSearchMvMito
         model_to_batch = {
             ClinvarAllVariantsGRCh37SnvIndel: [],
             ClinvarAllVariantsSnvIndel: [],
