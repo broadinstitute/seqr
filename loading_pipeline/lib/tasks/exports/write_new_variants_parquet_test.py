@@ -81,6 +81,13 @@ class WriteNewVariantsParquetTest(MockedDatarootTestCase):
         )
         ht = hl.read_table(TEST_GCNV_ANNOTATIONS)
         ht.write(
+            new_variants_table_path(
+                ReferenceGenome.GRCh38,
+                DatasetType.GCNV,
+                TEST_RUN_ID,
+            ),
+        )
+        ht.write(
             remapped_and_subsetted_callset_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
