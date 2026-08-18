@@ -122,7 +122,7 @@ def camelcase_array_structexpression_fields(
         ht = ht.transmute(
             **{
                 snake_to_camelcase(field): ht[field].map(
-                    lambda c: camelcase_hl_struct(c),
+                    camelcase_hl_struct,
                 ),
             },
         )

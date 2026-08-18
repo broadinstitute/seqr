@@ -2,7 +2,7 @@
 
 set -eux
 
-REFERENCE_GENOME=$1
+REFERENCE_GENOME="$1"
 VEP_REFERENCE_DATASETS_DIR=${VEP_REFERENCE_DATASETS_DIR:-/var/seqr/vep-reference-data}
 DEFAULT_REFERENCE_DATASETS_DIR="gs://seqr-reference-data"
 if [[ -n "${REFERENCE_DATASETS_DIR:-}" && "$REFERENCE_DATASETS_DIR" == gs://* ]]; then
@@ -12,7 +12,7 @@ else
   echo "Using default GCS path: $REFERENCE_DATASETS_DIR"
 fi
 
-case $REFERENCE_GENOME in
+case "$REFERENCE_GENOME" in
   GRCh38)
     VEP_REFERENCE_DATA_FILES=(
         "$REFERENCE_DATASETS_DIR/vep_data/loftee-beta/GRCh38.tar.gz"

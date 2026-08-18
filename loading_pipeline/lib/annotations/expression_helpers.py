@@ -8,10 +8,6 @@ TRANSCRIPT_CONSEQUENCE_TERM_RANK_LOOKUP = hl.dict(
 HGVSC_CONSEQUENCES = hl.set(
     ['splice_donor_variant', 'splice_acceptor_variant', 'splice_region_variant'],
 )
-OMIT_TRANSCRIPT_CONSEQUENCE_TERMS = [
-    'upstream_gene_variant',
-    'downstream_gene_variant',
-]
 PROTEIN_LETTERS_1TO3 = hl.dict(
     {
         'A': 'Ala',
@@ -79,7 +75,7 @@ def _get_expr_for_formatted_hgvs(csq):
                 + protein_letters,
                 hl.delimit(
                     csq.amino_acids.split('').map(
-                        lambda pl: PROTEIN_LETTERS_1TO3.get(pl),
+                        PROTEIN_LETTERS_1TO3.get,
                     ),
                     '',
                 ),
@@ -124,7 +120,6 @@ def get_expr_for_xpos(locus: hl.expr.LocusExpression) -> hl.expr.Int64Expression
 def get_expr_for_vep_sorted_transcript_consequences_array(
     vep_root,
     include_coding_annotations=True,
-    omit_consequences=OMIT_TRANSCRIPT_CONSEQUENCE_TERMS,
 ):
     """Sort transcripts by 3 properties:
 
@@ -177,23 +172,17 @@ def get_expr_for_vep_sorted_transcript_consequences_array(
             ],
         )
 
-    omit_consequence_terms = (
-        hl.set(omit_consequences) if omit_consequences else hl.empty_set(hl.tstr)
-    )
-
     result = hl.sorted(
         vep_root.transcript_consequences.map(
             lambda c: c.select(
                 *selected_annotations,
-                consequence_terms=c.consequence_terms.filter(
-                    lambda t: ~omit_consequence_terms.contains(t),
-                ),
+                consequence_terms=c.consequence_terms,
                 domains=c.domains.map(lambda domain: domain.db + ':' + domain.name),
                 major_consequence=hl.cond(
                     c.consequence_terms.size() > 0,
                     hl.sorted(
                         c.consequence_terms,
-                        key=lambda t: TRANSCRIPT_CONSEQUENCE_TERM_RANK_LOOKUP.get(t),
+                        key=TRANSCRIPT_CONSEQUENCE_TERM_RANK_LOOKUP.get,
                     )[0],
                     hl.null(hl.tstr),
                 ),
