@@ -176,9 +176,6 @@ def unmap_formatting_annotation_enums(
                 ).drop('consequence_term_ids'),
             ),
         )
-        ht = ht.annotate_globals(
-            enums=ht.enums.drop('sorted_motif_feature_consequences'),
-        )
     if 'sorted_regulatory_feature_consequences' in formatting_annotation_names:
         ht = ht.annotate(
             sorted_regulatory_feature_consequences=ht.sorted_regulatory_feature_consequences.map(
@@ -189,9 +186,6 @@ def unmap_formatting_annotation_enums(
                     ),
                 ).drop('biotype_id', 'consequence_term_ids'),
             ),
-        )
-        ht = ht.annotate_globals(
-            enums=ht.enums.drop('sorted_regulatory_feature_consequences'),
         )
     if 'sorted_transcript_consequences' in formatting_annotation_names:
         ht = ht.annotate(
@@ -234,7 +228,6 @@ def unmap_formatting_annotation_enums(
                 ),
             ),
         )
-        ht = ht.annotate_globals(enums=ht.enums.drop('sorted_transcript_consequences'))
     if 'mitotip' in formatting_annotation_names:
         ht = ht.annotate(
             mitotip=hl.Struct(
@@ -243,7 +236,6 @@ def unmap_formatting_annotation_enums(
                 ],
             ),
         )
-        ht = ht.annotate_globals(enums=ht.enums.drop('mitotip'))
     if 'cpx_intervals' in formatting_annotation_names:
         ht = ht.annotate(
             cpx_intervals=ht.cpx_intervals.map(
@@ -254,12 +246,10 @@ def unmap_formatting_annotation_enums(
         )
     if 'sv_type_id' in formatting_annotation_names:
         ht = ht.annotate(sv_type=hl.array(SV_TYPES)[ht.sv_type_id]).drop('sv_type_id')
-        ht = ht.annotate_globals(enums=ht.enums.drop('sv_type'))
     if 'sv_type_detail_id' in formatting_annotation_names:
         ht = ht.annotate(
             sv_type_detail=hl.array(SV_TYPE_DETAILS)[ht.sv_type_detail_id],
         ).drop('sv_type_detail_id')
-        ht = ht.annotate_globals(enums=ht.enums.drop('sv_type_detail'))
     if 'sorted_gene_consequences' in formatting_annotation_names:
         ht = ht.annotate(
             sorted_gene_consequences=ht.sorted_gene_consequences.map(
@@ -270,5 +260,4 @@ def unmap_formatting_annotation_enums(
                 ).drop('major_consequence_id'),
             ),
         )
-        ht = ht.annotate_globals(enums=ht.enums.drop('sorted_gene_consequences'))
     return ht

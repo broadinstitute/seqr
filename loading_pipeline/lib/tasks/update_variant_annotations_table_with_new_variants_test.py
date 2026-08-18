@@ -4,19 +4,6 @@ from unittest.mock import Mock, PropertyMock, patch
 import hail as hl
 import luigi.worker
 
-from loading_pipeline.lib.annotations.enums import (
-    BIOTYPES,
-    FIVEUTR_CONSEQUENCES,
-    LOF_FILTERS,
-    MITOTIP_PATHOGENICITIES,
-    MOTIF_CONSEQUENCE_TERMS,
-    REGULATORY_BIOTYPES,
-    REGULATORY_CONSEQUENCE_TERMS,
-    SV_CONSEQUENCE_RANKS,
-    SV_TYPE_DETAILS,
-    SV_TYPES,
-    TRANSCRIPT_CONSEQUENCE_TERMS,
-)
 from loading_pipeline.lib.core import (
     DatasetType,
     ReferenceGenome,
@@ -163,11 +150,7 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                 noncoding=hl.tbool,
             ),
             key='locus',
-            globals=hl.Struct(
-                enums=hl.Struct(
-                    gnomad_genomes=hl.Struct(),
-                ),
-            ),
+            globals=hl.Struct(),
         )
         coding_and_noncoding_variants_ht.write(
             valid_reference_dataset_path(
@@ -338,25 +321,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                     },
                     migrations=[],
                     max_key_=29,
-                    enums=hl.Struct(
-                        sorted_motif_feature_consequences=hl.Struct(
-                            consequence_term=MOTIF_CONSEQUENCE_TERMS,
-                        ),
-                        sorted_regulatory_feature_consequences=hl.Struct(
-                            biotype=REGULATORY_BIOTYPES,
-                            consequence_term=REGULATORY_CONSEQUENCE_TERMS,
-                        ),
-                        sorted_transcript_consequences=hl.Struct(
-                            biotype=BIOTYPES,
-                            consequence_term=TRANSCRIPT_CONSEQUENCE_TERMS,
-                            loftee=hl.Struct(
-                                lof_filter=LOF_FILTERS,
-                            ),
-                            utrannotator=hl.Struct(
-                                fiveutr_consequence=FIVEUTR_CONSEQUENCES,
-                            ),
-                        ),
-                    ),
                 ),
             ],
         )
@@ -483,14 +447,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
             ht.globals.collect(),
             [
                 hl.Struct(
-                    enums=hl.Struct(
-                        sorted_transcript_consequences=hl.Struct(
-                            biotype=BIOTYPES,
-                            consequence_term=TRANSCRIPT_CONSEQUENCE_TERMS,
-                            lof_filter=LOF_FILTERS,
-                        ),
-                        mitotip=hl.Struct(trna_prediction=MITOTIP_PATHOGENICITIES),
-                    ),
                     migrations=[],
                     max_key_=4,
                     updates={
@@ -573,13 +529,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
             ht.globals.collect(),
             [
                 hl.Struct(
-                    enums=hl.Struct(
-                        sv_type=SV_TYPES,
-                        sv_type_detail=SV_TYPE_DETAILS,
-                        sorted_gene_consequences=hl.Struct(
-                            major_consequence=SV_CONSEQUENCE_RANKS,
-                        ),
-                    ),
                     migrations=[],
                     max_key_=12,
                     updates={
@@ -1026,13 +975,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
             ht.globals.collect(),
             [
                 hl.Struct(
-                    enums=hl.Struct(
-                        sv_type=SV_TYPES,
-                        sv_type_detail=SV_TYPE_DETAILS,
-                        sorted_gene_consequences=hl.Struct(
-                            major_consequence=SV_CONSEQUENCE_RANKS,
-                        ),
-                    ),
                     migrations=[],
                     max_key_=13,
                     updates={
@@ -1181,12 +1123,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
             ht.globals.collect(),
             [
                 hl.Struct(
-                    enums=hl.Struct(
-                        sv_type=SV_TYPES,
-                        sorted_gene_consequences=hl.Struct(
-                            major_consequence=SV_CONSEQUENCE_RANKS,
-                        ),
-                    ),
                     migrations=[],
                     max_key_=1,
                     updates={

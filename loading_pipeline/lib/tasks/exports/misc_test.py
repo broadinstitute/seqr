@@ -28,22 +28,6 @@ class MiscTest(unittest.TestCase):
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
         )
-        self.assertCountEqual(
-            list(ht.globals.enums.collect()[0].keys()),
-            [
-                'clinvar',
-                'hgmd',
-                'screen',
-                'dbnsfp',
-                'gnomad_exomes',
-                'gnomad_non_coding_constraint',
-                'splice_ai',
-                'exac',
-                'topmed',
-                'gnomad_genomes',
-                'eigen',
-            ],
-        )
         ht = ht.annotate(
             sorted_transcript_consequences=[ht.sorted_transcript_consequences[0]],
         )
@@ -196,20 +180,6 @@ class MiscTest(unittest.TestCase):
             ht,
             ReferenceGenome.GRCh37,
             DatasetType.SNV_INDEL,
-        )
-        self.assertCountEqual(
-            list(ht.globals.enums.collect()[0].keys()),
-            [
-                'clinvar',
-                'hgmd',
-                'dbnsfp',
-                'gnomad_exomes',
-                'splice_ai',
-                'exac',
-                'topmed',
-                'gnomad_genomes',
-                'eigen',
-            ],
         )
         ht = ht.annotate(
             sorted_transcript_consequences=[ht.sorted_transcript_consequences[0]],

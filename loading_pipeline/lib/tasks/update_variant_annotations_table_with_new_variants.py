@@ -73,7 +73,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTask(
             key_type,
             key=key_type.fields,
             globals=hl.Struct(
-                enums=hl.Struct(),
                 updates=hl.empty_set(
                     hl.tstruct(
                         callset=hl.tstr,
@@ -129,7 +128,6 @@ class UpdateVariantAnnotationsTableWithNewVariantsTask(
 
         new_variants_ht_globals = new_variants_ht.index_globals()
         return ht.select_globals(
-            enums=new_variants_ht_globals.enums,
             updates=ht.updates.union(new_variants_ht_globals.updates),
             migrations=ht.migrations,
             max_key_=ht.aggregate(hl.agg.max(ht.key_)),

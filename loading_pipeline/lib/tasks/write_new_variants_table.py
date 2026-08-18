@@ -6,9 +6,6 @@ import luigi
 import luigi.util
 
 from loading_pipeline.lib.annotations.fields import get_fields
-from loading_pipeline.lib.annotations.misc import (
-    annotate_formatting_annotation_enum_globals,
-)
 from loading_pipeline.lib.misc.callsets import get_callset_ht
 from loading_pipeline.lib.misc.io import checkpoint, remap_pedigree_hash
 from loading_pipeline.lib.misc.math import constrain
@@ -197,11 +194,6 @@ class WriteNewVariantsTableTask(BaseWriteTask):
         new_variants_ht = new_variants_ht.add_index(name='key_')
         new_variants_ht = new_variants_ht.transmute(
             key_=new_variants_ht.key_ + curr_max_key_ + 1,
-        )
-        new_variants_ht = annotate_formatting_annotation_enum_globals(
-            new_variants_ht,
-            self.reference_genome,
-            self.dataset_type,
         )
         return new_variants_ht.annotate_globals(
             updates={
