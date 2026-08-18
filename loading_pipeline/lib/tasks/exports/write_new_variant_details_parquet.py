@@ -16,9 +16,6 @@ from loading_pipeline.lib.tasks.exports.misc import (
     unmap_formatting_annotation_enums,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalFolderTarget, GCSorLocalTarget
-from loading_pipeline.lib.tasks.update_variant_annotations_table_with_new_variants import (
-    UpdateVariantAnnotationsTableWithNewVariantsTask,
-)
 from loading_pipeline.lib.tasks.write_new_variants_table import (
     WriteNewVariantsTableTask,
 )
@@ -39,8 +36,6 @@ class WriteNewVariantDetailsParquetTask(BaseWriteParquetTask):
         return GCSorLocalFolderTarget(self.output().path).exists()
 
     def requires(self) -> luigi.Task:
-        if self.dataset_type.export_all_callset_variants:
-            return self.clone(UpdateVariantAnnotationsTableWithNewVariantsTask)
         return self.clone(WriteNewVariantsTableTask)
 
     def create_table(self) -> None:

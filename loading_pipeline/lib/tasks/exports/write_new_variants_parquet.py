@@ -2,11 +2,9 @@ import hail as hl
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.misc.callsets import get_callset_ht
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
     new_variants_table_path,
-    variant_annotations_table_path,
 )
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
@@ -19,9 +17,6 @@ from loading_pipeline.lib.tasks.exports.misc import (
     unmap_formatting_annotation_enums,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.update_variant_annotations_table_with_new_variants import (
-    UpdateVariantAnnotationsTableWithNewVariantsTask,
-)
 from loading_pipeline.lib.tasks.write_new_variants_table import (
     WriteNewVariantsTableTask,
 )
@@ -39,33 +34,16 @@ class WriteNewVariantsParquetTask(BaseWriteParquetTask):
         )
 
     def requires(self) -> luigi.Task:
-        if self.dataset_type.export_all_callset_variants:
-            return self.clone(UpdateVariantAnnotationsTableWithNewVariantsTask)
         return self.clone(WriteNewVariantsTableTask)
 
     def create_table(self) -> None:
-        if self.dataset_type.export_all_callset_variants:
-            ht = hl.read_table(
-                variant_annotations_table_path(
-                    self.reference_genome,
-                    self.dataset_type,
-                ),
-            )
-            callset_ht = get_callset_ht(
+        ht = hl.read_table(
+            new_variants_table_path(
                 self.reference_genome,
                 self.dataset_type,
-                self.callset_path,
-                self.project_guids,
-            )
-            ht = ht.semi_join(callset_ht)
-        else:
-            ht = hl.read_table(
-                new_variants_table_path(
-                    self.reference_genome,
-                    self.dataset_type,
-                    self.run_id,
-                ),
-            )
+                self.run_id,
+            ),
+        )
         ht = unmap_formatting_annotation_enums(
             ht,
             self.reference_genome,

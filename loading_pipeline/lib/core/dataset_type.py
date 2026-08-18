@@ -347,10 +347,6 @@ class DatasetType(StrEnum):
         return self == DatasetType.SV
 
     @property
-    def export_all_callset_variants(self):
-        return self == DatasetType.GCNV
-
-    @property
     def export_vcf_annotation_fns(self) -> list[Callable[..., hl.Expression]]:
         return {
             DatasetType.SV: [
