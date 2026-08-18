@@ -4,7 +4,6 @@ import hail as hl
 
 from loading_pipeline.lib.annotations import expression_helpers, liftover
 from loading_pipeline.lib.annotations.enums import (
-    SV_CONSEQUENCE_RANKS,
     SV_TYPES,
     validated_enum_member,
 )

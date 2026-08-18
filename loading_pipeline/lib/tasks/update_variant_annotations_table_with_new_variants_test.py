@@ -389,7 +389,10 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                         hgvsp=None,
                         transcript_id='ENST00000477976',
                         biotype='lncRNA',
-                        consequence_terms=['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                        consequence_terms=[
+                            'non_coding_transcript_exon_variant',
+                            'non_coding_transcript_variant',
+                        ],
                         is_lof_nagnag=None,
                         lof_filters=None,
                     ),
@@ -402,7 +405,10 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                         hgvsp=None,
                         transcript_id='ENST00000483767',
                         biotype='lncRNA',
-                        consequence_terms=['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                        consequence_terms=[
+                            'non_coding_transcript_exon_variant',
+                            'non_coding_transcript_variant',
+                        ],
                         is_lof_nagnag=None,
                         lof_filters=None,
                     ),
@@ -570,8 +576,14 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                         reference_genome='GRCh37',
                     ),
                     sorted_gene_consequences=[
-                        hl.Struct(gene_id='ENSG00000186092', major_consequence='NEAREST_TSS'),
-                        hl.Struct(gene_id='ENSG00000153404', major_consequence='NEAREST_TSS'),
+                        hl.Struct(
+                            gene_id='ENSG00000186092',
+                            major_consequence='NEAREST_TSS',
+                        ),
+                        hl.Struct(
+                            gene_id='ENSG00000153404',
+                            major_consequence='NEAREST_TSS',
+                        ),
                     ],
                     start_locus=hl.Locus(
                         contig='chr1',
@@ -655,7 +667,10 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                         reference_genome='GRCh37',
                     ),
                     sorted_gene_consequences=[
-                        hl.Struct(gene_id='ENSG00000173662', major_consequence='INTRONIC'),
+                        hl.Struct(
+                            gene_id='ENSG00000173662',
+                            major_consequence='INTRONIC',
+                        ),
                     ],
                     start_locus=hl.Locus(
                         contig='chr1',
@@ -752,7 +767,10 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                         reference_genome='GRCh37',
                     ),
                     sorted_gene_consequences=[
-                        hl.Struct(gene_id='ENSG00000185519', major_consequence='NEAREST_TSS'),
+                        hl.Struct(
+                            gene_id='ENSG00000185519',
+                            major_consequence='NEAREST_TSS',
+                        ),
                     ],
                     start_locus=hl.Locus(
                         contig='chr1',
@@ -1025,8 +1043,14 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                         reference_genome='GRCh37',
                     ),
                     sorted_gene_consequences=[
-                        hl.Struct(gene_id='ENSG00000186092', major_consequence='NEAREST_TSS'),
-                        hl.Struct(gene_id='ENSG00000153404', major_consequence='NEAREST_TSS'),
+                        hl.Struct(
+                            gene_id='ENSG00000186092',
+                            major_consequence='NEAREST_TSS',
+                        ),
+                        hl.Struct(
+                            gene_id='ENSG00000153404',
+                            major_consequence='NEAREST_TSS',
+                        ),
                     ],
                     start_locus=hl.Locus(
                         contig='chr1',

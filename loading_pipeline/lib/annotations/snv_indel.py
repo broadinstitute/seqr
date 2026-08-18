@@ -78,7 +78,9 @@ def sorted_motif_feature_consequences(
                     motif_feature_id=c.motif_feature_id,
                 ),
             ).filter(lambda c: c.consequence_terms.size() > 0),
-            lambda c: hl.min(c.consequence_terms.map(lambda t: MOTIF_CONSEQUENCE_TERMS_LOOKUP[t])),
+            lambda c: hl.min(
+                c.consequence_terms.map(lambda t: MOTIF_CONSEQUENCE_TERMS_LOOKUP[t]),
+            ),
         ),
     )
 
@@ -94,12 +96,19 @@ def sorted_regulatory_feature_consequences(
                 lambda c: c.select(
                     biotype=validated_enum_member(c.biotype, REGULATORY_BIOTYPES),
                     consequence_terms=c.consequence_terms.map(
-                        lambda t: validated_enum_member(t, REGULATORY_CONSEQUENCE_TERMS),
+                        lambda t: validated_enum_member(
+                            t,
+                            REGULATORY_CONSEQUENCE_TERMS,
+                        ),
                     ),
                     regulatory_feature_id=c.regulatory_feature_id,
                 ),
             ).filter(lambda c: c.consequence_terms.size() > 0),
-            lambda c: hl.min(c.consequence_terms.map(lambda t: REGULATORY_CONSEQUENCE_TERMS_LOOKUP[t])),
+            lambda c: hl.min(
+                c.consequence_terms.map(
+                    lambda t: REGULATORY_CONSEQUENCE_TERMS_LOOKUP[t],
+                ),
+            ),
         ),
     )
 

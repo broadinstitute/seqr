@@ -47,7 +47,10 @@ def mito_cn(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
 
 def mitotip(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.Struct(
-        trna_prediction=validated_enum_member(ht.mitotip_trna_prediction, MITOTIP_PATHOGENICITIES),
+        trna_prediction=validated_enum_member(
+            ht.mitotip_trna_prediction,
+            MITOTIP_PATHOGENICITIES,
+        ),
     )
 
 

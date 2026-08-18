@@ -5,7 +5,6 @@ import hail as hl
 
 from loading_pipeline.lib.annotations import liftover
 from loading_pipeline.lib.annotations.enums import (
-    SV_CONSEQUENCE_RANKS,
     SV_TYPE_DETAILS,
     SV_TYPES,
     validated_enum_member,
@@ -49,7 +48,6 @@ PREVIOUS_GENOTYPE_N_ALT_ALLELES = hl.dict(
 )
 
 
-
 def _get_cpx_interval(
     x: hl.StringExpression,
     reference_genome: ReferenceGenome,
@@ -82,10 +80,7 @@ def alleles(ht: hl.Table, **_: Any) -> hl.ArrayExpression:
         [
             'N',
             hl.if_else(
-                (
-                    hl.is_defined(ht.sv_type_detail)
-                    & (ht.sv_type != 'CPX')
-                ),
+                (hl.is_defined(ht.sv_type_detail) & (ht.sv_type != 'CPX')),
                 hl.format(
                     '<%s:%s>',
                     ht.sv_type,

@@ -89,7 +89,10 @@ def vep_110_transcript_consequences_select(
             existing_inframe_oorfs=c.existing_inframe_oorfs,
             existing_outofframe_oorfs=c.existing_outofframe_oorfs,
             existing_uorfs=c.existing_uorfs,
-            fiveutr_consequence=validated_enum_member(c.fiveutr_consequence, FIVEUTR_CONSEQUENCES),
+            fiveutr_consequence=validated_enum_member(
+                c.fiveutr_consequence,
+                FIVEUTR_CONSEQUENCES,
+            ),
             # Annotation documentation here:
             # https://github.com/ImperialCardioGenetics/UTRannotator?tab=readme-ov-file#the-detailed-annotation-for-each-consequence
             # NB:
