@@ -15,7 +15,6 @@ from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
     new_variants_table_path,
     remapped_and_subsetted_callset_path,
-    variant_annotations_table_path,
 )
 from loading_pipeline.lib.tasks.exports.write_new_variants_parquet import (
     WriteNewVariantsParquetTask,
@@ -81,12 +80,6 @@ class WriteNewVariantsParquetTest(MockedDatarootTestCase):
             ),
         )
         ht = hl.read_table(TEST_GCNV_ANNOTATIONS)
-        ht.write(
-            variant_annotations_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-            ),
-        )
         ht.write(
             remapped_and_subsetted_callset_path(
                 ReferenceGenome.GRCh38,
@@ -346,23 +339,13 @@ class WriteNewVariantsParquetTest(MockedDatarootTestCase):
         )
 
     @mock.patch(
-        'loading_pipeline.lib.tasks.exports.write_new_variants_parquet.UpdateVariantAnnotationsTableWithNewVariantsTask',
-    )
-    @mock.patch(
-        'loading_pipeline.lib.tasks.exports.write_new_variants_parquet.get_callset_ht',
+        'loading_pipeline.lib.tasks.exports.write_new_variants_parquet.WriteNewVariantsTableTask',
     )
     def test_gcnv_write_new_variants_parquet_test(
         self,
-        get_callset_ht: Mock,
-        update_variant_annotations_task: Mock,
+        write_new_variants_table_task: Mock,
     ) -> None:
-        get_callset_ht.return_value = hl.read_table(
-            variant_annotations_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-            ),
-        )
-        update_variant_annotations_task.return_value = MockCompleteTask()
+        write_new_variants_table_task.return_value = MockCompleteTask()
         worker = luigi.worker.Worker()
         task = WriteNewVariantsParquetTask(
             reference_genome=ReferenceGenome.GRCh38,
