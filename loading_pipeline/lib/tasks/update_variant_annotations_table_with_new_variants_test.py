@@ -290,7 +290,10 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
             [
                 [
                     ['missense_variant'],
-                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'non_coding_transcript_variant',
+                    ],
                     [
                         'non_coding_transcript_exon_variant',
                         'splice_donor_region_variant',
@@ -299,7 +302,10 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                 ],
                 [
                     ['missense_variant'],
-                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'non_coding_transcript_variant',
+                    ],
                     [
                         'non_coding_transcript_exon_variant',
                         'splice_donor_region_variant',
@@ -308,7 +314,10 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                 ],
                 [
                     ['missense_variant'],
-                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'non_coding_transcript_variant',
+                    ],
                     [
                         'non_coding_transcript_exon_variant',
                         'splice_donor_region_variant',
@@ -317,7 +326,10 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                 ],
                 [
                     ['missense_variant'],
-                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'non_coding_transcript_variant',
+                    ],
                     [
                         'non_coding_transcript_exon_variant',
                         'splice_donor_region_variant',
@@ -326,7 +338,10 @@ class UpdateVariantAnnotationsTableWithNewVariantsTaskTest(
                 ],
                 [
                     ['missense_variant'],
-                    ['non_coding_transcript_exon_variant', 'non_coding_transcript_variant'],
+                    [
+                        'non_coding_transcript_exon_variant',
+                        'non_coding_transcript_variant',
+                    ],
                     [
                         'non_coding_transcript_exon_variant',
                         'splice_donor_region_variant',
