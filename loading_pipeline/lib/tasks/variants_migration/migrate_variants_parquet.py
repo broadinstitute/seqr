@@ -17,7 +17,6 @@ from loading_pipeline.lib.tasks.exports.fields import get_variants_export_fields
 from loading_pipeline.lib.tasks.exports.misc import (
     camelcase_array_structexpression_fields,
     subset_consequences_fields,
-    unmap_formatting_annotation_enums,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.variants_migration.update_variant_annotations_table_with_dropped_reference_datasets import (
@@ -48,11 +47,6 @@ class MigrateVariantsParquetTask(BaseWriteParquetTask):
                 self.reference_genome,
                 self.dataset_type,
             ),
-        )
-        ht = unmap_formatting_annotation_enums(
-            ht,
-            self.reference_genome,
-            self.dataset_type,
         )
         ht = camelcase_array_structexpression_fields(
             ht,

@@ -13,7 +13,6 @@ from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetT
 from loading_pipeline.lib.tasks.exports.fields import get_variant_details_export_fields
 from loading_pipeline.lib.tasks.exports.misc import (
     camelcase_array_structexpression_fields,
-    unmap_formatting_annotation_enums,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalFolderTarget, GCSorLocalTarget
 from loading_pipeline.lib.tasks.update_variant_annotations_table_with_new_variants import (
@@ -50,11 +49,6 @@ class WriteNewVariantDetailsParquetTask(BaseWriteParquetTask):
                 self.dataset_type,
                 self.run_id,
             ),
-        )
-        ht = unmap_formatting_annotation_enums(
-            ht,
-            self.reference_genome,
-            self.dataset_type,
         )
         ht = camelcase_array_structexpression_fields(
             ht,
