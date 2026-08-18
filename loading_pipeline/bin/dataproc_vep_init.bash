@@ -54,10 +54,10 @@ EOF
 gcc -Wall -Werror -O2 /vep.c -o /vep
 chmod u+s /vep
 
-gcloud storage cp gs://seqr-pipeline-runner-builds/$DEPLOYMENT_TYPE/$PIPELINE_RUNNER_APP_VERSION/bin/download_vep_reference_data.bash /download_vep_reference_data.bash
+gcloud storage cp "gs://seqr-pipeline-runner-builds/$DEPLOYMENT_TYPE/$PIPELINE_RUNNER_APP_VERSION/bin/download_vep_reference_data.bash" /download_vep_reference_data.bash
 chmod +x /download_vep_reference_data.bash
-./download_vep_reference_data.bash $REFERENCE_GENOME
+./download_vep_reference_data.bash "$REFERENCE_GENOME"
 
-gcloud storage cp gs://seqr-pipeline-runner-builds/$DEPLOYMENT_TYPE/$PIPELINE_RUNNER_APP_VERSION/bin/vep /vep.bash
+gcloud storage cp "gs://seqr-pipeline-runner-builds/$DEPLOYMENT_TYPE/$PIPELINE_RUNNER_APP_VERSION/bin/vep" /vep.bash
 chmod +x /vep.bash
 

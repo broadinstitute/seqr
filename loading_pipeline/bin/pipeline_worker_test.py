@@ -110,7 +110,7 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
-            """,
+            """,  # nosec B608
         )
         annotations_count = cursor.fetchone()[0]
         self.assertEqual(annotations_count, 30)
@@ -119,7 +119,7 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             SELECT COUNT(*)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/entries`
-            """,
+            """,  # nosec B608
         )
         entries_count = cursor.fetchone()[0]
         self.assertEqual(entries_count, 16)
@@ -128,7 +128,7 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             SELECT sum(ac_wgs)
             FROM
             {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/gt_stats_dict`
-            """,
+            """,  # nosec B608
         )
         ac_wgs = cursor.fetchone()[0]
         self.assertEqual(ac_wgs, 69)

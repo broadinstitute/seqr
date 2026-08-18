@@ -3,7 +3,6 @@ import re
 from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-import google.cloud.bigquery
 from google.cloud import bigquery
 
 from loading_pipeline.lib.misc.gcp import get_service_account_credentials
@@ -58,7 +57,7 @@ def gen_bq_table_names() -> Generator[str]:
             yield f'{result["accessInformation"]["bigQuery"]["projectId"]}.{result["accessInformation"]["bigQuery"]["datasetName"]}'
 
 
-def bq_metrics_query(bq_table_name: str) -> google.cloud.bigquery.table.RowIterator:
+def bq_metrics_query(bq_table_name: str) -> bigquery.table.RowIterator:
     if not re.match(TABLE_NAME_VALIDATION_REGEX, bq_table_name):
         msg = f'{bq_table_name} does not match expected pattern'
         raise ValueError(msg)
@@ -69,12 +68,12 @@ def bq_metrics_query(bq_table_name: str) -> google.cloud.bigquery.table.RowItera
         client.query_and_wait(
             f"""
         SELECT ddl FROM `{bq_table_name}`.INFORMATION_SCHEMA.TABLES where table_name='sample';
-        """,  # noqa: S608
+        """,  # noqa: S608 # nosec B608
         ),
     )[0]
     metrics = [(m if m in table_ddl else f'NULL AS {m}') for m in BIGQUERY_METRICS]
     return client.query_and_wait(
         f"""
         SELECT {','.join(metrics)} FROM `{bq_table_name}.sample`;
-        """,  # noqa: S608
+        """,  # noqa: S608 # nosec B608
     )

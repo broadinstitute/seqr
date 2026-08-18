@@ -29,16 +29,16 @@ DATABASE_ROUTERS = [
 ]
 
 USE_TZ = True
-SECRET_KEY = 'loading-pipeline-test'  # noqa: S105
+SECRET_KEY = 'loading-pipeline-test'  # noqa: S105 # nosec B105
 DEPLOYMENT_TYPE = os.environ.get('DEPLOYMENT_TYPE', 'dev')
 PIPELINE_RUNNER_SERVER = os.environ.get('PIPELINE_RUNNER_SERVER', 'http://localhost')
 CLICKHOUSE_IN_MEMORY_DIR = os.environ.get(
     'CLICKHOUSE_IN_MEMORY_DIR',
-    '/tmp/loading_pipeline_test_clickhouse_in_memory',  # noqa: S108
+    '/tmp/loading_pipeline_test_clickhouse_in_memory',  # noqa: S108 # nosec B108
 )
 CLICKHOUSE_DATA_DIR = os.environ.get(
     'CLICKHOUSE_DATA_DIR',
-    '/tmp/loading_pipeline_test_clickhouse_data',  # noqa: S108
+    '/tmp/loading_pipeline_test_clickhouse_data',  # noqa: S108 # nosec B108
 )
 
 CLICKHOUSE_WRITER_USER = os.environ.get('CLICKHOUSE_WRITER_USER', 'default')
