@@ -1,4 +1,4 @@
-import luigi.util
+import luigi.util  # noqa: F401
 
 from loading_pipeline.lib.tasks.reference_data.updated_reference_dataset_parquet import (
     UpdatedReferenceDatasetParquetTask,
