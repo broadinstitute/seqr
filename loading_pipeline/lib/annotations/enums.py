@@ -1,3 +1,5 @@
+import hail as hl
+
 BIOTYPES = [
     'IG_C_gene',
     'IG_D_gene',
@@ -203,3 +205,21 @@ SV_CONSEQUENCE_RANKS = [
     'INTRONIC',
     'NEAREST_TSS',
 ]
+
+
+def validated_enum_member(
+    value: hl.StringExpression,
+    allowed_values: list[str],
+) -> hl.StringExpression:
+    """Validate that a string value is in the allowed enum list.
+
+    Returns the value if valid or missing, raises an error if unrecognized.
+    This replaces dict-based enum id encoding with validated string values.
+    """
+    allowed_values_set = hl.literal(set(allowed_values))
+    return (
+        hl.case()
+        .when(hl.is_missing(value), value)
+        .when(allowed_values_set.contains(value), value)
+        .or_error(hl.format('Unexpected enum value: %s', value))
+    )
