@@ -114,7 +114,7 @@ def _get_calls_export_fields(
     ht: hl.Table,
     fe: hl.Struct,
     dataset_type: DatasetType,
-    call_annotation_fields:set[str],
+    call_annotation_fields: set[str],
 ):
     return {
         DatasetType.SNV_INDEL: lambda fe: hl.Struct(
@@ -148,7 +148,9 @@ def _get_calls_export_fields(
             qs=fe.QS,
             defragged=fe.defragged,
             **{
-                snake_to_camelcase(field): hl.or_else(getattr(fe, f'sample_{field}'), geattr(ht, field))
+                snake_to_camelcase(field): hl.or_else(
+                    getattr(fe, f'sample_{field}'), geattr(ht, field)
+                )
                 for field in call_annotation_fields
             },
             newCall=fe.concordance.new_call,
@@ -167,7 +169,11 @@ def get_entries_annotations_export_fields(
         'xpos': ht.xpos,
     }
     if dataset_type in {DatasetType.SV, DatasetType.SNV_INDEL}:
-        fields['geneIds'] = hl.set(ht.sorted_gene_consequences.gene_id) if dataset_type == DatasetType.SV else ht.set(ht.sorted_gene_consequences.gene_id)
+        fields['geneIds'] = (
+            hl.set(ht.sorted_gene_consequences.gene_id)
+            if dataset_type == DatasetType.SV
+            else ht.set(ht.sorted_gene_consequences.gene_id)
+        )
     return fields
 
 
@@ -192,7 +198,9 @@ def get_entries_export_fields(
         ),
         'filters': ht.filters,
         'calls': hl.sorted(ht.family_entries, key=lambda fe: fe.s).map(
-            lambda fe: _get_calls_export_fields(ht, fe, dataset_type, call_annotation_fields),
+            lambda fe: _get_calls_export_fields(
+                ht, fe, dataset_type, call_annotation_fields
+            ),
         ),
         'sign': 1,
     }
