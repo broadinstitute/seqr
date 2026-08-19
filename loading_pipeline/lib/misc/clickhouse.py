@@ -946,6 +946,23 @@ def direct_insert_all_keys(
     )
 
 
+def export_existing_variants_to_parquet(
+    table_name_builder: TableNameBuilder,
+    export_select_fields: str,
+) -> None:
+    variants_table = table_name_builder.dst_table(ClickHouseTable.VARIANTS_MEMORY)
+    export_table = table_name_builder.src_table(ClickHouseTable.VARIANTS_MEMORY).replace(
+        'new_variants', 'existing_variants',
+    )
+    logged_query(
+        f"""
+        INSERT INTO FUNCTION {export_table}
+        SELECT {export_select_fields}
+        FROM {variants_table}
+        """,  # nosec B608
+    )
+
+
 # This is a smattering of shared operations that lacks a better name :/
 def finalize_refresh_flow(
     table_name_builder: TableNameBuilder,

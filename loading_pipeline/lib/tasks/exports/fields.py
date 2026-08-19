@@ -88,6 +88,14 @@ def get_dataset_type_specific_variants_annotations(
     }[dataset_type](ht)
 
 
+def get_existing_variants_export_field(dataset_type: DatasetType) -> str:
+    # TODO real export fields
+    dt_fields = {
+        DatasetType.SNV_INDEL: 'sorted_transcript_consequences.gene_id',
+    }[dataset_type]
+    return f'key AS key_, xpos {dt_fields}'
+
+
 def get_calls_export_fields(
     ht: hl.Table,
     fe: hl.Struct,
