@@ -1,7 +1,10 @@
 import hail as hl
 
 from loading_pipeline.lib.core import DatasetType, ReferenceGenome, SampleType
-from loading_pipeline.lib.tasks.exports.misc import reformat_transcripts_for_export, snake_to_camelcase
+from loading_pipeline.lib.tasks.exports.misc import (
+    reformat_transcripts_for_export,
+    snake_to_camelcase,
+)
 
 FIVE_PERCENT = 0.05
 STANDARD_CONTIGS = hl.set(
