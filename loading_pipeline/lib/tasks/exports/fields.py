@@ -1,7 +1,7 @@
 import hail as hl
 
 from loading_pipeline.lib.core import DatasetType, ReferenceGenome, SampleType
-from loading_pipeline.lib.tasks.exports.misc import reformat_transcripts_for_export
+from loading_pipeline.lib.tasks.exports.misc import reformat_transcripts_for_export, snake_to_camelcase
 
 FIVE_PERCENT = 0.05
 STANDARD_CONTIGS = hl.set(
@@ -96,10 +96,25 @@ def get_existing_variants_export_field(dataset_type: DatasetType) -> str:
     return f'key AS key_, xpos {dt_fields}'
 
 
-def get_calls_export_fields(
+def get_entries_call_annotations_fields(
+    ht: hl.Table,
+    dataset_type: DatasetType,
+):
+    if dataset_type == DatasetType.GCNV:
+        return {
+            'start': ht.start_locus.position,
+            'end': ht.end_locus.position,
+            'num_exon': ht.num_exon,
+            'gene_ids': hl.set(ht.sorted_gene_consequences.gene_id),
+        }
+    return {}
+
+
+def _get_calls_export_fields(
     ht: hl.Table,
     fe: hl.Struct,
     dataset_type: DatasetType,
+    call_annotation_fields:set[str],
 ):
     return {
         DatasetType.SNV_INDEL: lambda fe: hl.Struct(
@@ -132,13 +147,10 @@ def get_calls_export_fields(
             cn=fe.CN,
             qs=fe.QS,
             defragged=fe.defragged,
-            start=hl.or_else(fe.sample_start, ht.start_locus.position),
-            end=hl.or_else(fe.sample_end, ht.end_locus.position),
-            numExon=hl.or_else(fe.sample_num_exon, ht.num_exon),
-            geneIds=hl.or_else(
-                fe.sample_gene_ids,
-                hl.set(ht.sorted_gene_consequences.gene_id),
-            ),
+            **{
+                snake_to_camelcase(field): hl.or_else(getattr(fe, f'sample_{field}'), geattr(ht, field))
+                for field in call_annotation_fields
+            },
             newCall=fe.concordance.new_call,
             prevCall=fe.concordance.prev_call,
             prevOverlap=fe.concordance.prev_overlap,
@@ -146,16 +158,31 @@ def get_calls_export_fields(
     }[dataset_type](fe)
 
 
+def get_entries_annotations_export_fields(
+    ht: hl.Table,
+    dataset_type: DatasetType,
+):
+    fields = {
+        'key_': ht.key_,
+        'xpos': ht.xpos,
+    }
+    if dataset_type in {DatasetType.SV, DatasetType.SNV_INDEL}:
+        fields['geneIds'] = hl.set(ht.sorted_gene_consequences.gene_id) if dataset_type == DatasetType.SV else ht.set(ht.sorted_gene_consequences.gene_id)
+    return fields
+
+
 def get_entries_export_fields(
     ht: hl.Table,
     dataset_type: DatasetType,
     sample_type: SampleType,
     project_guid: str,
+    annotation_fields: set[str],
+    call_annotation_fields: set[str],
 ):
     return {
-        'key_': ht.key_,
         'project_guid': project_guid,
         'family_guid': ht.family_entries.family_guid[0],
+        **{field: getattr(ht, field) for field in annotation_fields},
         **(
             {
                 'sample_type': sample_type.value,
@@ -163,21 +190,9 @@ def get_entries_export_fields(
             if dataset_type in {DatasetType.SNV_INDEL, DatasetType.MITO}
             else {}
         ),
-        'xpos': ht.xpos,
-        **(
-            {
-                'geneIds': hl.set(ht.sorted_gene_consequences.gene_id)
-                if dataset_type == DatasetType.SV
-                else hl.set(ht.sorted_transcript_consequences.gene_id)
-                if dataset_type == DatasetType.SNV_INDEL
-                else None,
-            }
-            if dataset_type in {DatasetType.SV, DatasetType.SNV_INDEL}
-            else {}
-        ),
         'filters': ht.filters,
         'calls': hl.sorted(ht.family_entries, key=lambda fe: fe.s).map(
-            lambda fe: get_calls_export_fields(ht, fe, dataset_type),
+            lambda fe: _get_calls_export_fields(ht, fe, dataset_type, call_annotation_fields),
         ),
         'sign': 1,
     }
