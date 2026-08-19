@@ -17,9 +17,9 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.exports.fields import (
-    get_entries_export_fields,
     get_entries_annotations_export_fields,
     get_entries_call_annotations_fields,
+    get_entries_export_fields,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.update_variant_annotations_table_with_new_variants import (
@@ -78,10 +78,10 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             ht = deglobalize_ids(ht)
             ht = deduplicate_by_most_non_ref_calls(ht)
             annotation_fields = get_entries_annotations_export_fields(
-                ht, self.dataset_type
+                ht, self.dataset_type,
             )
-            call_annotation_fields = get_entries_call_annotations_export_fields(
-                ht, self.dataset_type
+            call_annotation_fields = get_entries_call_annotations_fields(
+                ht, self.dataset_type,
             )
             annotations_ht = hl.read_table(
                 variant_annotations_table_path(

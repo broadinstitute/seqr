@@ -152,7 +152,7 @@ def _get_calls_export_fields(
             defragged=fe.defragged,
             **{
                 snake_to_camelcase(field): hl.or_else(
-                    getattr(fe, f'sample_{field}'), geattr(ht, field)
+                    getattr(fe, f'sample_{field}'), getattr(ht, field),
                 )
                 for field in call_annotation_fields
             },
@@ -202,7 +202,7 @@ def get_entries_export_fields(
         'filters': ht.filters,
         'calls': hl.sorted(ht.family_entries, key=lambda fe: fe.s).map(
             lambda fe: _get_calls_export_fields(
-                ht, fe, dataset_type, call_annotation_fields
+                ht, fe, dataset_type, call_annotation_fields,
             ),
         ),
         'sign': 1,
