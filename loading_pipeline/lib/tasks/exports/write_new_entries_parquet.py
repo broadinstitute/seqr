@@ -78,10 +78,12 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             ht = deglobalize_ids(ht)
             ht = deduplicate_by_most_non_ref_calls(ht)
             annotation_fields = get_entries_annotations_export_fields(
-                ht, self.dataset_type,
+                ht,
+                self.dataset_type,
             )
             call_annotation_fields = get_entries_call_annotations_fields(
-                ht, self.dataset_type,
+                ht,
+                self.dataset_type,
             )
             annotations_ht = hl.read_table(
                 variant_annotations_table_path(
