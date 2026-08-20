@@ -95,7 +95,9 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
         mock_vep: Mock,
         mock_load_gencode_ensembl_to_refseq_id: Mock,
     ) -> None:
-        mock_load_gencode_ensembl_to_refseq_id.return_value = hl.dict({})
+        mock_load_gencode_ensembl_to_refseq_id.return_value = hl.dict(
+            {'ENST00000327044': 'NM_015658.4'},
+        )
         mock_vep.side_effect = lambda ht, **_: ht.annotate(vep=MOCK_38_VEP_DATA)
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_3_REMAP,
