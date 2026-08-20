@@ -78,7 +78,7 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
                     **get_entries_annotations_export_fields(self.dataset_type),
                     **get_entries_call_annotations_fields(self.dataset_type),
                 }.items()
-            }
+            },
         )
 
         existing_annotations_ht = import_parquet(
