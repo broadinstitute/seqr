@@ -934,10 +934,7 @@ def direct_insert_all_keys(
     **_,
 ) -> None:
     dst_table = table_name_builder.dst_table(clickhouse_table)
-    src_table = table_name_builder.src_table(clickhouse_table).replace(
-        '/*.parquet',
-        '',
-    )
+    src_table = table_name_builder.src_table(clickhouse_table)
     settings = ''
     # Large variant details inserts may OOM
     if clickhouse_table == ClickHouseTable.VARIANT_DETAILS:
@@ -968,7 +965,10 @@ def export_existing_variants_to_parquet(
         if dataset_type.should_write_new_variant_details
         else ClickHouseTable.VARIANTS_MEMORY,
     )
-    export_table = table_name_builder.src_table(ClickHouseTable.EXISTING_VARIANTS)
+    export_table = table_name_builder.src_table(ClickHouseTable.EXISTING_VARIANTS).replace(
+        '/*.parquet',
+        '',
+    )
     logged_query(
         f"""
         INSERT INTO FUNCTION {export_table}
