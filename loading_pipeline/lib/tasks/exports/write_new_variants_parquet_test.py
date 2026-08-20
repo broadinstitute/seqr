@@ -54,55 +54,44 @@ TEST_GCNV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/GCNV/annotatio
 TEST_RUN_ID = 'manual__2024-04-03'
 
 
-def _write_prior_annotations_table(
-    fixture_path: str,
-    reference_genome: ReferenceGenome,
-    dataset_type: DatasetType,
-    exclude_variant_id: str,
-    max_key_: int,
-) -> None:
-    # The fixture already documents `exclude_variant_id` as an example of a
-    # newly-added variant. Strip it back out and re-key the remainder so
-    # WriteNewVariantsTableTask's anti-join rediscovers it as new, at the
-    # same `key_` the fixture originally asserted.
-    ht = hl.read_table(fixture_path)
-    ht = ht.filter(ht.variant_id != exclude_variant_id)
-    ht = ht.select()
-    ht = ht.add_index(name='key_')
-    ht = ht.annotate_globals(max_key_=max_key_)
-    ht.write(variant_annotations_table_path(reference_genome, dataset_type))
-
-
 class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     def setUp(self) -> None:
         super().setUp()
-        _write_prior_annotations_table(
-            TEST_SNV_INDEL_ANNOTATIONS,
-            ReferenceGenome.GRCh38,
-            DatasetType.SNV_INDEL,
-            exclude_variant_id='1-876499-A-G',
-            max_key_=-1,
+        ht = hl.read_table(TEST_SNV_INDEL_ANNOTATIONS)
+        ht = ht.filter(ht.variant_id != '1-876499-A-G')
+        ht = ht.annotate_globals(max_key_=-1)
+        ht.write(
+            variant_annotations_table_path(
+                ReferenceGenome.GRCh38,
+                DatasetType.SNV_INDEL,
+            ),
         )
-        _write_prior_annotations_table(
-            TEST_GRCH37_SNV_INDEL_ANNOTATIONS,
-            ReferenceGenome.GRCh37,
-            DatasetType.SNV_INDEL,
-            exclude_variant_id='1-69134-A-G',
-            max_key_=1423,
+        ht = hl.read_table(TEST_GRCH37_SNV_INDEL_ANNOTATIONS)
+        ht = ht.filter(ht.variant_id != '1-69134-A-G')
+        ht = ht.annotate_globals(max_key_=1423)
+        ht.write(
+            variant_annotations_table_path(
+                ReferenceGenome.GRCh37,
+                DatasetType.SNV_INDEL,
+            ),
         )
-        _write_prior_annotations_table(
-            TEST_MITO_ANNOTATIONS,
-            ReferenceGenome.GRCh38,
-            DatasetType.MITO,
-            exclude_variant_id='M-8-G-T',
-            max_key_=997,
+        ht = hl.read_table(TEST_MITO_ANNOTATIONS)
+        ht = ht.filter(ht.variant_id != 'M-8-G-T')
+        ht = ht.annotate_globals(max_key_=997)
+        ht.write(
+            variant_annotations_table_path(
+                ReferenceGenome.GRCh38,
+                DatasetType.MITO,
+            ),
         )
-        _write_prior_annotations_table(
-            TEST_SV_ANNOTATIONS,
-            ReferenceGenome.GRCh38,
-            DatasetType.SV,
-            exclude_variant_id='BND_chr1_6',
-            max_key_=726,
+        ht = hl.read_table(TEST_SV_ANNOTATIONS)
+        ht = ht.filter(ht.variant_id != 'BND_chr1_6')
+        ht = ht.annotate_globals(max_key_=726)
+        ht.write(
+            variant_annotations_table_path(
+                ReferenceGenome.GRCh38,
+                DatasetType.SV,
+            ),
         )
         ht = hl.read_table(TEST_GCNV_ANNOTATIONS)
         ht.write(
