@@ -30,16 +30,13 @@
     (Project 1)                            (Project N)
           |                                           |
           |___________________________________________|
-                                |
-                                v
-                   WriteMetadataForRunTask
+                      |
+                      v
+            WriteMetadataForRunTask            WriteExistingVariantsParquetTask
+                      |___________________________________________|
                                 |
                                 v
                     WriteNewVariantsTableTask
-                                |
-                                v
-            UpdateVariantAnnotationsTableWithNewVariantsTask
-                      (Variants with annotations)
                                 |
           ______________________+_______________________
           |                     |                      |
