@@ -13,7 +13,6 @@ from loading_pipeline.lib.paths import (
     metadata_for_run_path,
     new_variants_table_path,
     project_pedigree_path,
-    project_table_path,
     relatedness_check_table_path,
     remapped_and_subsetted_callset_path,
     sex_check_table_path,
@@ -26,30 +25,6 @@ TEST_VCF = 'loading_pipeline/var/test/callsets/1kg_30varia*.vcf'
 
 
 class TestPaths(unittest.TestCase):
-    def test_project_table_path(self) -> None:
-        self.assertEqual(
-            project_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.MITO,
-                SampleType.WES,
-                'R0652_pipeline_test',
-            ),
-            '/var/seqr/pipeline-data/GRCh38/MITO/projects/WES/R0652_pipeline_test.ht',
-        )
-        with (
-            patch('loading_pipeline.lib.paths.Env') as mock_env,
-        ):
-            mock_env.PIPELINE_DATA_DIR = '/var/bucket/'
-            self.assertEqual(
-                project_table_path(
-                    ReferenceGenome.GRCh37,
-                    DatasetType.SNV_INDEL,
-                    SampleType.WES,
-                    'R0652_pipeline_test',
-                ),
-                '/var/bucket/GRCh37/SNV_INDEL/projects/WES/R0652_pipeline_test.ht',
-            )
-
     def test_sex_check_table_path(self) -> None:
         self.assertEqual(
             sex_check_table_path(

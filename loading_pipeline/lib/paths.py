@@ -58,24 +58,6 @@ def _callset_path_hash(callset_path: str) -> str:
     ).hexdigest()
 
 
-def family_table_path(
-    reference_genome: ReferenceGenome,
-    dataset_type: DatasetType,
-    sample_type: SampleType,
-    family_guid: str,
-) -> str:
-    return os.path.join(
-        pipeline_prefix(
-            Env.PIPELINE_DATA_DIR,
-            reference_genome,
-            dataset_type,
-        ),
-        'families',
-        sample_type.value,
-        f'{family_guid}.ht',
-    )
-
-
 def tdr_metrics_dir(
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
@@ -160,24 +142,6 @@ def metadata_for_run_path(
         ),
         run_id,
         'metadata.json',
-    )
-
-
-def project_table_path(
-    reference_genome: ReferenceGenome,
-    dataset_type: DatasetType,
-    sample_type: SampleType,
-    project_guid: str,
-) -> str:
-    return os.path.join(
-        pipeline_prefix(
-            Env.PIPELINE_DATA_DIR,
-            reference_genome,
-            dataset_type,
-        ),
-        'projects',
-        sample_type.value,
-        f'{project_guid}.ht',
     )
 
 
@@ -302,6 +266,7 @@ def ancestry_model_rf_path() -> str:
     )
 
 
+# TODO deprecate
 def variant_annotations_table_path(
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
