@@ -3,7 +3,7 @@ from typing import ClassVar
 import luigi.worker
 import pandas as pd
 
-from loading_pipeline.lib.core import DatasetType, ReferenceGenome
+from loading_pipeline.lib.core import DatasetType, ReferenceGenome, SampleType
 from loading_pipeline.lib.paths import existing_variants_parquet_path
 from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
     WriteExistingVariantsParquetTask,
@@ -31,6 +31,8 @@ class WriteExistingVariantsParquetTest(
         task = WriteExistingVariantsParquetTask(
             reference_genome=reference_genome,
             dataset_type=dataset_type,
+            sample_type=SampleType.WGS,
+            callset_path='fake_callset',
             run_id=TEST_RUN_ID,
         )
         worker.add(task)
