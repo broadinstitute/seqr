@@ -3,14 +3,16 @@ import luigi
 import luigi.util
 
 from loading_pipeline.lib.annotations.fields import get_fields
+from loading_pipeline.lib.annotations.shared import xpos
 from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
     deglobalize_ids,
 )
 from loading_pipeline.lib.paths import (
+    existing_variants_parquet_path,
     new_entries_parquet_path,
-    variant_annotations_table_path,
+    new_variants_table_path,
 )
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
@@ -60,6 +62,37 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
 
     def create_table(self) -> None:
         unioned_ht = None
+
+        annotation_fields = get_entries_annotations_export_fields(
+            ht,
+            self.dataset_type,
+        )
+        call_annotation_fields = get_entries_call_annotations_fields(
+            ht,
+            self.dataset_type,
+        )
+        annotations_ht = hl.read_table(
+            new_variants_table_path(
+                self.reference_genome,
+                self.dataset_type,
+                self.run_id,
+            ),
+        ).select(**annotation_fields, **call_annotation_fields)
+
+        existing_annotations_ht = import_parquet(
+            existing_variants_parquet_path(
+                self.reference_genome,
+                self.dataset_type,
+                self.run_id,
+            ),
+            self.reference_genome,
+            self.dataset_type,
+        )
+        if 'xpos' not in existing_annotations_ht.row:
+            existing_annotations_ht = existing_annotations_ht.annotate(xpos=xpos(existing_annotations_ht))
+
+        annotations_ht = annotations_ht.union(existing_annotations_ht)
+
         for project_guid, remapped_and_subsetted_callset_task in zip(
             self.project_guids,
             self.input()[REMAPPED_AND_SUBSETTED_CALLSET_TASKS],
@@ -77,20 +110,6 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             )
             ht = deglobalize_ids(ht)
             ht = deduplicate_by_most_non_ref_calls(ht)
-            annotation_fields = get_entries_annotations_export_fields(
-                ht,
-                self.dataset_type,
-            )
-            call_annotation_fields = get_entries_call_annotations_fields(
-                ht,
-                self.dataset_type,
-            )
-            annotations_ht = hl.read_table(
-                variant_annotations_table_path(
-                    self.reference_genome,
-                    self.dataset_type,
-                ),
-            ).select(**annotation_fields, **call_annotation_fields)
             ht = ht.join(annotations_ht)
 
             # the family entries ht will contain rows
