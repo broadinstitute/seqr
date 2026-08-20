@@ -267,7 +267,7 @@
         "pk": 1,
         "fields": {
             "key": 1,
-            "variant_id": "a",
+            "variant_id": "1-10059-C-T",
             "transcripts": [
                 [
                     [0.9978], "L/F", "protein_coding", 1, "ttA/ttC", ["missense_variant"], [2, 9], "ENSG00000177000",
@@ -286,7 +286,7 @@
         "pk": 7,
         "fields": {
             "key": 7,
-            "variant_id": "c",
+            "variant_id": "7-1234567-AGT-A",
             "transcripts": [],
             "sorted_motif_feature_consequences": [],
             "sorted_regulatory_feature_consequences": []
@@ -297,7 +297,7 @@
         "pk": 10,
         "fields": {
             "key": 10,
-            "variant_id": "b",
+            "variant_id": "10-987654-G-A",
             "transcripts": [],
             "sorted_motif_feature_consequences": [],
             "sorted_regulatory_feature_consequences": []

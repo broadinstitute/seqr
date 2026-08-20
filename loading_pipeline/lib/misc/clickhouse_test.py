@@ -435,8 +435,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 (2, '2-14-A-T'),
                 (3, 'Y-19-A-C'),
                 (4, 'M-12-C-G'),
-                (7, 'c'),
-                (10, 'b'),
+                (7, '7-1234567-AGT-A'),
+                (10, '10-987654-G-A'),
             ],
         )
 
@@ -1008,8 +1008,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 (2, '2-14-A-T'),
                 (3, 'Y-19-A-C'),
                 (4, 'M-12-C-G'),
-                (7, 'c'),
-                (10, 'b'),
+                (7, '7-1234567-AGT-A'),
+                (10, '10-987654-G-A'),
             ],
         )
 
