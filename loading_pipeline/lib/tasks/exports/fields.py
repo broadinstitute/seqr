@@ -188,7 +188,7 @@ def get_entries_export_fields(
         'project_guid': project_guid,
         'family_guid': ht.family_entries.family_guid[0],
         **{
-            field: getattr(ht, field) 
+            field: getattr(ht, field)
             for field in get_entries_annotations_export_fields(dataset_type)
         },
         **(
