@@ -53,6 +53,38 @@ TEST_GCNV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/GCNV/annotatio
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
+SNV_INDEL_GRCH38_MOCK_VEP_DATA = MOCK_38_VEP_DATA.annotate(
+    motif_feature_consequences=hl.array(
+        [
+            hl.struct(
+                consequence_terms=hl.array(['TF_binding_site_variant']),
+                motif_feature_id='motif_1',
+            ),
+        ],
+    ),
+    regulatory_feature_consequences=hl.array(
+        [MOCK_38_VEP_DATA.regulatory_feature_consequences[0]],
+    ),
+    transcript_consequences=hl.array(
+        [
+            MOCK_38_VEP_DATA.transcript_consequences[0].annotate(
+                am_pathogenicity=hl.missing(hl.tfloat32),
+                gene_id='ENSG00000187634',
+            ),
+        ],
+    ),
+)
+
+SNV_INDEL_GRCH37_MOCK_VEP_DATA = MOCK_37_VEP_DATA.annotate(
+    transcript_consequences=hl.array(
+        [
+            MOCK_37_VEP_DATA.transcript_consequences[0].annotate(
+                gene_id='ENSG00000186092',
+            ),
+        ],
+    ),
+)
+
 
 class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     def setUp(self) -> None:
@@ -121,7 +153,9 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         mock_load_gencode_ensembl_to_refseq_id.return_value = hl.dict(
             {'ENST00000327044': 'NM_015658.4'},
         )
-        mock_vep.side_effect = lambda ht, **_: ht.annotate(vep=MOCK_38_VEP_DATA)
+        mock_vep.side_effect = lambda ht, **_: ht.annotate(
+            vep=SNV_INDEL_GRCH38_MOCK_VEP_DATA,
+        )
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_3_REMAP,
             ReferenceGenome.GRCh38,
@@ -192,7 +226,9 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         self,
         mock_vep: Mock,
     ) -> None:
-        mock_vep.side_effect = lambda ht, **_: ht.annotate(vep=MOCK_37_VEP_DATA)
+        mock_vep.side_effect = lambda ht, **_: ht.annotate(
+            vep=SNV_INDEL_GRCH37_MOCK_VEP_DATA,
+        )
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_3_REMAP,
             ReferenceGenome.GRCh37,

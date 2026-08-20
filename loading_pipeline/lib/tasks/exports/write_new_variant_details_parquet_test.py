@@ -41,6 +41,64 @@ TEST_GRCH37_SNV_INDEL_ANNOTATIONS = (
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
+SNV_INDEL_GRCH38_MOCK_VEP_DATA = MOCK_38_VEP_DATA.annotate(
+    transcript_consequences=hl.array(
+        [
+            MOCK_38_VEP_DATA.transcript_consequences[0].annotate(
+                am_pathogenicity=hl.missing(hl.tfloat32),
+                exon='6/14',
+                gene_id='ENSG00000187634',
+                hgvsc='ENST00000616016.5:c.1049C>T',
+                hgvsp='ENSP00000478421.2:p.Ser350Leu',
+                lof=hl.missing(hl.tstr),
+                lof_filter=hl.missing(hl.tstr),
+                mane_select='NM_001385641.1',
+                transcript_id='ENST00000616016',
+                fiveutr_annotation=hl.dict(
+                    {
+                        '1': hl.struct(
+                            type='OutOfFrame_oORF',
+                            KozakContext='CGCATGC',
+                            KozakStrength='Weak',
+                            DistanceToCDS='41',
+                            CapDistanceToStart=hl.missing(hl.tstr),
+                            DistanceToStop=hl.missing(hl.tstr),
+                            Evidence=hl.missing(hl.tstr),
+                            AltStop=hl.missing(hl.tstr),
+                            AltStopDistanceToCDS=hl.missing(hl.tstr),
+                            FrameWithCDS=hl.missing(hl.tstr),
+                            StartDistanceToCDS=hl.missing(hl.tstr),
+                            newSTOPDistanceToCDS=hl.missing(hl.tstr),
+                            alt_type=hl.missing(hl.tstr),
+                            alt_type_length=hl.missing(hl.tstr),
+                            ref_StartDistanceToCDS=hl.missing(hl.tstr),
+                            ref_type=hl.missing(hl.tstr),
+                            ref_type_length=hl.missing(hl.tstr),
+                        ),
+                    },
+                ),
+            ),
+        ],
+    ),
+)
+
+SNV_INDEL_GRCH37_MOCK_VEP_DATA = MOCK_37_VEP_DATA.annotate(
+    transcript_consequences=hl.array(
+        [
+            MOCK_37_VEP_DATA.transcript_consequences[0].annotate(
+                amino_acids='E/G',
+                codons='gAa/gGa',
+                gene_id='ENSG00000186092',
+                hgvsc='ENST00000335137.3:c.44A>G',
+                hgvsp='ENSP00000334393.3:p.Glu15Gly',
+                transcript_id='ENST00000335137',
+                lof=hl.missing(hl.tstr),
+                lof_filter=hl.missing(hl.tstr),
+            ),
+        ],
+    ),
+)
+
 
 class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
     def setUp(self) -> None:
@@ -96,9 +154,11 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
         mock_load_gencode_ensembl_to_refseq_id: Mock,
     ) -> None:
         mock_load_gencode_ensembl_to_refseq_id.return_value = hl.dict(
-            {'ENST00000327044': 'NM_015658.4'},
+            {'ENST00000616016': 'NM_001385641.1'},
         )
-        mock_vep.side_effect = lambda ht, **_: ht.annotate(vep=MOCK_38_VEP_DATA)
+        mock_vep.side_effect = lambda ht, **_: ht.annotate(
+            vep=SNV_INDEL_GRCH38_MOCK_VEP_DATA,
+        )
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_3_REMAP,
             ReferenceGenome.GRCh38,
@@ -222,7 +282,9 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
         self,
         mock_vep: Mock,
     ) -> None:
-        mock_vep.side_effect = lambda ht, **_: ht.annotate(vep=MOCK_37_VEP_DATA)
+        mock_vep.side_effect = lambda ht, **_: ht.annotate(
+            vep=SNV_INDEL_GRCH37_MOCK_VEP_DATA,
+        )
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_3_REMAP,
             ReferenceGenome.GRCh37,
