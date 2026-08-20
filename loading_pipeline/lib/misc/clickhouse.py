@@ -950,7 +950,11 @@ def export_existing_variants_to_parquet(
     table_name_builder: TableNameBuilder,
     export_select_fields: str,
 ) -> None:
-    variants_table = table_name_builder.dst_table(ClickHouseTable.VARIANTS_MEMORY)
+    variants_table = table_name_builder.dst_table(
+        ClickHouseTable.VARIANT_DETAILS
+        if table_name_builder.dataset_type.should_write_new_variant_details
+        else ClickHouseTable.VARIANTS_MEMORY,
+    )
     export_table = table_name_builder.src_table(
         ClickHouseTable.VARIANTS_MEMORY,
     ).replace(
