@@ -7,7 +7,10 @@ from loading_pipeline.lib.tasks.base.base_loading_pipeline_params import (
     BaseLoadingPipelineParams,
 )
 from loading_pipeline.lib.tasks.exports.fields import get_existing_variants_export_field
-from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.files import (
+    GCSorLocalFolderTarget,
+    GCSorLocalTarget,
+)
 
 
 @luigi.util.inherits(BaseLoadingPipelineParams)
