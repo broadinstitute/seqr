@@ -3,8 +3,8 @@ import luigi.util
 
 from loading_pipeline.lib.misc.clickhouse import export_existing_variants_to_parquet
 from loading_pipeline.lib.paths import existing_variants_parquet_path
-from loading_pipeline.lib.tasks.base.base_loading_pipeline_params import (
-    BaseLoadingPipelineParams,
+from loading_pipeline.lib.tasks.base.base_loading_run_params import (
+    BaseLoadingRunParams,
 )
 from loading_pipeline.lib.tasks.exports.fields import get_existing_variants_export_field
 from loading_pipeline.lib.tasks.files import (
@@ -13,7 +13,7 @@ from loading_pipeline.lib.tasks.files import (
 )
 
 
-@luigi.util.inherits(BaseLoadingPipelineParams)
+@luigi.util.inherits(BaseLoadingRunParams)
 class WriteExistingVariantsParquetTask(luigi.Task):
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
