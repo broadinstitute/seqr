@@ -23,7 +23,7 @@ from loading_pipeline.lib.tasks.exports.fields import (
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.write_new_variants_table import (
-    WriteNewVariantsTableTask
+    WriteNewVariantsTableTask,
 )
 from loading_pipeline.lib.tasks.write_remapped_and_subsetted_callset import (
     WriteRemappedAndSubsettedCallsetTask,
