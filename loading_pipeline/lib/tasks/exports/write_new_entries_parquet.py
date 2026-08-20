@@ -89,7 +89,9 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             self.dataset_type,
         )
         if 'xpos' not in existing_annotations_ht.row:
-            existing_annotations_ht = existing_annotations_ht.annotate(xpos=xpos(existing_annotations_ht))
+            existing_annotations_ht = existing_annotations_ht.annotate(
+                xpos=xpos(existing_annotations_ht),
+            )
 
         annotations_ht = annotations_ht.union(existing_annotations_ht)
 
