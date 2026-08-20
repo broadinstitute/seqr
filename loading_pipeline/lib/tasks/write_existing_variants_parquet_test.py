@@ -70,7 +70,7 @@ class WriteExistingVariantsParquetTest(
 
     def test_mito(self):
         df = self._run_task(DatasetType.MITO)
-        self.assertEqual(list(df.columns), ['key_', 'variant_id'])
+        self.assertEqual(list(df.columns), ['key_', 'variant_id', 'xpos'])
         self.assertEqual(len(df), 0)
 
     def test_sv(self):

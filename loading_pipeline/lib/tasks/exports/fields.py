@@ -93,12 +93,12 @@ def get_dataset_type_specific_variants_annotations(
 
 def get_existing_variants_export_field(dataset_type: DatasetType) -> str:
     dt_fields = {
-        DatasetType.SNV_INDEL: ', transcripts.geneId AS geneIds',
-        DatasetType.MITO: '',
-        DatasetType.SV: ', xpos, end, endChrom, sortedGeneConsequences.geneId AS geneIds',
-        DatasetType.GCNV: ', xpos, pos AS start, end, numExon as num_exon, sortedGeneConsequences.geneId AS gene_ids',
+        DatasetType.SNV_INDEL: 'transcripts.geneId AS geneIds',
+        DatasetType.MITO: 'xpos',
+        DatasetType.SV: 'xpos, end, endChrom, sortedGeneConsequences.geneId AS geneIds',
+        DatasetType.GCNV: 'xpos, pos AS start, end, numExon as num_exon, sortedGeneConsequences.geneId AS gene_ids',
     }[dataset_type]
-    return f'key AS key_, variantId AS variant_id {dt_fields}'
+    return f'key AS key_, variantId AS variant_id, {dt_fields}'
 
 
 def get_entries_call_annotations_fields(

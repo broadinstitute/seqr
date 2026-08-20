@@ -1,7 +1,6 @@
 import math
 
 import hail as hl
-import hailtop.fs as hfs
 import luigi
 import luigi.util
 
@@ -10,14 +9,14 @@ from loading_pipeline.lib.annotations.misc import (
     annotate_formatting_annotation_enum_globals,
 )
 from loading_pipeline.lib.misc.callsets import get_callset_ht
-from loading_pipeline.lib.misc.io import checkpoint, remap_pedigree_hash
+from loading_pipeline.lib.misc.io import checkpoint, import_parquet, remap_pedigree_hash
 from loading_pipeline.lib.misc.math import constrain
 from loading_pipeline.lib.misc.vep import run_vep
 from loading_pipeline.lib.paths import (
+    existing_variants_parquet_path,
     new_variants_table_path,
     project_pedigree_path,
     valid_reference_dataset_path,
-    variant_annotations_table_path,
 )
 from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
     load_gencode_ensembl_to_refseq_id,
@@ -29,6 +28,9 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write import BaseWriteTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
+    WriteExistingVariantsParquetTask,
+)
 from loading_pipeline.lib.tasks.write_metadata_for_run import (
     WriteMetadataForRunTask,
 )
@@ -82,6 +84,7 @@ class WriteNewVariantsTableTask(BaseWriteTask):
     def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WriteMetadataForRunTask),
+            self.clone(WriteExistingVariantsParquetTask),
         ]
 
     def complete(self) -> bool:
@@ -119,37 +122,24 @@ class WriteNewVariantsTableTask(BaseWriteTask):
         )
 
         # 1) Identify new variants.
-        if hfs.exists(
-            variant_annotations_table_path(
+        annotations_ht = import_parquet(
+            existing_variants_parquet_path(
                 self.reference_genome,
                 self.dataset_type,
+                self.run_id,
             ),
-        ):
-            annotations_ht = hl.read_table(
-                variant_annotations_table_path(
-                    self.reference_genome,
-                    self.dataset_type,
-                ),
-            )
-            # Gracefully handle case for on-premises uses
-            # where key_ field is not present and migration was not run.
-            if not hasattr(annotations_ht, 'key_'):
-                annotations_ht = annotations_ht.add_index(name='key_')
-                annotations_ht = annotations_ht.annotate_globals(
-                    max_key_=(annotations_ht.count() - 1),
-                )
-            curr_max_key_ = annotations_ht.index_globals().max_key_
-            new_variants_ht = callset_ht.repartition(
-                # Repartition this join to improve performance
-                constrain(
-                    callset_ht.n_partitions() * 100,
-                    MIN_PARTITIONS,
-                    MAX_PARTITIONS,
-                ),
-            ).anti_join(annotations_ht)
-        else:
-            curr_max_key_ = -1
-            new_variants_ht = callset_ht
+            self.reference_genome,
+            self.dataset_type,
+        )
+        curr_max_key_ = annotations_ht.aggregate(hl.agg.max(annotations_ht.key_))
+        new_variants_ht = callset_ht.repartition(
+            # Repartition this join to improve performance
+            constrain(
+                callset_ht.n_partitions() * 100,
+                MIN_PARTITIONS,
+                MAX_PARTITIONS,
+            ),
+        ).anti_join(annotations_ht)
 
         # Annotate new variants with VEP.
         # Note about the repartition: our work here is cpu/memory bound and
