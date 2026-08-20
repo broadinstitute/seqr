@@ -1,9 +1,6 @@
-import csv
-
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.logger import get_logger
 from loading_pipeline.lib.misc.clickhouse import export_existing_variants_to_parquet
 from loading_pipeline.lib.paths import existing_variants_parquet_path
 from loading_pipeline.lib.tasks.base.base_loading_pipeline_params import (
@@ -11,8 +8,6 @@ from loading_pipeline.lib.tasks.base.base_loading_pipeline_params import (
 )
 from loading_pipeline.lib.tasks.exports.fields import get_existing_variants_export_field
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-
-logger = get_logger(__name__)
 
 
 @luigi.util.inherits(BaseLoadingPipelineParams)
