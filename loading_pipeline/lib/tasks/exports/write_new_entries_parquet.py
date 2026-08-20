@@ -22,14 +22,14 @@ from loading_pipeline.lib.tasks.exports.fields import (
     get_entries_export_fields,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.update_variant_annotations_table_with_new_variants import (
-    UpdateVariantAnnotationsTableWithNewVariantsTask,
+from loading_pipeline.lib.tasks.write_new_variants_table import (
+    WriteNewVariantsTableTask
 )
 from loading_pipeline.lib.tasks.write_remapped_and_subsetted_callset import (
     WriteRemappedAndSubsettedCallsetTask,
 )
 
-ANNOTATIONS_TABLE_TASK = 'annotations_table_task'
+VARIANTS_TABLE_TASK = 'variants_table_task'
 REMAPPED_AND_SUBSETTED_CALLSET_TASKS = 'remapped_and_subsetted_callset_tasks'
 
 
@@ -46,8 +46,8 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
 
     def requires(self) -> dict[str, luigi.Task]:
         return {
-            ANNOTATIONS_TABLE_TASK: self.clone(
-                UpdateVariantAnnotationsTableWithNewVariantsTask,
+            VARIANTS_TABLE_TASK: self.clone(
+                WriteNewVariantsTableTask,
             ),
             REMAPPED_AND_SUBSETTED_CALLSET_TASKS: [
                 self.clone(
