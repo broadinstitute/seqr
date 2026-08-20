@@ -48,7 +48,11 @@ class WriteExistingVariantsParquetTest(
         self.assertEqual(
             df[['key_', 'variant_id', 'geneIds']].to_dict('records'),
             [
-                {'key_': 1, 'variant_id': '1-10059-C-T', 'geneIds': ['ENSG00000177000']},
+                {
+                    'key_': 1,
+                    'variant_id': '1-10059-C-T',
+                    'geneIds': ['ENSG00000177000'],
+                },
                 {'key_': 7, 'variant_id': '7-1234567-AGT-A', 'geneIds': []},
                 {'key_': 10, 'variant_id': '10-987654-G-A', 'geneIds': []},
             ],
