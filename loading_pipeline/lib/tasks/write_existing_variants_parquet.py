@@ -8,7 +8,6 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.exports.fields import get_existing_variants_export_field
 from loading_pipeline.lib.tasks.files import (
-    GCSorLocalFolderTarget,
     GCSorLocalTarget,
 )
 
@@ -25,7 +24,7 @@ class WriteExistingVariantsParquetTask(luigi.Task):
         )
 
     def complete(self) -> luigi.Target:
-        return GCSorLocalFolderTarget(self.output().path).exists()
+        return GCSorLocalTarget(self.output().path).exists()
 
     def run(self):
         export_select_fields = get_existing_variants_export_field(self.dataset_type)

@@ -934,7 +934,10 @@ def direct_insert_all_keys(
     **_,
 ) -> None:
     dst_table = table_name_builder.dst_table(clickhouse_table)
-    src_table = table_name_builder.src_table(clickhouse_table)
+    src_table = table_name_builder.src_table(clickhouse_table).replace(
+        '/*.parquet',
+        '',
+    )
     settings = ''
     # Large variant details inserts may OOM
     if clickhouse_table == ClickHouseTable.VARIANT_DETAILS:
