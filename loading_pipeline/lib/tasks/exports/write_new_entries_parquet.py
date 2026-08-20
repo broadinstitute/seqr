@@ -71,12 +71,15 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
                 self.run_id,
             ),
         )
-        annotations_ht = annotations_ht.select(**{
-            field: func(annotations_ht) for field, func in {
-                **get_entries_annotations_export_fields(self.dataset_type),
-                **get_entries_call_annotations_fields(self.dataset_type),
-            }.items()
-        })
+        annotations_ht = annotations_ht.select(
+            **{
+                field: func(annotations_ht) 
+                for field, func in {
+                    **get_entries_annotations_export_fields(self.dataset_type),
+                    **get_entries_call_annotations_fields(self.dataset_type),
+                }.items()
+            }
+        )
 
         existing_annotations_ht = import_parquet(
             existing_variants_parquet_path(
