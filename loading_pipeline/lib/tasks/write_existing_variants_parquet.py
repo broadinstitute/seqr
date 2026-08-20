@@ -17,7 +17,6 @@ logger = get_logger(__name__)
 
 @luigi.util.inherits(BaseLoadingPipelineParams)
 class WriteExistingVariantsParquetTask(luigi.Task):
-
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
             existing_variants_parquet_path(
