@@ -5,9 +5,6 @@ import hail as hl
 import luigi.worker
 import pandas as pd
 
-from loading_pipeline.lib.annotations.expression_helpers import (
-    get_expr_for_variant_id,
-)
 from loading_pipeline.lib.core import (
     DatasetType,
     ReferenceGenome,
@@ -21,9 +18,6 @@ from loading_pipeline.lib.paths import (
 )
 from loading_pipeline.lib.tasks.exports.write_new_variants_parquet import (
     WriteNewVariantsParquetTask,
-)
-from loading_pipeline.lib.tasks.write_remapped_and_subsetted_callset import (
-    WriteRemappedAndSubsettedCallsetTask,
 )
 from loading_pipeline.lib.test.misc import (
     convert_ndarray_to_list,
@@ -46,107 +40,69 @@ TEST_MITO_EXPORT_PEDIGREE = (
 )
 TEST_SV_VCF_2 = 'loading_pipeline/var/test/callsets/sv_2.vcf'
 TEST_PEDIGREE_5 = 'loading_pipeline/var/test/pedigrees/test_pedigree_5.tsv'
+
+TEST_SNV_INDEL_ANNOTATIONS = (
+    'loading_pipeline/var/test/exports/GRCh38/SNV_INDEL/annotations.ht'
+)
+TEST_GRCH37_SNV_INDEL_ANNOTATIONS = (
+    'loading_pipeline/var/test/exports/GRCh37/SNV_INDEL/annotations.ht'
+)
+TEST_MITO_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/MITO/annotations.ht'
+TEST_SV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/SV/annotations.ht'
 TEST_GCNV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/GCNV/annotations.ht'
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
 
 def _write_prior_annotations_table(
+    fixture_path: str,
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
-    sample_type: SampleType,
-    pedigree_path: str,
-    callset_path: str,
-    project_guid: str,
     exclude_variant_id: str,
     max_key_: int,
-    keyed_by_variant_id: bool,
 ) -> None:
-    # Runs the real WriteRemappedAndSubsettedCallsetTask (no VEP/DB involved)
-    # to get a real callset, then snapshots everything except
-    # `exclude_variant_id` as a "prior" annotations table so that
-    # WriteNewVariantsTableTask's anti-join deterministically leaves
-    # exactly one new variant to annotate.
-    copy_project_pedigree_to_mocked_dir(
-        pedigree_path,
-        reference_genome,
-        dataset_type,
-        sample_type,
-        project_guid,
-    )
-    worker = luigi.worker.Worker()
-    wrsc_task = WriteRemappedAndSubsettedCallsetTask(
-        reference_genome=reference_genome,
-        dataset_type=dataset_type,
-        run_id=TEST_RUN_ID,
-        sample_type=sample_type,
-        callset_path=callset_path,
-        project_guids=[project_guid],
-        project_i=0,
-        validations_to_skip=[ALL_VALIDATIONS],
-        skip_expect_tdr_metrics=True,
-    )
-    worker.add(wrsc_task)
-    worker.run()
-    callset_ht = hl.read_matrix_table(wrsc_task.output().path).rows()
-    variant_id_expr = (
-        callset_ht.variant_id
-        if keyed_by_variant_id
-        else get_expr_for_variant_id(callset_ht)
-    )
-    prior_ht = callset_ht.filter(variant_id_expr != exclude_variant_id)
-    prior_ht = prior_ht.select()
-    prior_ht = prior_ht.add_index(name='key_')
-    prior_ht = prior_ht.annotate_globals(max_key_=max_key_)
-    prior_ht.write(variant_annotations_table_path(reference_genome, dataset_type))
+    # The fixture already documents `exclude_variant_id` as an example of a
+    # newly-added variant. Strip it back out and re-key the remainder so
+    # WriteNewVariantsTableTask's anti-join rediscovers it as new, at the
+    # same `key_` the fixture originally asserted.
+    ht = hl.read_table(fixture_path)
+    ht = ht.filter(ht.variant_id != exclude_variant_id)
+    ht = ht.select()
+    ht = ht.add_index(name='key_')
+    ht = ht.annotate_globals(max_key_=max_key_)
+    ht.write(variant_annotations_table_path(reference_genome, dataset_type))
 
 
 class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     def setUp(self) -> None:
         super().setUp()
         _write_prior_annotations_table(
+            TEST_SNV_INDEL_ANNOTATIONS,
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
-            SampleType.WGS,
-            TEST_PEDIGREE_3_REMAP,
-            TEST_SNV_INDEL_VCF,
-            'R0113_test_project',
             exclude_variant_id='1-876499-A-G',
             max_key_=-1,
-            keyed_by_variant_id=False,
         )
         _write_prior_annotations_table(
+            TEST_GRCH37_SNV_INDEL_ANNOTATIONS,
             ReferenceGenome.GRCh37,
             DatasetType.SNV_INDEL,
-            SampleType.WGS,
-            TEST_PEDIGREE_3_REMAP,
-            TEST_SNV_INDEL_VCF,
-            'R0113_test_project',
             exclude_variant_id='1-69134-A-G',
             max_key_=1423,
-            keyed_by_variant_id=False,
         )
         _write_prior_annotations_table(
+            TEST_MITO_ANNOTATIONS,
             ReferenceGenome.GRCh38,
             DatasetType.MITO,
-            SampleType.WGS,
-            TEST_MITO_EXPORT_PEDIGREE,
-            TEST_MITO_CALLSET,
-            'R0116_test_project3',
             exclude_variant_id='M-8-G-T',
             max_key_=997,
-            keyed_by_variant_id=False,
         )
         _write_prior_annotations_table(
+            TEST_SV_ANNOTATIONS,
             ReferenceGenome.GRCh38,
             DatasetType.SV,
-            SampleType.WGS,
-            TEST_PEDIGREE_5,
-            TEST_SV_VCF_2,
-            'R0115_test_project2',
             exclude_variant_id='BND_chr1_6',
             max_key_=726,
-            keyed_by_variant_id=True,
         )
         ht = hl.read_table(TEST_GCNV_ANNOTATIONS)
         ht.write(
@@ -175,6 +131,13 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     ) -> None:
         mock_load_gencode_ensembl_to_refseq_id.return_value = hl.dict({})
         mock_vep.side_effect = lambda ht, **_: ht.annotate(vep=MOCK_38_VEP_DATA)
+        copy_project_pedigree_to_mocked_dir(
+            TEST_PEDIGREE_3_REMAP,
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            SampleType.WGS,
+            'R0113_test_project',
+        )
         worker = luigi.worker.Worker()
         task = WriteNewVariantsParquetTask(
             reference_genome=ReferenceGenome.GRCh38,
@@ -239,6 +202,13 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         mock_vep: Mock,
     ) -> None:
         mock_vep.side_effect = lambda ht, **_: ht.annotate(vep=MOCK_37_VEP_DATA)
+        copy_project_pedigree_to_mocked_dir(
+            TEST_PEDIGREE_3_REMAP,
+            ReferenceGenome.GRCh37,
+            DatasetType.SNV_INDEL,
+            SampleType.WGS,
+            'R0113_test_project',
+        )
         worker = luigi.worker.Worker()
         task = WriteNewVariantsParquetTask(
             reference_genome=ReferenceGenome.GRCh37,
@@ -286,6 +256,13 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     def test_mito_write_new_variants_parquet_test(
         self,
     ) -> None:
+        copy_project_pedigree_to_mocked_dir(
+            TEST_MITO_EXPORT_PEDIGREE,
+            ReferenceGenome.GRCh38,
+            DatasetType.MITO,
+            SampleType.WGS,
+            'R0116_test_project3',
+        )
         worker = luigi.worker.Worker()
         task = WriteNewVariantsParquetTask(
             reference_genome=ReferenceGenome.GRCh38,
@@ -353,6 +330,13 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         mock_load_gencode_gene_symbol_to_gene_id: Mock,
     ) -> None:
         mock_load_gencode_gene_symbol_to_gene_id.return_value = hl.dict({})
+        copy_project_pedigree_to_mocked_dir(
+            TEST_PEDIGREE_5,
+            ReferenceGenome.GRCh38,
+            DatasetType.SV,
+            SampleType.WGS,
+            'R0115_test_project2',
+        )
         worker = luigi.worker.Worker()
         task = WriteNewVariantsParquetTask(
             reference_genome=ReferenceGenome.GRCh38,
