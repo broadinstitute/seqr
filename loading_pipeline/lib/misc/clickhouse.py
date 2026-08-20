@@ -965,7 +965,9 @@ def export_existing_variants_to_parquet(
         if dataset_type.should_write_new_variant_details
         else ClickHouseTable.VARIANTS_MEMORY,
     )
-    export_table = table_name_builder.src_table(ClickHouseTable.EXISTING_VARIANTS).replace(
+    export_table = table_name_builder.src_table(
+        ClickHouseTable.EXISTING_VARIANTS,
+    ).replace(
         '/*.parquet',
         '',
     )
