@@ -8,17 +8,19 @@
                    WritePostprocessedCallsetTask
                    (split multi, deduplicate)
                                 |
-                                v
-                       ValidateCallsetTask
-                       (validation checks)
-                                |
                  _______________|_______________
                 |                               |
                 v                               v
-    WriteSexCheckTableTask    WriteRelatednessCheckTableTask
+   WriteSexCheckTableTask          ValidateCallsetTask
+                |                  (validation checks)
                 |                               |
-                v                               v
-                         WriteRelatednessCheckTsvTask
+                |                               v
+                |               WriteRelatednessCheckTableTask
+                |                               |
+                |                               v
+                |               WriteRelatednessCheckTsvTask
+                |                               |
+                |_______________________________|
                                 |
                                 v
            _____________________|_____________________
@@ -44,11 +46,8 @@
           v                     v                      v
   WriteNewEntries...     WriteNewVariants...    WriteNewVariantDetails...
   ParquetTask            ParquetTask            ParquetTask
-  |                      |                      (optional)
-  |  [also requires]     |  [or just]
-  |  RemappedCallsets    |  WriteNewVariantsTableTask
-  |
-  |_______________________|
+  |                           |                  (optional)
+  |___________________________|_______________________|
           |
           v
      RunPipelineTask
