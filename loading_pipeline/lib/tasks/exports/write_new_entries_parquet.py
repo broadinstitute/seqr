@@ -9,6 +9,7 @@ from loading_pipeline.lib.misc.family_entries import (
     deduplicate_by_most_non_ref_calls,
     deglobalize_ids,
 )
+from loading_pipeline.lib.misc.io import import_parquet
 from loading_pipeline.lib.paths import (
     existing_variants_parquet_path,
     new_entries_parquet_path,
@@ -63,21 +64,19 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
     def create_table(self) -> None:
         unioned_ht = None
 
-        annotation_fields = get_entries_annotations_export_fields(
-            ht,
-            self.dataset_type,
-        )
-        call_annotation_fields = get_entries_call_annotations_fields(
-            ht,
-            self.dataset_type,
-        )
         annotations_ht = hl.read_table(
             new_variants_table_path(
                 self.reference_genome,
                 self.dataset_type,
                 self.run_id,
             ),
-        ).select(**annotation_fields, **call_annotation_fields)
+        )
+        annotations_ht = annotations_ht.select(**{
+            field: func(annotations_ht) for field, func in {
+                **get_entries_annotations_export_fields(self.dataset_type),
+                **get_entries_call_annotations_fields(self.dataset_type),
+            }.items()
+        })
 
         existing_annotations_ht = import_parquet(
             existing_variants_parquet_path(
@@ -125,8 +124,6 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
                     self.dataset_type,
                     self.sample_type,
                     project_guid,
-                    set(annotation_fields.keys()),
-                    set(call_annotation_fields.keys()),
                 ),
             )
             unioned_ht = unioned_ht.union(ht) if unioned_ht else ht
