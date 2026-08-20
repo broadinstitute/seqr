@@ -268,7 +268,15 @@
         "fields": {
             "key": 1,
             "variant_id": "a",
-            "transcripts": [],
+            "transcripts": [
+                [
+                    [0.9978], "L/F", "protein_coding", 1, "ttA/ttC", ["missense_variant"], [2, 9], "ENSG00000177000",
+                    "ENST00000383791.8:c.156A>C", "ENSP00000373301.3:p.Leu52Phe", [null, null], [null, []], "missense_variant",
+                    null, "NM_004844.5", "NM_004844.5", [false], "ENST00000383791", 0, [null, null, null, [
+                        null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+                    ], null]
+                ]
+            ],
             "sorted_motif_feature_consequences": [],
             "sorted_regulatory_feature_consequences": []
         }
