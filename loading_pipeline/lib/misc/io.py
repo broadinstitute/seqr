@@ -214,7 +214,7 @@ def import_parquet(
     callset_path: str,
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
-) -> hl.HailTable:
+) -> hl.Table:
     spark = SparkSession.builder.getOrCreate()
     df = spark.read.parquet(callset_path)
     ht = hl.Table.from_spark(df)
