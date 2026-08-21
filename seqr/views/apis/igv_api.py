@@ -204,8 +204,10 @@ def fetch_igv_track(request, sample_guid, igv_track_path):
         if not sample_track_path.startswith(f'gs://{bucket_name}'):
             raise PermissionDenied('Invalid sample track path')
 
-    extension = igv_track_path.split()[0].split('.', 1)[-1]
-    igv_track_path = f"{sample_track_path.split('.', 1)[0]}.{extension}"
+    extension_match = re.match(r'^[^.]*\.([A-Za-z.]+)$', igv_track_path)
+    if not extension_match:
+        raise PermissionDenied('Invalid sample track path')
+    igv_track_path = f"{sample_track_path.split('.', 1)[0]}.{extension_match.group(1)}"
 
     if igv_track_path.endswith('.bam.bai') and not does_file_exist(igv_track_path, user=request.user):
         igv_track_path = igv_track_path.replace('.bam.bai', '.bai')

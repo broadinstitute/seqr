@@ -43,7 +43,7 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         responses.add(responses.POST, 'https://www.googleapis.com/oauth2/v1/tokeninfo',
                       body=b'{"expires_in": 3599}', status=200)
 
-        url = reverse(fetch_igv_track, args=[GS_SAMPLE_GUID, 'gs://readviz/NA20870.cram.bam.bai | some command'])
+        url = reverse(fetch_igv_track, args=[GS_SAMPLE_GUID, 'gs://readviz/NA20870.cram.bam.bai'])
         self.check_require_login(url)
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
@@ -63,6 +63,14 @@ class IgvAPITest(AnvilAuthenticationTestCase):
             'CommandException: One or more URLs matched no objects.', self.no_access_user)
 
         mock_subprocess.reset_mock()
+        response = self.client.get(url + ' | some command')
+        self.assertEqual(response.status_code, 403)
+        mock_subprocess.assert_not_called()
+
+        response = self.client.get(url + '.$ext!')
+        self.assertEqual(response.status_code, 403)
+        mock_subprocess.assert_not_called()
+
         url = reverse(fetch_igv_track, args=[GS_SAMPLE_GUID, 'gs://some/other/path.bam'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
