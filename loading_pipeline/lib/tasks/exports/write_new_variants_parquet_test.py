@@ -109,6 +109,14 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         )
         ht = hl.read_table(TEST_MITO_ANNOTATIONS)
         ht = ht.filter(ht.variant_id != 'M-8-G-T')
+        ht = ht.join(
+            hl.Table.parallelize(
+                [{'locus': hl.Locus('chrM', 3, 'GRCh38'), 'alleles': ['T', 'C']}],
+                hl.tstruct(locus=hl.tlocus('GRCh38'), alleles=hl.tarray(hl.tstr)),
+                key=['locus', 'alleles'],
+            ),
+            how='outer',
+        )
         ht = ht.annotate_globals(max_key_=997)
         ht.write(
             variant_annotations_table_path(
