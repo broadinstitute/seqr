@@ -5,6 +5,7 @@ import subprocess # nosec
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls.base import reverse
+from seqr.models import IgvSample
 from seqr.views.apis.igv_api import fetch_igv_track, receive_igv_table_handler, update_individual_igv_sample, \
     receive_bulk_igv_table_handler
 from seqr.views.apis.igv_api import GS_STORAGE_ACCESS_CACHE_KEY
@@ -12,7 +13,9 @@ from seqr.views.utils.test_utils import AnvilAuthenticationTestCase
 
 STREAMING_READS_CONTENT = [b'CRAM\x03\x83', b'\\\t\xfb\xa3\xf7%\x01', b'[\xfc\xc9\t\xae']
 PROJECT_GUID = 'R0001_1kg'
-FAMILY_GUID = 'F000001_1'
+LOCAL_SAMPLE_GUID = 'S000145_na19675'
+GS_SAMPLE_GUID = 'S000146_na20870'
+OTHER_GS_SAMPLE_GUID = 'S000147_na20870'
 
 
 @mock.patch('seqr.views.utils.permissions_utils.PM_USER_GROUP', 'project-managers')
@@ -34,24 +37,24 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         mock_access_token_subprocess.wait.return_value = 0
         mock_get_redis.return_value = None
 
-        responses.add(responses.GET, 'https://storage.googleapis.com/fc-secure-project_A/sample_1.bai',
+        responses.add(responses.GET, 'https://storage.googleapis.com/readviz/NA20870.cram.bai',
                       stream=True,
                       body=b'\n'.join(STREAMING_READS_CONTENT), status=206)
         responses.add(responses.POST, 'https://www.googleapis.com/oauth2/v1/tokeninfo',
                       body=b'{"expires_in": 3599}', status=200)
 
-        url = reverse(fetch_igv_track, args=[FAMILY_GUID, 'gs://fc-secure-project_A/sample_1.bam.bai'])
+        url = reverse(fetch_igv_track, args=[GS_SAMPLE_GUID, 'gs://readviz/NA20870.cram.bam.bai'])
         self.check_require_login(url)
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
         self.assertEqual(next(response.streaming_content), b'\n'.join(STREAMING_READS_CONTENT))
         self.assertEqual(responses.calls[1].request.headers.get('Range'), 'bytes=100-200')
         self.assertEqual(responses.calls[1].request.headers.get('Authorization'), 'Bearer token1')
-        self.assertEqual(responses.calls[1].request.headers.get('x-goog-user-project'), 'anvil-datastorage')
+        self.assertIsNone(responses.calls[1].request.headers.get('x-goog-user-project'))
         mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
         mock_set_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY, 'token1', expire=3594)
         mock_subprocess.assert_has_calls([
-            mock.call('gsutil -u anvil-datastorage ls gs://fc-secure-project_A/sample_1.bam.bai', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),  # nosec
+            mock.call('gsutil ls gs://readviz/NA20870.cram.bam.bai', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),  # nosec
             mock.call('gcloud auth print-access-token', stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True),  # nosec
         ])
         mock_ls_subprocess.wait.assert_called_once()
@@ -59,14 +62,31 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         mock_file_logger.warning.assert_any_call(
             'CommandException: One or more URLs matched no objects.', self.no_access_user)
 
+        mock_subprocess.reset_mock()
+        response = self.client.get(url + ' | some command')
+        self.assertEqual(response.status_code, 403)
+        mock_subprocess.assert_not_called()
+
+        response = self.client.get(url + '.$ext!')
+        self.assertEqual(response.status_code, 403)
+        mock_subprocess.assert_not_called()
+
+        url = reverse(fetch_igv_track, args=[GS_SAMPLE_GUID, 'gs://some/other/path.bam'])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_subprocess.assert_not_called()
+
         mock_get_redis.reset_mock()
         mock_get_redis.return_value = 'token3'
         mock_set_redis.reset_mock()
-        mock_subprocess.reset_mock()
-        responses.add(responses.GET, 'https://storage.googleapis.com/project_A/sample_1.bed.gz',
+        sample = IgvSample.objects.get(guid=OTHER_GS_SAMPLE_GUID)
+        sample.file_path = sample.file_path.replace('datasets-gcnv', 'fc-secure-datasets-gcnv')
+        sample.individual_id = 4
+        sample.save()
+        responses.add(responses.GET, 'https://storage.googleapis.com/fc-secure-datasets-gcnv/NA20870.bed.gz',
                       stream=True,
                       body=b'\n'.join(STREAMING_READS_CONTENT), status=200)
-        url = reverse(fetch_igv_track, args=['F000002_2', 'gs://project_A/sample_1.bed.gz'])
+        url = reverse(fetch_igv_track, args=[OTHER_GS_SAMPLE_GUID, 'gs://fc-secure-datasets-gcnv/NA20870.bed.gz'])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 403)
 
@@ -75,10 +95,28 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsNone(responses.calls[2].request.headers.get('Range'))
         self.assertEqual(responses.calls[2].request.headers.get('Authorization'), 'Bearer token3')
-        self.assertIsNone(responses.calls[2].request.headers.get('x-goog-user-project'))
+        self.assertEqual(responses.calls[2].request.headers.get('x-goog-user-project'), 'anvil-datastorage')
         mock_get_redis.assert_called_with(GS_STORAGE_ACCESS_CACHE_KEY)
         mock_set_redis.assert_not_called()
         mock_subprocess.assert_not_called()
+
+        sample = IgvSample.objects.get(guid=GS_SAMPLE_GUID)
+        sample.individual_id = 19
+        sample.save()
+        self.login_manager()
+        url = reverse(fetch_igv_track, args=[GS_SAMPLE_GUID, 'gs://readviz/NA20870.cram'])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_subprocess.assert_not_called()
+
+        sample.file_path = 'gs://test_bucket/NA21987.cram'
+        sample.save()
+        responses.add(responses.GET, 'https://storage.googleapis.com/test_bucket/NA21987.cram',
+                      stream=True, body=b'\n'.join(STREAMING_READS_CONTENT), status=200)
+        url = reverse(fetch_igv_track, args=[GS_SAMPLE_GUID, 'gs://test_bucket/NA21987.cram'])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(next(response.streaming_content), b'\n'.join(STREAMING_READS_CONTENT))
 
     @mock.patch('seqr.utils.file_utils.os.path.isfile')
     @mock.patch('seqr.utils.file_utils.open')
@@ -87,13 +125,13 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         mock_subprocess.return_value.stdout = STREAMING_READS_CONTENT
         mock_open.return_value.__enter__.return_value.__iter__.return_value = STREAMING_READS_CONTENT
 
-        url = reverse(fetch_igv_track, args=[FAMILY_GUID, '/project_A/sample_1.bam.bai'])
+        url = reverse(fetch_igv_track, args=[LOCAL_SAMPLE_GUID, '/readviz/NA19675.cram.bam.bai'])
         self.check_require_login(url)
         response = self.client.get(url, HTTP_RANGE='bytes=100-250')
         self.assertEqual(response.status_code, 206)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
         mock_subprocess.assert_called_with(
-            'dd skip=100 count=151 bs=1 if=/project_A/sample_1.bai status="none"',
+            'dd skip=100 count=151 bs=1 if=/readviz/NA19675.cram.bai status="none"',
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)  # nosec
         mock_open.assert_not_called()
 
@@ -101,7 +139,13 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertListEqual([val for val in response.streaming_content], STREAMING_READS_CONTENT)
-        mock_open.assert_called_with('/project_A/sample_1.bai', 'rb')
+        mock_open.assert_called_with('/readviz/NA19675.cram.bai', 'rb')
+
+        mock_subprocess.reset_mock()
+        url = reverse(fetch_igv_track, args=[LOCAL_SAMPLE_GUID, '/some/local/path.bam'])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+        mock_subprocess.assert_not_called()
 
     def test_receive_alignment_table_handler(self, mock_subprocess):
         mock_subprocess.return_value.wait.return_value = 0
