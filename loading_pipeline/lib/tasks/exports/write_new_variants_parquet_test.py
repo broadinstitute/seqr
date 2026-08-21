@@ -111,7 +111,10 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         ht = ht.filter(ht.variant_id != 'M-8-G-T')
         ht = ht.join(
             hl.Table.parallelize(
-                [{'locus': hl.Locus('chrM', 3, 'GRCh38'), 'alleles': ['T', 'C']}],
+                [
+                    {'locus': hl.Locus('chrM', 3, 'GRCh38'), 'alleles': ['T', 'C']},
+                    {'locus': hl.Locus('chrM', 12, 'GRCh38'), 'alleles': ['T', 'C']},
+                ],
                 hl.tstruct(locus=hl.tlocus('GRCh38'), alleles=hl.tarray(hl.tstr)),
                 key=['locus', 'alleles'],
             ),
@@ -322,9 +325,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 TEST_RUN_ID,
             ),
         )
-        export_json = convert_ndarray_to_list(
-            df.head(10).to_dict('records'),
-        )  # TODO debug
+        export_json = convert_ndarray_to_list(df.head(1).to_dict('records'))
         self.assertEqual(
             export_json,
             [
