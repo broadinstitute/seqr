@@ -190,7 +190,7 @@ def fetch_igv_track(request, sample_guid, igv_track_path):
     check_family_view_permission(igv_sample.individual.family, request.user)
 
     sample_track_path = next(
-        (path for path in [igv_sample.file_path, igv_sample.index_file_path] if igv_track_path.startswith(path)), None,
+        (path for path in [igv_sample.file_path, igv_sample.index_file_path] if igv_track_path.startswith(path or '')), None,
     )
     if not sample_track_path:
         raise PermissionDenied('Invalid sample track path')
