@@ -324,7 +324,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         )
         export_json = convert_ndarray_to_list(
             df.head(10).to_dict('records'),
-        ) # TODO debug
+        )  # TODO debug
         export_json[0]['sortedTranscriptConsequences'] = [
             export_json[0]['sortedTranscriptConsequences'][0],
         ]
