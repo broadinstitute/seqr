@@ -125,7 +125,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             ),
         )
         ht = hl.read_table(TEST_SV_ANNOTATIONS)
-        ht = ht.filter(ht.variant_id != 'BND_chr1_6')
+        ht = ht.filter(ht.variant_id != 'CPX_chr1_22')
         ht = ht.annotate_globals(max_key_=726)
         ht.write(
             variant_annotations_table_path(
