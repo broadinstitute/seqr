@@ -101,7 +101,9 @@ def get_existing_variants_export_field(dataset_type: DatasetType) -> str:
     return f'key AS key_, variantId AS variant_id {dt_fields}'
 
 
-def get_entries_call_annotations_fields(dataset_type: DatasetType,):
+def get_entries_call_annotations_fields(
+    dataset_type: DatasetType,
+):
     if dataset_type == DatasetType.GCNV:
         return {
             'start': lambda ht: ht.start_locus.position,
@@ -185,7 +187,10 @@ def get_entries_export_fields(
     return {
         'project_guid': project_guid,
         'family_guid': ht.family_entries.family_guid[0],
-        **{field: getattr(ht, field) for field in get_entries_annotations_export_fields(dataset_type)},
+        **{
+            field: getattr(ht, field)
+            for field in get_entries_annotations_export_fields(dataset_type)
+        },
         **(
             {
                 'sample_type': sample_type.value,
