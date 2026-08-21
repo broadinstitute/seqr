@@ -322,10 +322,12 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 TEST_RUN_ID,
             ),
         )
-        export_json = convert_ndarray_to_list(df.head(1).to_dict('records'))
-        export_json[0]['sortedTranscriptConsequences'] = [
-            export_json[0]['sortedTranscriptConsequences'][0],
-        ]
+        export_json = convert_ndarray_to_list(
+            df.head(10).to_dict('records'),
+        )  # TODO debug
+        # export_json[0]['sortedTranscriptConsequences'] = [
+        #     export_json[0]['sortedTranscriptConsequences'][0],
+        # ]
         self.assertEqual(
             export_json,
             [
