@@ -43,7 +43,7 @@ class IgvAPITest(AnvilAuthenticationTestCase):
         responses.add(responses.POST, 'https://www.googleapis.com/oauth2/v1/tokeninfo',
                       body=b'{"expires_in": 3599}', status=200)
 
-        url = reverse(fetch_igv_track, args=[GS_SAMPLE_GUID, 'gs://readviz/NA20870.cram.bam.bai'])
+        url = reverse(fetch_igv_track, args=[GS_SAMPLE_GUID, 'gs://readviz/NA20870.cram.bam.bai | some command'])
         self.check_require_login(url)
         response = self.client.get(url, HTTP_RANGE='bytes=100-200')
         self.assertEqual(response.status_code, 206)
