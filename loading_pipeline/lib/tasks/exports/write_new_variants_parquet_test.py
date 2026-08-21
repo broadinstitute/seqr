@@ -38,7 +38,7 @@ TEST_MITO_CALLSET = 'loading_pipeline/var/test/callsets/mito_1.mt'
 TEST_MITO_EXPORT_PEDIGREE = (
     'loading_pipeline/var/test/pedigrees/test_mito_export_pedigree.tsv'
 )
-TEST_SV_VCF_2 = 'loading_pipeline/var/test/callsets/sv_2.vcf'
+TEST_SV_VCF = 'loading_pipeline/var/test/callsets/sv_1.vcf'
 TEST_PEDIGREE_5 = 'loading_pipeline/var/test/pedigrees/test_pedigree_5.tsv'
 
 TEST_SNV_INDEL_ANNOTATIONS = (
@@ -357,7 +357,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         mock_load_gencode_gene_symbol_to_gene_id: Mock,
     ) -> None:
         mock_load_gencode_gene_symbol_to_gene_id.return_value = hl.dict(
-            {'PCSK9': 'ENSG00000188157'},
+            {'TAS1R1': 'ENSG00000173662'},
         )
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_5,
@@ -371,7 +371,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             reference_genome=ReferenceGenome.GRCh38,
             dataset_type=DatasetType.SV,
             sample_type=SampleType.WGS,
-            callset_path=TEST_SV_VCF_2,
+            callset_path=TEST_SV_VCF,
             project_guids=[
                 'R0115_test_project2',
             ],
@@ -399,28 +399,28 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             [
                 {
                     'key': 727,
-                    'xpos': 1001025886,
+                    'xpos': 1006558902,
                     'chrom': '1',
-                    'pos': 1025886,
-                    'end': 1028192,
-                    'rg37LocusEnd': {'contig': '1', 'position': 963572},
-                    'variantId': 'BND_chr1_6',
+                    'pos': 6558902,
+                    'end': 6559723,
+                    'rg37LocusEnd': {'contig': '1', 'position': 6619783},
+                    'variantId': 'CPX_chr1_22',
                     'liftedOverChrom': '1',
-                    'liftedOverPos': 961266,
+                    'liftedOverPos': 6618962,
                     'algorithms': 'manta',
-                    'bothsidesSupport': None,
+                    'bothsidesSupport': True,
                     'cpxIntervals': [
-                        {'chrom': '1', 'start': 1025886, 'end': 1025986, 'type': 'DUP'},
-                        {'chrom': '1', 'start': 1025886, 'end': 1028192, 'type': 'INV'},
+                        {'chrom': '1', 'start': 6558902, 'end': 6559723, 'type': 'INV'},
+                        {'chrom': '1', 'start': 6559655, 'end': 6559723, 'type': 'DUP'},
                     ],
-                    'endChrom': '2',
+                    'endChrom': None,
                     'svSourceDetail': None,
                     'svType': 'CPX',
-                    'svTypeDetail': 'dupINV',
+                    'svTypeDetail': 'INVdup',
                     'predictions': {'strvctvre': None},
                     'populations': {'gnomad_svs': None},
                     'sortedGeneConsequences': [
-                        {'geneId': 'ENSG00000188157', 'majorConsequence': 'INTRONIC'},
+                        {'geneId': 'ENSG00000173662', 'majorConsequence': 'INTRONIC'},
                     ],
                 },
             ],
