@@ -11,6 +11,7 @@ from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
 from loading_pipeline.lib.test.clickhouse_schema_testcase import (
     ClickhouseSchemaTestCase,
 )
+from loading_pipeline.lib.test.misc import convert_ndarray_to_list
 from loading_pipeline.lib.test.mocked_dataroot_testcase import MockedDatarootTestCase
 
 TEST_RUN_ID = 'manual__2024-04-03'
@@ -48,7 +49,9 @@ class WriteExistingVariantsParquetTest(
         self.assertEqual(list(df.columns), ['key_', 'variant_id', 'geneIds'])
         df = df.sort_values('key_').reset_index(drop=True)
         self.assertEqual(
-            df[['key_', 'variant_id', 'geneIds']].to_dict('records'),
+            convert_ndarray_to_list(
+                df[['key_', 'variant_id', 'geneIds']].to_dict('records'),
+            ),
             [
                 {
                     'key_': 1,
