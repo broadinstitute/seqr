@@ -6,7 +6,7 @@ import requests
 from django.core.exceptions import PermissionDenied
 from django.http import StreamingHttpResponse
 
-from seqr.models import Family, Individual, IgvSample
+from seqr.models import Individual, IgvSample, Project
 from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, run_command, get_google_project
 from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
@@ -15,7 +15,8 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import get_json_for_sample
 from seqr.views.utils.permissions_utils import check_family_view_permission, external_anvil_project_can_edit, \
     login_and_policies_required, pm_or_data_manager_required, get_project_analysis_group_guids_user_can_view, user_is_data_manager, \
-    user_is_pm, get_project_and_check_edit_permission
+    user_is_pm, get_project_and_check_edit_permission, is_internal_anvil_project, project_has_anvil, \
+    check_workspace_perm, CAN_VIEW
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
@@ -184,9 +185,27 @@ def update_individual_igv_sample(request, individual_guid):
 
 
 @login_and_policies_required
-def fetch_igv_track(request, family_guid, igv_track_path):
+def fetch_igv_track(request, sample_guid, igv_track_path):
+    igv_sample = IgvSample.objects.get(guid=sample_guid)
+    check_family_view_permission(igv_sample.individual.family, request.user)
 
-    check_family_view_permission(Family.objects.get(guid=family_guid), request.user)
+    sample_track_path = next(
+        (path for path in [igv_sample.file_path, igv_sample.index_file_path] if igv_track_path.startswith(path)), None,
+    )
+    if not sample_track_path:
+        raise PermissionDenied('Invalid sample track path')
+
+    project = igv_sample.individual.family.project
+    if project_has_anvil(project) and not is_internal_anvil_project(project):
+        workspace_meta = check_workspace_perm(
+            request.user, CAN_VIEW, project.workspace_namespace, project.workspace_name, meta_fields=['workspace.bucketName'],
+        )
+        bucket_name = workspace_meta['workspace']['bucketName']
+        if not sample_track_path.startswith(f'gs://{bucket_name}'):
+            raise PermissionDenied('Invalid sample track path')
+
+    extension = igv_track_path.split()[0].split('.', 1)[-1]
+    igv_track_path = f"{sample_track_path.split('.', 1)[0]}.{extension}"
 
     if igv_track_path.endswith('.bam.bai') and not does_file_exist(igv_track_path, user=request.user):
         igv_track_path = igv_track_path.replace('.bam.bai', '.bai')
