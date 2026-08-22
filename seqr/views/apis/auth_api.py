@@ -30,8 +30,9 @@ def login_view(request):
     # Django's iexact filtering will improperly match unicode characters, which creates a security risk.
     # Instead, query for the lower case match to allow case-insensitive matching
     users = User.objects.annotate(email_lower=Lower('email')).filter(email_lower=request_json['email'].lower())
-    if users.count() != 1:
-        error = 'Invalid credentials'
+    user_count = users.count()
+    if user_count != 1:
+        error = 'Multiple users found with this email' if user_count > 1 else 'Invalid credentials'
         return create_json_response({'error': error}, status=401, reason=error)
 
     user = users.first()

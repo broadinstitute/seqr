@@ -90,6 +90,19 @@ class AuthAPITest(TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.reason_phrase, 'Invalid credentials')
 
+    def test_login_view_duplicate_email(self):
+        dup_user = User.objects.create_user('test_dup_user', 'test_dup_user@institute.com', 'password456')
+        # Bypass save() validation to simulate a pre-existing duplicate email
+        User.objects.filter(pk=dup_user.pk).update(email='test_new_user@institute.com')
+        url = reverse(login_view)
+        response = self.client.post(url, content_type='application/json', data=json.dumps({
+            'email': 'test_new_user@institute.com',
+            'password': 'password123',
+        }))
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.reason_phrase, 'Multiple users found with this email')
+        self.assertEqual(response.json()['error'], 'Multiple users found with this email')
+
     @mock.patch('seqr.views.utils.terra_api_utils.SOCIAL_AUTH_PROVIDER', TEST_OAUTH2_PROVIDER)
     def test_login_view_with_google(self):
         url = reverse(login_view)
