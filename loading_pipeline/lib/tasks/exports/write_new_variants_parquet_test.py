@@ -129,6 +129,29 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         )
         ht = hl.read_table(TEST_SV_ANNOTATIONS)
         ht = ht.filter(ht.variant_id != 'CPX_chr1_22')
+        ht = ht.join(
+            hl.Table.parallelize(
+                [
+                    {'variant_id': variant_id}
+                    for variant_id in [
+                        'DUP_chr1_5',
+                        'DEL_chr1_12',
+                        'BND_chr1_9',
+                        'INS_chr1_65',
+                        'CPX_chr1_41',
+                        'INS_chr1_268',
+                        'CPX_chr1_54',
+                        'INS_chr1_688',
+                        'CPX_chr1_251',
+                        'CPX_chrX_251',
+                        'CPX_chrX_252',
+                    ]
+                ],
+                hl.tstruct(variant_id=hl.tstr),
+                key='variant_id',
+            ),
+            how='outer',
+        )
         ht = ht.annotate_globals(max_key_=726)
         ht.write(
             variant_annotations_table_path(
