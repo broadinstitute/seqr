@@ -317,6 +317,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     def test_mito_write_new_variants_parquet_test(
         self,
     ) -> None:
+        self.maxDiff = None
         copy_project_pedigree_to_mocked_dir(
             TEST_MITO_EXPORT_PEDIGREE,
             ReferenceGenome.GRCh38,
