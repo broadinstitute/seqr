@@ -25,6 +25,9 @@ from loading_pipeline.lib.tasks.exports.fields import (
     get_entries_export_fields,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
+    WriteExistingVariantsParquetTask,
+)
 from loading_pipeline.lib.tasks.write_new_variants_table import (
     WriteNewVariantsTableTask,
 )
@@ -32,6 +35,7 @@ from loading_pipeline.lib.tasks.write_remapped_and_subsetted_callset import (
     WriteRemappedAndSubsettedCallsetTask,
 )
 
+EXISTING_VARIANTS_TASK = 'existing_variant_task'
 VARIANTS_TABLE_TASK = 'variants_table_task'
 REMAPPED_AND_SUBSETTED_CALLSET_TASKS = 'remapped_and_subsetted_callset_tasks'
 
@@ -49,6 +53,9 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
 
     def requires(self) -> dict[str, luigi.Task]:
         return {
+            EXISTING_VARIANTS_TASK: self.clone(
+                WriteExistingVariantsParquetTask,
+            ),
             VARIANTS_TABLE_TASK: self.clone(
                 WriteNewVariantsTableTask,
             ),
