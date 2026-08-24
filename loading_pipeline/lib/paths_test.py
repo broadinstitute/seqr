@@ -9,47 +9,22 @@ from loading_pipeline.lib.core import (
     SampleType,
 )
 from loading_pipeline.lib.paths import (
+    existing_variants_parquet_path,
     imported_callset_path,
     metadata_for_run_path,
     new_variants_table_path,
     project_pedigree_path,
-    project_table_path,
     relatedness_check_table_path,
     remapped_and_subsetted_callset_path,
     sex_check_table_path,
     tdr_metrics_path,
     validation_errors_for_run_path,
-    variant_annotations_table_path,
 )
 
 TEST_VCF = 'loading_pipeline/var/test/callsets/1kg_30varia*.vcf'
 
 
 class TestPaths(unittest.TestCase):
-    def test_project_table_path(self) -> None:
-        self.assertEqual(
-            project_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.MITO,
-                SampleType.WES,
-                'R0652_pipeline_test',
-            ),
-            '/var/seqr/pipeline-data/GRCh38/MITO/projects/WES/R0652_pipeline_test.ht',
-        )
-        with (
-            patch('loading_pipeline.lib.paths.Env') as mock_env,
-        ):
-            mock_env.PIPELINE_DATA_DIR = '/var/bucket/'
-            self.assertEqual(
-                project_table_path(
-                    ReferenceGenome.GRCh37,
-                    DatasetType.SNV_INDEL,
-                    SampleType.WES,
-                    'R0652_pipeline_test',
-                ),
-                '/var/bucket/GRCh37/SNV_INDEL/projects/WES/R0652_pipeline_test.ht',
-            )
-
     def test_sex_check_table_path(self) -> None:
         self.assertEqual(
             sex_check_table_path(
@@ -90,13 +65,14 @@ class TestPaths(unittest.TestCase):
             '/var/seqr/pipeline-data/GRCh38/SNV_INDEL/runs/manual__2023-06-26T18:30:09.349671+00:00/metadata.json',
         )
 
-    def test_variant_annotations_table_path(self) -> None:
+    def test_existing_variants_parquet_path(self) -> None:
         self.assertEqual(
-            variant_annotations_table_path(
+            existing_variants_parquet_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
+                'manual__2023-06-26T18:30:09.349671+00:00',
             ),
-            '/var/seqr/pipeline-data/GRCh38/GCNV/annotations.ht',
+            '/var/seqr/pipeline-data/GRCh38/GCNV/runs/manual__2023-06-26T18:30:09.349671+00:00/existing_variants.parquet',
         )
 
     def test_remapped_and_subsetted_callset_path(self) -> None:

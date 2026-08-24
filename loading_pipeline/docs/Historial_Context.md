@@ -59,11 +59,8 @@ gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/20260421-125644-303855/new
 
 ## Thoughts for future:
 	- Remove Hail for non SNV_INDEL dataset types and callsets < 500 samples.
-	- Resolve the "Fatal Flaw", two separate representations of production variants, one in Hail and one in Clickhouse.
-		- If pipeline fails immediately after "UpdateVariantAnnotationsTableWithNewVariantsTask", next run will have 
-		incorrect "new_variants.parquet".
 	- Lightweight replacement for Luigi "run()/complete()/output()/requires()" framework.
-	- Eliminate scheduler in favor or "tasks" table in seqr postgres.
+	- Eliminate scheduler in favor or "tasks" table in clickhouse.
 	- Running arbitrary docker images:
 		- Airflow was useful for this, w/ Kubernetes elasticity.
 		- Need to support external computational biology tools.

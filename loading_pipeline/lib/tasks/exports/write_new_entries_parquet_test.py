@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import hail as hl
 import luigi.worker
 import pandas as pd
@@ -10,10 +12,13 @@ from loading_pipeline.lib.core import (
 from loading_pipeline.lib.misc.validation import ALL_VALIDATIONS
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
-    variant_annotations_table_path,
+    new_variants_table_path,
 )
 from loading_pipeline.lib.tasks.exports.write_new_entries_parquet import (
     WriteNewEntriesParquetTask,
+)
+from loading_pipeline.lib.test.clickhouse_schema_testcase import (
+    ClickhouseSchemaTestCase,
 )
 from loading_pipeline.lib.test.misc import (
     convert_ndarray_to_list,
@@ -41,41 +46,47 @@ TEST_GCNV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/GCNV/annotatio
 TEST_RUN_ID = 'manual__2024-04-03'
 
 
-class WriteNewEntriesParquetTest(MockedDatarootTestCase):
+class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
+    fixtures: ClassVar = ['clickhouse_test']
+
     def setUp(self) -> None:
         super().setUp()
         ht = hl.read_table(
             TEST_SNV_INDEL_ANNOTATIONS,
         )
         ht.write(
-            variant_annotations_table_path(
+            new_variants_table_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.SNV_INDEL,
+                TEST_RUN_ID,
             ),
         )
         ht = hl.read_table(
             TEST_MITO_ANNOTATIONS,
         )
         ht.write(
-            variant_annotations_table_path(
+            new_variants_table_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.MITO,
+                TEST_RUN_ID,
             ),
         )
         ht = hl.read_table(
             TEST_SV_ANNOTATIONS,
         )
         ht.write(
-            variant_annotations_table_path(
+            new_variants_table_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.SV,
+                TEST_RUN_ID,
             ),
         )
         ht = hl.read_table(TEST_GCNV_ANNOTATIONS)
         ht.write(
-            variant_annotations_table_path(
+            new_variants_table_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
+                TEST_RUN_ID,
             ),
         )
 

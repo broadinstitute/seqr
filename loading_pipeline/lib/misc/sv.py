@@ -50,7 +50,6 @@ def deduplicate_merged_sv_concordance_calls(
     )
 
     # Then, collect into memory the necessary existing variants & the new variants
-    annotations_ht = annotations_ht.select('end_locus')
     existing_variants = {
         v.variant_id: v
         for v in (
@@ -75,13 +74,10 @@ def deduplicate_merged_sv_concordance_calls(
         for new_variant in new_variants_it1:
             distance = math.fabs(
                 new_variant.end_locus.position
-                - existing_variant.end_locus.position
+                - existing_variant.end
                 + (
                     WRONG_CHROM_PENALTY
-                    if (
-                        new_variant.end_locus.contig
-                        != existing_variant.end_locus.contig
-                    )
+                    if new_variant.end_locus.contig != existing_variant.endChrom
                     else 0
                 ),
             )

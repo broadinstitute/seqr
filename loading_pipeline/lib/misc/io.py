@@ -8,6 +8,7 @@ from string import Template
 
 import hail as hl
 import hailtop.fs as hfs
+from pyspark.sql import SparkSession
 
 from loading_pipeline.lib.core import DatasetType, Env, ReferenceGenome, Sex
 from loading_pipeline.lib.misc.gcnv import parse_gcnv_genes
@@ -207,6 +208,35 @@ def import_callset(
             variant_id=mt.rsid,
         )
     return mt.key_rows_by(*dataset_type.table_key_type(reference_genome).fields)
+
+
+def import_parquet(
+    callset_path: str,
+    reference_genome: ReferenceGenome,
+    dataset_type: DatasetType,
+) -> hl.Table:
+    spark = SparkSession.builder.getOrCreate()
+    df = spark.read.parquet(callset_path)
+    ht = hl.Table.from_spark(df)
+
+    key_fields = dataset_type.table_key_type(reference_genome).fields
+    if 'locus' in key_fields:
+        raw_contig = ht.variant_id.split('-')[0]
+        contig = (
+            hl.format('chr%s', raw_contig)
+            if reference_genome == ReferenceGenome.GRCh38
+            else raw_contig
+        )
+        ht = ht.transmute(
+            locus=hl.locus(
+                contig=contig,
+                pos=hl.int32(ht.variant_id.split('-')[1]),
+                reference_genome=reference_genome.value,
+            ),
+            alleles=[ht.variant_id.split('-')[2], ht.variant_id.split('-')[3]],
+        )
+
+    return ht.key_by(*key_fields)
 
 
 @validated_hl_function(

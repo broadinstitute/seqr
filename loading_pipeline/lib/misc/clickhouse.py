@@ -16,6 +16,7 @@ from loading_pipeline.lib.core.environment import Env
 from loading_pipeline.lib.logger import get_logger
 from loading_pipeline.lib.misc.retry import retry
 from loading_pipeline.lib.paths import (
+    existing_variants_parquet_path,
     new_entries_parquet_path,
     new_variant_details_parquet_path,
     new_variants_parquet_path,
@@ -39,6 +40,7 @@ class ClickHouseTable(StrEnum):
     ENTRIES = 'entries'
     PROJECT_GT_STATS = 'project_gt_stats'
     GT_STATS = 'gt_stats'
+    EXISTING_VARIANTS = 'existing_variants'
 
     @property
     def src_path_fn(self) -> Callable:
@@ -52,6 +54,7 @@ class ClickHouseTable(StrEnum):
             ),
             ClickHouseTable.VARIANT_DETAILS: new_variant_details_parquet_path,
             ClickHouseTable.ENTRIES: new_entries_parquet_path,
+            ClickHouseTable.EXISTING_VARIANTS: existing_variants_parquet_path,
         }[self]
 
     @property
@@ -942,6 +945,37 @@ def direct_insert_all_keys(
         SELECT {clickhouse_table.select_fields}
         FROM {src_table}
         {settings}
+        """,  # nosec B608
+    )
+
+
+def export_existing_variants_to_parquet(
+    reference_genome: ReferenceGenome,
+    dataset_type: DatasetType,
+    run_id: str,
+    export_select_fields: str,
+) -> None:
+    table_name_builder = TableNameBuilder(
+        reference_genome,
+        dataset_type,
+        run_id,
+    )
+    variants_table = table_name_builder.dst_table(
+        ClickHouseTable.VARIANT_DETAILS
+        if dataset_type.should_write_new_variant_details
+        else ClickHouseTable.VARIANTS_MEMORY,
+    )
+    export_table = table_name_builder.src_table(
+        ClickHouseTable.EXISTING_VARIANTS,
+    ).replace(
+        '/*.parquet',
+        '',
+    )
+    logged_query(
+        f"""
+        INSERT INTO FUNCTION {export_table}
+        SELECT {export_select_fields}
+        FROM {variants_table}
         """,  # nosec B608
     )
 

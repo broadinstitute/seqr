@@ -28,8 +28,8 @@ TEST_MITO_MT = 'loading_pipeline/var/test/callsets/mito_1.mt'
 class IOTest(unittest.TestCase):
     def test_file_size_mb(self) -> None:
         # find loading_pipeline/var/test/callsets/mito_1.mt -type f | grep -v 'crc' | xargs ls -alt {} | awk '{sum += $5; print sum}'
-        # 191310
-        self.assertEqual(file_size_bytes(TEST_MITO_MT), 191310)
+        # 154517
+        self.assertEqual(file_size_bytes(TEST_MITO_MT), 154517)
 
     def test_compute_hail_n_partitions(self) -> None:
         self.assertEqual(compute_hail_n_partitions(23), 1)

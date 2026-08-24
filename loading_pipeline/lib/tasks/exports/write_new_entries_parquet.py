@@ -3,29 +3,40 @@ import luigi
 import luigi.util
 
 from loading_pipeline.lib.annotations.fields import get_fields
+from loading_pipeline.lib.annotations.shared import xpos
 from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
     deglobalize_ids,
 )
+from loading_pipeline.lib.misc.io import import_parquet
 from loading_pipeline.lib.paths import (
+    existing_variants_parquet_path,
     new_entries_parquet_path,
-    variant_annotations_table_path,
+    new_variants_table_path,
 )
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
-from loading_pipeline.lib.tasks.exports.fields import get_entries_export_fields
+from loading_pipeline.lib.tasks.exports.fields import (
+    get_entries_annotations_export_fields,
+    get_entries_call_annotations_fields,
+    get_entries_export_fields,
+)
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.update_variant_annotations_table_with_new_variants import (
-    UpdateVariantAnnotationsTableWithNewVariantsTask,
+from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
+    WriteExistingVariantsParquetTask,
+)
+from loading_pipeline.lib.tasks.write_new_variants_table import (
+    WriteNewVariantsTableTask,
 )
 from loading_pipeline.lib.tasks.write_remapped_and_subsetted_callset import (
     WriteRemappedAndSubsettedCallsetTask,
 )
 
-ANNOTATIONS_TABLE_TASK = 'annotations_table_task'
+EXISTING_VARIANTS_TASK = 'existing_variant_task'
+VARIANTS_TABLE_TASK = 'variants_table_task'
 REMAPPED_AND_SUBSETTED_CALLSET_TASKS = 'remapped_and_subsetted_callset_tasks'
 
 
@@ -42,8 +53,11 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
 
     def requires(self) -> dict[str, luigi.Task]:
         return {
-            ANNOTATIONS_TABLE_TASK: self.clone(
-                UpdateVariantAnnotationsTableWithNewVariantsTask,
+            EXISTING_VARIANTS_TASK: self.clone(
+                WriteExistingVariantsParquetTask,
+            ),
+            VARIANTS_TABLE_TASK: self.clone(
+                WriteNewVariantsTableTask,
             ),
             REMAPPED_AND_SUBSETTED_CALLSET_TASKS: [
                 self.clone(
@@ -56,6 +70,41 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
 
     def create_table(self) -> None:
         unioned_ht = None
+
+        annotations_ht = hl.read_table(
+            new_variants_table_path(
+                self.reference_genome,
+                self.dataset_type,
+                self.run_id,
+            ),
+        )
+        annotation_selects = {
+            field: func(annotations_ht)
+            for field, func in {
+                **get_entries_annotations_export_fields(self.dataset_type),
+                **get_entries_call_annotations_fields(self.dataset_type),
+            }.items()
+        }
+        annotations_ht = annotations_ht.select(**annotation_selects)
+
+        existing_annotations_ht = import_parquet(
+            existing_variants_parquet_path(
+                self.reference_genome,
+                self.dataset_type,
+                self.run_id,
+            ),
+            self.reference_genome,
+            self.dataset_type,
+        )
+        if 'xpos' not in existing_annotations_ht.row:
+            existing_annotations_ht = existing_annotations_ht.annotate(
+                xpos=hl.int32(xpos(existing_annotations_ht)),
+            )
+
+        annotations_ht = annotations_ht.union(
+            existing_annotations_ht.select(*annotation_selects),
+        )
+
         for project_guid, remapped_and_subsetted_callset_task in zip(
             self.project_guids,
             self.input()[REMAPPED_AND_SUBSETTED_CALLSET_TASKS],
@@ -73,12 +122,6 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             )
             ht = deglobalize_ids(ht)
             ht = deduplicate_by_most_non_ref_calls(ht)
-            annotations_ht = hl.read_table(
-                variant_annotations_table_path(
-                    self.reference_genome,
-                    self.dataset_type,
-                ),
-            )
             ht = ht.join(annotations_ht)
 
             # the family entries ht will contain rows
