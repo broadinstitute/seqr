@@ -230,7 +230,7 @@ def import_parquet(
         ht = ht.transmute(
             locus=hl.locus(
                 contig=contig,
-                pos=hl.int64(ht.variant_id.split('-')[1]),
+                pos=hl.int32(ht.variant_id.split('-')[1]),
                 reference_genome=reference_genome.value,
             ),
             alleles=[ht.variant_id.split('-')[2], ht.variant_id.split('-')[3]],
