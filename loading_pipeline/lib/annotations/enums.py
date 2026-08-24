@@ -214,7 +214,6 @@ def validated_enum_member(
     """Validate that a string value is in the allowed enum list.
 
     Returns the value if valid or missing, raises an error if unrecognized.
-    This replaces dict-based enum id encoding with validated string values.
     """
     allowed_values_set = hl.literal(set(allowed_values))
     return (
