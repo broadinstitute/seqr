@@ -4,7 +4,7 @@ import luigi.util
 
 from loading_pipeline.lib.misc.callsets import get_additional_row_fields
 from loading_pipeline.lib.misc.io import (
-import_parquet,
+    import_parquet,
     split_multi_hts,
 )
 from loading_pipeline.lib.misc.sv import deduplicate_merged_sv_concordance_calls
@@ -51,9 +51,10 @@ class WritePostprocessedCallsetTask(BaseWriteTask):
         )
 
     def requires(self) -> list[luigi.Task]:
-        return [self.clone(WriteImportedCallsetTask)] + [
-            self.clone(WriteExistingVariantsParquetTask),
-        ] if self.dataset_type.re_key_by_seqr_internal_truth_vid else []
+        requires = [self.clone(WriteImportedCallsetTask)]
+        if self.dataset_type.re_key_by_seqr_internal_truth_vid:
+            requires.append(self.clone(WriteExistingVariantsParquetTask))
+        return requires
 
     @with_persisted_validation_errors
     def create_table(self) -> hl.MatrixTable:
