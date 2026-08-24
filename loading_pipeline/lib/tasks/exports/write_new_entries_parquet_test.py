@@ -58,6 +58,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             new_variants_table_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.SNV_INDEL,
+                TEST_RUN_ID,
             ),
         )
         ht = hl.read_table(
@@ -67,6 +68,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             new_variants_table_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.MITO,
+                TEST_RUN_ID,
             ),
         )
         ht = hl.read_table(
@@ -76,6 +78,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             new_variants_table_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.SV,
+                TEST_RUN_ID,
             ),
         )
         ht = hl.read_table(TEST_GCNV_ANNOTATIONS)
@@ -83,6 +86,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             new_variants_table_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
+                TEST_RUN_ID,
             ),
         )
 
