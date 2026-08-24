@@ -16,36 +16,24 @@ ANNOTATIONS_HT = hl.Table.parallelize(
     [
         {
             'variant_id': 'BND_chr1_6',
-            'algorithms': 'manta',
-            'end_locus': hl.Locus(
-                contig='chr5',
-                position=20404,
-                reference_genome='GRCh38',
-            ),
+            'end': 20404,
+            'endChrom': 'chr5',
         },
         {
             'variant_id': 'BND_chr1_9',
-            'algorithms': 'manta',
-            'end_locus': hl.Locus(
-                contig='chr1',
-                position=789481,
-                reference_genome='GRCh38',
-            ),
+            'end': 789481,
+            'endChrom': 'chr1',
         },
         {
             'variant_id': 'CPX_chr1_22',
-            'algorithms': 'manta',
-            'end_locus': hl.Locus(
-                contig='chr1',
-                position=6559723,
-                reference_genome='GRCh38',
-            ),
+            'end': 6559723,
+            'endChrom': 'chr1',
         },
     ],
     hl.tstruct(
         variant_id=hl.tstr,
-        algorithms=hl.tstr,
-        end_locus=hl.tlocus('GRCh38'),
+        end=hl.tint32,
+        endChrom=hl.tstr,
     ),
     key='variant_id',
 )
