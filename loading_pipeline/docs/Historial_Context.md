@@ -60,7 +60,7 @@ gs://seqr-hail-search-data/v3.1/GRCh38/SNV_INDEL/runs/20260421-125644-303855/new
 ## Thoughts for future:
 	- Remove Hail for non SNV_INDEL dataset types and callsets < 500 samples.
 	- Lightweight replacement for Luigi "run()/complete()/output()/requires()" framework.
-	- Eliminate scheduler in favor or "tasks" table in clickhouse.
+	- Eliminate scheduler in favor of "tasks" table in clickhouse.
 	- Running arbitrary docker images:
 		- Airflow was useful for this, w/ Kubernetes elasticity.
 		- Need to support external computational biology tools.

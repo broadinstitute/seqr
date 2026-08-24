@@ -109,7 +109,7 @@ def get_entries_call_annotations_fields(
             'start': lambda ht: hl.int64(ht.start_locus.position),
             'end': lambda ht: hl.int64(ht.end_locus.position),
             'num_exon': lambda ht: ht.num_exon,
-            'gene_ids': lambda ht: hl.array(ht.sorted_gene_consequences.gene_id),
+            'gene_ids': lambda ht: hl.set(ht.sorted_gene_consequences.gene_id),
         }
     return {}
 
@@ -167,13 +167,13 @@ def _get_calls_export_fields(
 def get_entries_annotations_export_fields(dataset_type: DatasetType):
     fields = {
         'key_': lambda ht: ht.key_,
-        'xpos': lambda ht: ht.xpos,
+        'xpos': lambda ht: hl.int64(ht.xpos),
     }
     if dataset_type in {DatasetType.SV, DatasetType.SNV_INDEL}:
         fields['geneIds'] = lambda ht: (
-            hl.array(ht.sorted_gene_consequences.gene_id)
+            hl.set(ht.sorted_gene_consequences.gene_id)
             if dataset_type == DatasetType.SV
-            else hl.array(ht.sorted_transcript_consequences.gene_id)
+            else hl.set(ht.sorted_transcript_consequences.gene_id)
         )
     return fields
 
