@@ -221,9 +221,15 @@ def import_parquet(
 
     key_fields = dataset_type.table_key_type(reference_genome).fields
     if 'locus' in key_fields:
+        raw_contig = ht.variant_id.split('-')[0]
+        contig = (
+            hl.format('chr%s', raw_contig)
+            if reference_genome == ReferenceGenome.GRCh38
+            else raw_contig
+        )
         ht = ht.annotate(
             locus=hl.locus(
-                contig=ht.variant_id.split('-')[0],
+                contig=contig,
                 pos=hl.int32(ht.variant_id.split('-')[1]),
                 reference_genome=reference_genome.value,
             ),
