@@ -95,8 +95,8 @@ def get_existing_variants_export_field(dataset_type: DatasetType) -> str:
     dt_fields = {
         DatasetType.SNV_INDEL: ', transcripts.geneId AS geneIds',
         DatasetType.MITO: '',
-        DatasetType.SV: ', xpos, end, endChrom, sortedGeneConsequences.geneId AS geneIds',
-        DatasetType.GCNV: ', xpos, pos AS start, end, numExon as num_exon, sortedGeneConsequences.geneId AS gene_ids',
+        DatasetType.SV: ', CAST(xpos AS Int64) AS xpos, end, endChrom, sortedGeneConsequences.geneId AS geneIds',
+        DatasetType.GCNV: ', CAST(xpos AS Int64) AS xpos, pos AS start, end, numExon as num_exon, sortedGeneConsequences.geneId AS gene_ids',
     }[dataset_type]
     return f'key AS key_, variantId AS variant_id {dt_fields}'
 

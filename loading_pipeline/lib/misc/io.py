@@ -227,7 +227,7 @@ def import_parquet(
             if reference_genome == ReferenceGenome.GRCh38
             else raw_contig
         )
-        ht = ht.annotate(
+        ht = ht.transmute(
             locus=hl.locus(
                 contig=contig,
                 pos=hl.int32(ht.variant_id.split('-')[1]),
