@@ -131,7 +131,9 @@ class WriteNewVariantsTableTask(BaseWriteTask):
             self.reference_genome,
             self.dataset_type,
         )
-        curr_max_key_ = annotations_ht.aggregate(hl.agg.max(annotations_ht.key_))
+        curr_max_key_ = (
+            annotations_ht.aggregate(hl.agg.max(annotations_ht.key_)) or -1
+        )
         new_variants_ht = callset_ht.repartition(
             # Repartition this join to improve performance
             constrain(
