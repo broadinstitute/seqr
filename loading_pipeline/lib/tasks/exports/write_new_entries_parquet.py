@@ -104,6 +104,10 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             existing_annotations_ht = existing_annotations_ht.annotate(
                 gene_ids=hl.set(existing_annotations_ht.gene_ids),
             )
+        if 'geneIds' in existing_annotations_ht.row:
+            existing_annotations_ht = existing_annotations_ht.annotate(
+                geneIds=hl.set(existing_annotations_ht.geneIds),
+            )
 
         annotations_ht = annotations_ht.union(
             existing_annotations_ht.select(*annotation_selects),

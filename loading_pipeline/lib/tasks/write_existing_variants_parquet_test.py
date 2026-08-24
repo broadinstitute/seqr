@@ -55,7 +55,7 @@ class WriteExistingVariantsParquetTest(
             [
                 {
                     'key_': 1,
-                    'variant_id': '1-10059-C-T',
+                    'variant_id': '1-878314-G-C',
                     'geneIds': ['ENSG00000177000'],
                 },
                 {'key_': 7, 'variant_id': '7-1234567-AGT-A', 'geneIds': []},

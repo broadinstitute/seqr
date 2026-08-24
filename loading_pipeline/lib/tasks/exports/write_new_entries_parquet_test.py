@@ -54,6 +54,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
         ht = hl.read_table(
             TEST_SNV_INDEL_ANNOTATIONS,
         )
+        ht = ht.filter(ht.variant_id != '1-878314-G-C')
         ht.write(
             new_variants_table_path(
                 ReferenceGenome.GRCh38,
@@ -170,7 +171,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
                     'family_guid': 'abc_1',
                     'sample_type': 'WGS',
                     'xpos': 1000878314,
-                    'geneIds': ['ENSG00000187634'],
+                    'geneIds': ['ENSG00000177000'],
                     'filters': ['VQSRTrancheSNP99.00to99.90'],
                     'calls': [
                         {
