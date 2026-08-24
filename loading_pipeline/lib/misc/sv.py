@@ -78,10 +78,7 @@ def deduplicate_merged_sv_concordance_calls(
                 - existing_variant.end
                 + (
                     WRONG_CHROM_PENALTY
-                    if (
-                        new_variant.end_locus.contig
-                        != existing_variant.endChrom
-                    )
+                    if new_variant.end_locus.contig != existing_variant.endChrom
                     else 0
                 ),
             )
