@@ -222,9 +222,9 @@ def import_parquet(
     key_fields = dataset_type.table_key_type(reference_genome).fields
     if 'locus' in key_fields:
         ht = ht.annotate(
-            locus=hl.Locus(
+            locus=hl.locus(
                 contig=ht.variant_id.split('-')[0],
-                position=ht.variant_id.split('-')[1],
+                pos=hl.int32(ht.variant_id.split('-')[1]),
                 reference_genome=reference_genome.value,
             ),
             alleles=[ht.variant_id.split('-')[2], ht.variant_id.split('-')[3]],
