@@ -78,15 +78,14 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
                 self.run_id,
             ),
         )
-        annotations_ht = annotations_ht.select(
-            **{
-                field: func(annotations_ht)
-                for field, func in {
-                    **get_entries_annotations_export_fields(self.dataset_type),
-                    **get_entries_call_annotations_fields(self.dataset_type),
-                }.items()
-            },
-        )
+        annotation_selects = {
+            field: func(annotations_ht)
+            for field, func in {
+                **get_entries_annotations_export_fields(self.dataset_type),
+                **get_entries_call_annotations_fields(self.dataset_type),
+            }.items()
+        }
+        annotations_ht = annotations_ht.select(**annotation_selects)
 
         existing_annotations_ht = import_parquet(
             existing_variants_parquet_path(
@@ -102,7 +101,7 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
                 xpos=hl.int64(xpos(existing_annotations_ht)),
             )
 
-        annotations_ht = annotations_ht.union(existing_annotations_ht)
+        annotations_ht = annotations_ht.union(existing_annotations_ht.select(*annotation_selects))
 
         for project_guid, remapped_and_subsetted_callset_task in zip(
             self.project_guids,
