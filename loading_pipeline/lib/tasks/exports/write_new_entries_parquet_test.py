@@ -1,7 +1,8 @@
+from typing import ClassVar
+
 import hail as hl
 import luigi.worker
 import pandas as pd
-from typing import ClassVar
 
 from loading_pipeline.lib.core import (
     DatasetType,
