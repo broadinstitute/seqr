@@ -1,5 +1,6 @@
 import os
 from unittest import mock
+from unittest.mock import Mock
 
 import hail as hl
 import luigi.worker
@@ -13,14 +14,23 @@ from loading_pipeline.lib.core import (
 from loading_pipeline.lib.misc.validation import ALL_VALIDATIONS
 from loading_pipeline.lib.paths import (
     new_variant_details_parquet_path,
-    new_variants_table_path,
+    variant_annotations_table_path,
 )
 from loading_pipeline.lib.tasks.exports.write_new_variant_details_parquet import (
     WriteNewVariantDetailsParquetTask,
 )
-from loading_pipeline.lib.test.misc import convert_ndarray_to_list
-from loading_pipeline.lib.test.mock_complete_task import MockCompleteTask
+from loading_pipeline.lib.test.misc import (
+    convert_ndarray_to_list,
+    copy_project_pedigree_to_mocked_dir,
+)
 from loading_pipeline.lib.test.mocked_dataroot_testcase import MockedDatarootTestCase
+from loading_pipeline.var.test.vep.mock_vep_data import (
+    MOCK_37_VEP_DATA,
+    MOCK_38_VEP_DATA,
+)
+
+TEST_SNV_INDEL_VCF = 'loading_pipeline/var/test/callsets/1kg_30variants.vcf'
+TEST_PEDIGREE_3_REMAP = 'loading_pipeline/var/test/pedigrees/test_pedigree_3_remap.tsv'
 
 TEST_SNV_INDEL_ANNOTATIONS = (
     'loading_pipeline/var/test/exports/GRCh38/SNV_INDEL/annotations.ht'
@@ -31,28 +41,84 @@ TEST_GRCH37_SNV_INDEL_ANNOTATIONS = (
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
+SNV_INDEL_GRCH38_MOCK_VEP_DATA = MOCK_38_VEP_DATA.annotate(
+    transcript_consequences=hl.array(
+        [
+            MOCK_38_VEP_DATA.transcript_consequences[0].annotate(
+                am_pathogenicity=hl.missing(hl.tfloat32),
+                exon='6/14',
+                gene_id='ENSG00000187634',
+                hgvsc='ENST00000616016.5:c.1049C>T',
+                hgvsp='ENSP00000478421.2:p.Ser350Leu',
+                lof=hl.missing(hl.tstr),
+                lof_filter=hl.missing(hl.tstr),
+                mane_select='NM_001385641.1',
+                transcript_id='ENST00000616016',
+                fiveutr_annotation=hl.dict(
+                    {
+                        '1': hl.struct(
+                            type='OutOfFrame_oORF',
+                            KozakContext='CGCATGC',
+                            KozakStrength='Weak',
+                            DistanceToCDS='41',
+                            CapDistanceToStart=hl.missing(hl.tstr),
+                            DistanceToStop=hl.missing(hl.tstr),
+                            Evidence=hl.missing(hl.tstr),
+                            AltStop=hl.missing(hl.tstr),
+                            AltStopDistanceToCDS=hl.missing(hl.tstr),
+                            FrameWithCDS=hl.missing(hl.tstr),
+                            StartDistanceToCDS=hl.missing(hl.tstr),
+                            newSTOPDistanceToCDS=hl.missing(hl.tstr),
+                            alt_type=hl.missing(hl.tstr),
+                            alt_type_length=hl.missing(hl.tstr),
+                            ref_StartDistanceToCDS=hl.missing(hl.tstr),
+                            ref_type=hl.missing(hl.tstr),
+                            ref_type_length=hl.missing(hl.tstr),
+                        ),
+                    },
+                ),
+            ),
+        ],
+    ),
+)
+
+SNV_INDEL_GRCH37_MOCK_VEP_DATA = MOCK_37_VEP_DATA.annotate(
+    transcript_consequences=hl.array(
+        [
+            MOCK_37_VEP_DATA.transcript_consequences[0].annotate(
+                amino_acids='E/G',
+                codons='gAa/gGa',
+                gene_id='ENSG00000186092',
+                hgvsc='ENST00000335137.3:c.44A>G',
+                hgvsp='ENSP00000334393.3:p.Glu15Gly',
+                transcript_id='ENST00000335137',
+                lof=hl.missing(hl.tstr),
+                lof_filter=hl.missing(hl.tstr),
+            ),
+        ],
+    ),
+)
+
 
 class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
     def setUp(self) -> None:
         super().setUp()
-        ht = hl.read_table(
-            TEST_SNV_INDEL_ANNOTATIONS,
-        )
+        ht = hl.read_table(TEST_SNV_INDEL_ANNOTATIONS)
+        ht = ht.filter(ht.variant_id != '1-876499-A-G')
+        ht = ht.annotate_globals(max_key_=-1)
         ht.write(
-            new_variants_table_path(
+            variant_annotations_table_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.SNV_INDEL,
-                TEST_RUN_ID,
             ),
         )
-        ht = hl.read_table(
-            TEST_GRCH37_SNV_INDEL_ANNOTATIONS,
-        )
+        ht = hl.read_table(TEST_GRCH37_SNV_INDEL_ANNOTATIONS)
+        ht = ht.filter(ht.variant_id != '1-69134-A-G')
+        ht = ht.annotate_globals(max_key_=1423)
         ht.write(
-            new_variants_table_path(
+            variant_annotations_table_path(
                 ReferenceGenome.GRCh37,
                 DatasetType.SNV_INDEL,
-                TEST_RUN_ID,
             ),
         )
 
@@ -79,24 +145,39 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
             f.write('')
 
     @mock.patch(
-        'loading_pipeline.lib.tasks.exports.write_new_variant_details_parquet.WriteNewVariantsTableTask',
+        'loading_pipeline.lib.tasks.write_new_variants_table.load_gencode_ensembl_to_refseq_id',
     )
+    @mock.patch('loading_pipeline.lib.misc.vep.hl.vep')
     def test_write_new_variant_details_parquet_test(
         self,
-        mock_write_new_variants_task,
+        mock_vep: Mock,
+        mock_load_gencode_ensembl_to_refseq_id: Mock,
     ) -> None:
-        mock_write_new_variants_task.return_value = MockCompleteTask()
+        mock_load_gencode_ensembl_to_refseq_id.return_value = hl.dict(
+            {'ENST00000616016': 'NM_001385641.1'},
+        )
+        mock_vep.side_effect = lambda ht, **_: ht.annotate(
+            vep=SNV_INDEL_GRCH38_MOCK_VEP_DATA,
+        )
+        copy_project_pedigree_to_mocked_dir(
+            TEST_PEDIGREE_3_REMAP,
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            SampleType.WGS,
+            'R0113_test_project',
+        )
         worker = luigi.worker.Worker()
         task = WriteNewVariantDetailsParquetTask(
             reference_genome=ReferenceGenome.GRCh38,
             dataset_type=DatasetType.SNV_INDEL,
             sample_type=SampleType.WGS,
-            callset_path='fake_callset',
+            callset_path=TEST_SNV_INDEL_VCF,
             project_guids=[
-                'fake_project',
+                'R0113_test_project',
             ],
             validations_to_skip=[ALL_VALIDATIONS],
             run_id=TEST_RUN_ID,
+            skip_expect_tdr_metrics=True,
         )
         worker.add(task)
         worker.run()
@@ -196,25 +277,33 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
             ),
         )
 
-    @mock.patch(
-        'loading_pipeline.lib.tasks.exports.write_new_variant_details_parquet.WriteNewVariantsTableTask',
-    )
+    @mock.patch('loading_pipeline.lib.misc.vep.hl.vep')
     def test_grch37_write_new_variant_details_parquet_test(
         self,
-        mock_write_new_variants_task,
+        mock_vep: Mock,
     ) -> None:
-        mock_write_new_variants_task.return_value = MockCompleteTask()
+        mock_vep.side_effect = lambda ht, **_: ht.annotate(
+            vep=SNV_INDEL_GRCH37_MOCK_VEP_DATA,
+        )
+        copy_project_pedigree_to_mocked_dir(
+            TEST_PEDIGREE_3_REMAP,
+            ReferenceGenome.GRCh37,
+            DatasetType.SNV_INDEL,
+            SampleType.WGS,
+            'R0113_test_project',
+        )
         worker = luigi.worker.Worker()
         task = WriteNewVariantDetailsParquetTask(
             reference_genome=ReferenceGenome.GRCh37,
             dataset_type=DatasetType.SNV_INDEL,
             sample_type=SampleType.WGS,
-            callset_path='fake_callset',
+            callset_path=TEST_SNV_INDEL_VCF,
             project_guids=[
-                'fake_project',
+                'R0113_test_project',
             ],
             validations_to_skip=[ALL_VALIDATIONS],
             run_id=TEST_RUN_ID,
+            skip_expect_tdr_metrics=True,
         )
         worker.add(task)
         worker.run()
