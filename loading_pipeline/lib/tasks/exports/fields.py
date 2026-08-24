@@ -171,9 +171,9 @@ def get_entries_annotations_export_fields(dataset_type: DatasetType):
     }
     if dataset_type in {DatasetType.SV, DatasetType.SNV_INDEL}:
         fields['geneIds'] = lambda ht: (
-            hl.set(ht.sorted_gene_consequences.gene_id)
+            hl.array(ht.sorted_gene_consequences.gene_id)
             if dataset_type == DatasetType.SV
-            else hl.set(ht.sorted_transcript_consequences.gene_id)
+            else hl.array(ht.sorted_transcript_consequences.gene_id)
         )
     return fields
 
