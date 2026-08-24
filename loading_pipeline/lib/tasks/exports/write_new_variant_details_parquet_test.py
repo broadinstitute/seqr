@@ -13,8 +13,8 @@ from loading_pipeline.lib.core import (
 )
 from loading_pipeline.lib.misc.validation import ALL_VALIDATIONS
 from loading_pipeline.lib.paths import (
+    existing_variants_parquet_path,
     new_variant_details_parquet_path,
-    variant_annotations_table_path,
 )
 from loading_pipeline.lib.tasks.exports.write_new_variant_details_parquet import (
     WriteNewVariantDetailsParquetTask,
@@ -32,14 +32,59 @@ from loading_pipeline.var.test.vep.mock_vep_data import (
 TEST_SNV_INDEL_VCF = 'loading_pipeline/var/test/callsets/1kg_30variants.vcf'
 TEST_PEDIGREE_3_REMAP = 'loading_pipeline/var/test/pedigrees/test_pedigree_3_remap.tsv'
 
-TEST_SNV_INDEL_ANNOTATIONS = (
-    'loading_pipeline/var/test/exports/GRCh38/SNV_INDEL/annotations.ht'
-)
-TEST_GRCH37_SNV_INDEL_ANNOTATIONS = (
-    'loading_pipeline/var/test/exports/GRCh37/SNV_INDEL/annotations.ht'
-)
-
 TEST_RUN_ID = 'manual__2024-04-03'
+
+EXISTING_SNV_INDEL_VARIANT_IDS = [
+    '1-871269-A-C',
+    '1-874734-C-T',
+    '1-878314-G-C',
+    '1-878809-C-T',
+    '1-879576-C-T',
+    '1-881070-G-A',
+    '1-881627-G-A',
+    '1-881918-G-A',
+    '1-883485-C-T',
+    '1-883625-A-G',
+    '1-883918-G-A',
+    '1-887560-A-C',
+    '1-887801-A-G',
+    '1-888529-G-A',
+    '1-888659-T-C',
+    '1-889158-G-C',
+    '1-889159-A-C',
+    '1-889238-G-A',
+    '1-894573-G-A',
+    '1-896922-C-T',
+    '1-897325-G-C',
+    '1-898313-C-T',
+    '1-898323-T-C',
+    '1-898467-C-T',
+    '1-899959-G-GC',
+    '1-900505-G-C',
+    '1-902024-G-A',
+    '1-902069-T-C',
+    '1-902088-G-A',
+    '1-902088-G-ACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACTACT',
+    'GL000207.1-1-G-A',
+]
+
+
+def _write_existing_variants_parquet_fixture(
+    variant_ids: list[str],
+    reference_genome: ReferenceGenome,
+    dataset_type: DatasetType,
+    max_key_: int,
+) -> None:
+    n = len(variant_ids)
+    path = existing_variants_parquet_path(reference_genome, dataset_type, TEST_RUN_ID)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    pd.DataFrame(
+        {
+            'variant_id': variant_ids,
+            'key_': range(max_key_ - n + 1, max_key_ + 1),
+        },
+    ).to_parquet(path)
+
 
 SNV_INDEL_GRCH38_MOCK_VEP_DATA = MOCK_38_VEP_DATA.annotate(
     transcript_consequences=hl.array(
@@ -103,23 +148,17 @@ SNV_INDEL_GRCH37_MOCK_VEP_DATA = MOCK_37_VEP_DATA.annotate(
 class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
     def setUp(self) -> None:
         super().setUp()
-        ht = hl.read_table(TEST_SNV_INDEL_ANNOTATIONS)
-        ht = ht.filter(ht.variant_id != '1-876499-A-G')
-        ht = ht.annotate_globals(max_key_=-1)
-        ht.write(
-            variant_annotations_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.SNV_INDEL,
-            ),
+        _write_existing_variants_parquet_fixture(
+            EXISTING_SNV_INDEL_VARIANT_IDS,
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            max_key_=-1,
         )
-        ht = hl.read_table(TEST_GRCH37_SNV_INDEL_ANNOTATIONS)
-        ht = ht.filter(ht.variant_id != '1-69134-A-G')
-        ht = ht.annotate_globals(max_key_=1423)
-        ht.write(
-            variant_annotations_table_path(
-                ReferenceGenome.GRCh37,
-                DatasetType.SNV_INDEL,
-            ),
+        _write_existing_variants_parquet_fixture(
+            EXISTING_SNV_INDEL_VARIANT_IDS,
+            ReferenceGenome.GRCh37,
+            DatasetType.SNV_INDEL,
+            max_key_=1423,
         )
 
         # Make an incomplete parquet to validate overwrite-ing.
