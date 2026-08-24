@@ -127,6 +127,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             ),
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
+        self.maxDiff = None
         self.assertEqual(
             export_json[:2],
             [
