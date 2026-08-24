@@ -102,7 +102,7 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             )
 
         annotations_ht = annotations_ht.union(
-            existing_annotations_ht.select(*annotation_selects)
+            existing_annotations_ht.select(*annotation_selects),
         )
 
         for project_guid, remapped_and_subsetted_callset_task in zip(
