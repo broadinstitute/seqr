@@ -101,7 +101,9 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
                 xpos=hl.int64(xpos(existing_annotations_ht)),
             )
 
-        annotations_ht = annotations_ht.union(existing_annotations_ht.select(*annotation_selects))
+        annotations_ht = annotations_ht.union(
+            existing_annotations_ht.select(*annotation_selects)
+        )
 
         for project_guid, remapped_and_subsetted_callset_task in zip(
             self.project_guids,
