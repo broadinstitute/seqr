@@ -25,6 +25,7 @@ class WriteExistingVariantsParquetTask(luigi.Task):
 
     def complete(self) -> bool:
         return self.output().exists()
+
     def run(self):
         export_select_fields = get_existing_variants_export_field(self.dataset_type)
         export_existing_variants_to_parquet(
