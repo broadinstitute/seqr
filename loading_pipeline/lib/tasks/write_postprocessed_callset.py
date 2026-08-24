@@ -4,18 +4,22 @@ import luigi.util
 
 from loading_pipeline.lib.misc.callsets import get_additional_row_fields
 from loading_pipeline.lib.misc.io import (
+import_parquet,
     split_multi_hts,
 )
 from loading_pipeline.lib.misc.sv import deduplicate_merged_sv_concordance_calls
 from loading_pipeline.lib.misc.vets import annotate_vets
 from loading_pipeline.lib.paths import (
+    existing_variants_parquet_path,
     imported_callset_path,
     postprocessed_callset_path,
-    variant_annotations_table_path,
 )
 from loading_pipeline.lib.tasks.base.base_loading_run_params import BaseLoadingRunParams
 from loading_pipeline.lib.tasks.base.base_write import BaseWriteTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
+    WriteExistingVariantsParquetTask,
+)
 from loading_pipeline.lib.tasks.write_imported_callset import WriteImportedCallsetTask
 from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
     with_persisted_validation_errors,
@@ -47,7 +51,9 @@ class WritePostprocessedCallsetTask(BaseWriteTask):
         )
 
     def requires(self) -> list[luigi.Task]:
-        return [self.clone(WriteImportedCallsetTask)]
+        return [self.clone(WriteImportedCallsetTask)] + [
+            self.clone(WriteExistingVariantsParquetTask),
+        ] if self.dataset_type.re_key_by_seqr_internal_truth_vid else []
 
     @with_persisted_validation_errors
     def create_table(self) -> hl.MatrixTable:
@@ -71,11 +77,14 @@ class WritePostprocessedCallsetTask(BaseWriteTask):
         ):
             mt = deduplicate_merged_sv_concordance_calls(
                 mt,
-                hl.read_table(
-                    variant_annotations_table_path(
+                import_parquet(
+                    existing_variants_parquet_path(
                         self.reference_genome,
                         self.dataset_type,
+                        self.run_id,
                     ),
+                    self.reference_genome,
+                    self.dataset_type,
                 ),
             )
             mt = mt.key_rows_by(

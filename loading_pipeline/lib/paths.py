@@ -266,21 +266,6 @@ def ancestry_model_rf_path() -> str:
     )
 
 
-# TODO deprecate
-def variant_annotations_table_path(
-    reference_genome: ReferenceGenome,
-    dataset_type: DatasetType,
-) -> str:
-    return os.path.join(
-        pipeline_prefix(
-            Env.PIPELINE_DATA_DIR,
-            reference_genome,
-            dataset_type,
-        ),
-        'annotations.ht',
-    )
-
-
 def new_entries_parquet_path(
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
