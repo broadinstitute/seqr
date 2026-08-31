@@ -18,7 +18,6 @@ class SNVTest(unittest.TestCase):
         self,
         mock_vep: Mock,
     ) -> None:
-        self.maxDiff = None
         ht = hl.Table.parallelize(
             [
                 {
@@ -105,7 +104,6 @@ class SNVTest(unittest.TestCase):
         self,
         mock_vep: Mock,
     ) -> None:
-        self.maxDiff = None
         ht = hl.Table.parallelize(
             [
                 {

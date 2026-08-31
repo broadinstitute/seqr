@@ -21,7 +21,6 @@ TEST_GRCH37_SNV_INDEL_ANNOTATIONS = (
 
 class MiscTest(unittest.TestCase):
     def test_camelcase_array_structexpression_fields(self) -> None:
-        self.maxDiff = None
         ht = hl.read_table(TEST_SNV_INDEL_ANNOTATIONS)
         ht = camelcase_array_structexpression_fields(
             ht,
