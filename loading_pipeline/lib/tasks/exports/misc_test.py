@@ -182,7 +182,7 @@ class MiscTest(unittest.TestCase):
                             consequenceTerms=['TF_binding_site_variant'],
                         ),
                     ],
-                )
+                ),
             ),
         )
 
