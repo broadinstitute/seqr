@@ -87,7 +87,7 @@ class SNVTest(unittest.TestCase):
                         hgvsc='ENST00000483767.1:n.523C>T',
                         hgvsp=None,
                         transcript_id='ENST00000483767',
-                        biotype='lncRNA',
+                        biotype='retained_intron',
                         consequence_terms=[
                             'non_coding_transcript_exon_variant',
                             'non_coding_transcript_variant',
@@ -234,7 +234,7 @@ class SNVTest(unittest.TestCase):
                         existing_inframe_oorfs=0,
                         existing_outofframe_oorfs=1,
                         existing_uorfs=0,
-                        fiveutr_consequence='5_prime_UTR_premature_start_codon_gain_variant',
+                        fiveutr_consequence='5_prime_UTR_premature_start_codon_loss_variant',
                         fiveutr_annotation=hl.Struct(
                             type='OutOfFrame_oORF',
                             KozakContext='TTTATGC',

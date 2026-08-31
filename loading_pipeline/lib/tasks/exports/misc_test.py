@@ -30,6 +30,7 @@ class MiscTest(unittest.TestCase):
         ht = ht.annotate(
             sortedTranscriptConsequences=[ht.sortedTranscriptConsequences[0]],
         )
+        self.maxDiff = None
         self.assertEqual(
             ht.collect()[0],
             hl.Struct(
