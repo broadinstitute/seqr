@@ -72,7 +72,7 @@ class SNVTest(unittest.TestCase):
                         hgvsc='ENST00000477976.1:n.3114C>T',
                         hgvsp=None,
                         transcript_id='ENST00000477976',
-                        biotype='lncRNA',
+                        biotype='retained_intron',
                         consequence_terms=[
                             'non_coding_transcript_exon_variant',
                             'non_coding_transcript_variant',
