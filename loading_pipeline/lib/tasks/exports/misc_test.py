@@ -59,7 +59,12 @@ class MiscTest(unittest.TestCase):
                     rsid=None,
                     variant_id='1-876499-A-G',
                     xpos=1000876499,
-                    gt_stats=hl.Struct(AC=47, AN=81784, AF=0.0005746845272369683, hom=1),
+                    gt_stats=hl.Struct(
+                        AC=47,
+                        AN=81784,
+                        AF=0.0005746845272369683,
+                        hom=1,
+                    ),
                     CAID='CA502654',
                     check_ref=False,
                     gnomad_non_coding_constraint=hl.Struct(z_score=None),
