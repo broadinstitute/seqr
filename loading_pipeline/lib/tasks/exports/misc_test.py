@@ -32,8 +32,8 @@ class MiscTest(unittest.TestCase):
         )
         self.maxDiff = None
         self.assertEqual(
-            ht.collect()[0],
-            hl.Struct(
+            dict(ht.collect()[0]),
+            dict(hl.Struct(
                 key_=0,
                 locus=hl.Locus(
                     contig='chr1',
@@ -176,7 +176,7 @@ class MiscTest(unittest.TestCase):
                         consequenceTerms=['TF_binding_site_variant'],
                     ),
                 ],
-            ),
+            )),
         )
 
     def test_sorted_hl_struct(self) -> None:
