@@ -67,45 +67,31 @@ class WriteMetadataForRunTask(luigi.Task):
             ),
             'sample_qc': {},
         }
-        sample_qc_loadable_samples = {}
-        # NB: the trailing WriteSampleQCJsonTask output is conditionally
-        # present in requires(), so slice by project count rather than
-        # dropping the last input.
-        for remapped_and_subsetted_callset in self.input()[: len(self.project_guids)]:
-            callset_mt = hl.read_matrix_table(remapped_and_subsetted_callset.path)
-            collected_globals = callset_mt.globals.collect()[0]
-            metadata_json['family_samples'] = {
-                **collected_globals['family_samples'],
-                **metadata_json['family_samples'],
-            }
+        callset_mt = hl.read_matrix_table(self.input()[0].path)
+        collected_globals = callset_mt.globals.collect()[0]
+        metadata_json['family_samples'] = collected_globals['family_samples']
+        sample_qc_loadable_samples = {
+            sample
+            for family_samples in collected_globals['family_samples'].values()
+            for sample in family_samples
+        }
+        for key in [
+            'missing_samples',
+            'relatedness_check',
+            'sex_check',
+            'ploidy_check',
+        ]:
+            metadata_json['failed_family_samples'][key] = collected_globals['failed_family_samples'][key]
             sample_qc_loadable_samples = {
                 *{
                     sample
-                    for family_samples in collected_globals['family_samples'].values()
-                    for sample in family_samples
+                    for meta in collected_globals['failed_family_samples'][
+                        key
+                    ].values()
+                    for sample in meta['samples']
                 },
                 *sample_qc_loadable_samples,
             }
-            for key in [
-                'missing_samples',
-                'relatedness_check',
-                'sex_check',
-                'ploidy_check',
-            ]:
-                metadata_json['failed_family_samples'][key] = {
-                    **collected_globals['failed_family_samples'][key],
-                    **metadata_json['failed_family_samples'][key],
-                }
-                sample_qc_loadable_samples = {
-                    *{
-                        sample
-                        for meta in collected_globals['failed_family_samples'][
-                            key
-                        ].values()
-                        for sample in meta['samples']
-                    },
-                    *sample_qc_loadable_samples,
-                }
         if (
             FeatureFlag.EXPECT_TDR_METRICS
             and not self.skip_expect_tdr_metrics
