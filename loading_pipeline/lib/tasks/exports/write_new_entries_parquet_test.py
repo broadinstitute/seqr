@@ -128,6 +128,26 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             ),
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
+        self.assertEqual(len(export_json), 183)
+        self.assertEqual(
+            df['family_guid'].value_counts().to_dict(),
+            {
+                'abc_1': 17,
+                '789_1': 15,
+                '890_1': 14,
+                '901_1': 14,
+                'bcd_1': 14,
+                '345_1': 13,
+                '456_1': 13,
+                '567_1': 13,
+                'def_1': 13,
+                '123_1': 12,
+                '234_1': 12,
+                '678_1': 11,
+                'cde_1': 11,
+                'efg_1': 11,
+            },
+        )
         self.assertEqual(
             export_json[:2],
             [
@@ -192,6 +212,28 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
                     'sign': 1,
                 },
             ],
+        )
+        self.assertEqual(
+            export_json[17],
+            {
+                'key': 0,
+                'project_guid': 'R0114_project4',
+                'family_guid': '123_1',
+                'sample_type': 'WGS',
+                'xpos': 1000876499,
+                'geneIds': ['ENSG00000187634'],
+                'filters': [],
+                'calls': [
+                    {
+                        'sampleId': 'NA19675_1',
+                        'gt': 2,
+                        'gq': 15,
+                        'ab': 1.0,
+                        'dp': 5,
+                    },
+                ],
+                'sign': 1,
+            },
         )
 
     def test_mito_write_new_entries_parquet(self):
