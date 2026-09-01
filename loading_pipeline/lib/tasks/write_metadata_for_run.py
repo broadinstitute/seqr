@@ -81,13 +81,13 @@ class WriteMetadataForRunTask(luigi.Task):
             'sex_check',
             'ploidy_check',
         ]:
-            metadata_json['failed_family_samples'][key] = collected_globals['failed_family_samples'][key]
+            metadata_json['failed_family_samples'][key] = collected_globals[
+                'failed_family_samples'
+            ][key]
             sample_qc_loadable_samples = {
                 *{
                     sample
-                    for meta in collected_globals['failed_family_samples'][
-                        key
-                    ].values()
+                    for meta in collected_globals['failed_family_samples'][key].values()
                     for sample in meta['samples']
                 },
                 *sample_qc_loadable_samples,
