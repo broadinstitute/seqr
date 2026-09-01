@@ -15,7 +15,7 @@ class RunsTest(MockedDatarootTestCase):
         run_ids = [
             'manual__2024-08-05T16-07-58.365146+00-00',
             'manual__2024-08-06T10-15-23.123456+00-00',
-            'manual__2024-08-07T12-30-45.654321+00-00',  # _SUCCESS, _CLICKHOUSE_LOAD_FAIL
+            'manual__2024-08-07T12-30-45.654321+00-00',  # _SUCCESS
             'manual__2024-08-08T09-45-00.000000+00-00',  # _SUCCESS
             'manual__2024-08-09T18-22-13.999999+00-00',  # _SUCCESS, _CLICKHOUSE_LOAD_SUCCESS
         ]
