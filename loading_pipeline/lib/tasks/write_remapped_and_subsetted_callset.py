@@ -50,24 +50,22 @@ def format_failures(failed_families):
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
-    project_i = luigi.IntParameter()
-
     def complete(self) -> luigi.Target:
         if not super().complete():
             return False
         mt = hl.read_matrix_table(self.output().path)
+        remap_pedigree_hashes = hl.eval(mt.globals.remap_pedigree_hashes)
         return bool(
             hl.eval(mt.globals.family_samples),
-        ) and hl.eval(
-            mt.globals.remap_pedigree_hash
-            == remap_pedigree_hash(
+        ) and len(remap_pedigree_hashes) == len(self.project_guids) and all(
+            remap_pedigree_hashes[i] == remap_pedigree_hash(
                 project_pedigree_path(
                     self.reference_genome,
                     self.dataset_type,
                     self.sample_type,
-                    self.project_guids[self.project_i],
+                    project_guid,
                 ),
-            ),
+            ) for i, project_guid in enumerate(self.project_guids)
         )
 
     def output(self) -> luigi.Target:
@@ -76,21 +74,22 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                 self.reference_genome,
                 self.dataset_type,
                 self.callset_path,
-                self.project_guids[self.project_i],
             ),
         )
 
     def requires(self) -> list[luigi.Task]:
         requirements = [
             self.clone(ValidateCallsetTask),
+        ]
+        requirements += [
             RawFileTask(
                 project_pedigree_path(
                     self.reference_genome,
                     self.dataset_type,
                     self.sample_type,
-                    self.project_guids[self.project_i],
+                    project_guid,
                 ),
-            ),
+            ) for project_guid in self.project_guids
         ]
         if (
             FeatureFlag.CHECK_SEX_AND_RELATEDNESS
@@ -206,14 +205,16 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
         if self.dataset_type.overwrite_male_non_par_calls:
             mt = overwrite_male_non_par_calls(mt, loadable_families)
         return mt.select_globals(
-            remap_pedigree_hash=remap_pedigree_hash(
-                project_pedigree_path(
-                    self.reference_genome,
-                    self.dataset_type,
-                    self.sample_type,
-                    self.project_guids[self.project_i],
-                ),
-            ),
+            remap_pedigree_hashes=[
+                remap_pedigree_hash(
+                    project_pedigree_path(
+                        self.reference_genome,
+                        self.dataset_type,
+                        self.sample_type,
+                        project_guid,
+                    ),
+                ) for project_guid in self.project_guids
+            ],
             family_samples=(
                 {
                     f.family_guid: sorted(f.samples.keys())
