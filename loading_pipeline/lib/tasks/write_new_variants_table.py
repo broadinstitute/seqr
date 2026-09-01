@@ -5,7 +5,6 @@ import luigi
 import luigi.util
 
 from loading_pipeline.lib.annotations.fields import get_fields
-from loading_pipeline.lib.misc.callsets import get_callset_ht
 from loading_pipeline.lib.misc.io import checkpoint, import_parquet, remap_pedigree_hash
 from loading_pipeline.lib.misc.math import constrain
 from loading_pipeline.lib.misc.vep import run_vep
@@ -13,6 +12,7 @@ from loading_pipeline.lib.paths import (
     existing_variants_parquet_path,
     new_variants_table_path,
     project_pedigree_path,
+    remapped_and_subsetted_callset_path,
     valid_reference_dataset_path,
 )
 from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
@@ -111,12 +111,13 @@ class WriteNewVariantsTableTask(BaseWriteTask):
         )
 
     def create_table(self) -> hl.Table:
-        callset_ht = get_callset_ht(
-            self.reference_genome,
-            self.dataset_type,
-            self.callset_path,
-            self.project_guids,
-        )
+        callset_ht = hl.read_matrix_table(
+            remapped_and_subsetted_callset_path(
+                self.reference_genome,
+                self.dataset_type,
+                self.callset_path,
+            ),
+        ).rows()
 
         # 1) Identify new variants.
         annotations_ht = import_parquet(
