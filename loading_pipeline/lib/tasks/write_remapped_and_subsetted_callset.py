@@ -55,17 +55,23 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
             return False
         mt = hl.read_matrix_table(self.output().path)
         remap_pedigree_hashes = hl.eval(mt.globals.remap_pedigree_hashes)
-        return bool(
-            hl.eval(mt.globals.family_samples),
-        ) and len(remap_pedigree_hashes) == len(self.project_guids) and all(
-            remap_pedigree_hashes[i] == remap_pedigree_hash(
-                project_pedigree_path(
-                    self.reference_genome,
-                    self.dataset_type,
-                    self.sample_type,
-                    project_guid,
-                ),
-            ) for i, project_guid in enumerate(self.project_guids)
+        return (
+            bool(
+                hl.eval(mt.globals.family_samples),
+            )
+            and len(remap_pedigree_hashes) == len(self.project_guids)
+            and all(
+                remap_pedigree_hashes[i]
+                == remap_pedigree_hash(
+                    project_pedigree_path(
+                        self.reference_genome,
+                        self.dataset_type,
+                        self.sample_type,
+                        project_guid,
+                    ),
+                )
+                for i, project_guid in enumerate(self.project_guids)
+            )
         )
 
     def output(self) -> luigi.Target:
@@ -89,7 +95,8 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                     self.sample_type,
                     project_guid,
                 ),
-            ) for project_guid in self.project_guids
+            )
+            for project_guid in self.project_guids
         ]
         if (
             FeatureFlag.CHECK_SEX_AND_RELATEDNESS
@@ -114,7 +121,11 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
             pedigree_ht = import_pedigree(self.input()[i + 1].path)
             if 'remap_id' in pedigree_ht.row:
                 project_remap_ht = parse_pedigree_ht_to_remap_ht(pedigree_ht)
-                remap_ht = remap_ht.union(project_remap_ht) if remap_ht is not None else project_remap_ht
+                remap_ht = (
+                    remap_ht.union(project_remap_ht)
+                    if remap_ht is not None
+                    else project_remap_ht
+                )
 
             project_families[project_guid] = parse_pedigree_ht_to_families(pedigree_ht)
 
@@ -137,9 +148,13 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
             and self.dataset_type.check_sex_and_relatedness
             and not self.skip_check_sex_and_relatedness
         ):
-            remap_lookup = hl.dict(
-                {r.s: r.seqr_id for r in remap_ht.collect()},
-            ) if remap_ht is not None else hl.empty_dict(hl.tstr, hl.tstr)
+            remap_lookup = (
+                hl.dict(
+                    {r.s: r.seqr_id for r in remap_ht.collect()},
+                )
+                if remap_ht is not None
+                else hl.empty_dict(hl.tstr, hl.tstr)
+            )
             relatedness_check_ht = hl.read_table(
                 relatedness_check_table_path(
                     self.reference_genome,
@@ -220,7 +235,8 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                         self.sample_type,
                         project_guid,
                     ),
-                ) for project_guid in self.project_guids
+                )
+                for project_guid in self.project_guids
             ],
             family_samples=(
                 {

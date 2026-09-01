@@ -33,7 +33,9 @@ def compute_callset_family_entries_ht(
                     hl.Struct(
                         s=mt.s,
                         family_guid=sample_id_to_family_guid[mt.s],
-                        project_guid=family_guid_to_project_guid[sample_id_to_family_guid[mt.s]],
+                        project_guid=family_guid_to_project_guid[
+                            sample_id_to_family_guid[mt.s]
+                        ],
                         **entries_fields,
                     ),
                 )
