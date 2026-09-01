@@ -11,7 +11,6 @@ from loading_pipeline.lib.methods.sample_qc import call_sample_qc
 from loading_pipeline.lib.misc.io import import_tdr_qc_metrics
 from loading_pipeline.lib.paths import (
     ancestry_model_rf_path,
-    remapped_and_subsetted_callset_path,
     sample_qc_json_path,
     tdr_metrics_dir,
 )
@@ -39,13 +38,6 @@ class WriteSampleQCJsonTask(luigi.Task):
         )
 
     def requires(self):
-        remapped_and_subsetted_callsets = [
-            self.clone(
-                WriteRemappedAndSubsettedCallsetTask,
-                project_i=i,
-            )
-            for i in range(len(self.project_guids))
-        ]
         return [
             self.clone(WriteTDRMetricsFilesTask),
             self.clone(
@@ -53,17 +45,11 @@ class WriteSampleQCJsonTask(luigi.Task):
                 reference_dataset=ReferenceDataset.gnomad_qc,
             ),
             RawFileTask(ancestry_model_rf_path()),
-            *remapped_and_subsetted_callsets,
+            self.clone(WriteRemappedAndSubsettedCallsetTask),
         ]
 
     def run(self):
-        callset_mt = hl.read_matrix_table(
-            remapped_and_subsetted_callset_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.callset_path,
-            ),
-        )
+        callset_mt = hl.read_matrix_table(self.input()[3].path)
         tdr_metrics_ht = None
         for tdr_metrics_file in hfs.ls(
             tdr_metrics_dir(self.reference_genome, self.dataset_type),

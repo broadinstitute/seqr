@@ -33,13 +33,7 @@ class WriteMetadataForRunTask(luigi.Task):
         )
 
     def requires(self) -> list[luigi.Task]:
-        requirements = [
-            self.clone(
-                WriteRemappedAndSubsettedCallsetTask,
-                project_i=i,
-            )
-            for i in range(len(self.project_guids))
-        ]
+        requirements = [self.clone(WriteRemappedAndSubsettedCallsetTask)]
         if (
             FeatureFlag.EXPECT_TDR_METRICS
             and not self.skip_expect_tdr_metrics
