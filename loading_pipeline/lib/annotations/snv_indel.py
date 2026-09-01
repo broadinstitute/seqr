@@ -19,9 +19,6 @@ from loading_pipeline.lib.core.definitions import ReferenceGenome
 MOTIF_CONSEQUENCE_TERMS_LOOKUP = hl.dict(
     hl.enumerate(MOTIF_CONSEQUENCE_TERMS, index_first=False),
 )
-REGULATORY_BIOTYPE_LOOKUP = hl.dict(
-    hl.enumerate(REGULATORY_BIOTYPES, index_first=False),
-)
 REGULATORY_CONSEQUENCE_TERMS_LOOKUP = hl.dict(
     hl.enumerate(REGULATORY_CONSEQUENCE_TERMS, index_first=False),
 )

@@ -7,9 +7,6 @@ from loading_pipeline.lib.annotations import gcnv, mito, shared, snv_indel, sv
 from loading_pipeline.lib.core.definitions import ReferenceGenome
 from loading_pipeline.lib.core.environment import Env
 
-MITO_MIN_HOM_THRESHOLD = 0.95
-ZERO = 0.0
-
 
 class DatasetType(StrEnum):
     GCNV = 'GCNV'
