@@ -58,7 +58,8 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
             bool(
                 hl.eval(mt.globals.family_samples),
             )
-            and len(hl.eval(mt.globals.remap_pedigree_hashes)) == len(self.project_guids)
+            and len(hl.eval(mt.globals.remap_pedigree_hashes))
+            == len(self.project_guids)
             and all(
                 hl.eval(
                     mt.globals.remap_pedigree_hashes[i]
