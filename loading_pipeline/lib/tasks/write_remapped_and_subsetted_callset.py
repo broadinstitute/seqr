@@ -106,21 +106,24 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
     @with_persisted_validation_errors
     def create_table(self) -> hl.MatrixTable:
         callset_mt = hl.read_matrix_table(self.input()[0].path)
-        pedigree_ht = import_pedigree(self.input()[1].path)
 
         # Remap, but only if the remap file is present!
-        remap_lookup = hl.empty_dict(hl.tstr, hl.tstr)
-        if 'remap_id' in pedigree_ht.row:
-            project_remap_ht = parse_pedigree_ht_to_remap_ht(pedigree_ht)
+        remap_ht = None
+        families = set()
+        for i in enumerate(self.project_guids):
+            pedigree_ht = import_pedigree(self.input()[i + 1].path)
+            if 'remap_id' in pedigree_ht.row:
+                project_remap_ht = parse_pedigree_ht_to_remap_ht(pedigree_ht)
+                remap_ht = remap_ht.union(project_remap_ht) if remap_ht is not None else project_remap_ht
+
+            families.update(parse_pedigree_ht_to_families(pedigree_ht))
+
+        if remap_ht is not None:
             callset_mt = remap_sample_ids(
                 callset_mt,
-                project_remap_ht,
-            )
-            remap_lookup = hl.dict(
-                {r.s: r.seqr_id for r in project_remap_ht.collect()},
+                remap_ht,
             )
 
-        families = parse_pedigree_ht_to_families(pedigree_ht)
         families_failed_missing_samples = get_families_failed_missing_samples(
             callset_mt,
             families,
@@ -133,6 +136,9 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
             and self.dataset_type.check_sex_and_relatedness
             and not self.skip_check_sex_and_relatedness
         ):
+            remap_lookup = hl.dict(
+                {r.s: r.seqr_id for r in remap_ht.collect()},
+            ) if remap_ht is not None else hl.empty_dict(hl.tstr, hl.tstr)
             relatedness_check_ht = hl.read_table(
                 relatedness_check_table_path(
                     self.reference_genome,
