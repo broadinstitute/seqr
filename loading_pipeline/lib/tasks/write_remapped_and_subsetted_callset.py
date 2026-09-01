@@ -70,7 +70,7 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                             self.sample_type,
                             project_guid,
                         ),
-                    )
+                    ),
                 )
                 for i, project_guid in enumerate(self.project_guids)
             )
