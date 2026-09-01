@@ -85,35 +85,31 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             existing_annotations_ht.select(*annotation_selects),
         )
 
-        for project_guid in self.project_guids:
-            # TODO remove loop
-            mt = hl.read_matrix_table(self.input()[2].path)
-            ht = compute_callset_family_entries_ht(
-                self.dataset_type,
+        mt = hl.read_matrix_table(self.input()[2].path)
+        ht = compute_callset_family_entries_ht(
+            self.dataset_type,
+            mt,
+            get_fields(
                 mt,
-                get_fields(
-                    mt,
-                    self.dataset_type.genotype_entry_annotation_fns,
-                    **self.param_kwargs,
-                ),
-            )
-            ht = deglobalize_ids(ht)
-            ht = deduplicate_by_most_non_ref_calls(ht)
-            ht = ht.join(annotations_ht)
+                self.dataset_type.genotype_entry_annotation_fns,
+                **self.param_kwargs,
+            ),
+        )
+        ht = deglobalize_ids(ht)
+        ht = deduplicate_by_most_non_ref_calls(ht)
+        ht = ht.join(annotations_ht)
 
-            # the family entries ht will contain rows
-            # where at least one family is defined... after explosion,
-            # rows where a family is not defined should be removed.
-            ht = ht.explode(ht.family_entries)
-            ht = ht.filter(hl.is_defined(ht.family_entries))
-            ht = ht.key_by()
-            ht = ht.select_globals()
-            ht = ht.select(
-                **get_entries_export_fields(
-                    ht,
-                    self.dataset_type,
-                    self.sample_type,
-                    project_guid,
-                ),
-            )
-        return ht
+        # the family entries ht will contain rows
+        # where at least one family is defined... after explosion,
+        # rows where a family is not defined should be removed.
+        ht = ht.explode(ht.family_entries)
+        ht = ht.filter(hl.is_defined(ht.family_entries))
+        ht = ht.key_by()
+        ht = ht.select_globals()
+        return ht.select(
+            **get_entries_export_fields(
+                ht,
+                self.dataset_type,
+                self.sample_type,
+            ),
+        )

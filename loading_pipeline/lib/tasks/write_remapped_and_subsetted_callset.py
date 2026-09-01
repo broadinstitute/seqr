@@ -109,14 +109,14 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
 
         # Remap, but only if the remap file is present!
         remap_ht = None
-        families = set()
-        for i in enumerate(self.project_guids):
+        project_families = {}
+        for i, project_guid in enumerate(self.project_guids):
             pedigree_ht = import_pedigree(self.input()[i + 1].path)
             if 'remap_id' in pedigree_ht.row:
                 project_remap_ht = parse_pedigree_ht_to_remap_ht(pedigree_ht)
                 remap_ht = remap_ht.union(project_remap_ht) if remap_ht is not None else project_remap_ht
 
-            families.update(parse_pedigree_ht_to_families(pedigree_ht))
+            project_families[project_guid] = parse_pedigree_ht_to_families(pedigree_ht)
 
         if remap_ht is not None:
             callset_mt = remap_sample_ids(
@@ -124,6 +124,7 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                 remap_ht,
             )
 
+        families = {f for families in project_families.values() for f in families}
         families_failed_missing_samples = get_families_failed_missing_samples(
             callset_mt,
             families,
@@ -246,4 +247,5 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                     or hl.empty_dict(hl.tstr, hl.tdict(hl.tstr, hl.tarray(hl.tstr)))
                 ),
             ),
+            project_families=project_families,
         )

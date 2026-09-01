@@ -182,10 +182,9 @@ def get_entries_export_fields(
     ht: hl.Table,
     dataset_type: DatasetType,
     sample_type: SampleType,
-    project_guid: str,
 ):
     return {
-        'project_guid': project_guid,
+        'project_guid': ht.family_entries.project_guid[0],
         'family_guid': ht.family_entries.family_guid[0],
         **{
             field: getattr(ht, field)
