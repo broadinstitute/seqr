@@ -263,5 +263,8 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                     or hl.empty_dict(hl.tstr, hl.tdict(hl.tstr, hl.tarray(hl.tstr)))
                 ),
             ),
-            project_families=project_families,
+            project_families={
+                project_guid: sorted([f.family_guid for f  in families])
+                for project_guid, families in project_families.items()
+            },
         )
