@@ -5,6 +5,7 @@ import hail as hl
 
 from loading_pipeline.lib.annotations import liftover
 from loading_pipeline.lib.annotations.enums import (
+    SV_CONSEQUENCE_RANKS,
     SV_TYPE_DETAILS,
     SV_TYPES,
     validated_enum_member,
@@ -210,7 +211,10 @@ def sorted_gene_consequences(
         ht[gene_col].map(
             lambda gene: hl.struct(
                 gene_id=gencode_gene_symbol_to_gene_id_mapping.get(gene),
-                major_consequence=gene_col.replace(CONSEQ_PREDICTED_PREFIX, '', 1),  # noqa: B023
+                major_consequence=validated_enum_member(
+                    gene_col.replace(CONSEQ_PREDICTED_PREFIX, '', 1),  # noqa: B023
+                    SV_CONSEQUENCE_RANKS,
+                ),
             ),
         )
         for gene_col in CONSEQ_PREDICTED_GENE_COLS
