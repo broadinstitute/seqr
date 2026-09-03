@@ -8,6 +8,7 @@ from loading_pipeline.lib.annotations.enums import (
     MOTIF_CONSEQUENCE_TERMS,
     REGULATORY_BIOTYPES,
     REGULATORY_CONSEQUENCE_TERMS,
+    validated_enum_member,
 )
 from loading_pipeline.lib.annotations.vep import (
     transcript_consequences_sort,
@@ -17,9 +18,6 @@ from loading_pipeline.lib.core.definitions import ReferenceGenome
 
 MOTIF_CONSEQUENCE_TERMS_LOOKUP = hl.dict(
     hl.enumerate(MOTIF_CONSEQUENCE_TERMS, index_first=False),
-)
-REGULATORY_BIOTYPE_LOOKUP = hl.dict(
-    hl.enumerate(REGULATORY_BIOTYPES, index_first=False),
 )
 REGULATORY_CONSEQUENCE_TERMS_LOOKUP = hl.dict(
     hl.enumerate(REGULATORY_CONSEQUENCE_TERMS, index_first=False),
@@ -71,13 +69,15 @@ def sorted_motif_feature_consequences(
         hl.sorted(
             ht.vep.motif_feature_consequences.map(
                 lambda c: c.select(
-                    consequence_term_ids=c.consequence_terms.map(
-                        lambda t: MOTIF_CONSEQUENCE_TERMS_LOOKUP[t],
+                    consequence_terms=c.consequence_terms.map(
+                        lambda t: validated_enum_member(t, MOTIF_CONSEQUENCE_TERMS),
                     ),
                     motif_feature_id=c.motif_feature_id,
                 ),
-            ).filter(lambda c: c.consequence_term_ids.size() > 0),
-            lambda c: hl.min(c.consequence_term_ids),
+            ).filter(lambda c: c.consequence_terms.size() > 0),
+            lambda c: hl.min(
+                c.consequence_terms.map(lambda t: MOTIF_CONSEQUENCE_TERMS_LOOKUP[t]),
+            ),
         ),
     )
 
@@ -91,14 +91,21 @@ def sorted_regulatory_feature_consequences(
         hl.sorted(
             ht.vep.regulatory_feature_consequences.map(
                 lambda c: c.select(
-                    biotype_id=REGULATORY_BIOTYPE_LOOKUP[c.biotype],
-                    consequence_term_ids=c.consequence_terms.map(
-                        lambda t: REGULATORY_CONSEQUENCE_TERMS_LOOKUP[t],
+                    biotype=validated_enum_member(c.biotype, REGULATORY_BIOTYPES),
+                    consequence_terms=c.consequence_terms.map(
+                        lambda t: validated_enum_member(
+                            t,
+                            REGULATORY_CONSEQUENCE_TERMS,
+                        ),
                     ),
                     regulatory_feature_id=c.regulatory_feature_id,
                 ),
-            ).filter(lambda c: c.consequence_term_ids.size() > 0),
-            lambda c: hl.min(c.consequence_term_ids),
+            ).filter(lambda c: c.consequence_terms.size() > 0),
+            lambda c: hl.min(
+                c.consequence_terms.map(
+                    lambda t: REGULATORY_CONSEQUENCE_TERMS_LOOKUP[t],
+                ),
+            ),
         ),
     )
 
@@ -113,6 +120,6 @@ def sorted_transcript_consequences(
             vep_110_transcript_consequences_select(
                 gencode_ensembl_to_refseq_id_mapping,
             ),
-        ).filter(lambda c: c.consequence_term_ids.size() > 0),
+        ).filter(lambda c: c.consequence_terms.size() > 0),
         transcript_consequences_sort(ht),
     )

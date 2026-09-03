@@ -7,16 +7,10 @@ from loading_pipeline.lib.annotations.enums import (
     FIVEUTR_CONSEQUENCES,
     LOF_FILTERS,
     TRANSCRIPT_CONSEQUENCE_TERMS,
+    validated_enum_member,
 )
 
-BIOTYPE_LOOKUP = hl.dict(hl.enumerate(BIOTYPES, index_first=False))
 EXTENDED_INTRONIC_SPLICE_REGION_VARIANT = 'extended_intronic_splice_region_variant'
-FIVEUTR_CONSEQUENCES_LOOKUP = hl.dict(
-    hl.enumerate(FIVEUTR_CONSEQUENCES, index_first=False).extend(
-        [(hl.missing(hl.tstr), hl.missing(hl.tint32))],
-    ),
-)
-LOF_FILTERS_LOOKUP = hl.dict(hl.enumerate(LOF_FILTERS, index_first=False))
 MANE_SELECT_ANNOTATIONS = [
     'mane_select',
     'mane_plus_clinical',
@@ -28,7 +22,7 @@ OMIT_TRANSCRIPT_CONSEQUENCE_TERMS = hl.set(
         'downstream_gene_variant',
     ],
 )
-PROTEIN_CODING_ID = BIOTYPE_LOOKUP['protein_coding']
+PROTEIN_CODING_BIOTYPE = 'protein_coding'
 SELECTED_ANNOTATIONS = [
     'amino_acids',
     'canonical',
@@ -38,22 +32,19 @@ SELECTED_ANNOTATIONS = [
     'hgvsp',
     'transcript_id',
 ]
-TRANSCRIPT_CONSEQUENCE_TERMS_LOOKUP = hl.dict(
-    hl.enumerate(TRANSCRIPT_CONSEQUENCE_TERMS, index_first=False),
-)
 
 
-def _lof_filter_ids(c: hl.StructExpression) -> hl.ArrayNumericExpression:
+def _lof_filters(c: hl.StructExpression) -> hl.ArrayExpression:
     return hl.or_missing(
         (c.lof == 'LC') & hl.is_defined(c.lof_filter),
-        c.lof_filter.split('&|,').map(lambda f: LOF_FILTERS_LOOKUP[f]),
+        c.lof_filter.split('&|,').map(lambda f: validated_enum_member(f, LOF_FILTERS)),
     )
 
 
-def _consequence_term_ids(c: hl.StructExpression) -> hl.ArrayNumericExpression:
+def _consequence_terms(c: hl.StructExpression) -> hl.ArrayExpression:
     return c.consequence_terms.filter(
         lambda t: ~OMIT_TRANSCRIPT_CONSEQUENCE_TERMS.contains(t),
-    ).map(lambda t: TRANSCRIPT_CONSEQUENCE_TERMS_LOOKUP[t])
+    ).map(lambda t: validated_enum_member(t, TRANSCRIPT_CONSEQUENCE_TERMS))
 
 
 def vep_110_transcript_consequences_select(
@@ -62,8 +53,8 @@ def vep_110_transcript_consequences_select(
     return lambda c: c.select(
         *SELECTED_ANNOTATIONS,
         *MANE_SELECT_ANNOTATIONS,
-        biotype_id=BIOTYPE_LOOKUP[c.biotype],
-        consequence_term_ids=_consequence_term_ids(c),
+        biotype=validated_enum_member(c.biotype, BIOTYPES),
+        consequence_terms=_consequence_terms(c),
         exon=hl.bind(
             lambda split: hl.or_missing(
                 hl.is_defined(split),
@@ -84,7 +75,7 @@ def vep_110_transcript_consequences_select(
         ),
         loftee=hl.struct(
             is_lof_nagnag=c.lof_flags == NAGNAG_SITE,
-            lof_filter_ids=_lof_filter_ids(c),
+            lof_filters=_lof_filters(c),
         ),
         spliceregion=hl.struct(
             extended_intronic_splice_region_variant=(
@@ -98,7 +89,10 @@ def vep_110_transcript_consequences_select(
             existing_inframe_oorfs=c.existing_inframe_oorfs,
             existing_outofframe_oorfs=c.existing_outofframe_oorfs,
             existing_uorfs=c.existing_uorfs,
-            fiveutr_consequence_id=FIVEUTR_CONSEQUENCES_LOOKUP[c.fiveutr_consequence],
+            fiveutr_consequence=validated_enum_member(
+                c.fiveutr_consequence,
+                FIVEUTR_CONSEQUENCES,
+            ),
             # Annotation documentation here:
             # https://github.com/ImperialCardioGenetics/UTRannotator?tab=readme-ov-file#the-detailed-annotation-for-each-consequence
             # NB:
@@ -148,10 +142,10 @@ def vep_85_transcript_consequences_select(
 ) -> hl.StructExpression:
     return c.select(
         *SELECTED_ANNOTATIONS,
-        biotype_id=BIOTYPE_LOOKUP[c.biotype],
-        consequence_term_ids=_consequence_term_ids(c),
+        biotype=validated_enum_member(c.biotype, BIOTYPES),
+        consequence_terms=_consequence_terms(c),
         is_lof_nagnag=c.lof_flags == NAGNAG_SITE,
-        lof_filter_ids=_lof_filter_ids(c),
+        lof_filters=_lof_filters(c),
     )
 
 
@@ -174,9 +168,7 @@ def transcript_consequences_sort(
                 ),
             )
         ),
-        c.biotype_id == PROTEIN_CODING_ID,
-        hl.set(c.consequence_term_ids).contains(
-            TRANSCRIPT_CONSEQUENCE_TERMS_LOOKUP[ht.vep.most_severe_consequence],
-        ),
+        c.biotype == PROTEIN_CODING_BIOTYPE,
+        hl.set(c.consequence_terms).contains(ht.vep.most_severe_consequence),
         hl.or_else(c.canonical, 0) == 1,
     )

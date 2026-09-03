@@ -7,9 +7,6 @@ from loading_pipeline.lib.annotations import gcnv, mito, shared, snv_indel, sv
 from loading_pipeline.lib.core.definitions import ReferenceGenome
 from loading_pipeline.lib.core.environment import Env
 
-MITO_MIN_HOM_THRESHOLD = 0.95
-ZERO = 0.0
-
 
 class DatasetType(StrEnum):
     GCNV = 'GCNV'
@@ -250,8 +247,8 @@ class DatasetType(StrEnum):
                 sv.sorted_gene_consequences,
                 sv.start_locus,
                 sv.strvctvre,
-                sv.sv_type_id,
-                sv.sv_type_detail_id,
+                sv.sv_type,
+                sv.sv_type_detail,
                 sv.sv_len,
                 shared.xpos,
             ],
@@ -261,7 +258,7 @@ class DatasetType(StrEnum):
                 gcnv.sorted_gene_consequences,
                 gcnv.start_locus,
                 gcnv.strvctvre,
-                gcnv.sv_type_id,
+                gcnv.sv_type,
                 gcnv.xpos,
             ],
         }
