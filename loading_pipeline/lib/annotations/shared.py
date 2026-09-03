@@ -46,6 +46,6 @@ def sorted_transcript_consequences(
     return hl.sorted(
         ht.vep.transcript_consequences.map(
             vep_85_transcript_consequences_select,
-        ).filter(lambda c: c.consequence_term_ids.size() > 0),
+        ).filter(lambda c: c.consequence_terms.size() > 0),
         transcript_consequences_sort(ht),
     )
