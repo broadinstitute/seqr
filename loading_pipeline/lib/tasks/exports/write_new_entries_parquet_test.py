@@ -148,7 +148,6 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
                 'efg_1': 1,
             },
         )
-        self.maxDiff = None
         self.assertEqual(
             [export_json[0], export_json[9], export_json[15]],
             [
