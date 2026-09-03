@@ -1058,14 +1058,42 @@ def atomic_insert_entries(
 
 
 @retry()
-def load_complete_run(
+def load_run_variants(
+    reference_genome: ReferenceGenome,
+    dataset_type: DatasetType,
+    run_id: str,
+):
+    msg = f'Attempting load of variants for run: {reference_genome.value}/{dataset_type.value}/{run_id}'
+    logger.info(msg)
+    table_name_builder = TableNameBuilder(
+        reference_genome,
+        dataset_type,
+        run_id,
+    )
+    for clickhouse_table in ClickHouseTable.for_dataset_type(dataset_type):
+        clickhouse_table.insert(
+            table_name_builder=table_name_builder,
+        )
+    for (
+        clickhouse_reference_data
+    ) in ClickhouseReferenceDataset.for_reference_genome_dataset_type(
+        reference_genome,
+        dataset_type,
+    ):
+        clickhouse_reference_data.insert_into_seqr_variants_and_refresh_search(
+            table_name_builder=table_name_builder,
+        )
+
+
+@retry()
+def load_run_entries(
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
     run_id: str,
     project_guids: list[str],
     family_guids: list[str],
 ):
-    msg = f'Attempting load of run: {reference_genome.value}/{dataset_type.value}/{run_id}'
+    msg = f'Attempting load of entries for run: {reference_genome.value}/{dataset_type.value}/{run_id}'
     logger.info(msg)
     table_name_builder = TableNameBuilder(
         reference_genome,

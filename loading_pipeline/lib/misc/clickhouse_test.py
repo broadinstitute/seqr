@@ -24,7 +24,7 @@ from loading_pipeline.lib.misc.clickhouse import (
     exchange_tables,
     get_clickhouse_client,
     insert_new_entries,
-    load_complete_run,
+    load_run_variants,
     logged_query,
     normalize_partition,
     optimize_entries,
@@ -895,7 +895,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_load_complete_run_snv_indel(self, mock_for_reference_genome_dataset_type):
-        load_complete_run(
+        load_run_variants(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
             TEST_RUN_ID,
@@ -1014,7 +1014,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
 
     def test_load_complete_gcnv(self):
-        load_complete_run(
+        load_run_variants(
             ReferenceGenome.GRCh38,
             DatasetType.GCNV,
             TEST_RUN_ID,
