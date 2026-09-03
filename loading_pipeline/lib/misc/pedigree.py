@@ -8,7 +8,6 @@ import numpy as np
 from loading_pipeline.lib.core import Sex
 
 DEFAULT_RELATEDNESS_TOLERANCE = 0.2
-PARENT_CHILD_RELATEDNESS_TOLERANCE = 0.4
 
 
 class Relation(Enum):
