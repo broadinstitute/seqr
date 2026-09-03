@@ -24,6 +24,7 @@ from loading_pipeline.lib.misc.clickhouse import (
     exchange_tables,
     get_clickhouse_client,
     insert_new_entries,
+    load_run_entries,
     load_run_variants,
     logged_query,
     normalize_partition,
@@ -889,13 +890,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ],
         )
 
-    @patch.object(
-        ClickhouseReferenceDataset,
-        'for_reference_genome_dataset_type',
-        return_value=[ClickhouseReferenceDataset.CLINVAR],
-    )
-    def test_load_complete_run_snv_indel(self, mock_for_reference_genome_dataset_type):
-        load_run_variants(
+    def test_load_run_entries_snv_indel(self):
+        load_run_entries(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
             TEST_RUN_ID,
@@ -959,6 +955,19 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 (10, 4, 0, 0, 2, 0, 0),
             ],
         )
+
+    @patch.object(
+        ClickhouseReferenceDataset,
+        'for_reference_genome_dataset_type',
+        return_value=[ClickhouseReferenceDataset.CLINVAR],
+    )
+    def test_load_run_variants_snv_indel(self, mock_for_reference_genome_dataset_type):
+        load_run_variants(
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            TEST_RUN_ID,
+        )
+        cursor = connections['clickhouse_write'].cursor()
         cursor.execute(
             f"""
            SELECT *
@@ -1013,13 +1022,11 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ],
         )
 
-    def test_load_complete_gcnv(self):
+    def test_load_run_variants_gcnv(self):
         load_run_variants(
             ReferenceGenome.GRCh38,
             DatasetType.GCNV,
             TEST_RUN_ID,
-            ['project_d'],
-            ['family_d1', 'family_d2'],
         )
         cursor = connections['clickhouse_write'].cursor()
         cursor.execute(
@@ -1049,6 +1056,16 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         key_lookup_count = cursor.fetchone()[0]
         self.assertEqual(key_lookup_count, 4)
+
+    def test_load_run_entries_gcnv(self):
+        load_run_entries(
+            ReferenceGenome.GRCh38,
+            DatasetType.GCNV,
+            TEST_RUN_ID,
+            ['project_d'],
+            ['family_d1', 'family_d2'],
+        )
+        cursor = connections['clickhouse_write'].cursor()
         cursor.execute(
             f"""
            SELECT COUNT(*)
