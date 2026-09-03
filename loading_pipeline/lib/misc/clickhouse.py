@@ -81,7 +81,6 @@ class ClickHouseTable(StrEnum):
             # Note that VARIANTS_DETAILS is not included here because
             # of the special logic to ensure writes are made to both tables.
             ClickHouseTable.VARIANTS_MEMORY: direct_insert_annotations,
-            ClickHouseTable.ENTRIES: atomic_insert_entries,
             ClickHouseTable.KEY_LOOKUP: functools.partial(
                 direct_insert_all_keys,
                 clickhouse_table=self,
@@ -103,10 +102,7 @@ class ClickHouseTable(StrEnum):
                 *tables,
                 ClickHouseTable.VARIANT_DETAILS,
             ]
-        return [
-            *tables,
-            ClickHouseTable.ENTRIES,
-        ]
+        return tables
 
     @classmethod
     def for_dataset_type_disk_backed_variants_tables(
@@ -1100,21 +1096,11 @@ def load_run_entries(
         dataset_type,
         run_id,
     )
-    for clickhouse_table in ClickHouseTable.for_dataset_type(dataset_type):
-        clickhouse_table.insert(
-            table_name_builder=table_name_builder,
-            project_guids=project_guids,
-            family_guids=family_guids,
-        )
-    for (
-        clickhouse_reference_data
-    ) in ClickhouseReferenceDataset.for_reference_genome_dataset_type(
-        reference_genome,
-        dataset_type,
-    ):
-        clickhouse_reference_data.insert_into_seqr_variants_and_refresh_search(
-            table_name_builder=table_name_builder,
-        )
+    atomic_insert_entries(
+        table_name_builder=table_name_builder,
+        project_guids=project_guids,
+        family_guids=family_guids,
+    )
 
 
 @retry()
