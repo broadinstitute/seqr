@@ -172,7 +172,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             },
         )
         self.assertEqual(
-            export_json[-2:],
+            export_json,
             [
                 {
                     'key': 0,
