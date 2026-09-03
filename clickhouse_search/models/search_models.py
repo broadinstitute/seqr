@@ -1,26 +1,18 @@
 from clickhouse_backend import models
-from django.db.models import ForeignKey, OneToOneField, Func, CASCADE
+from django.db.models import ForeignKey, OneToOneField, CASCADE
 
 from clickhouse_search.backend.engines import CollapsingMergeTree, EmbeddedRocksDB
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, UInt64FieldDeltaCodecField, NamedTupleField, MaterializedUInt8Field
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayFlatten, ArrayMin, ArrayMax
-from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel
+from clickhouse_search.backend.table_models import Dictionary, FixtureLoadableClickhouseModel, Projection
 from clickhouse_search.managers import EntriesManager, SvEntriesManager, SvVariantsQuerySet, VariantsQuerySet, \
     VariantDetailsQuerySet
 from clickhouse_search.models.reference_data_models import GnomadNonCodingConstraintDict, BaseSpliceAi, \
     ScreenDict
-from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Dataset
+from seqr.utils.constants import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, \
+    SAMPLE_TYPE_WES, SAMPLE_TYPE_WGS, DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS
 from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
-
-
-class Projection(Func):
-
-    def __init__(self, name, select='*', order_by=None):
-        self.name = name
-        self.select = select
-        self.order_by = order_by
 
 
 class BaseVariants(FixtureLoadableClickhouseModel):
@@ -414,7 +406,7 @@ class EntriesMito(BaseEntries):
         )
 
 class EntriesSv(BaseEntries):
-    SAMPLE_TYPE = Dataset.SAMPLE_TYPE_WGS
+    SAMPLE_TYPE = SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -436,7 +428,7 @@ class EntriesSv(BaseEntries):
         db_table = 'GRCh38/SV/entries'
 
 class EntriesGcnv(BaseEntries):
-    SAMPLE_TYPE = Dataset.SAMPLE_TYPE_WES
+    SAMPLE_TYPE = SAMPLE_TYPE_WES
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
         ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
@@ -461,7 +453,7 @@ class EntriesGcnv(BaseEntries):
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/GCNV/entries'
 
-class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
+class VariantDetailsGRCh37SnvIndel(FixtureLoadableClickhouseModel):
     ANNOTATION_CONSTANTS = VariantsGRCh37SnvIndel.ANNOTATION_CONSTANTS
 
     key = OneToOneField('VariantsGRCh37SnvIndel', db_column='key', primary_key=True, on_delete=CASCADE)
@@ -478,7 +470,7 @@ class VariantDetailsGRCh37SnvIndel(models.ClickhouseModel):
         db_table = 'GRCh37/SNV_INDEL/variants/details'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh37/SNV_INDEL/variants_details', primary_key='key', flatten_nested=0)
 
-class VariantDetailsSnvIndel(models.ClickhouseModel):
+class VariantDetailsSnvIndel(FixtureLoadableClickhouseModel):
     TRANSCRIPTS_FIELDS = sorted([
         ('alphamissense', NamedTupleField([
             ('pathogenicity', models.DecimalField(null=True, blank=True, max_digits=9, decimal_places=5)),
@@ -621,21 +613,21 @@ class ProjectPartitionsDict(Dictionary):
 
 
 ENTRY_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Dataset.DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
+    GENOME_VERSION_GRCh37: {DATASET_TYPE_VARIANT_CALLS: EntriesGRCh37SnvIndel},
     GENOME_VERSION_GRCh38: {
-        Dataset.DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
-        Dataset.DATASET_TYPE_MITO_CALLS: EntriesMito,
-        f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WGS}': EntriesSv,
-        f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WES}': EntriesGcnv,
+        DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
+        DATASET_TYPE_MITO_CALLS: EntriesMito,
+        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': EntriesSv,
+        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WES}': EntriesGcnv,
     },
 }
 VARIANTS_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Dataset.DATASET_TYPE_VARIANT_CALLS: VariantsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh37: {DATASET_TYPE_VARIANT_CALLS: VariantsGRCh37SnvIndel},
     GENOME_VERSION_GRCh38: {
-        Dataset.DATASET_TYPE_VARIANT_CALLS: VariantsSnvIndel,
-        Dataset.DATASET_TYPE_MITO_CALLS: VariantsMito,
-        f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WGS}': VariantsSv,
-        f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WES}': VariantsGcnv,
+        DATASET_TYPE_VARIANT_CALLS: VariantsSnvIndel,
+        DATASET_TYPE_MITO_CALLS: VariantsMito,
+        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': VariantsSv,
+        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WES}': VariantsGcnv,
     },
 }
 VARIANT_DETAILS_CLASS_MAP = {

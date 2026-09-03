@@ -6,6 +6,7 @@ static/*
 deploy/*
 !deploy/docker/seqr/*
 !deploy/docker/vlm/*
+loading_pipeline/*test*
 .git
 .vscode
 .idea

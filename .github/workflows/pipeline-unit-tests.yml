@@ -1,0 +1,91 @@
+name: Pipeline Unit Tests
+
+# Run the test suite on pushes (incl. merges) to master and dev
+# Run the test suite when a PR is opened, pushed to, or reopened
+on:
+  push:
+    branches:
+      - dev
+      - master
+    paths:
+      - 'loading_pipeline/**'
+      - '.github/workflows/pipeline-*-release.yaml'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'loading_pipeline/**'
+      - '.github/workflows/*pipeline*.yaml'
+      - 'clickhouse_search/migrations/*.py'
+
+permissions:
+  contents: read
+
+jobs:
+  unit_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Create ClickHouse Config
+        run: |
+          cat <<EOF > test_config.xml
+          <clickhouse>
+            <user_files_path>/tmp</user_files_path>
+          </clickhouse>
+          EOF
+      - name: Start ClickHouse with mounted config
+        run: |
+          docker run -d --name clickhouse \
+            -v ${{ github.workspace }}/test_config.xml:/etc/clickhouse-server/config.d/config.xml \
+            -v /tmp:/tmp \
+            -p 9000:9000 \
+            -e CLICKHOUSE_USER=default \
+            -e CLICKHOUSE_PASSWORD=default_password \
+            -e CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1 \
+            gcr.io/seqr-project/seqr-clickhouse:26.3.9
+      - name: Wait for ClickHouse
+        run: |
+          until docker exec clickhouse clickhouse-client --query "SELECT 1"; do
+            echo "Waiting for ClickHouse to start..."
+            sleep 2
+          done
+      - name: Set up ClickHouse Settings
+        run: |
+          docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS flatten_nested=0, join_use_nulls=1, stop_refreshable_materialized_views_on_startup=1, allow_materialized_view_with_bad_select=1, enable_join_runtime_filters=0 TO default"
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      # Install uv
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            **/uv.lock
+            **/pyproject.toml
+      - name: Sync dependencies (prod + dataproc)
+        run: uv sync --locked  --project loading_pipeline
+      - name: Check Ruff Format
+        run: |
+          cd loading_pipeline
+          uv run ruff format --check . --diff
+      - name: Check Ruff
+        run: |
+          cd loading_pipeline
+          uv run ruff check --output-format github
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          severity: error
+          scandir: './loading_pipeline/bin'
+      - name: Unit Tests
+        run: |
+          export CLICKHOUSE_OPTIMIZE_TABLE_WAIT_S=1
+          export PYSPARK_SUBMIT_ARGS='--driver-memory 8G pyspark-shell'
+          export CLICKHOUSE_DATABASE=test
+          uv run --project loading_pipeline pytest --cov=loading_pipeline --cov-report=term-missing loading_pipeline
+          uv run --project loading_pipeline coverage report --omit '*test*' --fail-under=85

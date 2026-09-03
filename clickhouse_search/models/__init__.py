@@ -12,6 +12,10 @@ options.DEFAULT_NAMES = (
 )
 state.DEFAULT_NAMES = options.DEFAULT_NAMES
 
+# Importing here registers model classes with Django's app registry
+from clickhouse_search.models import postgres_dicts, reference_data_models, search_models, gt_stats_models  # noqa: F401,E402
+
+
 class ClickHouseRouter:
     # Adapted from https://github.com/jayvynl/django-clickhouse-backend/blob/v1.3.2/README.md#configuration
 

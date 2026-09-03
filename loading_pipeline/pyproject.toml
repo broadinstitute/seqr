@@ -1,0 +1,124 @@
+[project]
+name = "seqr-loading-pipeline"
+dynamic = ['version']
+requires-python = ">=3.11"
+dependencies = [
+    "hail==0.2.138", # NB: when upgrading hail, manually verify the below jupyter pins
+    "luigi==3.5.2",
+    "gnomad==0.8.0",
+    "aiofiles==24.1.0",
+    "pydantic==2.8.2",
+    "clickhouse-driver==0.2.10", # matches main seqr app's pinned version and django-clickhouse-backend's requirement
+    "slacker==0.14.0",
+    "ipykernel==6.29.2",  # matches pinned version in hail init_notebook.py
+    "jupyter-console==6.6.3", # matches pinned version in hail init_notebook.py
+    "qtconsole==5.6.1", # matches pinned version in hail init_notebook.py
+
+    # Git/URL installs (PEP 508 direct references)
+    "gnomad-qc @ git+https://github.com/broadinstitute/gnomad_qc.git@v4.1",
+    "onnxconverter-common @ git+https://github.com/microsoft/onnxconverter-common.git@f7a8eb699caa6f6a78d3bdfbcaf5dfbd43569ebd",
+
+    # Dataproc
+    "pip==23.2.1",
+    "google-cloud-dataproc==5.16.0",
+    "google-cloud-bigquery==3.29.0",
+    "google-api-python-client==2.159.0",
+]
+
+[dependency-groups]
+prod = [
+    "sqlalchemy<2.0.0" # This is required for the Luigi UI but nothing else.
+]
+dev = [
+    "coverage>=7.2.2",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-django>=4.8.0",
+    "django==4.2.30", # matches the main seqr app's pinned version
+    "django-clickhouse-backend==1.6", # matches the main seqr app's pinned version
+    "responses>=0.23.1",
+    "ruff==0.11.3",
+    "shellcheck-py>=0.10.0",
+    "pysam",
+    "pyarrow",
+]
+
+[tool.uv]
+exclude-dependencies = ["psycopg2-binary", "psycopg2"]
+
+[tool.pytest.ini_options]
+pythonpath = ["lib/test/clickhouse_django", ".."]
+DJANGO_SETTINGS_MODULE = "settings"
+django_find_project = false
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"loading_pipeline.var" = ["liftover/*.over.chain.gz"]
+
+[tool.setuptools.packages.find]
+include = ["loading_pipeline*"]
+exclude = ["loading_pipeline.bin", "loading_pipeline.deploy", "loading_pipeline*test*"]
+namespaces = false
+
+[tool.ruff]
+extend-exclude = [
+    'download_and_create_reference_datasets/v02/*',
+    'gcloud_dataproc/*',
+    'hail_scripts/*',
+    'kubernetes/*',
+    'luigi_pipeline/lib/*',
+    'luigi_pipeline/seqr*.py',
+    'luigi_pipeline/tests/data/*',
+]
+ignore = [
+    # Individual Rules
+    "E501",  # Black is less aggressive here when touching comments and strings, we're going to let those through.
+    "G004",  # logging-f-string, these are fine for now
+
+    # Rule Groupings
+    "D",     # pydocstyle is for docs... we have none
+    "FBT",   # flake-boolean-trap... disallows boolean args to functions... fixing this code will require refactors.
+    "ANN",   # flake8-annotations is for typed code
+    "DJ",    # django specific
+    "PYI",   # pyi is typing stub files
+    "PT",    # pytest specific
+    "PTH",   # pathlib is preferred, but we're not using it yet
+    "PD",    # pandas specific
+    "NPY",   # numpy specific
+    "TD",    # todos
+    "FIX",   # fixmes
+]
+line-length = 88
+select = [
+    "ALL"
+]
+target-version = "py311"
+
+[tool.ruff.flake8-quotes]
+inline-quotes = "single"
+
+[tool.ruff.per-file-ignores]
+'*test*' = [
+    'ARG002', # allow unused method arguments
+    'SLF001', # allow private access
+    'PLR0913', # allow high arity functions
+    'S101', # allow asserts in tests
+]
+'*migration*' = [
+    'N999', # allow invalid module names
+    'RUF012', # Django migration classes' dependencies/operations are conventionally plain lists
+]
+'*clickhouse*' = [
+    'S608' # unsafe sql
+]
+'*pipeline_worker*' = [
+    'S608' # unsafe sql
+]
+
+[tool.ruff.pylint]
+max-args = 6
+
+[tool.ruff.format]
+quote-style = "single"

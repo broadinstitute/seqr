@@ -1,6 +1,5 @@
 from clickhouse_backend import models
 from django.db.models import ForeignKey, PROTECT
-import requests
 
 from clickhouse_search.backend.engines import Join
 from clickhouse_search.backend.fields import Enum8Field, NestedField, UInt32FieldDeltaCodecField, DictKeyForeignKey
@@ -8,19 +7,6 @@ from clickhouse_search.backend.table_models import FixtureLoadableClickhouseMode
     RefreshableMaterializedView, RefreshableMaterializedViewMeta
 from clickhouse_search.constants import CLINVAR_ASSERTIONS, CLINVAR_PATHOGENICITIES
 from seqr.utils.xpos_utils import CHROMOSOME_CHOICES
-from settings import DATABASES, PIPELINE_RUNNER_SERVER
-
-
-def conditionally_refresh_reference_dataset(reference_dataset: str):
-    def inner(apps, schema_editor):
-        if DATABASES['default']['NAME'].startswith('test_'):
-            return
-        requests.post( # pragma: no cover
-            f"{PIPELINE_RUNNER_SERVER}/refresh_clickhouse_reference_dataset_enqueue",
-            json={"reference_dataset": reference_dataset},
-            timeout=60,
-        )
-    return inner
 
 
 def _all_variants_to_seqr_source_sql(reference_genome, dataset_type):
