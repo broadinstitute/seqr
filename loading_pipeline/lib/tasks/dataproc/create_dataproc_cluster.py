@@ -10,6 +10,7 @@ from pip._internal.operations import freeze as pip_freeze
 from loading_pipeline.lib.core import DatasetType, Env, FeatureFlag, ReferenceGenome
 from loading_pipeline.lib.logger import get_logger
 from loading_pipeline.lib.misc.gcp import get_service_account_credentials
+from loading_pipeline.lib.misc.retry import retry
 from loading_pipeline.lib.tasks.base.base_loading_pipeline_params import (
     BaseLoadingPipelineParams,
 )
@@ -192,6 +193,10 @@ class CreateDataprocClusterTask(luigi.Task):
         if not Env.GCLOUD_PROJECT or not Env.GCLOUD_REGION:
             msg = 'Environment Variables GCLOUD_PROJECT and GCLOUD_REGION are required for running the pipeline on dataproc.'
             raise RuntimeError(msg)
+        self.get_running_cluster()
+
+    @retry(tries=5)
+    def get_running_cluster(self):
         cluster = self.safely_get_cluster()
         if not cluster:
             self.client.create_cluster(
