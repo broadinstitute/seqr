@@ -19,7 +19,7 @@ from loading_pipeline.lib.tasks.write_success_file import WriteSuccessFileTask
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteClickhouseLoadSuccessFileTask(luigi.Task):
+class LoadClickhouseEntries(luigi.Task):
     attempt_id = luigi.IntParameter()
 
     def output(self) -> luigi.Target:

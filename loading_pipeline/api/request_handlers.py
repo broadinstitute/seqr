@@ -19,8 +19,8 @@ from loading_pipeline.lib.misc.clickhouse import (
     rebuild_gt_stats,
     refresh_clickhouse_reference_data,
 )
-from loading_pipeline.lib.tasks.write_clickhouse_load_success_file import (
-    WriteClickhouseLoadSuccessFileTask,
+from loading_pipeline.lib.tasks.load_clickhouse_entries import (
+    LoadClickhouseEntries,
 )
 
 logger = get_logger(__name__)
@@ -34,7 +34,7 @@ def run_loading_pipeline(
 ):
     luigi_task_result = luigi.build(
         [
-            WriteClickhouseLoadSuccessFileTask(
+            LoadClickhouseEntries(
                 run_id=run_id,
                 **lpr.model_dump(exclude='request_type'),
             ),
