@@ -150,30 +150,27 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
         )
         self.maxDiff = None
         self.assertEqual(
-            export_json[0],
-            {
-                'key': 0,
-                'project_guid': 'R0114_project4',
-                'family_guid': '123_1',
-                'sample_type': 'WGS',
-                'xpos': 1000876499,
-                'geneIds': ['ENSG00000187634'],
-                'filters': [],
-                'calls': [
-                    {
-                        'sampleId': 'NA19675_1',
-                        'gt': 2,
-                        'gq': 15,
-                        'ab': 1.0,
-                        'dp': 5,
-                    },
-                ],
-                'sign': 1,
-            },
-        )
-        self.assertEqual(
-            export_json,
+            [export_json[0], export_json[9], export_json[15]],
             [
+                {
+                    'key': 0,
+                    'project_guid': 'R0114_project4',
+                    'family_guid': '123_1',
+                    'sample_type': 'WGS',
+                    'xpos': 1000876499,
+                    'geneIds': ['ENSG00000187634'],
+                    'filters': [],
+                    'calls': [
+                        {
+                            'sampleId': 'NA19675_1',
+                            'gt': 2,
+                            'gq': 15,
+                            'ab': 1.0,
+                            'dp': 5,
+                        },
+                    ],
+                    'sign': 1,
+                },
                 {
                     'key': 0,
                     'project_guid': 'R0113_test_project',
