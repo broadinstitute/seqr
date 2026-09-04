@@ -1028,20 +1028,15 @@ def atomic_insert_entries(
     mv_overrides = None
     ordered_mv_table = None
     if dataset_type == DatasetType.SNV_INDEL:
-        # Create a copy of the PROJECT_GT_STATS table ordered by key as the GT_STATS materialized view source
+        # Create a copy of the PROJECT_GT_STATS table ordered by key for the GT_STATS materialized view source
         # This allows clickhouse to utilize a memory optimized group by only available for sorted tables
         table_suffix = 'key_ordered'
-        ordered_mv_table = f'{table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS)}/{table_suffix}'
-        logged_query(
-            f"""
-            CREATE TABLE {ordered_mv_table}
-            AS {table_name_builder.dst_table(ClickHouseTable.PROJECT_GT_STATS)}
-            ORDER BY key
-            """,
-        )
+        base_table = table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS)
+        ordered_mv_table = f'{base_table}/{table_suffix}'
+        logged_query(f'CREATE TABLE {ordered_mv_table} AS {base_table} ORDER BY key')
         mv_overrides = {
             ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV: [
-                [table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS), ordered_mv_table],
+                [base_table, ordered_mv_table],
                 [';', ' SETTINGS max_memory_usage=10000000000, max_bytes_before_external_group_by=5000000000, optimize_aggregation_in_order=1;'],
             ],
         }
