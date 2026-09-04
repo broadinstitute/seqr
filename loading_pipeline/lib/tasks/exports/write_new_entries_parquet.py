@@ -45,14 +45,14 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             ),
         )
 
-    def requires(self) -> dict[str, luigi.Task]:
+    def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WriteExistingVariantsParquetTask),
             self.clone(WriteNewVariantsTableTask),
             self.clone(WriteRemappedAndSubsettedCallsetTask),
         ]
 
-    def create_table(self) -> None:
+    def create_table(self) -> hl.Table:
         annotations_ht = hl.read_table(self.input()[1].path)
         annotation_selects = {
             field: func(annotations_ht)
