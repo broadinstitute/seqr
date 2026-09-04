@@ -81,7 +81,6 @@ class ClickHouseTable(StrEnum):
             # Note that VARIANTS_DETAILS is not included here because
             # of the special logic to ensure writes are made to both tables.
             ClickHouseTable.VARIANTS_MEMORY: direct_insert_annotations,
-            ClickHouseTable.ENTRIES: atomic_insert_entries,
             ClickHouseTable.KEY_LOOKUP: functools.partial(
                 direct_insert_all_keys,
                 clickhouse_table=self,
@@ -103,10 +102,7 @@ class ClickHouseTable(StrEnum):
                 *tables,
                 ClickHouseTable.VARIANT_DETAILS,
             ]
-        return [
-            *tables,
-            ClickHouseTable.ENTRIES,
-        ]
+        return tables
 
     @classmethod
     def for_dataset_type_disk_backed_variants_tables(
@@ -577,6 +573,7 @@ def get_partitions_for_projects(
 def create_staging_materialized_views(
     table_name_builder: TableNameBuilder,
     clickhouse_mvs: list[ClickHouseMaterializedView],
+    mv_overrides: dict[ClickHouseMaterializedView, list[list[str]]] | None = None,
 ):
     for clickhouse_mv in clickhouse_mvs:
         create_table_statement = get_create_mv_statements(
@@ -587,6 +584,8 @@ def create_staging_materialized_views(
             table_name_builder.dst_prefix,
             table_name_builder.staging_dst_prefix,
         )
+        for override in (mv_overrides or {}).get(clickhouse_mv, []):
+            create_table_statement = create_table_statement.replace(*override)
         logged_query(create_table_statement)
 
 
@@ -1025,11 +1024,34 @@ def atomic_insert_entries(
         table_name_builder,
         ClickHouseTable.for_dataset_type_atomic_entries_update(dataset_type),
     )
+
+    mv_overrides = None
+    ordered_mv_table = None
+    if dataset_type == DatasetType.SNV_INDEL:
+        # Create a copy of the PROJECT_GT_STATS table ordered by key for the GT_STATS materialized view source
+        # This allows clickhouse to utilize a memory optimized group by only available for sorted tables
+        table_suffix = 'key_ordered'
+        base_table = table_name_builder.staging_dst_table(
+            ClickHouseTable.PROJECT_GT_STATS,
+        )
+        ordered_mv_table = f'{base_table}/{table_suffix}'
+        logged_query(f'CREATE TABLE {ordered_mv_table} AS {base_table} ORDER BY key')
+        mv_overrides = {
+            ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV: [
+                [base_table, ordered_mv_table],
+                [
+                    ';',
+                    ' SETTINGS max_memory_usage=10000000000, max_bytes_before_external_group_by=5000000000, optimize_aggregation_in_order=1;',
+                ],
+            ],
+        }
+
     create_staging_materialized_views(
         table_name_builder,
         ClickHouseMaterializedView.for_dataset_type_atomic_entries_update(
             dataset_type,
         ),
+        mv_overrides=mv_overrides,
     )
     stage_existing_project_partitions(
         table_name_builder,
@@ -1054,18 +1076,24 @@ def atomic_insert_entries(
         project_guids,
         family_guids,
     )
+    if ordered_mv_table:
+        logged_query(
+            f"""
+            INSERT INTO {ordered_mv_table}
+            SELECT(*)
+            FROM {table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS)}
+            """,
+        )
     finalize_refresh_flow(table_name_builder, project_guids)
 
 
 @retry()
-def load_complete_run(
+def load_run_variants(
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
     run_id: str,
-    project_guids: list[str],
-    family_guids: list[str],
 ):
-    msg = f'Attempting load of run: {reference_genome.value}/{dataset_type.value}/{run_id}'
+    msg = f'Attempting load of variants for run: {reference_genome.value}/{dataset_type.value}/{run_id}'
     logger.info(msg)
     table_name_builder = TableNameBuilder(
         reference_genome,
@@ -1075,8 +1103,6 @@ def load_complete_run(
     for clickhouse_table in ClickHouseTable.for_dataset_type(dataset_type):
         clickhouse_table.insert(
             table_name_builder=table_name_builder,
-            project_guids=project_guids,
-            family_guids=family_guids,
         )
     for (
         clickhouse_reference_data
@@ -1087,6 +1113,28 @@ def load_complete_run(
         clickhouse_reference_data.insert_into_seqr_variants_and_refresh_search(
             table_name_builder=table_name_builder,
         )
+
+
+@retry()
+def load_run_entries(
+    reference_genome: ReferenceGenome,
+    dataset_type: DatasetType,
+    run_id: str,
+    project_guids: list[str],
+    family_guids: list[str],
+):
+    msg = f'Attempting load of entries for run: {reference_genome.value}/{dataset_type.value}/{run_id}'
+    logger.info(msg)
+    table_name_builder = TableNameBuilder(
+        reference_genome,
+        dataset_type,
+        run_id,
+    )
+    atomic_insert_entries(
+        table_name_builder=table_name_builder,
+        project_guids=project_guids,
+        family_guids=family_guids,
+    )
 
 
 @retry()
