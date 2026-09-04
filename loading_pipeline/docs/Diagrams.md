@@ -23,16 +23,10 @@
                 |_______________________________|
                                 |
                                 v
-           _____________________|_____________________
-          |                                           |
-          v                                           v
-  WriteRemappedAndSubsettedCallsetTask  WriteRemappedAndSubsettedCallsetTask
-    (Project 1)                            (Project N)
-          |                                           |
-          |___________________________________________|
-                      |
-                      v
-            WriteMetadataForRunTask            WriteExistingVariantsParquetTask
+               WriteRemappedAndSubsettedCallsetTask
+                                |
+                                v
+               WriteMetadataForRunTask            WriteExistingVariantsParquetTask
                       |___________________________________________|
                                 |
                                 v

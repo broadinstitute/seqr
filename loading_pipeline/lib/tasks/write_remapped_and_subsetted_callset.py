@@ -50,24 +50,30 @@ def format_failures(failed_families):
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
-    project_i = luigi.IntParameter()
-
     def complete(self) -> luigi.Target:
         if not super().complete():
             return False
         mt = hl.read_matrix_table(self.output().path)
-        return bool(
-            hl.eval(mt.globals.family_samples),
-        ) and hl.eval(
-            mt.globals.remap_pedigree_hash
-            == remap_pedigree_hash(
-                project_pedigree_path(
-                    self.reference_genome,
-                    self.dataset_type,
-                    self.sample_type,
-                    self.project_guids[self.project_i],
-                ),
-            ),
+        return (
+            bool(
+                hl.eval(mt.globals.family_samples),
+            )
+            and len(hl.eval(mt.globals.remap_pedigree_hashes))
+            == len(self.project_guids)
+            and all(
+                hl.eval(
+                    mt.globals.remap_pedigree_hashes[i]
+                    == remap_pedigree_hash(
+                        project_pedigree_path(
+                            self.reference_genome,
+                            self.dataset_type,
+                            self.sample_type,
+                            project_guid,
+                        ),
+                    ),
+                )
+                for i, project_guid in enumerate(self.project_guids)
+            )
         )
 
     def output(self) -> luigi.Target:
@@ -76,21 +82,23 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                 self.reference_genome,
                 self.dataset_type,
                 self.callset_path,
-                self.project_guids[self.project_i],
             ),
         )
 
     def requires(self) -> list[luigi.Task]:
         requirements = [
             self.clone(ValidateCallsetTask),
+        ]
+        requirements += [
             RawFileTask(
                 project_pedigree_path(
                     self.reference_genome,
                     self.dataset_type,
                     self.sample_type,
-                    self.project_guids[self.project_i],
+                    project_guid,
                 ),
-            ),
+            )
+            for project_guid in self.project_guids
         ]
         if (
             FeatureFlag.CHECK_SEX_AND_RELATEDNESS
@@ -107,21 +115,29 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
     @with_persisted_validation_errors
     def create_table(self) -> hl.MatrixTable:
         callset_mt = hl.read_matrix_table(self.input()[0].path)
-        pedigree_ht = import_pedigree(self.input()[1].path)
 
         # Remap, but only if the remap file is present!
-        remap_lookup = hl.empty_dict(hl.tstr, hl.tstr)
-        if 'remap_id' in pedigree_ht.row:
-            project_remap_ht = parse_pedigree_ht_to_remap_ht(pedigree_ht)
+        remap_ht = None
+        project_families = {}
+        for i, project_guid in enumerate(self.project_guids):
+            pedigree_ht = import_pedigree(self.input()[i + 1].path)
+            if 'remap_id' in pedigree_ht.row:
+                project_remap_ht = parse_pedigree_ht_to_remap_ht(pedigree_ht)
+                remap_ht = (
+                    remap_ht.union(project_remap_ht)
+                    if remap_ht is not None
+                    else project_remap_ht
+                )
+
+            project_families[project_guid] = parse_pedigree_ht_to_families(pedigree_ht)
+
+        if remap_ht is not None:
             callset_mt = remap_sample_ids(
                 callset_mt,
-                project_remap_ht,
-            )
-            remap_lookup = hl.dict(
-                {r.s: r.seqr_id for r in project_remap_ht.collect()},
+                remap_ht,
             )
 
-        families = parse_pedigree_ht_to_families(pedigree_ht)
+        families = {f for families in project_families.values() for f in families}
         families_failed_missing_samples = get_families_failed_missing_samples(
             callset_mt,
             families,
@@ -134,6 +150,13 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
             and self.dataset_type.check_sex_and_relatedness
             and not self.skip_check_sex_and_relatedness
         ):
+            remap_lookup = (
+                hl.dict(
+                    {r.s: r.seqr_id for r in remap_ht.collect()},
+                )
+                if remap_ht is not None
+                else hl.empty_dict(hl.tstr, hl.tstr)
+            )
             relatedness_check_ht = hl.read_table(
                 relatedness_check_table_path(
                     self.reference_genome,
@@ -141,7 +164,7 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                     self.callset_path,
                 ),
             )
-            sex_check_ht = hl.read_table(self.input()[3].path)
+            sex_check_ht = hl.read_table(self.input()[-1].path)
             families_failed_relatedness_check = get_families_failed_relatedness_check(
                 families - families_failed_missing_samples.keys(),
                 relatedness_check_ht,
@@ -206,14 +229,17 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
         if self.dataset_type.overwrite_male_non_par_calls:
             mt = overwrite_male_non_par_calls(mt, loadable_families)
         return mt.select_globals(
-            remap_pedigree_hash=remap_pedigree_hash(
-                project_pedigree_path(
-                    self.reference_genome,
-                    self.dataset_type,
-                    self.sample_type,
-                    self.project_guids[self.project_i],
-                ),
-            ),
+            remap_pedigree_hashes=[
+                remap_pedigree_hash(
+                    project_pedigree_path(
+                        self.reference_genome,
+                        self.dataset_type,
+                        self.sample_type,
+                        project_guid,
+                    ),
+                )
+                for project_guid in self.project_guids
+            ],
             family_samples=(
                 {
                     f.family_guid: sorted(f.samples.keys())
@@ -239,4 +265,8 @@ class WriteRemappedAndSubsettedCallsetTask(BaseWriteTask):
                     or hl.empty_dict(hl.tstr, hl.tdict(hl.tstr, hl.tarray(hl.tstr)))
                 ),
             ),
+            project_families={
+                project_guid: sorted([f.family_guid for f in families])
+                for project_guid, families in project_families.items()
+            },
         )

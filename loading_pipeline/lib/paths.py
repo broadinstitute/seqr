@@ -197,7 +197,6 @@ def remapped_and_subsetted_callset_path(
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
     callset_path: str,
-    project_guid: str,
 ) -> str:
     return os.path.join(
         pipeline_prefix(
@@ -206,7 +205,6 @@ def remapped_and_subsetted_callset_path(
             dataset_type,
         ),
         'remapped_and_subsetted_callsets',
-        project_guid,
         f'{_callset_path_hash(callset_path)}.mt',
     )
 

@@ -27,6 +27,9 @@ TEST_PEDIGREE_3_DIFFERENT_FAMILIES = (
     'loading_pipeline/var/test/pedigrees/test_pedigree_3_different_families.tsv'
 )
 TEST_PEDIGREE_4_REMAP = 'loading_pipeline/var/test/pedigrees/test_pedigree_4_remap.tsv'
+TEST_PEDIGREE_4_REMAP_2 = (
+    'loading_pipeline/var/test/pedigrees/test_pedigree_4_remap_2.tsv'
+)
 TEST_PEDIGREE_7 = 'loading_pipeline/var/test/pedigrees/test_pedigree_7.tsv'
 TEST_SEX_CHECK_1 = 'loading_pipeline/var/test/sex_check/test_sex_check_1.ht'
 TEST_RELATEDNESS_CHECK_1 = (
@@ -104,7 +107,6 @@ class WriteRemappedAndSubsettedCallsetTaskTest(MockedDatarootTestCase):
             sample_type=SampleType.WGS,
             callset_path=TEST_VCF,
             project_guids=['R0113_test_project'],
-            project_i=0,
             validations_to_skip=[ALL_VALIDATIONS],
             skip_expect_tdr_metrics=True,
         )
@@ -117,11 +119,13 @@ class WriteRemappedAndSubsettedCallsetTaskTest(MockedDatarootTestCase):
             mt.globals.collect(),
             [
                 hl.Struct(
-                    remap_pedigree_hash=hl.eval(
-                        remap_pedigree_hash(
-                            TEST_PEDIGREE_3_REMAP,
+                    remap_pedigree_hashes=[
+                        hl.eval(
+                            remap_pedigree_hash(
+                                TEST_PEDIGREE_3_REMAP,
+                            ),
                         ),
-                    ),
+                    ],
                     failed_family_samples=hl.Struct(
                         missing_samples={},
                         relatedness_check={},
@@ -129,6 +133,7 @@ class WriteRemappedAndSubsettedCallsetTaskTest(MockedDatarootTestCase):
                         ploidy_check={},
                     ),
                     family_samples={'abc_1': ['HG00731_1', 'HG00732_1', 'HG00733_1']},
+                    project_families={'R0113_test_project': ['abc_1']},
                 ),
             ],
         )
@@ -156,7 +161,6 @@ class WriteRemappedAndSubsettedCallsetTaskTest(MockedDatarootTestCase):
             sample_type=SampleType.WGS,
             callset_path=TEST_VCF,
             project_guids=['R0114_project4'],
-            project_i=0,
             validations_to_skip=[ALL_VALIDATIONS],
             skip_expect_tdr_metrics=True,
         )
@@ -171,11 +175,30 @@ class WriteRemappedAndSubsettedCallsetTaskTest(MockedDatarootTestCase):
             mt.globals.collect(),
             [
                 hl.Struct(
-                    remap_pedigree_hash=hl.eval(
-                        remap_pedigree_hash(
-                            TEST_PEDIGREE_4_REMAP,
+                    remap_pedigree_hashes=[
+                        hl.eval(
+                            remap_pedigree_hash(
+                                TEST_PEDIGREE_4_REMAP,
+                            ),
                         ),
-                    ),
+                    ],
+                    project_families={
+                        'R0114_project4': [
+                            '123_1',
+                            '234_1',
+                            '345_1',
+                            '456_1',
+                            '567_1',
+                            '678_1',
+                            '789_1',
+                            '890_1',
+                            '901_1',
+                            'bcd_1',
+                            'cde_1',
+                            'def_1',
+                            'efg_1',
+                        ],
+                    },
                     family_samples={
                         '123_1': ['NA19675_1'],
                         '345_1': ['NA19679_1'],
@@ -228,6 +251,94 @@ class WriteRemappedAndSubsettedCallsetTaskTest(MockedDatarootTestCase):
             ],
         )
 
+    def test_write_remapped_and_subsetted_callset_task_multiple_projects(
+        self,
+    ) -> None:
+        copy_project_pedigree_to_mocked_dir(
+            TEST_PEDIGREE_3_REMAP,
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            SampleType.WGS,
+            'R0113_test_project',
+        )
+        copy_project_pedigree_to_mocked_dir(
+            TEST_PEDIGREE_4_REMAP_2,
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            SampleType.WGS,
+            'R0114_project4',
+        )
+        worker = luigi.worker.Worker()
+        wrsc_task = WriteRemappedAndSubsettedCallsetTask(
+            reference_genome=ReferenceGenome.GRCh38,
+            dataset_type=DatasetType.SNV_INDEL,
+            run_id=TEST_RUN_ID,
+            sample_type=SampleType.WGS,
+            callset_path=TEST_VCF,
+            project_guids=['R0113_test_project', 'R0114_project4'],
+            validations_to_skip=[ALL_VALIDATIONS],
+            skip_expect_tdr_metrics=True,
+        )
+        worker.add(wrsc_task)
+        worker.run()
+        self.assertTrue(wrsc_task.complete())
+        mt = hl.read_matrix_table(wrsc_task.output().path)
+        self.assertEqual(
+            mt.globals.collect(),
+            [
+                hl.Struct(
+                    remap_pedigree_hashes=[
+                        hl.eval(remap_pedigree_hash(TEST_PEDIGREE_3_REMAP)),
+                        hl.eval(remap_pedigree_hash(TEST_PEDIGREE_4_REMAP_2)),
+                    ],
+                    failed_family_samples=hl.Struct(
+                        missing_samples={
+                            'efg_1': {
+                                'samples': ['NA20888_1'],
+                                'reasons': ["Missing samples: {'NA20888_1'}"],
+                            },
+                        },
+                        relatedness_check={},
+                        sex_check={},
+                        ploidy_check={},
+                    ),
+                    family_samples={
+                        'abc_1': ['HG00731_1', 'HG00732_1', 'HG00733_1'],
+                        '123_1': ['NA19675_1'],
+                        '234_1': ['NA19678_1'],
+                        '345_1': ['NA19679_1'],
+                        '456_1': ['NA20870_1'],
+                        '567_1': ['NA20872_1'],
+                        '678_1': ['NA20874_1'],
+                        '789_1': ['NA20875_1'],
+                        '890_1': ['NA20876_1'],
+                        '901_1': ['NA20877_1'],
+                        'bcd_1': ['NA20878_1'],
+                        'cde_1': ['NA20881_1'],
+                        'def_1': ['NA20885_1'],
+                    },
+                    project_families={
+                        'R0113_test_project': ['abc_1'],
+                        'R0114_project4': [
+                            '123_1',
+                            '234_1',
+                            '345_1',
+                            '456_1',
+                            '567_1',
+                            '678_1',
+                            '789_1',
+                            '890_1',
+                            '901_1',
+                            'bcd_1',
+                            'cde_1',
+                            'def_1',
+                            'efg_1',
+                        ],
+                    },
+                ),
+            ],
+        )
+
     @patch(
         'loading_pipeline.lib.tasks.write_remapped_and_subsetted_callset.FeatureFlag',
     )
@@ -251,7 +362,6 @@ class WriteRemappedAndSubsettedCallsetTaskTest(MockedDatarootTestCase):
             sample_type=SampleType.WGS,
             callset_path=TEST_VCF,
             project_guids=['R0114_project4'],
-            project_i=0,
             validations_to_skip=[ALL_VALIDATIONS],
             skip_expect_tdr_metrics=True,
         )
@@ -385,7 +495,6 @@ class WriteRemappedAndSubsettedCallsetTaskTest(MockedDatarootTestCase):
             sample_type=SampleType.WGS,
             callset_path=TEST_VCF,
             project_guids=['R0113_test_project'],
-            project_i=0,
             validations_to_skip=[ALL_VALIDATIONS],
             skip_expect_tdr_metrics=True,
         )
@@ -409,7 +518,6 @@ class WriteRemappedAndSubsettedCallsetTaskTest(MockedDatarootTestCase):
             sample_type=SampleType.WGS,
             callset_path=TEST_VCF,
             project_guids=['R0114_project4'],
-            project_i=0,
             validations_to_skip=[ALL_VALIDATIONS],
             skip_expect_tdr_metrics=True,
         )
