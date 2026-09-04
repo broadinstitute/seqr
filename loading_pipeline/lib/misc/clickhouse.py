@@ -573,6 +573,7 @@ def get_partitions_for_projects(
 def create_staging_materialized_views(
     table_name_builder: TableNameBuilder,
     clickhouse_mvs: list[ClickHouseMaterializedView],
+    mv_overrides: dict[ClickHouseMaterializedView, list[list[str]]] | None = None,
 ):
     for clickhouse_mv in clickhouse_mvs:
         create_table_statement = get_create_mv_statements(
@@ -583,6 +584,8 @@ def create_staging_materialized_views(
             table_name_builder.dst_prefix,
             table_name_builder.staging_dst_prefix,
         )
+        for override in (mv_overrides or {}).get(clickhouse_mv, []):
+            create_table_statement = create_table_statement.replace(*override)
         logged_query(create_table_statement)
 
 
@@ -1021,11 +1024,34 @@ def atomic_insert_entries(
         table_name_builder,
         ClickHouseTable.for_dataset_type_atomic_entries_update(dataset_type),
     )
+
+    mv_overrides = None
+    ordered_mv_table = None
+    if dataset_type == DatasetType.SNV_INDEL:
+        # Create a copy of the PROJECT_GT_STATS table ordered by key as the GT_STATS materialized view source
+        # This allows clickhouse to utilize a memory optimized group by only available for sorted tables
+        table_suffix = 'key_ordered'
+        ordered_mv_table = f'{table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS)}/{table_suffix}'
+        logged_query(
+            f"""
+            CREATE TABLE {ordered_mv_table}
+            AS {table_name_builder.dst_table(ClickHouseTable.PROJECT_GT_STATS)}
+            ORDER BY key
+            """,
+        )
+        mv_overrides = {
+            ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV: [
+                [table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS), ordered_mv_table],
+                [';', ' SETTINGS max_memory_usage=10000000000, max_bytes_before_external_group_by=5000000000, optimize_aggregation_in_order=1;'],
+            ],
+        }
+
     create_staging_materialized_views(
         table_name_builder,
         ClickHouseMaterializedView.for_dataset_type_atomic_entries_update(
             dataset_type,
         ),
+        mv_overrides=mv_overrides,
     )
     stage_existing_project_partitions(
         table_name_builder,
@@ -1050,6 +1076,14 @@ def atomic_insert_entries(
         project_guids,
         family_guids,
     )
+    if ordered_mv_table:
+        logged_query(
+            f"""
+            INSERT INTO {ordered_mv_table}
+            SELECT(*)
+            FROM {table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS)}
+            """,
+        )
     finalize_refresh_flow(table_name_builder, project_guids)
 
 
