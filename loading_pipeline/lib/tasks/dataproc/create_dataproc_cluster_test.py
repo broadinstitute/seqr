@@ -13,7 +13,10 @@ from loading_pipeline.lib.tasks.dataproc.create_dataproc_cluster import (
 )
 
 
-@patch('loading_pipeline.lib.tasks.dataproc.create_dataproc_cluster.CLUSTER_RETRY_DELAY', 0)
+@patch(
+    'loading_pipeline.lib.tasks.dataproc.create_dataproc_cluster.CLUSTER_RETRY_DELAY',
+    0,
+)
 @patch.multiple(
     'loading_pipeline.lib.tasks.dataproc.create_dataproc_cluster.Env',
     GCLOUD_PROJECT='proj',
