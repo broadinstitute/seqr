@@ -29,6 +29,7 @@ PKGS = '|'.join(
     ],
 )
 TIMEOUT_S = 1200
+CLUSTER_RETRY_DELAY = 30
 FAILURE_STATUSES = {
     google.cloud.dataproc_v1.types.clusters.ClusterStatus.State.UNKNOWN,
     google.cloud.dataproc_v1.types.clusters.ClusterStatus.State.ERROR,
@@ -195,7 +196,7 @@ class CreateDataprocClusterTask(luigi.Task):
             raise RuntimeError(msg)
         self.get_running_cluster()
 
-    @retry(tries=5, backoff=1)
+    @retry(tries=5, backoff=1, delay=CLUSTER_RETRY_DELAY)
     def get_running_cluster(self):
         cluster = self.safely_get_cluster()
         if not cluster:
