@@ -1034,7 +1034,7 @@ def atomic_insert_entries(
         base_table = table_name_builder.staging_dst_table(
             ClickHouseTable.PROJECT_GT_STATS,
         )
-        ordered_mv_table = f'{base_table}/{table_suffix}'
+        ordered_mv_table = f'{base_table[:-1]}/{table_suffix}`'
         logged_query(f'CREATE TABLE {ordered_mv_table} AS {base_table} ORDER BY key')
         mv_overrides = {
             ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV: [
