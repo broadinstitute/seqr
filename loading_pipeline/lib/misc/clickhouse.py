@@ -1040,8 +1040,8 @@ def atomic_insert_entries(
             ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV: [
                 [base_table, ordered_mv_table],
                 [
-                    ';',
-                    ' SETTINGS max_memory_usage=10000000000, max_bytes_before_external_group_by=5000000000, optimize_aggregation_in_order=1;',
+                    'GROUP BY key',
+                    'GROUP BY key SETTINGS max_memory_usage=10000000000, max_bytes_before_external_group_by=5000000000, optimize_aggregation_in_order=1',
                 ],
             ],
         }
