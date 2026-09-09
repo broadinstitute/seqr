@@ -1080,7 +1080,7 @@ def atomic_insert_entries(
         logged_query(
             f"""
             INSERT INTO {ordered_mv_table}
-            SELECT(*)
+            SELECT *
             FROM {table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS)}
             """,
         )
