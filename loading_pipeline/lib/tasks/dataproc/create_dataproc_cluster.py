@@ -195,7 +195,7 @@ class CreateDataprocClusterTask(luigi.Task):
             raise RuntimeError(msg)
         self.get_running_cluster()
 
-    @retry(tries=5)
+    @retry(tries=5, backoff=1)
     def get_running_cluster(self):
         cluster = self.safely_get_cluster()
         if not cluster:
