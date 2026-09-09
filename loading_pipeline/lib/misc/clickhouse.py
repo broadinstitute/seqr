@@ -1082,7 +1082,7 @@ def atomic_insert_entries(
             INSERT INTO {ordered_mv_table}
             SELECT *
             FROM {table_name_builder.staging_dst_table(ClickHouseTable.PROJECT_GT_STATS)}
-            """,
+            """,  # nosec B608
         )
     finalize_refresh_flow(table_name_builder, project_guids)
 
