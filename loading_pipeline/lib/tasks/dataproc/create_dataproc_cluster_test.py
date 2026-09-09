@@ -26,6 +26,9 @@ from loading_pipeline.lib.tasks.dataproc.create_dataproc_cluster import (
     ),
 )
 @patch(
+    'loading_pipeline.lib.tasks.dataproc.create_dataproc_cluster.time',
+)
+@patch(
     'loading_pipeline.lib.tasks.dataproc.create_dataproc_cluster.dataproc.ClusterControllerClient',
 )
 class CreateDataprocClusterTaskTest(unittest.TestCase):
