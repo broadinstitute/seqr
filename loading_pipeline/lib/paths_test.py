@@ -81,18 +81,16 @@ class TestPaths(unittest.TestCase):
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
                 '/var/abc.efg/callset.vcf.gz',
-                'R0111_tgg_bblanken_wes',
             ),
-            '/var/seqr/seqr-loading-temp/GRCh38/GCNV/remapped_and_subsetted_callsets/R0111_tgg_bblanken_wes/f92b8ab6b5b8c41fa20d7d49a5626b96dcd2ba79fa6f61eab7ffb80d550d951c.mt',
+            '/var/seqr/seqr-loading-temp/GRCh38/GCNV/remapped_and_subsetted_callsets/f92b8ab6b5b8c41fa20d7d49a5626b96dcd2ba79fa6f61eab7ffb80d550d951c.mt',
         )
         self.assertEqual(
             remapped_and_subsetted_callset_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
                 '/var/abc.efg/callset/*.vcf.gz',
-                'R0111_tgg_bblanken_wes',
             ),
-            '/var/seqr/seqr-loading-temp/GRCh38/GCNV/remapped_and_subsetted_callsets/R0111_tgg_bblanken_wes/26f481b386721f9889250c6549905660728ec9f77be4b8f7eeb6c4facc76282e.mt',
+            '/var/seqr/seqr-loading-temp/GRCh38/GCNV/remapped_and_subsetted_callsets/26f481b386721f9889250c6549905660728ec9f77be4b8f7eeb6c4facc76282e.mt',
         )
 
     def test_imported_callset_path(self) -> None:

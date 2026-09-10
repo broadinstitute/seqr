@@ -15,6 +15,13 @@ def compute_callset_family_entries_ht(
             for s in sample_ids
         },
     )
+    family_guid_to_project_guid = hl.dict(
+        {
+            family_guid: project_guid
+            for project_guid, family_guids in hl.eval(mt.project_families).items()
+            for family_guid in family_guids
+        },
+    )
     ht = mt.select_rows(
         filters=mt.filters.difference(dataset_type.excluded_filters),
         family_entries=(
@@ -26,6 +33,9 @@ def compute_callset_family_entries_ht(
                     hl.Struct(
                         s=mt.s,
                         family_guid=sample_id_to_family_guid[mt.s],
+                        project_guid=family_guid_to_project_guid[
+                            sample_id_to_family_guid[mt.s]
+                        ],
                         **entries_fields,
                     ),
                 )
@@ -58,6 +68,11 @@ def globalize_ids(ht: hl.Table) -> hl.Table:
     row = ht.take(1)[0] if ht.count() > 0 else None
     has_family_entries = row and len(row.family_entries) > 0
     ht = ht.annotate_globals(
+        project_guids=(
+            [fe[0].project_guid for fe in row.family_entries]
+            if has_family_entries
+            else hl.empty_array(hl.tstr)
+        ),
         family_guids=(
             [fe[0].family_guid for fe in row.family_entries]
             if has_family_entries
@@ -71,7 +86,7 @@ def globalize_ids(ht: hl.Table) -> hl.Table:
     )
     return ht.annotate(
         family_entries=ht.family_entries.map(
-            lambda fe: fe.map(lambda se: se.drop('s', 'family_guid')),
+            lambda fe: fe.map(lambda se: se.drop('s', 'family_guid', 'project_guid')),
         ),
     )
 
@@ -85,12 +100,13 @@ def deglobalize_ids(ht: hl.Table) -> hl.Table:
                         **e,
                         s=ht.family_samples[ht.family_guids[i]][j],
                         family_guid=ht.family_guids[i],
+                        project_guid=ht.project_guids[i],
                     ),
                 ),
             )
         ),
     )
-    return ht.drop('family_guids', 'family_samples')
+    return ht.drop('family_guids', 'family_samples', 'project_guids')
 
 
 def deduplicate_by_most_non_ref_calls(ht: hl.Table) -> hl.Table:

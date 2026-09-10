@@ -188,7 +188,6 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
                 'fake_callset',
-                'fake_project',
             ),
         )
 

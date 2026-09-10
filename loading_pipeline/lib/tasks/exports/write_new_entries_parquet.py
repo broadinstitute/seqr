@@ -11,9 +11,7 @@ from loading_pipeline.lib.misc.family_entries import (
 )
 from loading_pipeline.lib.misc.io import import_parquet
 from loading_pipeline.lib.paths import (
-    existing_variants_parquet_path,
     new_entries_parquet_path,
-    new_variants_table_path,
 )
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
@@ -35,10 +33,6 @@ from loading_pipeline.lib.tasks.write_remapped_and_subsetted_callset import (
     WriteRemappedAndSubsettedCallsetTask,
 )
 
-EXISTING_VARIANTS_TASK = 'existing_variant_task'
-VARIANTS_TABLE_TASK = 'variants_table_task'
-REMAPPED_AND_SUBSETTED_CALLSET_TASKS = 'remapped_and_subsetted_callset_tasks'
-
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteNewEntriesParquetTask(BaseWriteParquetTask):
@@ -51,33 +45,15 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             ),
         )
 
-    def requires(self) -> dict[str, luigi.Task]:
-        return {
-            EXISTING_VARIANTS_TASK: self.clone(
-                WriteExistingVariantsParquetTask,
-            ),
-            VARIANTS_TABLE_TASK: self.clone(
-                WriteNewVariantsTableTask,
-            ),
-            REMAPPED_AND_SUBSETTED_CALLSET_TASKS: [
-                self.clone(
-                    WriteRemappedAndSubsettedCallsetTask,
-                    project_i=i,
-                )
-                for i in range(len(self.project_guids))
-            ],
-        }
+    def requires(self) -> list[luigi.Task]:
+        return [
+            self.clone(WriteExistingVariantsParquetTask),
+            self.clone(WriteNewVariantsTableTask),
+            self.clone(WriteRemappedAndSubsettedCallsetTask),
+        ]
 
-    def create_table(self) -> None:
-        unioned_ht = None
-
-        annotations_ht = hl.read_table(
-            new_variants_table_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.run_id,
-            ),
-        )
+    def create_table(self) -> hl.Table:
+        annotations_ht = hl.read_table(self.input()[1].path)
         annotation_selects = {
             field: func(annotations_ht)
             for field, func in {
@@ -88,11 +64,7 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
         annotations_ht = annotations_ht.select(**annotation_selects)
 
         existing_annotations_ht = import_parquet(
-            existing_variants_parquet_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.run_id,
-            ),
+            self.input()[0].path,
             self.reference_genome,
             self.dataset_type,
         )
@@ -113,39 +85,31 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
             existing_annotations_ht.select(*annotation_selects),
         )
 
-        for project_guid, remapped_and_subsetted_callset_task in zip(
-            self.project_guids,
-            self.input()[REMAPPED_AND_SUBSETTED_CALLSET_TASKS],
-            strict=True,
-        ):
-            mt = hl.read_matrix_table(remapped_and_subsetted_callset_task.path)
-            ht = compute_callset_family_entries_ht(
-                self.dataset_type,
+        mt = hl.read_matrix_table(self.input()[2].path)
+        ht = compute_callset_family_entries_ht(
+            self.dataset_type,
+            mt,
+            get_fields(
                 mt,
-                get_fields(
-                    mt,
-                    self.dataset_type.genotype_entry_annotation_fns,
-                    **self.param_kwargs,
-                ),
-            )
-            ht = deglobalize_ids(ht)
-            ht = deduplicate_by_most_non_ref_calls(ht)
-            ht = ht.join(annotations_ht)
+                self.dataset_type.genotype_entry_annotation_fns,
+                **self.param_kwargs,
+            ),
+        )
+        ht = deglobalize_ids(ht)
+        ht = deduplicate_by_most_non_ref_calls(ht)
+        ht = ht.join(annotations_ht)
 
-            # the family entries ht will contain rows
-            # where at least one family is defined... after explosion,
-            # rows where a family is not defined should be removed.
-            ht = ht.explode(ht.family_entries)
-            ht = ht.filter(hl.is_defined(ht.family_entries))
-            ht = ht.key_by()
-            ht = ht.select_globals()
-            ht = ht.select(
-                **get_entries_export_fields(
-                    ht,
-                    self.dataset_type,
-                    self.sample_type,
-                    project_guid,
-                ),
-            )
-            unioned_ht = unioned_ht.union(ht) if unioned_ht else ht
-        return unioned_ht
+        # the family entries ht will contain rows
+        # where at least one family is defined... after explosion,
+        # rows where a family is not defined should be removed.
+        ht = ht.explode(ht.family_entries)
+        ht = ht.filter(hl.is_defined(ht.family_entries))
+        ht = ht.key_by()
+        ht = ht.select_globals()
+        return ht.select(
+            **get_entries_export_fields(
+                ht,
+                self.dataset_type,
+                self.sample_type,
+            ),
+        )
