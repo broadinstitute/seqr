@@ -25,6 +25,7 @@ from loading_pipeline.lib.tasks.dataproc.create_dataproc_cluster import (
         scopes=SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE,
     ),
 )
+@patch('time.sleep')
 @patch(
     'loading_pipeline.lib.tasks.dataproc.create_dataproc_cluster.dataproc.ClusterControllerClient',
 )

@@ -48,8 +48,10 @@
     WriteSuccessFileTask
           |
           v
-  WriteClickhouseLoadSuccessFileTask
-  (load parquets → ClickHouse)
+    LoadClickhouseVariants
+          |
+          v
+    LoadClickhouseEntries
 ```
 
 ClickHouse LSM-Tree

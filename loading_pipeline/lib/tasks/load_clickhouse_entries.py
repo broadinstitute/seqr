@@ -5,7 +5,7 @@ import luigi
 import luigi.util
 
 from loading_pipeline.lib.misc.clickhouse import (
-    load_complete_run,
+    load_run_entries,
 )
 from loading_pipeline.lib.paths import (
     clickhouse_load_success_file_path,
@@ -15,11 +15,11 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.write_success_file import WriteSuccessFileTask
+from loading_pipeline.lib.tasks.load_clickhouse_variants import LoadClickhouseVariants
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteClickhouseLoadSuccessFileTask(luigi.Task):
+class LoadClickhouseEntries(luigi.Task):
     attempt_id = luigi.IntParameter()
 
     def output(self) -> luigi.Target:
@@ -32,7 +32,7 @@ class WriteClickhouseLoadSuccessFileTask(luigi.Task):
         )
 
     def requires(self) -> luigi.Task:
-        return self.clone(WriteSuccessFileTask)
+        return self.clone(LoadClickhouseVariants)
 
     def run(self):
         with hfs.open(
@@ -43,7 +43,7 @@ class WriteClickhouseLoadSuccessFileTask(luigi.Task):
             ),
         ) as f:
             family_guids = list(json.load(f)['family_samples'].keys())
-        load_complete_run(
+        load_run_entries(
             self.reference_genome,
             self.dataset_type,
             self.run_id,

@@ -134,12 +134,12 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         self.assertEqual(ac_wgs, 69)
 
     @patch('loading_pipeline.lib.misc.slack._safe_post_to_slack')
-    @patch('loading_pipeline.api.request_handlers.WriteClickhouseLoadSuccessFileTask')
+    @patch('loading_pipeline.api.request_handlers.LoadClickhouseEntries')
     @patch('loading_pipeline.bin.pipeline_worker.logger')
     def test_process_failure(
         self,
         mock_logger,
-        mock_write_clickhouse_load_success_file_task,
+        mock_load_clickhouse_entries_task,
         mock_safe_post_to_slack,
     ):
         raw_request = {
@@ -150,7 +150,7 @@ class PipelineWorkerTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             'reference_genome': ReferenceGenome.GRCh38.value,
             'dataset_type': DatasetType.SNV_INDEL.value,
         }
-        mock_write_clickhouse_load_success_file_task.return_value = MyFailingTask()
+        mock_load_clickhouse_entries_task.return_value = MyFailingTask()
         os.makedirs(
             loading_pipeline_queue_dir(),
             exist_ok=True,
