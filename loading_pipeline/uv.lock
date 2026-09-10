@@ -2843,11 +2843,11 @@ wheels = [
 
 [[package]]
 name = "pip"
-version = "23.2.1"
+version = "26.2"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ba/19/e63fb4e0d20e48bd2167bb7e857abc0e21679e24805ba921a224df8977c0/pip-23.2.1.tar.gz", hash = "sha256:fb0bd5435b3200c602b5bf61d2d43c2f13c02e29c1707567ae7fbc514eb9faf2", size = 2109449, upload-time = "2023-07-22T09:17:34.056Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/db/96/e6f8e9d9d7b9cc4457092712a7e919c3186aa2c2fa9ffed2c5d29cc947e8/pip-26.2.tar.gz", hash = "sha256:2d8542afcc84cdd8e846c2b36b2861fad1da376dd98f8e7113e9108a3c331690", size = 1848845, upload-time = "2026-07-29T21:57:56.407Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/50/c2/e06851e8cc28dcad7c155f4753da8833ac06a5c704c109313b8d5a62968a/pip-23.2.1-py3-none-any.whl", hash = "sha256:7ccf472345f20d35bdc9d1841ff5f313260c2c33fe417f48c30ac46cccabf5be", size = 2086091, upload-time = "2023-07-22T09:17:31.548Z" },
+    { url = "https://files.pythonhosted.org/packages/62/36/a3aed958d60531cb442b7ab4596cda7b3621cfb916f8ae1d6769795c7dc1/pip-26.2-py3-none-any.whl", hash = "sha256:931c303696af6fa3417112103b1cad26890e5a07eccb5b99783700e33f2b8aad", size = 1816475, upload-time = "2026-07-29T21:57:54.763Z" },
 ]
 
 [[package]]
@@ -4016,7 +4016,7 @@ requires-dist = [
     { name = "jupyter-console", specifier = "==6.6.3" },
     { name = "luigi", specifier = "==3.5.2" },
     { name = "onnxconverter-common", git = "https://github.com/microsoft/onnxconverter-common.git?rev=f7a8eb699caa6f6a78d3bdfbcaf5dfbd43569ebd" },
-    { name = "pip", specifier = "==23.2.1" },
+    { name = "pip", specifier = "==26.2" },
     { name = "pydantic", specifier = "==2.8.2" },
     { name = "qtconsole", specifier = "==5.6.1" },
     { name = "slacker", specifier = "==0.14.0" },
