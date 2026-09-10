@@ -22,10 +22,10 @@ RUN npm run build
 ############################
 # Python build stage
 ############################
-FROM python:3.11-slim-bullseye AS build
+FROM python:3.11-slim-trixie AS build
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::Check-Valid-Until=false update && apt-get install -y --no-install-recommends \
     apt-utils \
     bzip2 \
     curl \
@@ -52,7 +52,7 @@ RUN pip install --no-cache-dir wheel \
 ############################
 # Runtime stage
 ############################
-FROM python:3.11-slim-bullseye AS runtime
+FROM python:3.11-slim-trixie AS runtime
 
 # Copy Python virtualenv from build stage
 COPY --from=build /opt/venv /opt/venv
