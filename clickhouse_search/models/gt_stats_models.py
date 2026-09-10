@@ -3,8 +3,8 @@ from clickhouse_backend import models
 from clickhouse_search.backend.fields import UInt32FieldDeltaCodecField, DictKeyForeignKey
 from clickhouse_search.backend.table_models import RefreshableMaterializedView, RefreshableMaterializedViewMeta, \
     IncrementalMaterializedView, Dictionary
-from reference_data.models import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
-from seqr.models import Dataset
+from seqr.utils.constants import GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, \
+    DATASET_TYPE_VARIANT_CALLS, DATASET_TYPE_SV_CALLS, DATASET_TYPE_MITO_CALLS
 
 
 class BaseProjectGtStats(models.ClickhouseModel):
@@ -307,10 +307,10 @@ class GtStatsDictSv(Dictionary):
         layout = 'FLAT(MAX_ARRAY_SIZE 5000000)'
 
 PROJECT_GT_STATS_VIEW_CLASS_MAP = {
-    GENOME_VERSION_GRCh37: {Dataset.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsGRCh37SnvIndel},
+    GENOME_VERSION_GRCh37: {DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsGRCh37SnvIndel},
     GENOME_VERSION_GRCh38: {
-        Dataset.DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
-        Dataset.DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
-        Dataset.DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
+        DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
+        DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
+        DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
     },
 }

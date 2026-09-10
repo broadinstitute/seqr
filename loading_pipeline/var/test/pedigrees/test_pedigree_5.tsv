@@ -1,0 +1,5 @@
+Project_GUID	Family_GUID	Family_ID	Individual_ID	Paternal_ID	Maternal_ID	Sex
+R0115_test_project2	family_2_1	family_2	RGP_164_1			F
+R0115_test_project2	family_2_1	family_2	RGP_164_2			M
+R0115_test_project2	family_2_1	family_2	RGP_164_3	RGP_164_1	RGP_164_2	F
+R0115_test_project2	family_2_1	family_2	RGP_164_4	RGP_164_1	RGP_164_2	F

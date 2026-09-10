@@ -1,0 +1,13 @@
+FROM ubuntu:18.04 as build
+
+# Adapted from https://hub.docker.com/layers/konradjk/vep95_loftee/latest/images/sha256-d5f1a155293412acb5af4811142ba6907bad1cd708ca4000528f6317b784440e?context=explore
+# and https://github.com/broadinstitute/gnomad_methods/blob/main/docker_files/Dockerfile_VEP105
+RUN apt-get update && apt-get -y install wget libncurses5-dev libncursesw5-dev libbz2-dev liblzma-dev build-essential libz-dev git
+RUN wget https://github.com/samtools/samtools/releases/download/1.7/samtools-1.7.tar.bz2 && tar xjvf samtools-1.7.tar.bz2 && cd samtools-1.7 && make && make install
+RUN git clone -b grch38 https://github.com/konradjk/loftee.git
+
+FROM ensemblorg/ensembl-vep:release_110.1 as runtime
+RUN cpanm DBD::SQLite
+COPY --from=build /usr/local/bin/samtools /usr/local/bin/samtools
+# semantics of mv vs COPY are different such that we don't need the '*' when moving files.
+COPY --from=build /loftee/ /plugins

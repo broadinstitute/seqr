@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -eux
+
+REFERENCE_GENOME=$1
+VEP_REFERENCE_DATASETS_DIR=${VEP_REFERENCE_DATASETS_DIR:-/var/seqr/vep-reference-data}
+VEP_DOCKER_IMAGE="gcr.io/seqr-project/vep-docker-image"
+
+case $REFERENCE_GENOME in
+  GRCh38)
+    ;;
+  GRCh37)
+    ;;
+   *)
+    echo "Invalid reference genome $REFERENCE_GENOME, should be GRCh37 or GRCh38"
+    exit 1
+esac
+
+shift # Remove the REFERENCE_GENOME arg.
+docker run --platform linux/amd64 -i -v "$VEP_REFERENCE_DATASETS_DIR"/"$REFERENCE_GENOME":/opt/vep/.vep/:ro $VEP_DOCKER_IMAGE:"$REFERENCE_GENOME" \
+  /opt/vep/src/ensembl-vep/vep "$@"

@@ -1,0 +1,12 @@
+# Run locally with:
+#
+# gcloud builds submit --quiet --substitutions='_REFERENCE_GENOME=GRCh38' --config .cloudbuild/vep-docker.cloudbuild.yaml loading_pipeline/deploy
+steps:
+- name: 'gcr.io/kaniko-project/executor:v1.3.0'
+  args:
+  - --destination=gcr.io/seqr-project/vep-docker-image:${_REFERENCE_GENOME}
+  - --dockerfile=Dockerfile.vep_${_REFERENCE_GENOME}
+  - --cache=true
+  - --cache-ttl=168h
+
+timeout: 1800s

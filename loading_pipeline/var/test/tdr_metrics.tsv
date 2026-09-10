@@ -1,0 +1,5 @@
+collaborator_sample_id	predicted_sex	contamination_rate	percent_bases_at_20x	mean_coverage
+HG00731	Unknown	5.1	93.69	29.31
+HG00732	Female	5	90	28
+HG00733	Male	6	85	36.4
+NA19675	Male	0	80	30

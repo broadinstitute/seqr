@@ -42,4 +42,6 @@ Single test: `npx jest path/to/File.test.js`. Coverage threshold 40% lines/state
 
 ## Development Notes
 
-Never delete a file that is not in source control without confirming first
+- Never delete a file that is not in source control without confirming first
+- Comments should be kept to a minimum. Only add them where the code is genuinely hard to understand or maintain, and keep them brief. 
+- Always ask before downloading large amounts of data

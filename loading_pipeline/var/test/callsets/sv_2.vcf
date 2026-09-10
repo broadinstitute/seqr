@@ -1,0 +1,82 @@
+##fileformat=VCFv4.2
+##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Predicted copy state">
+##FORMAT=<ID=CNQ,Number=1,Type=Integer,Description="Read-depth genotype quality">
+##FORMAT=<ID=EV,Number=.,Type=String,Description="Classes of evidence supporting final genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=PE_GQ,Number=1,Type=Integer,Description="Paired-end genotype quality">
+##FORMAT=<ID=PE_GT,Number=1,Type=Integer,Description="Paired-end genotype">
+##FORMAT=<ID=RD_CN,Number=1,Type=Integer,Description="Predicted copy state">
+##FORMAT=<ID=RD_GQ,Number=1,Type=Integer,Description="Read-depth genotype quality">
+##FORMAT=<ID=SR_GQ,Number=1,Type=Integer,Description="Split read genotype quality">
+##FORMAT=<ID=SR_GT,Number=1,Type=Integer,Description="Split-read genotype">
+##INFO=<ID=ALGORITHMS,Number=.,Type=String,Description="Source algorithms">
+##INFO=<ID=BOTHSIDES_SUPPORT,Number=0,Type=Flag,Description="Variant has read-level support for both sides of breakpoint">
+##INFO=<ID=CHR2,Number=1,Type=String,Description="Chromosome for END coordinate">
+##INFO=<ID=CPX_INTERVALS,Number=.,Type=String,Description="Genomic intervals constituting complex variant.">
+##INFO=<ID=CPX_TYPE,Number=1,Type=String,Description="Class of complex variant.">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the structural variant">
+##INFO=<ID=END2,Number=1,Type=Integer,Description="Position of breakpoint on CHR2">
+##INFO=<ID=EVIDENCE,Number=.,Type=String,Description="Classes of random forest support.">
+##INFO=<ID=SOURCE,Number=1,Type=String,Description="Source of inserted sequence.">
+##INFO=<ID=STRANDS,Number=1,Type=String,Description="Breakpoint strandedness [++,+-,-+,--]">
+##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="SV length">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=UNRESOLVED_TYPE,Number=1,Type=String,Description="Class of unresolved variant.">
+##INFO=<ID=PREDICTED_BREAKEND_EXONIC,Number=.,Type=String,Description="Gene(s) for which the SV breakend is predicted to fall in an exon.">
+##INFO=<ID=PREDICTED_COPY_GAIN,Number=.,Type=String,Description="Gene(s) on which the SV is predicted to have a copy-gain effect.">
+##INFO=<ID=PREDICTED_DUP_PARTIAL,Number=.,Type=String,Description="Gene(s) which are partially overlapped by an SV's duplication, but the transcription start site is not duplicated.">
+##INFO=<ID=PREDICTED_INTERGENIC,Number=0,Type=Flag,Description="SV does not overlap any protein-coding genes.">
+##INFO=<ID=PREDICTED_INTRAGENIC_EXON_DUP,Number=.,Type=String,Description="Gene(s) on which the SV is predicted to result in intragenic exonic duplication without breaking any coding sequences.">
+##INFO=<ID=PREDICTED_INTRONIC,Number=.,Type=String,Description="Gene(s) where the SV was found to lie entirely within an intron.">
+##INFO=<ID=PREDICTED_INV_SPAN,Number=.,Type=String,Description="Gene(s) which are entirely spanned by an SV's inversion.">
+##INFO=<ID=PREDICTED_LOF,Number=.,Type=String,Description="Gene(s) on which the SV is predicted to have a loss-of-function effect.">
+##INFO=<ID=PREDICTED_MSV_EXON_OVERLAP,Number=.,Type=String,Description="Gene(s) on which the multiallelic SV would be predicted to have a LOF, INTRAGENIC_EXON_DUP, COPY_GAIN, DUP_PARTIAL, TSS_DUP, or PARTIAL_EXON_DUP annotation if the SV were biallelic.">
+##INFO=<ID=PREDICTED_NEAREST_TSS,Number=.,Type=String,Description="Nearest transcription start site to an intergenic variant.">
+##INFO=<ID=PREDICTED_NONCODING_BREAKPOINT,Number=.,Type=String,Description="Class(es) of noncoding elements disrupted by SV breakpoint.">
+##INFO=<ID=PREDICTED_NONCODING_SPAN,Number=.,Type=String,Description="Class(es) of noncoding elements spanned by SV.">
+##INFO=<ID=PREDICTED_PARTIAL_EXON_DUP,Number=.,Type=String,Description="Gene(s) where the duplication SV has one breakpoint in the coding sequence.">
+##INFO=<ID=PREDICTED_PROMOTER,Number=.,Type=String,Description="Gene(s) for which the SV is predicted to overlap the promoter region.">
+##INFO=<ID=PREDICTED_TSS_DUP,Number=.,Type=String,Description="Gene(s) for which the SV is predicted to duplicate the transcription start site.">
+##INFO=<ID=PREDICTED_UTR,Number=.,Type=String,Description="Gene(s) for which the SV is predicted to disrupt a UTR.">
+##INFO=<ID=AN,Number=1,Type=Integer,Description="Total number of alleles genotyped (for biallelic sites) or individuals with copy-state estimates (for multiallelic sites).">
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Number of non-reference alleles observed (for biallelic sites) or individuals at each copy state (for multiallelic sites).">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele frequency (for biallelic sites) or copy-state frequency (for multiallelic sites).">
+##INFO=<ID=N_BI_GENOS,Number=1,Type=Integer,Description="Total number of individuals with complete genotypes (biallelic sites only).">
+##INFO=<ID=N_HOMREF,Number=1,Type=Integer,Description="Number of individuals with homozygous reference genotypes (biallelic sites only).">
+##INFO=<ID=N_HET,Number=1,Type=Integer,Description="Number of individuals with heterozygous genotypes (biallelic sites only).">
+##INFO=<ID=N_HOMALT,Number=1,Type=Integer,Description="Number of individuals with homozygous alternate genotypes (biallelic sites only).">
+##INFO=<ID=FREQ_HOMREF,Number=1,Type=Float,Description="Homozygous reference genotype frequency (biallelic sites only).">
+##INFO=<ID=FREQ_HET,Number=1,Type=Float,Description="Heterozygous genotype frequency (biallelic sites only).">
+##INFO=<ID=FREQ_HOMALT,Number=1,Type=Float,Description="Homozygous alternate genotype frequency (biallelic sites only).">
+##INFO=<ID=MALE_AN,Number=1,Type=Integer,Description="Total number of MALE alleles genotyped (for biallelic sites) or MALE individuals with copy-state estimates (for multiallelic sites).">
+##INFO=<ID=MALE_AC,Number=A,Type=Integer,Description="Number of non-reference MALE alleles observed (for biallelic sites) or MALE individuals at each copy state (for multiallelic sites).">
+##INFO=<ID=MALE_AF,Number=A,Type=Float,Description="MALE allele frequency (for biallelic sites) or MALE copy-state frequency (for multiallelic sites).">
+##INFO=<ID=MALE_N_BI_GENOS,Number=1,Type=Integer,Description="Total number of MALE individuals with complete genotypes (biallelic sites only).">
+##INFO=<ID=MALE_N_HOMREF,Number=1,Type=Integer,Description="Number of MALE individuals with homozygous reference genotypes (biallelic sites only).">
+##INFO=<ID=MALE_N_HET,Number=1,Type=Integer,Description="Number of MALE individuals with heterozygous genotypes (biallelic sites only).">
+##INFO=<ID=MALE_N_HOMALT,Number=1,Type=Integer,Description="Number of MALE individuals with homozygous alternate genotypes (biallelic sites only).">
+##INFO=<ID=MALE_FREQ_HOMREF,Number=1,Type=Float,Description="MALE homozygous reference genotype frequency (biallelic sites only).">
+##INFO=<ID=MALE_FREQ_HET,Number=1,Type=Float,Description="MALE heterozygous genotype frequency (biallelic sites only).">
+##INFO=<ID=MALE_FREQ_HOMALT,Number=1,Type=Float,Description="MALE homozygous alternate genotype frequency (biallelic sites only).">
+##INFO=<ID=FEMALE_AN,Number=1,Type=Integer,Description="Total number of FEMALE alleles genotyped (for biallelic sites) or FEMALE individuals with copy-state estimates (for multiallelic sites).">
+##INFO=<ID=FEMALE_AC,Number=A,Type=Integer,Description="Number of non-reference FEMALE alleles observed (for biallelic sites) or FEMALE individuals at each copy state (for multiallelic sites).">
+##INFO=<ID=FEMALE_AF,Number=A,Type=Float,Description="FEMALE allele frequency (for biallelic sites) or FEMALE copy-state frequency (for multiallelic sites).">
+##INFO=<ID=FEMALE_N_BI_GENOS,Number=1,Type=Integer,Description="Total number of FEMALE individuals with complete genotypes (biallelic sites only).">
+##INFO=<ID=FEMALE_N_HOMREF,Number=1,Type=Integer,Description="Number of FEMALE individuals with homozygous reference genotypes (biallelic sites only).">
+##INFO=<ID=FEMALE_N_HET,Number=1,Type=Integer,Description="Number of FEMALE individuals with heterozygous genotypes (biallelic sites only).">
+##INFO=<ID=FEMALE_N_HOMALT,Number=1,Type=Integer,Description="Number of FEMALE individuals with homozygous alternate genotypes (biallelic sites only).">
+##INFO=<ID=FEMALE_FREQ_HOMREF,Number=1,Type=Float,Description="FEMALE homozygous reference genotype frequency (biallelic sites only).">
+##INFO=<ID=FEMALE_FREQ_HET,Number=1,Type=Float,Description="FEMALE heterozygous genotype frequency (biallelic sites only).">
+##INFO=<ID=FEMALE_FREQ_HOMALT,Number=1,Type=Float,Description="FEMALE homozygous alternate genotype frequency (biallelic sites only).">
+##INFO=<ID=gnomAD_V2_SVID,Number=1,Type=String,Description="Allele frequency (for biallelic sites) or copy-state frequency (for multiallelic sites) of an overlapping event in gnomad.">
+##INFO=<ID=gnomAD_V2_AF,Number=1,Type=Float,Description="Allele frequency (for biallelic sites) or copy-state frequency (for multiallelic sites) of an overlapping event in gnomad.">
+##INFO=<ID=gnomAD_V2_AC,Number=1,Type=Float,Description="Allele frequency (for biallelic sites) or copy-state frequency (for multiallelic sites) of an overlapping event in gnomad.">
+##INFO=<ID=gnomAD_V2_AN,Number=1,Type=Float,Description="Allele frequency (for biallelic sites) or copy-state frequency (for multiallelic sites) of an overlapping event in gnomad.">
+##INFO=<ID=StrVCTVRE,Number=1,Type=String,Description="StrVCTVRE score">
+##INFO=<ID=GNOMAD_V4.1_TRUTH_VID,Number=1,Type=String,Description="Annotation added by seqr loading pipeline run of SVConcordance between the callset & the gnomAD SVs VCF">
+##INFO=<ID=SEQR_INTERNAL_TRUTH_VID,Number=1,Type=String,Description="Annotation added by seqr loading pipeline run of SVConcordance between the callset & the all previously loaded variants exported to VCF">
+##FORMAT=<ID=CONC_ST,Number=.,Type=String,Description="The genotype concordance contingency state">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	RGP_164_1	RGP_164_2	RGP_164_3	RGP_164_4	RGP_164_5
+chr1	180929	new_variant1	N	<BND>	657	HIGH_SR_BACKGROUND;UNRESOLVED	ALGORITHMS=manta;CHR2=chr5;END=180928;END2=20404;EVIDENCE=PE,SR;PREDICTED_INTERGENIC;PREDICTED_NEAREST_TSS=OR4F5,PLEKHG4B;PREDICTED_NONCODING_BREAKPOINT=DNase;STRANDS=+-;SVLEN=-1;SVTYPE=BND;UNRESOLVED_TYPE=SINGLE_ENDER_+-;AN=8;AC=1;AF=0.04775;N_BI_GENOS=2911;N_HOMREF=2633;N_HET=278;N_HOMALT=0;FREQ_HOMREF=0.9045;FREQ_HET=0.0954998;FREQ_HOMALT=0;MALE_AN=2894;MALE_AC=137;MALE_AF=0.047339;MALE_N_BI_GENOS=1447;MALE_N_HOMREF=1310;MALE_N_HET=137;MALE_N_HOMALT=0;MALE_FREQ_HOMREF=0.905321;MALE_FREQ_HET=0.0946786;MALE_FREQ_HOMALT=0;FEMALE_AN=2906;FEMALE_AC=139;FEMALE_AF=0.047832;FEMALE_N_BI_GENOS=1453;FEMALE_N_HOMREF=1314;FEMALE_N_HET=139;FEMALE_N_HOMALT=0;FEMALE_FREQ_HOMREF=0.904336;FEMALE_FREQ_HET=0.0956641;FEMALE_FREQ_HOMALT=0;SEQR_INTERNAL_TRUTH_VID=BND_chr1_6	GT:EV:GQ:PE_GQ:PE_GT:SR_GQ:SR_GT	0/0:PE,SR:99:99:0:2:0	0/1:SR:31:99:0:31:1	0/0:PE,SR:99:99:0:99:0	0/0:PE,SR:99:99:0:2:0	0/0:PE,SR:99:99:0:2:0
+chr1	257667	new_variant2	N	<DUP>	999	PASS	ALGORITHMS=depth;CHR2=chr1;END=263666;EVIDENCE=BAF,RD;PREDICTED_INTERGENIC;PREDICTED_NEAREST_TSS=OR4F29;SVLEN=6000;SVTYPE=DUP;AN=8;AC=1;AF=0.115596;N_BI_GENOS=2911;N_HOMREF=2348;N_HET=453;N_HOMALT=110;FREQ_HOMREF=0.806596;FREQ_HET=0.155617;FREQ_HOMALT=0.0377877;MALE_AN=2894;MALE_AC=339;MALE_AF=0.117139;MALE_N_BI_GENOS=1447;MALE_N_HOMREF=1163;MALE_N_HET=229;MALE_N_HOMALT=55;MALE_FREQ_HOMREF=0.803732;MALE_FREQ_HET=0.158258;MALE_FREQ_HOMALT=0.0380097;FEMALE_AN=2906;FEMALE_AC=330;FEMALE_AF=0.113558;FEMALE_N_BI_GENOS=1453;FEMALE_N_HOMREF=1178;FEMALE_N_HET=220;FEMALE_N_HOMALT=55;FEMALE_FREQ_HOMREF=0.810736;FEMALE_FREQ_HET=0.151411;FEMALE_FREQ_HOMALT=0.0378527	GT:EV:GQ:RD_CN:RD_GQ	0/0:RD:99:2:99	0/0:RD:99:2:99	0/1:RD:8:3:8	0/0:RD:13:1:13	0/0:RD:13:1:13

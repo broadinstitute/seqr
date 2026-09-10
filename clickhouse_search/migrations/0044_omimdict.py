@@ -4,6 +4,8 @@ import clickhouse_backend.models
 from django.db import migrations
 import django.db.models.manager
 
+from clickhouse_search.backend.table_models import conditionally_reload_dictionary
+
 
 class Migration(migrations.Migration):
 
@@ -30,5 +32,5 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
-        migrations.RunSQL('SYSTEM RELOAD DICTIONARY "seqrdb_omim"'),
+        migrations.RunPython(conditionally_reload_dictionary('seqrdb_omim')),
     ]

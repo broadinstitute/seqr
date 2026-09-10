@@ -1,0 +1,11 @@
+steps:
+- name: 'gcr.io/kaniko-project/executor:v1.3.0'
+  args:
+  - --destination=gcr.io/seqr-project/seqr-pipeline-runner:${COMMIT_SHA}
+  - --destination=gcr.io/seqr-project/seqr-pipeline-runner:${_CUSTOM_BRANCH_TAG}
+  - --dockerfile=loading_pipeline/deploy/Dockerfile
+  - --cache=true
+  - --cache-ttl=168h
+  - --build-arg=PIPELINE_RUNNER_APP_VERSION=${COMMIT_SHA}
+
+timeout: 1800s

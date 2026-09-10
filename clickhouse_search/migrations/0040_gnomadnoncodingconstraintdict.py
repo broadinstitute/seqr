@@ -3,13 +3,13 @@
 import clickhouse_backend.models
 import clickhouse_search.backend.engines
 import clickhouse_search.backend.fields
-import clickhouse_search.models.search_models
+import clickhouse_search.backend.table_models
 from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
 import os
 
-from clickhouse_search.models.reference_data_models import conditionally_refresh_reference_dataset
+from clickhouse_search.backend.table_models import conditionally_refresh_reference_dataset
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
 
 CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
@@ -419,7 +419,7 @@ class Migration(migrations.Migration):
             options={
                 'db_table': 'GRCh38/SNV_INDEL/entries',
                 'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'), partition_by=['project_guid', 'partition_id']),
-                'projection': clickhouse_search.models.search_models.Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos'),
+                'projection': clickhouse_search.backend.table_models.Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -711,7 +711,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh37/SNV_INDEL/entries',
                 'abstract': False,
                 'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'sample_type', 'is_gnomad_gt_5_percent', 'is_annotated_in_any_gene', 'key'), partition_by='project_guid'),
-                'projection': clickhouse_search.models.search_models.Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos'),
+                'projection': clickhouse_search.backend.table_models.Projection('xpos_projection', order_by='is_gnomad_gt_5_percent, is_annotated_in_any_gene, xpos'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -775,7 +775,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/MITO/entries',
                 'abstract': False,
                 'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'sample_type', 'key'), partition_by='project_guid'),
-                'projection': clickhouse_search.models.search_models.Projection('xpos_projection', order_by='xpos'),
+                'projection': clickhouse_search.backend.table_models.Projection('xpos_projection', order_by='xpos'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -820,7 +820,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/SV/entries',
                 'abstract': False,
                 'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'key'), partition_by='project_guid'),
-                'projection': clickhouse_search.models.search_models.Projection('xpos_projection', order_by='xpos'),
+                'projection': clickhouse_search.backend.table_models.Projection('xpos_projection', order_by='xpos'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
@@ -842,7 +842,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/GCNV/entries',
                 'abstract': False,
                 'engine': clickhouse_search.backend.engines.CollapsingMergeTree('sign', deduplicate_merge_projection_mode='rebuild', index_granularity=8192, order_by=('project_guid', 'family_guid', 'key'), partition_by='project_guid'),
-                'projection': clickhouse_search.models.search_models.Projection('xpos_projection', order_by='xpos'),
+                'projection': clickhouse_search.backend.table_models.Projection('xpos_projection', order_by='xpos'),
             },
             managers=[
                 ('objects', django.db.models.manager.Manager()),
