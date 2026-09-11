@@ -1,5 +1,6 @@
 import hail as hl
 
+from loading_pipeline.lib.annotations.shared import xpos
 from loading_pipeline.lib.core import DatasetType, ReferenceGenome, SampleType
 from loading_pipeline.lib.tasks.exports.misc import (
     reformat_transcripts_for_export,
@@ -100,7 +101,7 @@ def get_existing_variants_export_field(dataset_type: DatasetType) -> str:
     return f'key AS key_, variantId AS variant_id {dt_fields}'
 
 
-def get_entries_call_annotations_fields(
+def _get_entries_call_annotations_fields(
     dataset_type: DatasetType,
 ):
     if dataset_type == DatasetType.GCNV:
@@ -154,27 +155,13 @@ def _get_calls_export_fields(
                     getattr(fe, f'sample_{field}'),
                     getattr(ht, field),
                 )
-                for field in get_entries_call_annotations_fields(dataset_type)
+                for field in _get_entries_call_annotations_fields(dataset_type)
             },
             newCall=fe.concordance.new_call,
             prevCall=fe.concordance.prev_call,
             prevOverlap=fe.concordance.prev_overlap,
         ),
     }[dataset_type](fe)
-
-
-def get_entries_annotations_export_fields(dataset_type: DatasetType):
-    fields = {
-        'key_': lambda ht: ht.key_,
-        'xpos': lambda ht: hl.int64(ht.xpos),
-    }
-    if dataset_type in {DatasetType.SV, DatasetType.SNV_INDEL}:
-        fields['geneIds'] = lambda ht: (
-            hl.set(ht.sorted_gene_consequences.gene_id)
-            if dataset_type == DatasetType.SV
-            else hl.set(ht.sorted_transcript_consequences.gene_id)
-        )
-    return fields
 
 
 def get_entries_export_fields(
@@ -185,13 +172,10 @@ def get_entries_export_fields(
     return {
         'project_guid': ht.family_entries.project_guid[0],
         'family_guid': ht.family_entries.family_guid[0],
-        **{
-            field: getattr(ht, field)
-            for field in get_entries_annotations_export_fields(dataset_type)
-        },
         **(
             {
                 'sample_type': sample_type.value,
+                'xpos': xpos(ht),
             }
             if dataset_type in {DatasetType.SNV_INDEL, DatasetType.MITO}
             else {}

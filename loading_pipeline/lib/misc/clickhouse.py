@@ -655,9 +655,13 @@ def insert_new_entries(
         )
     ]
     common, overrides = [c for c in dst_cols if c in src_cols], {}
-    if 'geneId_ids' in dst_cols and 'geneIds' in src_cols:
-        common = [c for c in common if c not in ('geneId_ids', 'geneIds')]
+    if 'xpos' not in common:
+        common.append('xpos')
+        overrides['xpos'] = 'v.xpos'
+
+    if 'geneId_ids' in dst_cols:
         common.append('geneId_ids')
+        gene_list_field = 'sortedGeneConsequences' if table_name_builder.dataset_type == DatasetType.SV else 'sortedTranscriptConsequences'
         overrides['geneId_ids'] = f"""
             arrayFilter(
                 x -> x IS NOT NULL,
@@ -667,7 +671,7 @@ def insert_new_entries(
                         'seqrdb_id',
                         g
                     ),
-                    geneIds
+                    arrayDistinct(v.{gene_list_field}.geneId)
                 )
             )
         """
@@ -681,13 +685,25 @@ def insert_new_entries(
             dictGetOrDefault({ClickhouseReferenceDataset.GNOMAD_GENOMES.search_path(table_name_builder)}, 'filter_af', key, 0) > 0.05
         """
 
+    if table_name_builder.dataset_type == DatasetType.GCNV:
+        overrides
+
     dst_list = ', '.join(common)
-    src_list = ', '.join([overrides.get(c, c) for c in common])
+    src_list = ', '.join([overrides.get(c, f'e.{c}') for c in common])
     logged_query(
         f"""
         INSERT INTO {table_name_builder.staging_dst_table(ClickHouseTable.ENTRIES)} ({dst_list})
-        SELECT {src_list}
-        FROM {table_name_builder.src_table(ClickHouseTable.ENTRIES)}
+        SELECT e.key, {src_list}
+        FROM (
+            SELECT
+                dst.key,
+                COLUMNS('.*') EXCEPT(variantId, key)
+            FROM {table_name_builder.src_table(ClickHouseTable.ENTRIES)} src
+            INNER JOIN {table_name_builder.dst_table(ClickHouseTable.KEY_LOOKUP)} dst
+            ON {ClickHouseTable.KEY_LOOKUP.join_condition}
+        ) e
+        INNER JOIN {table_name_builder.dst_table(ClickHouseTable.VARIANTS_MEMORY)} v
+        ON assumeNotNull(e.key) = v.key
         """,  # nosec B608
     )
 
