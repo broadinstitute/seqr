@@ -968,28 +968,24 @@ def export_existing_variants_to_parquet(
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
     run_id: str,
-    export_select_fields: str,
 ) -> None:
     table_name_builder = TableNameBuilder(
         reference_genome,
         dataset_type,
         run_id,
     )
-    variants_table = table_name_builder.dst_table(
-        ClickHouseTable.VARIANT_DETAILS
-        if dataset_type.should_write_new_variant_details
-        else ClickHouseTable.VARIANTS_MEMORY,
-    )
+    variants_table = table_name_builder.dst_table(ClickHouseTable.VARIANTS_MEMORY)
     export_table = table_name_builder.src_table(
         ClickHouseTable.EXISTING_VARIANTS,
     ).replace(
-        '/*.parquet',
+        '/*.parquet.gz',
         '',
     )
+    dt_fields = ', end, endChrom' if dataset_type == DatasetType.SV else ''
     logged_query(
         f"""
         INSERT INTO FUNCTION {export_table}
-        SELECT {export_select_fields}
+        SELECT key AS key_, variantId AS variant_id {dt_fields}
         FROM {variants_table}
         """,  # nosec B608
     )

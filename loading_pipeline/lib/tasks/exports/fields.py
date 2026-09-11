@@ -91,17 +91,6 @@ def get_dataset_type_specific_variants_annotations(
     }[dataset_type](ht)
 
 
-def get_existing_variants_export_field(dataset_type: DatasetType) -> str:
-    # TODO should really be querying from key lookup table
-    dt_fields = {
-        DatasetType.SNV_INDEL: '',
-        DatasetType.MITO: '',
-        DatasetType.SV: ', end, endChrom',
-        DatasetType.GCNV: '',
-    }[dataset_type]
-    return f'key AS key_, variantId AS variant_id {dt_fields}'
-
-
 def _get_entries_call_annotations_fields(
     dataset_type: DatasetType,
 ):
