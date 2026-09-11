@@ -1,4 +1,4 @@
-name: dev release
+name: pipeline dev release
 on:
   workflow_run:
     workflows: ["Pipeline Unit Tests"]
@@ -27,8 +27,11 @@ jobs:
 
       - name: Build package
         run: |
-          cd loading_pipeline
-          rm -rf dist/
+          rm -rf pipeline_build
+          mkdir pipeline_build
+          cp -r loading_pipeline pipeline_build
+          mv pipeline_build/loading_pipeline/pyproject.toml pipeline_build
+          cd pipeline_build
           python -m pip install build
           python -m build
 
