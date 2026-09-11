@@ -1,4 +1,4 @@
-name: dev release
+name: pipeline dev release
 on:
   workflow_run:
     workflows: ["Pipeline Unit Tests"]
