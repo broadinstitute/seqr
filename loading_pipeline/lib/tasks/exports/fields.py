@@ -1,6 +1,6 @@
 import hail as hl
 
-from loading_pipeline.lib.annotations.shared import xpos
+from loading_pipeline.lib.annotations.shared import variant_id, xpos
 from loading_pipeline.lib.core import DatasetType, ReferenceGenome, SampleType
 from loading_pipeline.lib.tasks.exports.misc import (
     reformat_transcripts_for_export,
@@ -175,10 +175,11 @@ def get_entries_export_fields(
         **(
             {
                 'sample_type': sample_type.value,
+                'variantId': variant_id(ht),
                 'xpos': xpos(ht),
             }
             if dataset_type in {DatasetType.SNV_INDEL, DatasetType.MITO}
-            else {}
+            else {'variantId': ht.variant_id}
         ),
         'filters': ht.filters,
         'calls': hl.sorted(ht.family_entries, key=lambda fe: fe.s).map(
