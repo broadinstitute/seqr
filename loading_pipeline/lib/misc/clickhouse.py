@@ -974,7 +974,7 @@ def export_existing_variants_to_parquet(
         dataset_type,
         run_id,
     )
-    variants_table = variants_table = table_name_builder.dst_table(
+    variants_table = table_name_builder.dst_table(
         ClickHouseTable.KEY_LOOKUP
         if dataset_type.should_write_new_variant_details
         else ClickHouseTable.VARIANTS_MEMORY,
