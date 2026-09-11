@@ -14,6 +14,9 @@ from loading_pipeline.lib.test.mock_complete_task import MockCompleteTask
 
 
 @patch(
+    'loading_pipeline.lib.tasks.dataproc.base_run_job_on_dataproc.WriteExistingVariantsParquetTask',
+)
+@patch(
     'loading_pipeline.lib.tasks.dataproc.base_run_job_on_dataproc.CreateDataprocClusterTask',
 )
 @patch(
@@ -26,6 +29,7 @@ class WriteSuccessFileOnDataprocTaskTest(unittest.TestCase):
         mock_logger: Mock,
         mock_job_controller_client: Mock,
         mock_create_dataproc_cluster: Mock,
+        mock_variants_parquet: Mock,
     ) -> None:
         mock_create_dataproc_cluster.return_value = MockCompleteTask()
         mock_client = mock_job_controller_client.return_value
@@ -63,6 +67,7 @@ class WriteSuccessFileOnDataprocTaskTest(unittest.TestCase):
         self,
         mock_job_controller_client: Mock,
         mock_create_dataproc_cluster: Mock,
+        mock_variants_parquet: Mock,
     ) -> None:
         mock_create_dataproc_cluster.return_value = MockCompleteTask()
         mock_client = mock_job_controller_client.return_value
@@ -91,8 +96,10 @@ class WriteSuccessFileOnDataprocTaskTest(unittest.TestCase):
         mock_logger: Mock,
         mock_job_controller_client: Mock,
         mock_create_dataproc_cluster: Mock,
+        mock_variants_parquet: Mock,
     ) -> None:
         mock_create_dataproc_cluster.return_value = MockCompleteTask()
+        mock_variants_parquet.return_value = MockCompleteTask()
         mock_client = mock_job_controller_client.return_value
         mock_client.get_job.side_effect = [
             google.api_core.exceptions.NotFound(
@@ -139,8 +146,10 @@ class WriteSuccessFileOnDataprocTaskTest(unittest.TestCase):
         mock_logger: Mock,
         mock_job_controller_client: Mock,
         mock_create_dataproc_cluster: Mock,
+        mock_variants_parquet: Mock,
     ) -> None:
         mock_create_dataproc_cluster.return_value = MockCompleteTask()
+        mock_variants_parquet.return_value = MockCompleteTask()
         mock_client = mock_job_controller_client.return_value
         mock_client.get_job.side_effect = [
             google.api_core.exceptions.NotFound(
