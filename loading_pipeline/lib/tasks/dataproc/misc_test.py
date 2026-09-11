@@ -31,8 +31,6 @@ class MiscTest(unittest.TestCase):
                 'SNV_INDEL',
                 '--run-id',
                 'a_misc_run',
-                '--attempt-id',
-                '0',
                 '--sample-type',
                 'WGS',
                 '--callset-path',
@@ -47,5 +45,7 @@ class MiscTest(unittest.TestCase):
                 '[]',
                 '--is-new-gcnv-joint-call',
                 'False',
+                '--attempt-id',
+                '0',
             ],
         )
