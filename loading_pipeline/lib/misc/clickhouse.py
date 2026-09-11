@@ -661,7 +661,11 @@ def insert_new_entries(
 
     if 'geneId_ids' in dst_cols:
         common.append('geneId_ids')
-        gene_list_field = 'sortedGeneConsequences' if table_name_builder.dataset_type == DatasetType.SV else 'sortedTranscriptConsequences'
+        gene_list_field = (
+            'sortedGeneConsequences'
+            if table_name_builder.dataset_type == DatasetType.SV
+            else 'sortedTranscriptConsequences'
+        )
         overrides['geneId_ids'] = f"""
             arrayFilter(
                 x -> x IS NOT NULL,
@@ -684,9 +688,6 @@ def insert_new_entries(
         overrides['is_gnomad_gt_5_percent'] = f"""
             dictGetOrDefault({ClickhouseReferenceDataset.GNOMAD_GENOMES.search_path(table_name_builder)}, 'filter_af', key, 0) > 0.05
         """
-
-    if table_name_builder.dataset_type == DatasetType.GCNV:
-        overrides
 
     dst_list = ', '.join(common)
     src_list = ', '.join([overrides.get(c, f'e.{c}') for c in common])
