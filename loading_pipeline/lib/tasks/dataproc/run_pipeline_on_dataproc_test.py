@@ -14,7 +14,7 @@ from loading_pipeline.lib.test.mock_complete_task import MockCompleteTask
 
 
 @patch(
-    'loading_pipeline.lib.tasks.dataproc.base_run_job_on_dataproc.WriteExistingVariantsParquetTask',
+    'loading_pipeline.lib.tasks.dataproc.run_pipeline_on_dataproc.WriteExistingVariantsParquetTask',
 )
 @patch(
     'loading_pipeline.lib.tasks.dataproc.base_run_job_on_dataproc.CreateDataprocClusterTask',
