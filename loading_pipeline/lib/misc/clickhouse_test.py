@@ -313,6 +313,11 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'family_d2',
                     'family_d3',
                 ],
+                'xpos': [
+                    123456789,
+                    123456789,
+                    123456789,
+                ],
                 'sample_type': [
                     'WES',
                     'WES',
@@ -322,16 +327,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     '1-3-A-C',
                     'Y-19-A-C',
                     'M-12-C-G',
-                ],
-                'xpos': [
-                    123456789,
-                    123456789,
-                    123456789,
-                ],
-                'filters': [
-                    [],
-                    [],
-                    [],
                 ],
                 'calls': [
                     [('sample_d1', 0), ('sample_d11', 2)],
@@ -349,10 +344,9 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             [
                 ('project_guid', pa.string()),
                 ('family_guid', pa.string()),
+                ('xpos', pa.int64()),
                 ('sample_type', pa.string()),
                 ('variantId', pa.string()),
-                ('xpos', pa.int64()),
-                ('filters', pa.list_(pa.string())),
                 (
                     'calls',
                     pa.list_(
@@ -372,13 +366,13 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             schema,
         )
         write_test_parquet(
-            df.drop(['sample_type', 'xpos'], axis=1),
+            df.drop(['xpos', 'sample_type'], axis=1),
             new_entries_parquet_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
                 TEST_RUN_ID,
             ),
-            pa.schema([f for f in schema if f.name not in ('sample_type', 'xpos')]),
+            schema.remove(2).remove(2),
         )
 
     def test_get_clickhouse_client(self):
