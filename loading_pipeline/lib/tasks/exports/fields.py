@@ -4,7 +4,6 @@ from loading_pipeline.lib.annotations.shared import variant_id, xpos
 from loading_pipeline.lib.core import DatasetType, ReferenceGenome, SampleType
 from loading_pipeline.lib.tasks.exports.misc import (
     reformat_transcripts_for_export,
-    snake_to_camelcase,
 )
 
 STANDARD_CONTIGS = hl.set(
