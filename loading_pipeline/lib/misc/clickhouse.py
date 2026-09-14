@@ -985,9 +985,6 @@ def export_existing_variants_to_parquet(
     ).replace(
         '/*.parquet',
         '',
-    ).replace(
-        '.parquet',
-        '.parquet.gz',
     )
     dt_fields = ', end, endChrom' if dataset_type == DatasetType.SV else ''
     logged_query(
