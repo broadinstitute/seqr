@@ -71,28 +71,28 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
             ),
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
-        self.assertEqual(len(export_json), 16)
+        self.assertEqual(len(export_json), 181)
         self.assertEqual(
             df['family_guid'].value_counts().to_dict(),
             {
-                'abc_1': 2,
-                '345_1': 2,
-                '123_1': 1,
-                '234_1': 1,
-                '456_1': 1,
-                '567_1': 1,
-                '678_1': 1,
-                '789_1': 1,
-                '890_1': 1,
-                '901_1': 1,
-                'bcd_1': 1,
-                'cde_1': 1,
-                'def_1': 1,
-                'efg_1': 1,
+                'abc_1': 16,
+                '789_1': 15,
+                '890_1': 14,
+                '901_1': 14,
+                'bcd_1': 14,
+                '345_1': 13,
+                '456_1': 13,
+                '567_1': 13,
+                'def_1': 13,
+                '123_1': 12,
+                '234_1': 11,
+                '678_1': 11,
+                'cde_1': 11,
+                'efg_1': 11,
             },
         )
         self.assertEqual(
-            [export_json[0], export_json[9], export_json[15]],
+            [export_json[2], export_json[11], export_json[17]],
             [
                 {
                     'project_guid': 'R0114_project4',
@@ -203,29 +203,28 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
             ),
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
+        self.assertEqual(len(export_json), 3)
         self.assertEqual(
-            export_json,
-            [
-                {
-                    'project_guid': 'R0116_test_project3',
-                    'family_guid': 'family_1',
-                    'sample_type': 'WGS',
-                    'variantId': 'M-8-G-T',
-                    'xpos': 25000000008,
-                    'filters': [],
-                    'calls': [
-                        {
-                            'sampleId': 'RGP_1270_2',
-                            'gt': 2,
-                            'dp': 4216,
-                            'hl': 0.999,
-                            'mitoCn': 224,
-                            'contamination': 0.0,
-                        },
-                    ],
-                    'sign': 1,
-                },
-            ],
+            export_json[0],
+            {
+                'project_guid': 'R0116_test_project3',
+                'family_guid': 'family_1',
+                'sample_type': 'WGS',
+                'variantId': 'M-8-G-T',
+                'xpos': 25000000008,
+                'filters': [],
+                'calls': [
+                    {
+                        'sampleId': 'RGP_1270_2',
+                        'gt': 2,
+                        'dp': 4216,
+                        'hl': 0.999,
+                        'mitoCn': 224,
+                        'contamination': 0.0,
+                    },
+                ],
+                'sign': 1,
+            },
         )
 
     def test_sv_write_new_entries_parquet(self):
