@@ -193,6 +193,7 @@ _FULL_REGULATORY_CONSEQUENCE = {
 }
 
 
+@patch('time.sleep', return_value=None)
 class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
     fixtures: ClassVar = ['clickhouse_test']
 
