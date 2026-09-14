@@ -1,6 +1,3 @@
-from typing import ClassVar
-
-import hail as hl
 import luigi.worker
 import pandas as pd
 
@@ -12,13 +9,9 @@ from loading_pipeline.lib.core import (
 from loading_pipeline.lib.misc.validation import ALL_VALIDATIONS
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
-    new_variants_table_path,
 )
 from loading_pipeline.lib.tasks.exports.write_new_entries_parquet import (
     WriteNewEntriesParquetTask,
-)
-from loading_pipeline.lib.test.clickhouse_schema_testcase import (
-    ClickhouseSchemaTestCase,
 )
 from loading_pipeline.lib.test.misc import (
     convert_ndarray_to_list,
@@ -36,61 +29,11 @@ TEST_SNV_INDEL_VCF = 'loading_pipeline/var/test/callsets/1kg_30variants.vcf'
 TEST_MITO_CALLSET = 'loading_pipeline/var/test/callsets/mito_1.mt'
 TEST_SV_VCF_2 = 'loading_pipeline/var/test/callsets/sv_2.vcf'
 TEST_GCNV_BED_FILE = 'loading_pipeline/var/test/callsets/gcnv_1.tsv'
-TEST_SNV_INDEL_ANNOTATIONS = (
-    'loading_pipeline/var/test/exports/GRCh38/SNV_INDEL/annotations.ht'
-)
-TEST_MITO_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/MITO/annotations.ht'
-TEST_SV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/SV/annotations.ht'
-TEST_GCNV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/GCNV/annotations.ht'
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
 
-class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
-    fixtures: ClassVar = ['clickhouse_test']
-
-    def setUp(self) -> None:
-        super().setUp()
-        ht = hl.read_table(
-            TEST_SNV_INDEL_ANNOTATIONS,
-        )
-        ht = ht.filter(ht.variant_id != '1-878314-G-C')
-        ht.write(
-            new_variants_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.SNV_INDEL,
-                TEST_RUN_ID,
-            ),
-        )
-        ht = hl.read_table(
-            TEST_MITO_ANNOTATIONS,
-        )
-        ht.write(
-            new_variants_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.MITO,
-                TEST_RUN_ID,
-            ),
-        )
-        ht = hl.read_table(
-            TEST_SV_ANNOTATIONS,
-        )
-        ht.write(
-            new_variants_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.SV,
-                TEST_RUN_ID,
-            ),
-        )
-        ht = hl.read_table(TEST_GCNV_ANNOTATIONS)
-        ht.write(
-            new_variants_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-                TEST_RUN_ID,
-            ),
-        )
-
+class WriteNewEntriesParquetTest(MockedDatarootTestCase):
     def test_write_new_entries_parquet(self):
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_3_REMAP,
@@ -152,12 +95,11 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             [export_json[0], export_json[9], export_json[15]],
             [
                 {
-                    'key': 0,
                     'project_guid': 'R0114_project4',
                     'family_guid': '123_1',
                     'sample_type': 'WGS',
+                    'variantId': '1-876499-A-G',
                     'xpos': 1000876499,
-                    'geneIds': ['ENSG00000187634'],
                     'filters': [],
                     'calls': [
                         {
@@ -171,12 +113,11 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
                     'sign': 1,
                 },
                 {
-                    'key': 0,
                     'project_guid': 'R0113_test_project',
                     'family_guid': 'abc_1',
                     'sample_type': 'WGS',
+                    'variantId': '1-876499-A-G',
                     'xpos': 1000876499,
-                    'geneIds': ['ENSG00000187634'],
                     'filters': [],
                     'calls': [
                         {
@@ -204,12 +145,11 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
                     'sign': 1,
                 },
                 {
-                    'key': 1,
                     'project_guid': 'R0113_test_project',
                     'family_guid': 'abc_1',
                     'sample_type': 'WGS',
+                    'variantId': '1-878314-G-C',
                     'xpos': 1000878314,
-                    'geneIds': ['ENSG00000177000'],
                     'filters': ['VQSRTrancheSNP99.00to99.90'],
                     'calls': [
                         {
@@ -267,10 +207,10 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             export_json,
             [
                 {
-                    'key': 998,
                     'project_guid': 'R0116_test_project3',
                     'family_guid': 'family_1',
                     'sample_type': 'WGS',
+                    'variantId': 'M-8-G-T',
                     'xpos': 25000000008,
                     'filters': [],
                     'calls': [
@@ -322,11 +262,9 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             export_json,
             [
                 {
-                    'key': 727,
                     'project_guid': 'R0115_test_project2',
                     'family_guid': 'family_2_1',
-                    'xpos': 1001025886,
-                    'geneIds': ['ENSG00000188157'],
+                    'variantId': 'BND_chr1_6',
                     'filters': ['HIGH_SR_BACKGROUND', 'UNRESOLVED'],
                     'calls': [
                         {
@@ -405,10 +343,9 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             export_json,
             [
                 {
-                    'key': 0,
                     'project_guid': 'R0115_test_project2',
                     'family_guid': 'family_2_1',
-                    'xpos': 1000939203,
+                    'variantId': 'suffix_16456_DEL',
                     'filters': [],
                     'calls': [
                         {
