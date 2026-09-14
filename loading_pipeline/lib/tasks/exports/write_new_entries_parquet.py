@@ -19,6 +19,9 @@ from loading_pipeline.lib.tasks.exports.fields import (
     get_entries_export_fields,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.write_metadata_for_run import (
+    WriteMetadataForRunTask,
+)
 from loading_pipeline.lib.tasks.write_remapped_and_subsetted_callset import (
     WriteRemappedAndSubsettedCallsetTask,
 )
@@ -38,6 +41,7 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
     def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WriteRemappedAndSubsettedCallsetTask),
+            self.clone(WriteMetadataForRunTask),
         ]
 
     def create_table(self) -> hl.Table:
