@@ -303,7 +303,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         # New Entries Parquet
         df = pd.DataFrame(
             {
-                'key': [10, 3, 4],
                 'project_guid': [
                     'project_d',
                     'project_d',
@@ -314,20 +313,25 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'family_d2',
                     'family_d3',
                 ],
-                'xpos': [
-                    123456789,
-                    123456789,
-                    123456789,
-                ],
                 'sample_type': [
                     'WES',
                     'WES',
                     'WES',
                 ],
-                'geneIds': [
+                'variantId': [
+                    '1-3-A-C',
+                    'Y-19-A-C',
+                    'M-12-C-G',
+                ],
+                'xpos': [
+                    123456789,
+                    123456789,
+                    123456789,
+                ],
+                'filters': [
                     [],
-                    ['GENE1', 'GENE2'],
-                    ['GENE3'],
+                    [],
+                    [],
                 ],
                 'calls': [
                     [('sample_d1', 0), ('sample_d11', 2)],
@@ -343,12 +347,12 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         schema = pa.schema(
             [
-                ('key', pa.int64()),
                 ('project_guid', pa.string()),
                 ('family_guid', pa.string()),
-                ('xpos', pa.int64()),
                 ('sample_type', pa.string()),
-                ('geneIds', pa.list_(pa.string())),
+                ('variantId', pa.string()),
+                ('xpos', pa.int64()),
+                ('filters', pa.list_(pa.string())),
                 (
                     'calls',
                     pa.list_(
@@ -368,13 +372,13 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             schema,
         )
         write_test_parquet(
-            df.drop('geneIds', axis=1),
+            df.drop(['sample_type', 'xpos'], axis=1),
             new_entries_parquet_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
                 TEST_RUN_ID,
             ),
-            schema.remove(5).remove(5),
+            pa.schema([f for f in schema if f.name not in ('sample_type', 'xpos')]),
         )
 
     def test_get_clickhouse_client(self):
