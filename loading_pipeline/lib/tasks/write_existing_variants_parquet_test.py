@@ -1,3 +1,4 @@
+import gzip
 from typing import ClassVar
 
 import luigi.worker
@@ -40,26 +41,23 @@ class WriteExistingVariantsParquetTest(
         worker.run()
         self.assertTrue(task.output().exists())
         self.assertTrue(task.complete())
-        return pd.read_parquet(
+        with gzip.open(
             existing_variants_parquet_path(reference_genome, dataset_type, TEST_RUN_ID),
-        )
+        ) as f:
+            return pd.read_parquet(f)
 
     def test_snv_indel(self):
         df = self._run_task(DatasetType.SNV_INDEL)
-        self.assertEqual(list(df.columns), ['key_', 'variant_id', 'geneIds'])
+        self.assertEqual(list(df.columns), ['key_', 'variant_id'])
         df = df.sort_values('key_').reset_index(drop=True)
         self.assertEqual(
             convert_ndarray_to_list(
-                df[['key_', 'variant_id', 'geneIds']].to_dict('records'),
+                df[['key_', 'variant_id']].to_dict('records'),
             ),
             [
-                {
-                    'key_': 1,
-                    'variant_id': '1-878314-G-C',
-                    'geneIds': ['ENSG00000177000'],
-                },
-                {'key_': 7, 'variant_id': '7-1234567-AGT-A', 'geneIds': []},
-                {'key_': 10, 'variant_id': '10-987654-G-A', 'geneIds': []},
+                {'key_': 1, 'variant_id': '1-878314-G-C'},
+                {'key_': 7, 'variant_id': '7-1234567-AGT-A'},
+                {'key_': 10, 'variant_id': '10-987654-G-A'},
             ],
         )
 
@@ -68,7 +66,7 @@ class WriteExistingVariantsParquetTest(
             DatasetType.SNV_INDEL,
             reference_genome=ReferenceGenome.GRCh37,
         )
-        self.assertEqual(list(df.columns), ['key_', 'variant_id', 'geneIds'])
+        self.assertEqual(list(df.columns), ['key_', 'variant_id'])
         self.assertEqual(len(df), 0)
 
     def test_mito(self):
@@ -80,7 +78,7 @@ class WriteExistingVariantsParquetTest(
         df = self._run_task(DatasetType.SV)
         self.assertEqual(
             list(df.columns),
-            ['key_', 'variant_id', 'xpos', 'end', 'endChrom', 'geneIds'],
+            ['key_', 'variant_id', 'end', 'endChrom'],
         )
         self.assertEqual(len(df), 0)
 
@@ -88,6 +86,6 @@ class WriteExistingVariantsParquetTest(
         df = self._run_task(DatasetType.GCNV)
         self.assertEqual(
             list(df.columns),
-            ['key_', 'variant_id', 'xpos', 'start', 'end', 'num_exon', 'gene_ids'],
+            ['key_', 'variant_id'],
         )
         self.assertEqual(len(df), 0)
