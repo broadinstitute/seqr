@@ -72,7 +72,7 @@ class TestPaths(unittest.TestCase):
                 DatasetType.GCNV,
                 'manual__2023-06-26T18:30:09.349671+00:00',
             ),
-            '/var/seqr/pipeline-data/GRCh38/GCNV/runs/manual__2023-06-26T18:30:09.349671+00:00/existing_variants.parquet',
+            '/var/seqr/pipeline-data/GRCh38/GCNV/runs/manual__2023-06-26T18:30:09.349671+00:00/existing_variants.parquet.gz',
         )
 
     def test_remapped_and_subsetted_callset_path(self) -> None:

@@ -983,8 +983,11 @@ def export_existing_variants_to_parquet(
     export_table = table_name_builder.src_table(
         ClickHouseTable.EXISTING_VARIANTS,
     ).replace(
-        '/*.parquet.gz',
+        '/*.parquet',
         '',
+    ).replace(
+        '.parquet',
+        '.parquet.gz',
     )
     dt_fields = ', end, endChrom' if dataset_type == DatasetType.SV else ''
     logged_query(
