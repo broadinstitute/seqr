@@ -9,7 +9,7 @@ on:
       - master
     paths:
       - 'loading_pipeline/**'
-      - '.github/workflows/pipeline-*-release.yaml'
+      - '.github/workflows/*-pipeline-release.yaml'
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
