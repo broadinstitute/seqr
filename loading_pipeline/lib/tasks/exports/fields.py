@@ -91,19 +91,6 @@ def get_dataset_type_specific_variants_annotations(
     }[dataset_type](ht)
 
 
-def _get_entries_call_annotations_fields(
-    dataset_type: DatasetType,
-):
-    if dataset_type == DatasetType.GCNV:
-        return {
-            'start': lambda ht: hl.int64(ht.start_locus.position),
-            'end': lambda ht: hl.int64(ht.end_locus.position),
-            'num_exon': lambda ht: ht.num_exon,
-            'gene_ids': lambda ht: hl.set(ht.sorted_gene_consequences.gene_id),
-        }
-    return {}
-
-
 def _get_calls_export_fields(
     ht: hl.Table,
     fe: hl.Struct,
@@ -140,13 +127,13 @@ def _get_calls_export_fields(
             cn=fe.CN,
             qs=fe.QS,
             defragged=fe.defragged,
-            **{
-                snake_to_camelcase(field): hl.or_else(
-                    getattr(fe, f'sample_{field}'),
-                    getattr(ht, field),
-                )
-                for field in _get_entries_call_annotations_fields(dataset_type)
-            },
+            start=hl.or_else(fe.sample_start, ht.start_locus.position),
+            end=hl.or_else(fe.sample_end, ht.end_locus.position),
+            numExon=hl.or_else(fe.sample_num_exon, ht.num_exon),
+            geneIds=hl.or_else(
+                fe.sample_gene_ids,
+                hl.set(ht.sorted_gene_consequences.gene_id),
+            ),
             newCall=fe.concordance.new_call,
             prevCall=fe.concordance.prev_call,
             prevOverlap=fe.concordance.prev_overlap,
