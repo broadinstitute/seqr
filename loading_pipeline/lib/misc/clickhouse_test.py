@@ -193,7 +193,6 @@ _FULL_REGULATORY_CONSEQUENCE = {
 }
 
 
-@patch('time.sleep', return_value=None)
 class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
     fixtures: ClassVar = ['clickhouse_test']
 
@@ -212,6 +211,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
 
     def setUp(self):
         super().setUp()
+        sleep_patch = patch('time.sleep')
+        sleep_patch.start()
+        self.addCleanup(sleep_patch.stop)
+
         base_path = runs_path(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
