@@ -326,5 +326,51 @@
             "variant_id": "10-987654-G-A",
             "key": 10
         }
+    },
+    {
+        "model": "clickhouse_search.keylookupsnvindel",
+        "pk": "3-133456789-A-G",
+        "fields": {
+            "variant_id": "3-133456789-A-G",
+            "key": 3
+        }
+    },
+    {
+        "model": "clickhouse_search.keylookupsnvindel",
+        "pk": "4-133456789-C-T",
+        "fields": {
+            "variant_id": "4-133456789-C-T",
+            "key": 4
+        }
+    },
+    {
+        "model": "clickhouse_search.variantssnvindel",
+        "pk": 10,
+        "fields": {
+            "key": 10,
+            "sorted_transcript_consequences": [],
+            "sorted_motif_feature_consequences": [],
+            "sorted_regulatory_feature_consequences": []
+        }
+    },
+    {
+        "model": "clickhouse_search.variantssnvindel",
+        "pk": 3,
+        "fields": {
+            "key": 3,
+            "sorted_transcript_consequences": [],
+            "sorted_motif_feature_consequences": [],
+            "sorted_regulatory_feature_consequences": []
+        }
+    },
+    {
+        "model": "clickhouse_search.variantssnvindel",
+        "pk": 4,
+        "fields": {
+            "key": 4,
+            "sorted_transcript_consequences": [],
+            "sorted_motif_feature_consequences": [],
+            "sorted_regulatory_feature_consequences": []
+        }
     }
 ]

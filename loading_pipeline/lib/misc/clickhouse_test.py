@@ -328,9 +328,9 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                 ],
                 'variantId': [
-                    '1-3-A-C',
-                    'Y-19-A-C',
-                    'M-12-C-G',
+                    '10-987654-G-A',
+                    '3-133456789-A-G',
+                    '4-133456789-C-T',
                 ],
                 'calls': [
                     [('sample_d1', 0), ('sample_d11', 2)],
@@ -465,13 +465,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_entries_insert_flow(self, mock_for_reference_genome_dataset_type):
-        load_run_variants(
-            ReferenceGenome.GRCh38,
-            DatasetType.SNV_INDEL,
-            TEST_RUN_ID,
-        )
-        drop_staging_db()
-
         # Tests individual components of the atomic_insert_entries
         # to validate the state after each step.
         cursor = connections['clickhouse_write'].cursor()
@@ -906,12 +899,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[],
     )
     def test_load_run_entries_snv_indel(self, mock_for_reference_genome_dataset_type):
-        load_run_variants(
-            ReferenceGenome.GRCh38,
-            DatasetType.SNV_INDEL,
-            TEST_RUN_ID,
-        )
-
         load_run_entries(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
