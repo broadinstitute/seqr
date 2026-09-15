@@ -203,7 +203,11 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f'INSERT INTO {Env.CLICKHOUSE_DATABASE}.`seqrdb_gene_ids_src` VALUES',
-                [('GENE1', 123), ('GENE2', 12), ('GENE3', 1)],
+                [
+                    ('ENSG00000141510', 123),
+                    ('ENSG00000012048', 12),
+                    ('ENSG00000139618', 1),
+                ],
             )
             cursor.execute(
                 f'SYSTEM RELOAD DICTIONARY {Env.CLICKHOUSE_DATABASE}.`seqrdb_gene_ids`',
