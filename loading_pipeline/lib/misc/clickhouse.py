@@ -993,6 +993,7 @@ def export_existing_variants_to_parquet(
         INSERT INTO FUNCTION {export_table}
         SELECT key AS key_, variantId AS variant_id {dt_fields}
         FROM {variants_table}
+        SETTINGS output_format_parquet_use_custom_encoder=1
         """,  # nosec B608
     )
 

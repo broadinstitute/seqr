@@ -320,7 +320,7 @@ def existing_variants_parquet_path(
             dataset_type,
         ),
         run_id,
-        'existing_variants.parquet.gz',
+        'existing_variants.parquet',
     )
 
 
