@@ -302,5 +302,29 @@
             "sorted_motif_feature_consequences": [],
             "sorted_regulatory_feature_consequences": []
         }
+    },
+    {
+        "model": "clickhouse_search.keylookupsnvindel",
+        "pk": "1-878314-G-C",
+        "fields": {
+            "variant_id": "1-878314-G-C",
+            "key": 1
+        }
+    },
+    {
+        "model": "clickhouse_search.keylookupsnvindel",
+        "pk": "7-1234567-AGT-A",
+        "fields": {
+            "variant_id": "7-1234567-AGT-A",
+            "key": 7
+        }
+    },
+    {
+        "model": "clickhouse_search.keylookupsnvindel",
+        "pk": "10-987654-G-A",
+        "fields": {
+            "variant_id": "10-987654-G-A",
+            "key": 10
+        }
     }
 ]
