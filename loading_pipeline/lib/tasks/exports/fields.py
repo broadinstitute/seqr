@@ -91,7 +91,7 @@ def get_dataset_type_specific_variants_annotations(
     }[dataset_type](ht)
 
 
-def _get_entries_call_annotations_fields(
+def get_entries_call_annotations_fields(
     dataset_type: DatasetType,
 ):
     if dataset_type == DatasetType.GCNV:
@@ -143,11 +143,9 @@ def _get_calls_export_fields(
             **{
                 snake_to_camelcase(field): hl.or_else(
                     getattr(fe, f'sample_{field}'),
-                    get_value(ht),
+                    getattr(ht, field),
                 )
-                for field, get_value in _get_entries_call_annotations_fields(
-                    dataset_type,
-                ).items()
+                for field in get_entries_call_annotations_fields(dataset_type)
             },
             newCall=fe.concordance.new_call,
             prevCall=fe.concordance.prev_call,

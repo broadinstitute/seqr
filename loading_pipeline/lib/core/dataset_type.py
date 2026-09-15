@@ -324,10 +324,6 @@ class DatasetType(StrEnum):
                 gcnv.CN,
                 gcnv.GT,
                 gcnv.QS,
-                gcnv.start_locus,
-                gcnv.end_locus,
-                gcnv.num_exon,
-                gcnv.sorted_gene_consequences,
             ],
         }[self]
 

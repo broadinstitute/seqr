@@ -16,6 +16,7 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.exports.fields import (
+    get_entries_call_annotations_fields,
     get_entries_export_fields,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
@@ -54,6 +55,7 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
                 self.dataset_type.genotype_entry_annotation_fns,
                 **self.param_kwargs,
             ),
+            get_entries_call_annotations_fields(self.dataset_type),
         )
         ht = deglobalize_ids(ht)
         ht = deduplicate_by_most_non_ref_calls(ht)
