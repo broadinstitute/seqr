@@ -981,6 +981,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         self.assertCountEqual(
             variants_memory,
             [
+                (3, [], [], []),
+                (4, [], [], []),
                 (10, [], [], []),
                 (11, [], [], []),
                 (12, [], [], []),
@@ -998,6 +1000,8 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         self.assertCountEqual(
             variants_disk,
             [
+                (3, [], [], []),
+                (4, [], [], []),
                 (10, [], [], []),
                 (11, [], [], []),
                 (12, [], [], []),

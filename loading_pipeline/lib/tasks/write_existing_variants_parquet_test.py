@@ -54,6 +54,8 @@ class WriteExistingVariantsParquetTest(
             ),
             [
                 {'key_': 1, 'variant_id': '1-878314-G-C'},
+                {'key_': 3, 'variant_id': '3-133456789-A-G'},
+                {'key_': 4, 'variant_id': '4-133456789-C-T'},
                 {'key_': 7, 'variant_id': '7-1234567-AGT-A'},
                 {'key_': 10, 'variant_id': '10-987654-G-A'},
             ],
@@ -84,6 +86,6 @@ class WriteExistingVariantsParquetTest(
         df = self._run_task(DatasetType.GCNV)
         self.assertEqual(
             list(df.columns),
-            ['key_', 'variant_id', 'xpos', 'start', 'end', 'num_exon', 'gene_ids'],
+            ['key_', 'variant_id'],
         )
         self.assertEqual(len(df), 0)
