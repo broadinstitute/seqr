@@ -7,7 +7,6 @@ def compute_callset_family_entries_ht(
     dataset_type: DatasetType,
     mt: hl.MatrixTable,
     entries_fields: dict[str, hl.Expression],
-    additional_selects: dict | None = None,
 ) -> hl.Table:
     sample_id_to_family_guid = hl.dict(
         {
@@ -48,10 +47,6 @@ def compute_callset_family_entries_ht(
                 lambda fe: fe[0].family_guid,
             )
         ),
-        **{
-            field: get_value(mt)
-            for field, get_value in (additional_selects or {}).items()
-        },
     ).rows()
     # NB: globalize before we set families to missing
     ht = globalize_ids(ht)

@@ -91,21 +91,7 @@ def get_dataset_type_specific_variants_annotations(
     }[dataset_type](ht)
 
 
-def get_entries_call_annotations_fields(
-    dataset_type: DatasetType,
-):
-    if dataset_type == DatasetType.GCNV:
-        return {
-            'start': lambda ht: hl.int64(ht.start),
-            'end': lambda ht: hl.int64(ht.end),
-            'num_exon': lambda ht: ht.num_exon,
-            'gene_ids': lambda ht: hl.set(ht.gene_ids),
-        }
-    return {}
-
-
 def _get_calls_export_fields(
-    ht: hl.Table,
     fe: hl.Struct,
     dataset_type: DatasetType,
 ):
@@ -140,13 +126,10 @@ def _get_calls_export_fields(
             cn=fe.CN,
             qs=fe.QS,
             defragged=fe.defragged,
-            **{
-                snake_to_camelcase(field): hl.or_else(
-                    getattr(fe, f'sample_{field}'),
-                    getattr(ht, field),
-                )
-                for field in get_entries_call_annotations_fields(dataset_type)
-            },
+            start=fe.sample_start,
+            end=fe.sample_end,
+            numExon=fe.sample_num_exon,
+            gene_ids=fe.sample_gene_ids,
             newCall=fe.concordance.new_call,
             prevCall=fe.concordance.prev_call,
             prevOverlap=fe.concordance.prev_overlap,
@@ -173,7 +156,7 @@ def get_entries_export_fields(
         ),
         'filters': ht.filters,
         'calls': hl.sorted(ht.family_entries, key=lambda fe: fe.s).map(
-            lambda fe: _get_calls_export_fields(ht, fe, dataset_type),
+            lambda fe: _get_calls_export_fields(fe, dataset_type),
         ),
         'sign': 1,
     }

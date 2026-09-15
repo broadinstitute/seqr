@@ -104,28 +104,35 @@ def rg37_locus_end(
 
 
 def sample_end(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    return hl.or_missing(
+    return hl.sample_end(
         ~_start_and_end_equal(mt),
         mt.sample_end,
+        mt.end,
     )
 
 
 def sample_gene_ids(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     parsed_genes = parse_gcnv_genes(mt.genes_any_overlap_Ensemble_ID)
-    return hl.or_missing(parsed_genes != mt.gene_ids, parsed_genes)
+    return hl.if_else(
+        parsed_genes != mt.gene_ids,
+        parsed_genes,
+        mt.gene_ids,
+    )
 
 
 def sample_start(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    return hl.or_missing(
+    return hl.if_else(
         ~_start_and_end_equal(mt),
         mt.sample_start,
+        mt.start,
     )
 
 
 def sample_num_exon(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    return hl.or_missing(
+    return hl.if_else(
         mt.genes_any_overlap_totalExons != mt.num_exon,
         mt.genes_any_overlap_totalExons,
+        mt.num_exon,
     )
 
 
