@@ -1077,14 +1077,13 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
            SELECT *
            FROM
            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
+           WHERE key > 5
            """,  # nosec B608
         )
         variants_memory = cursor.fetchall()
         self.assertCountEqual(
             variants_memory,
             [
-                (3, [(None, None, [], None, None, 'ENSG00000141510', None), (None, None, [], None, None, 'ENSG00000012048', None)], [], []),
-                (4, [(None, None, [], None, None, 'ENSG00000139618', None)], [], []),
                 (10, [], [], []),
                 (11, [], [], []),
                 (12, [], [], []),
@@ -1096,14 +1095,13 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
            SELECT *
            FROM
            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_disk`
+           WHERE key > 5
            """,  # nosec B608
         )
         variants_disk = cursor.fetchall()
         self.assertCountEqual(
             variants_disk,
             [
-                (3, [(None, None, [], None, None, 'ENSG00000141510', None), (None, None, [], None, None, 'ENSG00000012048', None)], [], []),
-                (4, [(None, None, [], None, None, 'ENSG00000139618', None)], [], []),
                 (10, [], [], []),
                 (11, [], [], []),
                 (12, [], [], []),

@@ -104,7 +104,7 @@ def rg37_locus_end(
 
 
 def sample_end(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    return hl.sample_end(
+    return hl.if_else(
         ~_start_and_end_equal(mt),
         mt.sample_end,
         mt.end,
