@@ -464,6 +464,12 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         return_value=[ClickhouseReferenceDataset.CLINVAR],
     )
     def test_entries_insert_flow(self, mock_for_reference_genome_dataset_type):
+        load_run_variants(
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            TEST_RUN_ID,
+        )
+
         # Tests individual components of the atomic_insert_entries
         # to validate the state after each step.
         cursor = connections['clickhouse_write'].cursor()
@@ -892,7 +898,18 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ],
         )
 
-    def test_load_run_entries_snv_indel(self):
+    @patch.object(
+        ClickhouseReferenceDataset,
+        'for_reference_genome_dataset_type',
+        return_value=[],
+    )
+    def test_load_run_entries_snv_indel(self, mock_for_reference_genome_dataset_type):
+        load_run_variants(
+            ReferenceGenome.GRCh38,
+            DatasetType.SNV_INDEL,
+            TEST_RUN_ID,
+        )
+
         load_run_entries(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -1060,6 +1077,12 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         self.assertEqual(key_lookup_count, 4)
 
     def test_load_run_entries_gcnv(self):
+        load_run_variants(
+            ReferenceGenome.GRCh38,
+            DatasetType.GCNV,
+            TEST_RUN_ID,
+        )
+
         load_run_entries(
             ReferenceGenome.GRCh38,
             DatasetType.GCNV,
