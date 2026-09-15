@@ -298,8 +298,19 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 TEST_RUN_ID,
             ),
         )
+        gcnv_variants_df = pd.DataFrame(
+            {
+                'key': [10, 11, 12, 13],
+                'variantId': [
+                    'suffix_1000_DEL',
+                    'suffix_1001_DUP',
+                    'suffix_1002_DEL',
+                    'suffix_1003_DUP',
+                ],
+            },
+        )
         write_test_parquet(
-            df,
+            gcnv_variants_df,
             new_variants_parquet_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
@@ -372,14 +383,101 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ),
             schema,
         )
+        gcnv_entries_df = pd.DataFrame(
+            {
+                'project_guid': [
+                    'project_d',
+                    'project_d',
+                    'project_d',
+                ],
+                'family_guid': [
+                    'family_d1',
+                    'family_d2',
+                    'family_d3',
+                ],
+                'variantId': [
+                    'suffix_1000_DEL',
+                    'suffix_1002_DEL',
+                    'suffix_1003_DUP',
+                ],
+                'calls': [
+                    [
+                        {
+                            'sampleId': 'sample_d1',
+                            'gt': 0,
+                            'cn': 2,
+                            'qs': 4,
+                            'defragged': False,
+                            'start': 100006937,
+                            'end': 100007881,
+                            'numExon': 2,
+                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
+                            'newCall': False,
+                            'prevCall': True,
+                            'prevOverlap': False,
+                        },
+                        {
+                            'sampleId': 'sample_d11',
+                            'gt': 2,
+                            'cn': 0,
+                            'qs': 30,
+                            'defragged': False,
+                            'start': 100006937,
+                            'end': 100007881,
+                            'numExon': 2,
+                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
+                            'newCall': True,
+                            'prevCall': False,
+                            'prevOverlap': False,
+                        },
+                    ],
+                    [
+                        {
+                            'sampleId': 'sample_d2',
+                            'gt': 0,
+                            'cn': 2,
+                            'qs': 5,
+                            'defragged': False,
+                            'start': 100017585,
+                            'end': 100023213,
+                            'numExon': 1,
+                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
+                            'newCall': False,
+                            'prevCall': True,
+                            'prevOverlap': False,
+                        },
+                    ],
+                    [
+                        {
+                            'sampleId': 'sample_d3',
+                            'gt': 1,
+                            'cn': 1,
+                            'qs': 20,
+                            'defragged': False,
+                            'start': 100017585,
+                            'end': 100023213,
+                            'numExon': 1,
+                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
+                            'newCall': True,
+                            'prevCall': False,
+                            'prevOverlap': False,
+                        },
+                    ],
+                ],
+                'sign': [
+                    1,
+                    1,
+                    1,
+                ],
+            },
+        )
         write_test_parquet(
-            df.drop(['xpos', 'sample_type'], axis=1),
+            gcnv_entries_df,
             new_entries_parquet_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
                 TEST_RUN_ID,
             ),
-            schema.remove(2).remove(2),
         )
 
     def test_get_clickhouse_client(self):
