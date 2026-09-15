@@ -21,6 +21,7 @@ from loading_pipeline.lib.misc.clickhouse import (
     delete_existing_families_from_staging_entries,
     delete_family_guids,
     direct_insert_all_keys,
+    drop_staging_db,
     exchange_tables,
     get_clickhouse_client,
     insert_new_entries,
@@ -469,6 +470,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             DatasetType.SNV_INDEL,
             TEST_RUN_ID,
         )
+        drop_staging_db()
 
         # Tests individual components of the atomic_insert_entries
         # to validate the state after each step.
