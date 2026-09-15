@@ -145,7 +145,9 @@ def _get_calls_export_fields(
                     getattr(fe, f'sample_{field}'),
                     get_value(ht),
                 )
-                for field, get_value in _get_entries_call_annotations_fields(dataset_type).items()
+                for field, get_value in _get_entries_call_annotations_fields(
+                    dataset_type,
+                ).items()
             },
             newCall=fe.concordance.new_call,
             prevCall=fe.concordance.prev_call,
