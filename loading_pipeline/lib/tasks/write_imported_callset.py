@@ -23,6 +23,8 @@ from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteImportedCallsetTask(BaseWriteTask):
+    priority = 2
+
     def complete(self) -> luigi.Target:
         if super().complete():
             mt = hl.read_matrix_table(self.output().path)

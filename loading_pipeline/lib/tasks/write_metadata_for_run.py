@@ -23,6 +23,8 @@ from loading_pipeline.lib.tasks.write_sample_qc_json import WriteSampleQCJsonTas
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteMetadataForRunTask(luigi.Task):
+    priority = 2
+
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
             metadata_for_run_path(
