@@ -96,10 +96,10 @@ def get_entries_call_annotations_fields(
 ):
     if dataset_type == DatasetType.GCNV:
         return {
-            'start': lambda ht: hl.int64(ht.start_locus.position),
-            'end': lambda ht: hl.int64(ht.end_locus.position),
+            'start': lambda ht: hl.int64(ht.start),
+            'end': lambda ht: hl.int64(ht.end),
             'num_exon': lambda ht: ht.num_exon,
-            'gene_ids': lambda ht: hl.set(ht.sorted_gene_consequences.gene_id),
+            'gene_ids': lambda ht: hl.set(ht.gene_ids),
         }
     return {}
 
