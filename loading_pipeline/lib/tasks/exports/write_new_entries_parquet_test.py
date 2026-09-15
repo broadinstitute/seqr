@@ -1,3 +1,5 @@
+import os
+
 import luigi.worker
 import pandas as pd
 
@@ -8,6 +10,7 @@ from loading_pipeline.lib.core import (
 )
 from loading_pipeline.lib.misc.validation import ALL_VALIDATIONS
 from loading_pipeline.lib.paths import (
+    existing_variants_parquet_path,
     new_entries_parquet_path,
 )
 from loading_pipeline.lib.tasks.exports.write_new_entries_parquet import (
@@ -235,6 +238,20 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
             SampleType.WGS,
             'R0115_test_project2',
         )
+        existing_variants_path = existing_variants_parquet_path(
+            ReferenceGenome.GRCh38,
+            DatasetType.SV,
+            TEST_RUN_ID,
+        )
+        os.makedirs(os.path.dirname(existing_variants_path), exist_ok=True)
+        pd.DataFrame(
+            {
+                'variant_id': ['BND_chr1_6'],
+                'key_': [727],
+                'end': [180928],
+                'endChrom': ['chr5'],
+            },
+        ).to_parquet(existing_variants_path)
         worker = luigi.worker.Worker()
         task = WriteNewEntriesParquetTask(
             reference_genome=ReferenceGenome.GRCh38,
