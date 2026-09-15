@@ -143,9 +143,9 @@ def _get_calls_export_fields(
             **{
                 snake_to_camelcase(field): hl.or_else(
                     getattr(fe, f'sample_{field}'),
-                    getattr(ht, field),
+                    get_value(ht),
                 )
-                for field in _get_entries_call_annotations_fields(dataset_type)
+                for field, get_value in _get_entries_call_annotations_fields(dataset_type).items()
             },
             newCall=fe.concordance.new_call,
             prevCall=fe.concordance.prev_call,
