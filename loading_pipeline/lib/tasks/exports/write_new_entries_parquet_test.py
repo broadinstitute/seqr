@@ -353,6 +353,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                 TEST_RUN_ID,
             ),
         )
+        self.maxDiff = None
         export_json = convert_ndarray_to_list(df.to_dict('records'))
         self.assertEqual(
             export_json,

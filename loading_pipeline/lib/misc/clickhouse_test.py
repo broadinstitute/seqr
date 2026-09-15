@@ -281,7 +281,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         # New Variants parquet.
         df = pd.DataFrame(
             {
-                'key': [10, 11, 12, 13],
+                'key': [20, 11, 12, 13],
                 'variantId': [
                     '1-3-A-C',
                     '2-4-A-T',
@@ -1084,10 +1084,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         self.assertCountEqual(
             variants_memory,
             [
-                (10, [], [], []),
                 (11, [], [], []),
                 (12, [], [], []),
                 (13, [], [], []),
+                (20, [], [], []),
             ],
         )
         cursor.execute(
@@ -1102,10 +1102,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         self.assertCountEqual(
             variants_disk,
             [
-                (10, [], [], []),
                 (11, [], [], []),
                 (12, [], [], []),
                 (13, [], [], []),
+                (20, [], [], []),
             ],
         )
         cursor.execute(
