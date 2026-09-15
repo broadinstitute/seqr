@@ -19,7 +19,7 @@ dependencies = [
     "onnxconverter-common @ git+https://github.com/microsoft/onnxconverter-common.git@f7a8eb699caa6f6a78d3bdfbcaf5dfbd43569ebd",
 
     # Dataproc
-    "pip==23.2.1",
+    "pip==26.2",
     "google-cloud-dataproc==5.16.0",
     "google-cloud-bigquery==3.29.0",
     "google-api-python-client==2.159.0",
