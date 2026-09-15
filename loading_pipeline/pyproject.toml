@@ -34,7 +34,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-django>=4.8.0",
-    "django==4.2.30", # matches the main seqr app's pinned version
+    "django==5.2.16", # matches the main seqr app's pinned version
     "django-clickhouse-backend==1.6", # matches the main seqr app's pinned version
     "responses>=0.23.1",
     "ruff==0.11.3",
