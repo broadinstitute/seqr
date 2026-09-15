@@ -21,7 +21,6 @@ from loading_pipeline.lib.misc.clickhouse import (
     delete_existing_families_from_staging_entries,
     delete_family_guids,
     direct_insert_all_keys,
-    drop_staging_db,
     exchange_tables,
     get_clickhouse_client,
     insert_new_entries,
