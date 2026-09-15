@@ -274,55 +274,54 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
             ),
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
+        self.assertEqual(len(export_json), 2)
         self.assertEqual(
-            export_json,
-            [
-                {
-                    'project_guid': 'R0115_test_project2',
-                    'family_guid': 'family_2_1',
-                    'variantId': 'BND_chr1_6',
-                    'filters': ['HIGH_SR_BACKGROUND', 'UNRESOLVED'],
-                    'calls': [
-                        {
-                            'sampleId': 'RGP_164_1',
-                            'gt': 0,
-                            'cn': None,
-                            'gq': 99,
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevNumAlt': None,
-                        },
-                        {
-                            'sampleId': 'RGP_164_2',
-                            'gt': 1,
-                            'cn': None,
-                            'gq': 31,
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevNumAlt': None,
-                        },
-                        {
-                            'sampleId': 'RGP_164_3',
-                            'gt': 0,
-                            'cn': None,
-                            'gq': 99,
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevNumAlt': None,
-                        },
-                        {
-                            'sampleId': 'RGP_164_4',
-                            'gt': 0,
-                            'cn': None,
-                            'gq': 99,
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevNumAlt': None,
-                        },
-                    ],
-                    'sign': 1,
-                },
-            ],
+            export_json[0],
+            {
+                'project_guid': 'R0115_test_project2',
+                'family_guid': 'family_2_1',
+                'variantId': 'BND_chr1_6',
+                'filters': ['HIGH_SR_BACKGROUND', 'UNRESOLVED'],
+                'calls': [
+                    {
+                        'sampleId': 'RGP_164_1',
+                        'gt': 0,
+                        'cn': None,
+                        'gq': 99,
+                        'newCall': True,
+                        'prevCall': False,
+                        'prevNumAlt': None,
+                    },
+                    {
+                        'sampleId': 'RGP_164_2',
+                        'gt': 1,
+                        'cn': None,
+                        'gq': 31,
+                        'newCall': True,
+                        'prevCall': False,
+                        'prevNumAlt': None,
+                    },
+                    {
+                        'sampleId': 'RGP_164_3',
+                        'gt': 0,
+                        'cn': None,
+                        'gq': 99,
+                        'newCall': True,
+                        'prevCall': False,
+                        'prevNumAlt': None,
+                    },
+                    {
+                        'sampleId': 'RGP_164_4',
+                        'gt': 0,
+                        'cn': None,
+                        'gq': 99,
+                        'newCall': True,
+                        'prevCall': False,
+                        'prevNumAlt': None,
+                    },
+                ],
+                'sign': 1,
+            },
         )
 
     def test_gcnv_write_new_entries_parquet(self):
