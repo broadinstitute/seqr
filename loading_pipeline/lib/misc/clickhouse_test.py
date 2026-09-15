@@ -892,12 +892,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ],
         )
 
-    @patch.object(
-        ClickhouseReferenceDataset,
-        'for_reference_genome_dataset_type',
-        return_value=[],
-    )
-    def test_load_run_entries_snv_indel(self, mock_for_reference_genome_dataset_type):
+    def test_load_run_entries_snv_indel(self):
         load_run_entries(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,

@@ -48,7 +48,10 @@ def compute_callset_family_entries_ht(
                 lambda fe: fe[0].family_guid,
             )
         ),
-        **{field: get_value(mt) for field, get_value in (additional_selects or {}).items()},
+        **{
+            field: get_value(mt)
+            for field, get_value in (additional_selects or {}).items()
+        },
     ).rows()
     # NB: globalize before we set families to missing
     ht = globalize_ids(ht)
