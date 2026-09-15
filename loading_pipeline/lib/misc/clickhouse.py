@@ -655,6 +655,7 @@ def insert_new_entries(
         )
     ]
     common, overrides = [c for c in dst_cols if c in src_cols], {}
+    common.insert(0, 'key')
     if 'xpos' not in common:
         common.append('xpos')
         overrides['xpos'] = 'v.xpos'
@@ -694,7 +695,7 @@ def insert_new_entries(
     logged_query(
         f"""
         INSERT INTO {table_name_builder.staging_dst_table(ClickHouseTable.ENTRIES)} ({dst_list})
-        SELECT e.key, {src_list}
+        SELECT {src_list}
         FROM (
             SELECT
                 dst.key,
