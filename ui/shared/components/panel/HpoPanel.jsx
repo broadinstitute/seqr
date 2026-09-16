@@ -41,8 +41,10 @@ export const CATEGORY_NAMES = {
   'HP:0033127': 'Musculoskeletal',
 }
 
+const asTermList = value => (Array.isArray(value) ? value : [])
+
 export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
-  const hpoTermsByCategory = (features || []).reduce((acc, hpoTerm) => {
+  const hpoTermsByCategory = asTermList(features).reduce((acc, hpoTerm) => {
     const category = CATEGORY_NAMES[hpoTerm.category] || UNKNOWN_CATEGORY
     if (!acc[category]) {
       acc[category] = [] // init array of features
@@ -51,19 +53,17 @@ export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
     return acc
   }, {})
 
-  if (nonstandardFeatures) {
-    nonstandardFeatures.reduce((acc, term) => {
-      const category = (term.categories || ['']).map(
-        categoryTerm => CATEGORY_NAMES[categoryTerm.id] || categoryTerm.label || UNKNOWN_CATEGORY,
-      ).sort().join(', ')
-      if (!acc[category]) {
-        acc[category] = [] // init array of features
-      }
+  asTermList(nonstandardFeatures).reduce((acc, term) => {
+    const category = (term.categories || ['']).map(
+      categoryTerm => CATEGORY_NAMES[categoryTerm.id] || categoryTerm.label || UNKNOWN_CATEGORY,
+    ).sort().join(', ')
+    if (!acc[category]) {
+      acc[category] = [] // init array of features
+    }
 
-      acc[category].push(term)
-      return acc
-    }, hpoTermsByCategory)
-  }
+    acc[category].push(term)
+    return acc
+  }, hpoTermsByCategory)
 
   return Object.entries(hpoTermsByCategory).map(([categoryName, terms]) => ({ categoryName, terms })).sort(
     (a, b) => a.categoryName.localeCompare(b.categoryName),
@@ -71,7 +71,7 @@ export const getHpoTermsForCategory = (features, nonstandardFeatures) => {
 }
 
 const FeatureSection = React.memo(({ features, nonstandardFeatures, title, color }) => {
-  if ((features || []).length < 1 && (nonstandardFeatures || []).length < 1) {
+  if (asTermList(features).length < 1 && asTermList(nonstandardFeatures).length < 1) {
     return null
   }
   const termsByCategory = getHpoTermsForCategory(features, nonstandardFeatures)
