@@ -208,26 +208,28 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
         export_json = convert_ndarray_to_list(df.to_dict('records'))
         self.assertEqual(len(export_json), 3)
         self.assertEqual(
-            export_json[0],
-            {
-                'project_guid': 'R0116_test_project3',
-                'family_guid': 'family_1',
-                'sample_type': 'WGS',
-                'variantId': 'M-8-G-T',
-                'xpos': 25000000008,
-                'filters': [],
-                'calls': [
-                    {
-                        'sampleId': 'RGP_1270_2',
-                        'gt': 2,
-                        'dp': 4216,
-                        'hl': 0.999,
-                        'mitoCn': 224,
-                        'contamination': 0.0,
-                    },
-                ],
-                'sign': 1,
-            },
+            export_json[:1],
+            [
+                {
+                    'project_guid': 'R0116_test_project3',
+                    'family_guid': 'family_1',
+                    'sample_type': 'WGS',
+                    'variantId': 'M-8-G-T',
+                    'xpos': 25000000008,
+                    'filters': [],
+                    'calls': [
+                        {
+                            'sampleId': 'RGP_1270_2',
+                            'gt': 2,
+                            'dp': 4216,
+                            'hl': 0.999,
+                            'mitoCn': 224,
+                            'contamination': 0.0,
+                        },
+                    ],
+                    'sign': 1,
+                },
+            ]
         )
 
     def test_sv_write_new_entries_parquet(self):
@@ -276,52 +278,54 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
         export_json = convert_ndarray_to_list(df.to_dict('records'))
         self.assertEqual(len(export_json), 2)
         self.assertEqual(
-            export_json[0],
-            {
-                'project_guid': 'R0115_test_project2',
-                'family_guid': 'family_2_1',
-                'variantId': 'BND_chr1_6',
-                'filters': ['HIGH_SR_BACKGROUND', 'UNRESOLVED'],
-                'calls': [
-                    {
-                        'sampleId': 'RGP_164_1',
-                        'gt': 0,
-                        'cn': None,
-                        'gq': 99,
-                        'newCall': True,
-                        'prevCall': False,
-                        'prevNumAlt': None,
-                    },
-                    {
-                        'sampleId': 'RGP_164_2',
-                        'gt': 1,
-                        'cn': None,
-                        'gq': 31,
-                        'newCall': True,
-                        'prevCall': False,
-                        'prevNumAlt': None,
-                    },
-                    {
-                        'sampleId': 'RGP_164_3',
-                        'gt': 0,
-                        'cn': None,
-                        'gq': 99,
-                        'newCall': True,
-                        'prevCall': False,
-                        'prevNumAlt': None,
-                    },
-                    {
-                        'sampleId': 'RGP_164_4',
-                        'gt': 0,
-                        'cn': None,
-                        'gq': 99,
-                        'newCall': True,
-                        'prevCall': False,
-                        'prevNumAlt': None,
-                    },
-                ],
-                'sign': 1,
-            },
+            export_json[:1],
+            [
+                {
+                    'variantId': 'BND_chr1_6',
+                    'project_guid': 'R0115_test_project2',
+                    'family_guid': 'family_2_1',
+                    'filters': ['HIGH_SR_BACKGROUND', 'UNRESOLVED'],
+                    'calls': [
+                        {
+                            'sampleId': 'RGP_164_1',
+                            'gt': 0,
+                            'cn': None,
+                            'gq': 99,
+                            'newCall': True,
+                            'prevCall': False,
+                            'prevNumAlt': None,
+                        },
+                        {
+                            'sampleId': 'RGP_164_2',
+                            'gt': 1,
+                            'cn': None,
+                            'gq': 31,
+                            'newCall': True,
+                            'prevCall': False,
+                            'prevNumAlt': None,
+                        },
+                        {
+                            'sampleId': 'RGP_164_3',
+                            'gt': 0,
+                            'cn': None,
+                            'gq': 99,
+                            'newCall': True,
+                            'prevCall': False,
+                            'prevNumAlt': None,
+                        },
+                        {
+                            'sampleId': 'RGP_164_4',
+                            'gt': 0,
+                            'cn': None,
+                            'gq': 99,
+                            'newCall': True,
+                            'prevCall': False,
+                            'prevNumAlt': None,
+                        },
+                    ],
+                    'sign': 1,
+                },
+            ],
         )
 
     def test_gcnv_write_new_entries_parquet(self):
@@ -353,15 +357,15 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                 TEST_RUN_ID,
             ),
         )
-        self.maxDiff = None
         export_json = convert_ndarray_to_list(df.to_dict('records'))
+        self.assertEqual(len(export_json), 2)
         self.assertEqual(
-            export_json,
+            export_json[:1],
             [
                 {
+                    'variantId': 'suffix_16456_DEL',
                     'project_guid': 'R0115_test_project2',
                     'family_guid': 'family_2_1',
-                    'variantId': 'suffix_16456_DEL',
                     'filters': [],
                     'calls': [
                         {

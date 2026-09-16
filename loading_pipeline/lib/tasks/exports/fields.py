@@ -128,7 +128,7 @@ def _get_calls_export_fields(
             start=fe.sample_start,
             end=fe.sample_end,
             numExon=fe.sample_num_exon,
-            gene_ids=fe.sample_gene_ids,
+            geneIds=fe.sample_gene_ids,
             newCall=fe.concordance.new_call,
             prevCall=fe.concordance.prev_call,
             prevOverlap=fe.concordance.prev_overlap,
