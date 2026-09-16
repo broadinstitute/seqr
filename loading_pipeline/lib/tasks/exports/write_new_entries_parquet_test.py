@@ -229,7 +229,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                     ],
                     'sign': 1,
                 },
-            ]
+            ],
         )
 
     def test_sv_write_new_entries_parquet(self):
