@@ -359,7 +359,6 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
         self.assertEqual(len(export_json), 2)
-        self.maxDiff = None
         self.assertEqual(
             export_json[:1],
             [
@@ -391,7 +390,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                             'defragged': False,
                             'start': 100017585,
                             'end': 100023213,
-                            'numExon': 1,
+                            'numExon': 3,
                             'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
                             'newCall': False,
                             'prevCall': False,
@@ -405,7 +404,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                             'defragged': False,
                             'start': 100017585,
                             'end': 100023213,
-                            'numExon': 1,
+                            'numExon': 3,
                             'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
                             'newCall': False,
                             'prevCall': True,

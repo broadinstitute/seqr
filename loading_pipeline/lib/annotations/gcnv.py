@@ -11,10 +11,6 @@ from loading_pipeline.lib.core.definitions import ReferenceGenome
 from loading_pipeline.lib.misc.gcnv import parse_gcnv_genes
 
 
-def _start_and_end_equal(mt: hl.MatrixTable) -> hl.BooleanExpression:
-    return (mt.sample_start == mt.start) & (mt.sample_end == mt.end)
-
-
 def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return mt.CN
 
@@ -104,36 +100,19 @@ def rg37_locus_end(
 
 
 def sample_end(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    return hl.if_else(
-        ~_start_and_end_equal(mt),
-        mt.sample_end,
-        mt.end,
-    )
+    return mt.sample_end
 
 
 def sample_gene_ids(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    parsed_genes = parse_gcnv_genes(mt.genes_any_overlap_Ensemble_ID)
-    return hl.if_else(
-        parsed_genes != mt.gene_ids,
-        parsed_genes,
-        mt.gene_ids,
-    )
+    return parse_gcnv_genes(mt.genes_any_overlap_Ensemble_ID)
 
 
 def sample_start(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    return hl.if_else(
-        ~_start_and_end_equal(mt),
-        mt.sample_start,
-        mt.start,
-    )
+    return mt.sample_start
 
 
 def sample_num_exon(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    return hl.if_else(
-        mt.genes_any_overlap_totalExons != mt.num_exon,
-        mt.genes_any_overlap_totalExons,
-        mt.num_exon,
-    )
+    return mt.genes_any_overlap_totalExons
 
 
 def sorted_gene_consequences(
