@@ -108,6 +108,9 @@ class EditRecordsForm extends React.PureComponent {
     const rowsToDelete = Object.entries(recordData).reduce((acc, [recordId, { toDelete }]) => (
       { ...acc, [recordId]: toDelete }
     ), {})
+    const selectedIds = Object.values(recordData).filter(({ toDelete }) => toDelete).map(
+      record => record[filterColumn] || record[idField],
+    )
 
     const getRowFilterVal = filterColumn ? row => row[filterColumn] : null
 
@@ -139,8 +142,9 @@ class EditRecordsForm extends React.PureComponent {
                   initialValues={this.getFilteredRecords(recordData, record => record.toDelete)}
                   onSubmit={onSubmit}
                   onSuccess={closeParentModal}
-                  confirmDialog={`Are you sure you want to delete the selected ${entityKey}?`}
-                  buttonText="Deleted Selected"
+                  confirmDialog={`Are you sure you want to delete the following ${entityKey}: ${selectedIds.join(', ')}?`}
+                  buttonText="Delete Selected"
+                  disabled={!selectedIds.length}
                 />
               }
               getRowFilterVal={getRowFilterVal}

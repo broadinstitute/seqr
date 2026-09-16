@@ -54,3 +54,22 @@ test('shows the analyst-only fields when the user is an analyst', () => {
     'familyId', 'individualId', 'paternalId', 'maternalId', 'sex', 'affected',
   ])
 })
+
+test('confirms which individuals will be deleted', () => {
+  const store = configureStore(STATE_WITH_2_FAMILIES)
+  const wrapper = mount(
+    <Provider store={store}>
+      <EditIndividualsForm modalName="editIndividuals" analysisGroupGuid="AG0000183_test_group" />
+    </Provider>,
+  )
+
+  expect(wrapper.find('DispatchRequestButton').prop('buttonContent')).toEqual('Delete Selected')
+  expect(wrapper.find('DispatchRequestButton').prop('disabled')).toEqual(true)
+
+  wrapper.find('DataTable').prop('selectRows')({ I021476_na19678_1: true, I021475_na19675_1: true })
+  wrapper.update()
+  expect(wrapper.find('DispatchRequestButton').prop('disabled')).toEqual(false)
+  expect(wrapper.find('DispatchRequestButton').prop('confirmDialog')).toEqual(
+    'Are you sure you want to delete the following individuals: NA19678, NA19675?',
+  )
+})
