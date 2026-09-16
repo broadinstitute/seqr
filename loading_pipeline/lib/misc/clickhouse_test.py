@@ -1103,11 +1103,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         self.assertCountEqual(
             variants_disk,
             [
-                (10, [], [], []),
+                (20, [], [], []),
                 (11, [], [], []),
                 (12, [], [], []),
                 (13, [], [], []),
-                (20, [], [], []),
             ],
         )
         cursor.execute(
