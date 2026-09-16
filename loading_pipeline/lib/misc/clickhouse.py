@@ -687,7 +687,7 @@ def insert_new_entries(
     ):
         common.append('is_gnomad_gt_5_percent')
         overrides['is_gnomad_gt_5_percent'] = f"""
-            dictGetOrDefault({ClickhouseReferenceDataset.GNOMAD_GENOMES.search_path(table_name_builder)}, 'filter_af', key, 0) > 0.05
+            dictGetOrDefault({ClickhouseReferenceDataset.GNOMAD_GENOMES.search_path(table_name_builder)}, 'filter_af', e.key, 0) > 0.05
         """
 
     dst_list = ', '.join(common)
