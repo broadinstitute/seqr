@@ -14,6 +14,8 @@ from loading_pipeline.lib.tasks.files import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteExistingVariantsParquetTask(luigi.Task):
+    priority = 1
+
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
             existing_variants_parquet_path(
