@@ -8,7 +8,7 @@ from seqr.utils.logging_utils import SeqrLogger
 logger = SeqrLogger(__name__)
 
 
-def run_command(command, user=None, pipe_errors=False):
+def _run_command(command, user=None, pipe_errors=False):
     logger.info('==> {}'.format(command), user)
     return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE if pipe_errors else subprocess.STDOUT, shell=True) # nosec
 
@@ -24,7 +24,7 @@ def _run_gsutil_command(command, gs_path, gunzip=False, user=None, pipe_errors=F
     if gunzip:
         command += " | gunzip -c -q - "
 
-    return run_command(command, user=user, pipe_errors=pipe_errors)
+    return _run_command(command, user=user, pipe_errors=pipe_errors)
 
 
 def is_google_bucket_file_path(file_path):
@@ -68,7 +68,7 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs
         )
         if file_path.endswith("gz"):
             command += " | gunzip -c - "
-        process = run_command(command, user=user)
+        process = _run_command(command, user=user)
         for line in process.stdout:
             yield line
     else:
