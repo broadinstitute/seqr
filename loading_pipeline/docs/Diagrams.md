@@ -26,32 +26,33 @@
                WriteRemappedAndSubsettedCallsetTask
                                 |
                                 v
-               WriteMetadataForRunTask            WriteExistingVariantsParquetTask
-                      |___________________________________________|
+                     WriteMetadataForRunTask
                                 |
-                                v
-                    WriteNewVariantsTableTask
-                                |
-          ______________________+_______________________
-          |                     |                      |
-          v                     v                      v
-  WriteNewEntries...     WriteNewVariants...    WriteNewVariantDetails...
-  ParquetTask            ParquetTask            ParquetTask
-  |                           |                  (optional)
-  |___________________________|_______________________|
-          |
-          v
-     RunPipelineTask
-     (all parquets ready)
-          |
-          v
-    WriteSuccessFileTask
-          |
-          v
-    LoadClickhouseVariants
-          |
-          v
-    LoadClickhouseEntries
+               _________________+__________           WriteExistingVariantsParquetTask
+               |                          |                      |          
+               |                          |______________________|
+               |                                      |
+               v                                      v
+     WriteNewEntriesParquetTask          WriteNewVariantsTableTask
+               |                                      |
+               |                          ____________+____________
+               |                          |                       |
+               |                          v                       v
+               |       WriteNewVariantsParquetTask      WriteNewVariantDetailsParquetTask
+               |                          |                   (optional)
+               |__________________________|_______________________|
+                           |
+                           v
+                     RunPipelineTask (all parquets ready)
+                           |
+                           v
+                     WriteSuccessFileTask
+                           |
+                           v
+                     LoadClickhouseVariants
+                           |
+                           v
+                     LoadClickhouseEntries
 ```
 
 ClickHouse LSM-Tree
