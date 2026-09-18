@@ -61,16 +61,12 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs
         for line in _google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content, user=user, **kwargs):
             yield line
     elif byte_range:
-        command = 'dd skip={offset} count={size} bs=1 if={file_path} status="none"'.format(
-            offset=byte_range[0],
-            size=byte_range[1]-byte_range[0] + 1,
-            file_path=file_path,
-        )
-        if file_path.endswith("gz"):
-            command += " | gunzip -c - "
-        process = _run_command(command, user=user)
-        for line in process.stdout:
-            yield line
+        with open(file_path, 'rb') as f:
+            f.seek(byte_range[0])
+            data = f.read(byte_range[1] - byte_range[0]+1)
+        if file_path.endswith('gz'):
+            data = gzip.decompress(data)
+        yield data
     else:
         mode = 'rb' if raw_content else 'r'
         is_gz = file_path.endswith("gz")
