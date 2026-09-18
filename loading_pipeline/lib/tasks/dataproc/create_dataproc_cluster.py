@@ -228,7 +228,7 @@ class CreateDataprocClusterTask(luigi.Task):
                         'project_id': Env.GCLOUD_PROJECT,
                         'region': Env.GCLOUD_REGION,
                         'cluster_name': cluster.cluster_name,
-                    }
+                    },
                 )
                 raise RuntimeError(msg)
             logger.info('Waiting for cluster spinup')
