@@ -6,7 +6,7 @@ import zipfile
 
 from django.http.response import HttpResponse
 
-from seqr.utils.file_utils import mv_file_to_gs, is_google_bucket_file_path
+from seqr.utils.google_storage_utils import mv_file_to_gs, is_google_bucket_file_path
 from seqr.views.utils.json_utils import _to_title_case
 
 DELIMITERS = {

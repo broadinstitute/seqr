@@ -7,7 +7,8 @@ from django.core.exceptions import PermissionDenied
 from django.http import StreamingHttpResponse
 
 from seqr.models import Individual, IgvSample
-from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, get_google_project
+from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.google_storage_utils import get_google_project, is_google_bucket_file_path
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response

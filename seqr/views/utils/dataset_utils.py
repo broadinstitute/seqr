@@ -8,7 +8,8 @@ import os
 from tqdm import tqdm
 
 from seqr.models import Individual, Project, RnaSample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
-from seqr.utils.file_utils import file_iter, is_google_bucket_file_path, run_gsutil_with_wait
+from seqr.utils.file_utils import file_iter
+from seqr.utils.google_storage_utils import is_google_bucket_file_path, cp_file_from_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.add_data_utils import basic_notify_search_data_loaded
@@ -365,7 +366,7 @@ def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, proj
     os.mkdir(file_dir)
     if is_google_bucket_file_path(file_path):
         try:
-            run_gsutil_with_wait('cp', file_path, additional_args=f' {file_dir}', user=user)
+            cp_file_from_gs(file_path, file_dir, user=user)
         except Exception as e:
             # re-raise so error is properly handled upstream
             raise ValueError(e)

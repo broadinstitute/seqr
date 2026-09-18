@@ -9,7 +9,8 @@ import os
 import tempfile
 import openpyxl as xl
 
-from seqr.utils.file_utils import mv_file_to_gs, file_iter
+from seqr.utils.file_utils import file_iter
+from seqr.utils.google_storage_utils import mv_file_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import login_and_policies_required
 from seqr.views.utils.terra_api_utils import anvil_enabled
