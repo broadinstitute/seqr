@@ -7,8 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import StreamingHttpResponse
 
 from seqr.models import Individual, IgvSample
-from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, run_command, get_google_project
-from seqr.utils.redis_utils import safe_redis_get_json, safe_redis_set_json
+from seqr.utils.file_utils import file_iter, does_file_exist, is_google_bucket_file_path, get_google_project
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -17,6 +16,7 @@ from seqr.views.utils.permissions_utils import check_family_view_permission, ext
     login_and_policies_required, pm_or_data_manager_required, get_project_analysis_group_guids_user_can_view, user_is_data_manager, \
     user_is_pm, get_project_and_check_edit_permission, is_internal_anvil_project, project_has_anvil, \
     check_workspace_perm, CAN_VIEW
+from seqr.views.utils.terra_api_utils import get_service_account_access_token
 
 GS_STORAGE_ACCESS_CACHE_KEY = 'gs_storage_access_cache_entry'
 GS_STORAGE_URL = 'https://storage.googleapis.com'
@@ -219,7 +219,7 @@ def fetch_igv_track(request, sample_guid, igv_track_path):
 
 
 def _stream_gs(request, gs_path):
-    headers = _get_gs_rest_api_headers(request.META.get('HTTP_RANGE'), gs_path, user=request.user)
+    headers = _get_gs_rest_api_headers(request.META.get('HTTP_RANGE'), gs_path)
 
     response = requests.get(
         f"{GS_STORAGE_URL}/{gs_path.replace('gs://', '', 1)}",
@@ -230,8 +230,8 @@ def _stream_gs(request, gs_path):
                                  content_type='application/octet-stream')
 
 
-def _get_gs_rest_api_headers(range_header, gs_path, user=None):
-    headers = {'Authorization': 'Bearer {}'.format(_get_access_token(user))}
+def _get_gs_rest_api_headers(range_header, gs_path):
+    headers = {'Authorization': 'Bearer {}'.format(get_service_account_access_token())}
     if range_header:
         headers['Range'] = range_header
     google_project = get_google_project(gs_path)
@@ -239,28 +239,6 @@ def _get_gs_rest_api_headers(range_header, gs_path, user=None):
         headers['x-goog-user-project'] = get_google_project(gs_path)
 
     return headers
-
-
-def _get_token_expiry(token):
-    response = requests.post('https://www.googleapis.com/oauth2/v1/tokeninfo',
-                             headers={'Content-Type': 'application/x-www-form-urlencoded'},
-                             data='access_token={}'.format(token), timeout=30)
-    if response.status_code == 200:
-        result = json.loads(response.text)
-        return result['expires_in']
-    else:
-        return 0
-
-
-def _get_access_token(user):
-    access_token = safe_redis_get_json(GS_STORAGE_ACCESS_CACHE_KEY)
-    if not access_token:
-        process = run_command('gcloud auth print-access-token', user=user)
-        if process.wait() == 0:
-            access_token = next(process.stdout).decode('utf-8').strip()
-            expires_in = _get_token_expiry(access_token)
-            safe_redis_set_json(GS_STORAGE_ACCESS_CACHE_KEY, access_token, expire=expires_in-5)
-    return access_token
 
 
 def _stream_file(request, path):

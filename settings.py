@@ -470,6 +470,7 @@ if TERRA_API_ROOT_URL:
         raise Exception('Error starting seqr - gcloud auth credentials are not properly configured')
 
     # activate command line account if failed on start up
+    # TODO remove before removing CLI
     activated_service_account = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
                                                capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
     if activated_service_account != SERVICE_ACCOUNT_FOR_ANVIL:
