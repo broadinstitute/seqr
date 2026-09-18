@@ -223,6 +223,13 @@ class CreateDataprocClusterTask(luigi.Task):
             if cluster.status.state in FAILURE_STATUSES:
                 msg = f'Cluster {cluster.cluster_name} entered {cluster.status.state.name} state'
                 logger.error(msg)
+                self.client.delete_cluster(
+                    request={
+                        'project_id': Env.GCLOUD_PROJECT,
+                        'region': Env.GCLOUD_REGION,
+                        'cluster_name': cluster.cluster_name,
+                    },
+                )
                 raise RuntimeError(msg)
             logger.info('Waiting for cluster spinup')
             time.sleep(3)
