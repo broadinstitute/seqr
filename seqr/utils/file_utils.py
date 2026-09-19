@@ -66,15 +66,20 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs
             size=byte_range[1]-byte_range[0] + 1,
             file_path=file_path,
         )
-        if file_path.endswith("gz"):
+        if file_path.endswith("gz") and not raw_content:  # Avoids unzipping BED files
             command += " | gunzip -c - "
         process = run_command(command, user=user)
+        if process.wait() != 0:  # Check subprocess status for errors
+            raise Exception(f'Run command failed: \nCommand: {command}\nError:{process.stdout}')
         for line in process.stdout:
             yield line
     else:
         mode = 'rb' if raw_content else 'r'
         is_gz = file_path.endswith("gz")
-        open_func = gzip.open if is_gz else open
+        if file_path.endswith("gz") and not raw_content:  # Avoids unzipping BED files
+            open_func = gzip.open
+        else:
+            open_func = open
         with open_func(file_path, mode) as f:
             for line in f:
                 if is_gz and not raw_content:
