@@ -8,11 +8,12 @@ from seqr.utils.logging_utils import SeqrLogger
 logger = SeqrLogger(__name__)
 
 
-def _parse_gs_path(gs_path):
+def _get_gs_blob(gs_path):
     if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
     bucket_name, blob_name = gs_path.replace('gs://', '', 1).split('/', 1)
-    return bucket_name, blob_name
+    bucket = storage.Client().bucket(bucket_name, user_project=get_google_project(gs_path))
+    return bucket.blob(blob_name)
 
 
 def _run_gsutil_command(command, gs_path, gunzip=False, user=None, pipe_errors=False, no_project=False, additional_args=''):
@@ -39,12 +40,7 @@ def get_google_project(gs_path):
 
 
 def does_gs_file_exist(file_path, user=None):
-    process = _run_gsutil_command('ls', file_path, user=user)
-    success = process.wait() == 0
-    if not success:
-        errors = [line.decode('utf-8').strip() for line in process.stdout]
-        logger.warning(' '.join(errors), user)
-    return success
+    return _get_gs_blob(file_path).exists()
 
 
 def google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=None, **kwargs):
@@ -63,11 +59,9 @@ def mv_file_to_gs(local_path, gs_path, user=None):
     
     
 def cp_file_from_gs(gs_path, local_dir, user):
-    bucket_name, blob_name = _parse_gs_path(gs_path)
-    local_path = os.path.join(local_dir, os.path.basename(blob_name))
-
-    bucket = storage.Client().bucket(bucket_name, user_project=get_google_project(gs_path))
-    bucket.blob(blob_name).download_to_filename(local_path)
+    blob = _get_gs_blob(gs_path)
+    local_path = os.path.join(local_dir, os.path.basename(blob.name))
+    blob.download_to_filename(local_path)
 
 
 def get_gs_file_list(gs_path, user, check_subfolders, allow_missing):
