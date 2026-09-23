@@ -1,8 +1,18 @@
+import os
 import subprocess # nosec
+
+from google.cloud import storage
 
 from seqr.utils.logging_utils import SeqrLogger
 
 logger = SeqrLogger(__name__)
+
+
+def _parse_gs_path(gs_path):
+    if not is_google_bucket_file_path(gs_path):
+        raise Exception('A Google Storage path is expected.')
+    bucket_name, blob_name = gs_path.replace('gs://', '', 1).split('/', 1)
+    return bucket_name, blob_name
 
 
 def _run_gsutil_command(command, gs_path, gunzip=False, user=None, pipe_errors=False, no_project=False, additional_args=''):
@@ -53,7 +63,11 @@ def mv_file_to_gs(local_path, gs_path, user=None):
     
     
 def cp_file_from_gs(gs_path, local_dir, user):
-    _run_gsutil_with_wait('cp', gs_path, additional_args=f' {local_dir}', user=user)
+    bucket_name, blob_name = _parse_gs_path(gs_path)
+    local_path = os.path.join(local_dir, os.path.basename(blob_name))
+
+    bucket = storage.Client().bucket(bucket_name, user_project=get_google_project(gs_path))
+    bucket.blob(blob_name).download_to_filename(local_path)
 
 
 def get_gs_file_list(gs_path, user, check_subfolders, allow_missing):
