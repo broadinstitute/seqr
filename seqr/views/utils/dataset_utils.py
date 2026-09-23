@@ -366,7 +366,7 @@ def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, proj
     os.mkdir(file_dir)
     if is_google_bucket_file_path(file_path):
         try:
-            cp_file_from_gs(file_path, file_dir, user=user)
+            cp_file_from_gs(file_path, file_dir)
         except Exception as e:
             # re-raise so error is properly handled upstream
             raise ValueError(e)

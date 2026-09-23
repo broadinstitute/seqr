@@ -6,9 +6,9 @@ from seqr.utils.google_storage_utils import is_google_bucket_file_path, does_gs_
     google_bucket_file_iter
 
 
-def does_file_exist(file_path, user=None):
+def does_file_exist(file_path):
     if is_google_bucket_file_path(file_path):
-        return does_gs_file_exist(file_path, user=user)
+        return does_gs_file_exist(file_path)
     return os.path.isfile(file_path)
 
 
@@ -21,7 +21,7 @@ def list_files(wildcard_path, user, check_subfolders=False, allow_missing=True):
 
 
 def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs):
-    if not does_file_exist(file_path, user=user):
+    if not does_file_exist(file_path):
         raise FileNotFoundError(f'Could not access file {file_path}')
     if is_google_bucket_file_path(file_path):
         for line in google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content, user=user, **kwargs):

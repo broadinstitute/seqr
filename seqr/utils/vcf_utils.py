@@ -133,7 +133,7 @@ def _validate_valid_vcf_name(data_path, user, allowed_exts):
         if files:
             file_to_check = files[0]
     elif allowed_exts and data_path.endswith(allowed_exts):
-        if not does_file_exist(data_path, user=user):
+        if not does_file_exist(data_path):
             raise ErrorsWarningsException([f'Data file or path {data_path} is not found.'])
         file_to_check = None
 

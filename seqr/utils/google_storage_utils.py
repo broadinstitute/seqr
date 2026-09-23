@@ -39,7 +39,7 @@ def get_google_project(gs_path):
     return 'anvil-datastorage' if gs_path.startswith('gs://fc-secure') else None
 
 
-def does_gs_file_exist(file_path, user=None):
+def does_gs_file_exist(file_path):
     return _get_gs_blob(file_path).exists()
 
 
@@ -58,7 +58,7 @@ def mv_file_to_gs(local_path, gs_path, user=None):
     _run_gsutil_with_wait(command, gs_path, user)
     
     
-def cp_file_from_gs(gs_path, local_dir, user):
+def cp_file_from_gs(gs_path, local_dir):
     blob = _get_gs_blob(gs_path)
     local_path = os.path.join(local_dir, os.path.basename(blob.name))
     blob.download_to_filename(local_path)

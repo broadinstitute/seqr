@@ -434,7 +434,7 @@ def gregor_export(request):
     file_path = request_json['deliveryPath']
     if not is_google_bucket_file_path(file_path):
         raise ErrorsWarningsException(['Delivery Path must be a valid google bucket path (starts with gs://)'])
-    if not does_gs_file_exist(file_path, user=request.user):
+    if not does_gs_file_exist(file_path):
         raise ErrorsWarningsException(['Invalid Delivery Path: folder not found'])
 
     projects = get_internal_projects().filter(

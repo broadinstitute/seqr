@@ -159,9 +159,9 @@ def update_individual_igv_sample(request, individual_guid):
         if not sample_type:
             raise Exception('Invalid file extension for "{}" - valid extensions are {}'.format(
                 file_path, ', '.join([suffix for suffixes in IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS.values() for suffix in suffixes])))
-        if not does_file_exist(file_path, user=user):
+        if not does_file_exist(file_path):
             raise Exception('Error accessing "{}"'.format(file_path))
-        if request_json.get('indexFilePath') and not does_file_exist(request_json['indexFilePath'], user=user):
+        if request_json.get('indexFilePath') and not does_file_exist(request_json['indexFilePath']):
             raise Exception('Error accessing "{}"'.format(request_json['indexFilePath']))
 
         sample, created = get_or_create_model_from_json(
@@ -210,7 +210,7 @@ def fetch_igv_track(request, sample_guid, igv_track_path):
         raise PermissionDenied('Invalid sample track path')
     igv_track_path = f"{sample_track_path.split('.', 1)[0]}.{extension_match.group(1)}"
 
-    if igv_track_path.endswith('.bam.bai') and not does_file_exist(igv_track_path, user=request.user):
+    if igv_track_path.endswith('.bam.bai') and not does_file_exist(igv_track_path):
         igv_track_path = igv_track_path.replace('.bam.bai', '.bai')
 
     if is_google_bucket_file_path(igv_track_path):

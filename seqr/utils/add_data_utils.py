@@ -198,7 +198,7 @@ def _upload_data_loading_files(individual_ids: list[int], vcf_sample_id_map: dic
 
 def _write_gene_id_file(user):
     file_name = 'db_id_to_gene_id'
-    if does_file_exist(f'{LOADING_DATASETS_DIR}/{file_name}.csv.gz', user):
+    if does_file_exist(f'{LOADING_DATASETS_DIR}/{file_name}.csv.gz'):
         return
 
     gene_data_loaded = (GeneInfo.objects.filter(gencode_release=int(GeneInfo.CURRENT_VERSION)).exists() and
