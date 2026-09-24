@@ -51,7 +51,7 @@ jobs:
           gcloud storage cp loading_pipeline/bin/* gs://seqr-pipeline-runner-builds/dev/latest/bin/
           gcloud storage cp pipeline_build/dist/*.whl gs://seqr-pipeline-runner-builds/dev/latest/pyscripts.zip
           gcloud storage cp loading_pipeline/bin/* gs://seqr-pipeline-runner-builds/dev/${{ github.event.workflow_run.head_sha }}/bin/
-          gcloud storage cp cd pipeline_build/dist/*.whl gs://seqr-pipeline-runner-builds/dev/${{ github.event.workflow_run.head_sha }}/pyscripts.zip
+          gcloud storage cp pipeline_build/dist/*.whl gs://seqr-pipeline-runner-builds/dev/${{ github.event.workflow_run.head_sha }}/pyscripts.zip
   docker:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
