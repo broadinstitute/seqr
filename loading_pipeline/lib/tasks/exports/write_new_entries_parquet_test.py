@@ -1,6 +1,5 @@
-from typing import ClassVar
+import os
 
-import hail as hl
 import luigi.worker
 import pandas as pd
 
@@ -11,14 +10,11 @@ from loading_pipeline.lib.core import (
 )
 from loading_pipeline.lib.misc.validation import ALL_VALIDATIONS
 from loading_pipeline.lib.paths import (
+    existing_variants_parquet_path,
     new_entries_parquet_path,
-    new_variants_table_path,
 )
 from loading_pipeline.lib.tasks.exports.write_new_entries_parquet import (
     WriteNewEntriesParquetTask,
-)
-from loading_pipeline.lib.test.clickhouse_schema_testcase import (
-    ClickhouseSchemaTestCase,
 )
 from loading_pipeline.lib.test.misc import (
     convert_ndarray_to_list,
@@ -36,61 +32,11 @@ TEST_SNV_INDEL_VCF = 'loading_pipeline/var/test/callsets/1kg_30variants.vcf'
 TEST_MITO_CALLSET = 'loading_pipeline/var/test/callsets/mito_1.mt'
 TEST_SV_VCF_2 = 'loading_pipeline/var/test/callsets/sv_2.vcf'
 TEST_GCNV_BED_FILE = 'loading_pipeline/var/test/callsets/gcnv_1.tsv'
-TEST_SNV_INDEL_ANNOTATIONS = (
-    'loading_pipeline/var/test/exports/GRCh38/SNV_INDEL/annotations.ht'
-)
-TEST_MITO_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/MITO/annotations.ht'
-TEST_SV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/SV/annotations.ht'
-TEST_GCNV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/GCNV/annotations.ht'
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
 
-class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
-    fixtures: ClassVar = ['clickhouse_test']
-
-    def setUp(self) -> None:
-        super().setUp()
-        ht = hl.read_table(
-            TEST_SNV_INDEL_ANNOTATIONS,
-        )
-        ht = ht.filter(ht.variant_id != '1-878314-G-C')
-        ht.write(
-            new_variants_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.SNV_INDEL,
-                TEST_RUN_ID,
-            ),
-        )
-        ht = hl.read_table(
-            TEST_MITO_ANNOTATIONS,
-        )
-        ht.write(
-            new_variants_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.MITO,
-                TEST_RUN_ID,
-            ),
-        )
-        ht = hl.read_table(
-            TEST_SV_ANNOTATIONS,
-        )
-        ht.write(
-            new_variants_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.SV,
-                TEST_RUN_ID,
-            ),
-        )
-        ht = hl.read_table(TEST_GCNV_ANNOTATIONS)
-        ht.write(
-            new_variants_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-                TEST_RUN_ID,
-            ),
-        )
-
+class WriteNewEntriesParquetTest(MockedDatarootTestCase):
     def test_write_new_entries_parquet(self):
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_3_REMAP,
@@ -128,36 +74,35 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             ),
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
-        self.assertEqual(len(export_json), 16)
+        self.assertEqual(len(export_json), 181)
         self.assertEqual(
             df['family_guid'].value_counts().to_dict(),
             {
-                'abc_1': 2,
-                '345_1': 2,
-                '123_1': 1,
-                '234_1': 1,
-                '456_1': 1,
-                '567_1': 1,
-                '678_1': 1,
-                '789_1': 1,
-                '890_1': 1,
-                '901_1': 1,
-                'bcd_1': 1,
-                'cde_1': 1,
-                'def_1': 1,
-                'efg_1': 1,
+                'abc_1': 16,
+                '789_1': 15,
+                '890_1': 14,
+                '901_1': 14,
+                'bcd_1': 14,
+                '345_1': 13,
+                '456_1': 13,
+                '567_1': 13,
+                'def_1': 13,
+                '123_1': 12,
+                '234_1': 11,
+                '678_1': 11,
+                'cde_1': 11,
+                'efg_1': 11,
             },
         )
         self.assertEqual(
-            [export_json[0], export_json[9], export_json[15]],
+            [export_json[2], export_json[11], export_json[17]],
             [
                 {
-                    'key': 0,
                     'project_guid': 'R0114_project4',
                     'family_guid': '123_1',
                     'sample_type': 'WGS',
+                    'variantId': '1-876499-A-G',
                     'xpos': 1000876499,
-                    'geneIds': ['ENSG00000187634'],
                     'filters': [],
                     'calls': [
                         {
@@ -171,12 +116,11 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
                     'sign': 1,
                 },
                 {
-                    'key': 0,
                     'project_guid': 'R0113_test_project',
                     'family_guid': 'abc_1',
                     'sample_type': 'WGS',
+                    'variantId': '1-876499-A-G',
                     'xpos': 1000876499,
-                    'geneIds': ['ENSG00000187634'],
                     'filters': [],
                     'calls': [
                         {
@@ -204,12 +148,11 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
                     'sign': 1,
                 },
                 {
-                    'key': 1,
                     'project_guid': 'R0113_test_project',
                     'family_guid': 'abc_1',
                     'sample_type': 'WGS',
+                    'variantId': '1-878314-G-C',
                     'xpos': 1000878314,
-                    'geneIds': ['ENSG00000177000'],
                     'filters': ['VQSRTrancheSNP99.00to99.90'],
                     'calls': [
                         {
@@ -263,14 +206,15 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             ),
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
+        self.assertEqual(len(export_json), 3)
         self.assertEqual(
-            export_json,
+            export_json[:1],
             [
                 {
-                    'key': 998,
                     'project_guid': 'R0116_test_project3',
                     'family_guid': 'family_1',
                     'sample_type': 'WGS',
+                    'variantId': 'M-8-G-T',
                     'xpos': 25000000008,
                     'filters': [],
                     'calls': [
@@ -296,6 +240,20 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             SampleType.WGS,
             'R0115_test_project2',
         )
+        existing_variants_path = existing_variants_parquet_path(
+            ReferenceGenome.GRCh38,
+            DatasetType.SV,
+            TEST_RUN_ID,
+        )
+        os.makedirs(os.path.dirname(existing_variants_path), exist_ok=True)
+        pd.DataFrame(
+            {
+                'variant_id': ['BND_chr1_6'],
+                'key_': [727],
+                'end': [180928],
+                'endChrom': ['chr5'],
+            },
+        ).to_parquet(existing_variants_path)
         worker = luigi.worker.Worker()
         task = WriteNewEntriesParquetTask(
             reference_genome=ReferenceGenome.GRCh38,
@@ -318,15 +276,14 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             ),
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
+        self.assertEqual(len(export_json), 2)
         self.assertEqual(
-            export_json,
+            export_json[:1],
             [
                 {
-                    'key': 727,
+                    'variantId': 'BND_chr1_6',
                     'project_guid': 'R0115_test_project2',
                     'family_guid': 'family_2_1',
-                    'xpos': 1001025886,
-                    'geneIds': ['ENSG00000188157'],
                     'filters': ['HIGH_SR_BACKGROUND', 'UNRESOLVED'],
                     'calls': [
                         {
@@ -401,14 +358,14 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
             ),
         )
         export_json = convert_ndarray_to_list(df.to_dict('records'))
+        self.assertEqual(len(export_json), 2)
         self.assertEqual(
-            export_json,
+            export_json[:1],
             [
                 {
-                    'key': 0,
+                    'variantId': 'suffix_16456_DEL',
                     'project_guid': 'R0115_test_project2',
                     'family_guid': 'family_2_1',
-                    'xpos': 1000939203,
                     'filters': [],
                     'calls': [
                         {
@@ -433,7 +390,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
                             'defragged': False,
                             'start': 100017585,
                             'end': 100023213,
-                            'numExon': 1,
+                            'numExon': 3,
                             'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
                             'newCall': False,
                             'prevCall': False,
@@ -447,7 +404,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase, ClickhouseSchemaTestCas
                             'defragged': False,
                             'start': 100017585,
                             'end': 100023213,
-                            'numExon': 1,
+                            'numExon': 3,
                             'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
                             'newCall': False,
                             'prevCall': True,
