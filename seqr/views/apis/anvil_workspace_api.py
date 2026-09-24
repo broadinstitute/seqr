@@ -131,7 +131,7 @@ def validate_anvil_vcf(request, namespace, name, workspace_meta):
     data_path = 'gs://{bucket}/{path}'.format(bucket=bucket_name.rstrip('/'), path=path.lstrip('/'))
 
     # Validate the VCF to see if it contains all the required samples
-    samples = validate_vcf_and_get_samples(data_path, request.user, body['genomeVersion'], path_name=path)
+    samples = validate_vcf_and_get_samples(data_path, body['genomeVersion'], path_name=path)
 
     return create_json_response({'vcfSamples': samples, 'fullDataPath': data_path})
 

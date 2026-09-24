@@ -161,7 +161,7 @@ def _load_rna_seq_file(
         allowed_column_map, allow_missing_gene=False, ignore_extra_samples=False, skip_new_sample_validation=False, optional_columns=None, sample_id_header_col_config=None,
         misconfigured_samples=None, sample_metadata_mapping=None,
 ):
-    f = file_iter(file_path, user=user)
+    f = file_iter(file_path)
     parsed_f = parse_file(file_path.split('/')[-1].replace('.gz', ''), f, iter_file=True)
     header = next(parsed_f)
     file_sample_id, column_map = _validate_rna_header(header, allowed_column_map, optional_columns, sample_id_header_col_config)
@@ -502,9 +502,9 @@ def _parse_phenotype_pri_row(row):
     yield record
 
 
-def load_phenotype_prioritization_data_file(file_path, user):
+def load_phenotype_prioritization_data_file(file_path):
     data_by_project_sample_id = defaultdict(lambda: defaultdict(list))
-    f = file_iter(file_path, user=user)
+    f = file_iter(file_path)
     header = _parse_tsv_row(next(f))
     missing_cols = [col for col in PHENOTYPE_PRIORITIZATION_REQUIRED_HEADER if col not in header]
     if missing_cols:

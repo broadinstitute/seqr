@@ -708,18 +708,18 @@ def import_gregor_metadata(request, project_guid):
 
     experiment_sample_lookup = {
         row['experiment_dna_short_read_id']: row['experiment_sample_id'] for row in _iter_metadata_table(
-            metadata_files_path, EXPERIMENT_TABLE, request.user,
+            metadata_files_path, EXPERIMENT_TABLE,
             lambda r: r['experiment_type'] == sample_type and r['experiment_sample_id'] != 'NA',
         )
     }
     participant_sample_lookup = {
         row['participant_id']: experiment_sample_lookup[row['id_in_table']] for row in _iter_metadata_table(
-            metadata_files_path, EXPERIMENT_LOOKUP_TABLE, request.user,
+            metadata_files_path, EXPERIMENT_LOOKUP_TABLE,
             lambda r: r['id_in_table'] in experiment_sample_lookup and r['table_name'] == 'experiment_dna_short_read',
         )
     }
 
-    participant_rows = list(_iter_metadata_table(metadata_files_path, PARTICIPANT_TABLE, request.user, lambda r: True))
+    participant_rows = list(_iter_metadata_table(metadata_files_path, PARTICIPANT_TABLE, lambda r: True))
     family_ids = {row['family_id'] for row in participant_rows if row['participant_id'] in participant_sample_lookup}
     individuals_by_participant = {row['participant_id']: {
         JsonConstants.INDIVIDUAL_ID_COLUMN: participant_sample_lookup.get(row['participant_id'], row['participant_id']),
@@ -733,7 +733,7 @@ def import_gregor_metadata(request, project_guid):
     warnings = validate_fam_file_records(project, individuals, clear_invalid_values=True)
 
     for row in _iter_metadata_table(
-        metadata_files_path, PHENOTYPE_TABLE, request.user,
+        metadata_files_path, PHENOTYPE_TABLE,
         lambda r: r['participant_id'] in individuals_by_participant and r['ontology'] == 'HPO' and r['presence'] in {'Present', 'Absent'},
     ):
         col = FEATURES_COL if row['presence'] == 'Present' else ABSENT_FEATURES_COL
@@ -770,7 +770,7 @@ def import_gregor_metadata(request, project_guid):
     finding_id_map = {}
     genes = set()
     for row in _iter_metadata_table(
-        metadata_files_path, FINDINGS_TABLE, request.user,
+        metadata_files_path, FINDINGS_TABLE,
             lambda r: r['participant_id'] in participant_individual_map and r['variant_type'] in {'SNV/INDEL', 'SNV', 'INDEL'},
     ):
         individual = participant_individual_map[row['participant_id']]
@@ -843,9 +843,9 @@ def _parse_new_aip_saved_variants(new_variant_keys, family_variant_data):
     return new_variant_data
 
 
-def _iter_metadata_table(file_path, table_name, user, filter_row):
+def _iter_metadata_table(file_path, table_name, filter_row):
     file_name = f'{file_path}/{table_name}.tsv'
-    file_rows = parse_file(file_name, file_iter(file_name, user=user, no_project=True), iter_file=True)
+    file_rows = parse_file(file_name, file_iter(file_name, no_project=True), iter_file=True)
     header = next(file_rows)
     for row in file_rows:
         row_dict = dict(zip(header, row))

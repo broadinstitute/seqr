@@ -118,7 +118,7 @@ def load_phenotype_prioritization_data(request):
 
     file_path = request_json['file']
     try:
-        tool, data_by_project_indiv_id = load_phenotype_prioritization_data_file(file_path, request.user)
+        tool, data_by_project_indiv_id = load_phenotype_prioritization_data_file(file_path)
     except FileNotFoundError:
         return create_json_response({'error': 'File not found: {}'.format(file_path)}, status=400)
     except ValueError as e:
@@ -205,7 +205,7 @@ def validate_callset(request):
     request_json = json.loads(request.body)
     dataset_type = request_json['datasetType'] if anvil_enabled() else None
     samples = validate_vcf_and_get_samples(
-        _callset_path(request_json), request.user, request_json['genomeVersion'], dataset_type=dataset_type,
+        _callset_path(request_json), request_json['genomeVersion'], dataset_type=dataset_type,
         path_name=request_json['filePath'],
     )
     return create_json_response({'vcfSamples': samples})

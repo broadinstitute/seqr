@@ -253,10 +253,10 @@ def _stream_file(request, path):
         last_byte = int(last_byte)
         length = last_byte - first_byte + 1
         resp = StreamingHttpResponse(
-            file_bytes_iter(path, first_byte, last_byte, raw_content=True, user=request.user), status=206, content_type=content_type)
+            file_bytes_iter(path, first_byte, last_byte, raw_content=True), status=206, content_type=content_type)
         resp['Content-Length'] = str(length)
         resp['Content-Range'] = 'bytes %s-%s' % (first_byte, last_byte)
     else:
-        resp = StreamingHttpResponse(file_iter(path, raw_content=True, user=request.user), content_type=content_type)
+        resp = StreamingHttpResponse(file_iter(path, raw_content=True), content_type=content_type)
     resp['Accept-Ranges'] = 'bytes'
     return resp

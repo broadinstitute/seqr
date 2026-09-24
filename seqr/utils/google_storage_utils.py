@@ -57,13 +57,9 @@ def google_bucket_file_stream(no_project):
         return blob.open(mode)
     return wrapper
 
-def google_bucket_file_bytes_iter(gs_path, first_byte, last_byte, raw_content=False, user=None):
-    process = _run_gsutil_command(
-        f'cat -r {first_byte}-{last_byte}', gs_path, gunzip=gs_path.endswith("gz") and not raw_content, user=user)
-    for line in process.stdout:
-        if not raw_content:
-            line = line.decode('utf-8')
-        yield line
+def google_bucket_read_bytes(gs_path, first_byte, last_byte):
+    blob = _get_gs_blob(gs_path)
+    return blob.download_as_bytes(start=first_byte, end=last_byte)
 
 
 def mv_file_to_gs(local_path, gs_path, user=None):

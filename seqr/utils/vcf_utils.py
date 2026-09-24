@@ -74,7 +74,7 @@ def _get_vcf_meta_info(line):
     return None
 
 
-def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None, dataset_type=None):
+def validate_vcf_and_get_samples(data_path, genome_version, path_name=None, dataset_type=None):
     allowed_exts = DATA_TYPE_FILE_EXTS.get(dataset_type)
 
     vcf_filename = _validate_valid_vcf_name(data_path, allowed_exts)
@@ -84,7 +84,7 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
 
     meta = defaultdict(dict)
     try:
-        file_content = file_iter(vcf_filename, user=user) if vcf_filename.endswith('.vcf') else file_bytes_iter(vcf_filename, 0, BLOCK_SIZE, user=user)
+        file_content = file_iter(vcf_filename) if vcf_filename.endswith('.vcf') else file_bytes_iter(vcf_filename, 0, BLOCK_SIZE)
         header_line = next(_get_vcf_header_line(file_content, meta))
     except FileNotFoundError:
         raise ErrorsWarningsException([f'Data file or path {path_name or data_path} is not found.'], [])
