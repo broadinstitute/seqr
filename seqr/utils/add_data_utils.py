@@ -109,7 +109,7 @@ def trigger_data_loading(projects: list[Project], individual_ids: list[int], sam
     variables.update({k: v for k, v in conditional_variables.items() if v})
     file_path = _get_pedigree_path(genome_version, sample_type, dataset_type)
     _upload_data_loading_files(individual_ids, vcf_sample_id_map or {}, user, file_path, raise_error)
-    _write_gene_id_file(user)
+    _write_gene_id_file()
 
     error = _enqueue_pipeline_request('loading_pipeline', variables, user, raise_error, log_error=False)
     if error:
@@ -187,7 +187,7 @@ def _upload_data_loading_files(individual_ids: list[int], vcf_sample_id_map: dic
     files = [(f'{project_guid}_pedigree', header, rows) for project_guid, rows in data_by_project.items()]
 
     try:
-        write_multiple_files(files, file_path, user, file_format='tsv')
+        write_multiple_files(files, file_path, file_format='tsv')
     except Exception as e:
         logger.error(f'Uploading Pedigrees failed. Errors: {e}', user, detail={
             project: rows for project, _, rows in files
@@ -196,7 +196,7 @@ def _upload_data_loading_files(individual_ids: list[int], vcf_sample_id_map: dic
             raise e
 
 
-def _write_gene_id_file(user):
+def _write_gene_id_file():
     file_name = 'db_id_to_gene_id'
     if does_file_exist(f'{LOADING_DATASETS_DIR}/{file_name}.csv.gz'):
         return
@@ -210,7 +210,7 @@ def _write_gene_id_file(user):
         )
     gene_data = GeneInfo.objects.all().values('gene_id', db_id=F('id')).order_by('id')
     file_config = (file_name, ['db_id', 'gene_id'], gene_data)
-    write_multiple_files([file_config], LOADING_DATASETS_DIR, user, file_format='csv', gzip_file=True)
+    write_multiple_files([file_config], LOADING_DATASETS_DIR, file_format='csv', gzip_file=True)
 
 
 def _get_pedigree_path(genome_version: str, sample_type: str, dataset_type: str):

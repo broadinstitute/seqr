@@ -150,7 +150,7 @@ class Command(BaseCommand):
                     cls._report_internal_validation_error(
                         run_details, file_path, project_guids, error_messages or json.dumps(error_summary),
                     )
-                write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, user=None, file_format=None)
+                write_multiple_files([(ERRORS_REPORTED_FILE_NAME, [], [])], run_dir, file_format=None)
 
     @classmethod
     def _report_internal_validation_error(cls, run_details, file_path, project_guids, error_messages):

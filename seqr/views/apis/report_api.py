@@ -543,7 +543,7 @@ def gregor_export(request):
     else:
         warnings = errors + warnings
 
-    write_multiple_files(files, file_path, request.user, file_format='tsv')
+    write_multiple_files(files, file_path, file_format='tsv')
 
     return create_json_response({
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],

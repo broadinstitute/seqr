@@ -1,13 +1,8 @@
 import gzip
 import os
 import re
-import subprocess # nosec
 
 from google.cloud import storage
-
-from seqr.utils.logging_utils import SeqrLogger
-
-logger = SeqrLogger(__name__)
 
 
 def _parse_gs_path(gs_path, no_project=False):
@@ -22,21 +17,6 @@ def _parse_gs_path(gs_path, no_project=False):
 def _get_gs_blob(gs_path, no_project=False):
     bucket, blob_name = _parse_gs_path(gs_path, no_project=no_project)
     return bucket.blob(blob_name)
-
-
-def _run_gsutil_command(command, gs_path, gunzip=False, user=None, no_project=False):
-    if not is_google_bucket_file_path(gs_path):
-        raise Exception('A Google Storage path is expected.')
-
-    #  Anvil buckets are requester-pays and we bill them to the anvil project
-    google_project = get_google_project(gs_path) if not no_project else None
-    project_arg = '-u {} '.format(google_project) if google_project else ''
-    command = f'gsutil {project_arg}{command} {gs_path}'
-    if gunzip:
-        command += " | gunzip -c -q - "
-
-    logger.info('==> {}'.format(command), user)
-    return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True) # nosec
 
 
 def is_google_bucket_file_path(file_path):
@@ -62,9 +42,10 @@ def google_bucket_read_bytes(gs_path, first_byte, last_byte):
     return blob.download_as_bytes(start=first_byte, end=last_byte)
 
 
-def mv_file_to_gs(local_path, gs_path, user=None):
-    command = 'mv {}'.format(local_path)
-    _run_gsutil_with_wait(command, gs_path, user)
+def mv_file_to_gs(local_path, gs_path):
+    blob = _get_gs_blob(gs_path)
+    blob.upload_from_filename(local_path)
+    os.remove(local_path)
     
     
 def cp_file_from_gs(gs_path, local_dir):
@@ -83,11 +64,3 @@ def get_gs_wildcard_match_files(gs_path):
     blobs = bucket.list_blobs(prefix=pattern.split('*')[0])
     regex = re.escape(pattern).replace(re.escape('*'), '.*')
     return [f'gs://{bucket.name}/{blob.name}' for blob in blobs if re.fullmatch(regex, blob.name)]
-
-
-def _run_gsutil_with_wait(command, gs_path, user):
-    process = _run_gsutil_command(command, gs_path, user=user)
-    if process.wait() != 0:
-        errors = [line.decode('utf-8').strip() for line in process.stdout]
-        raise Exception('Run command failed: ' + ' '.join(errors))
-    return process

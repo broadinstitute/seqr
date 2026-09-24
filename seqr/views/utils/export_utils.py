@@ -92,7 +92,7 @@ def export_multiple_files(files, zip_filename, **kwargs):
         return response
 
 
-def write_multiple_files(files, file_path, user, gzip_file=False, **kwargs):
+def write_multiple_files(files, file_path, gzip_file=False, **kwargs):
     is_gs_path = is_google_bucket_file_path(file_path)
     if not is_gs_path:
         os.makedirs(file_path, exist_ok=True)
@@ -106,5 +106,5 @@ def write_multiple_files(files, file_path, user, gzip_file=False, **kwargs):
                 current_file += '.gz'
             with open_func(current_file, open_mode) as f:
                 f.write(content)
-        if is_gs_path:
-            mv_file_to_gs(f'{temp_dir_name}/*', f'{file_path}/', user)
+            if is_gs_path:
+                mv_file_to_gs(current_file, f'{file_path}/{filename}')

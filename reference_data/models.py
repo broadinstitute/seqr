@@ -326,7 +326,7 @@ class GeneInfo(LoadableModel):
         if symbol_changes:
             write_multiple_files([
                 (f'gene_symbol_changes__{gencode_release}', ['gene_id', 'old_symbol', 'new_symbol'], symbol_changes)
-            ], gene_symbol_change_dir, user=None)
+            ], gene_symbol_change_dir)
 
         return transcripts
 
@@ -624,7 +624,7 @@ class Omim(LoadableModel):
         if omim_key:
             write_multiple_files(
                 [(cls.CACHED_RECORDS_FILENAME, cls.CACHED_RECORDS_HEADER, records)],
-                f'gs://{cls.CACHED_RECORDS_BUCKET}', file_format='txt', user=None,
+                f'gs://{cls.CACHED_RECORDS_BUCKET}', file_format='txt',
             )
             for record in records:
                 del record['ensembl_gene_id']
