@@ -19,7 +19,7 @@ from seqr.views.utils.terra_api_utils import add_service_account, has_service_ac
     TerraRefreshTokenFailedException
 from seqr.views.utils.pedigree_info_utils import parse_basic_pedigree_table, JsonConstants
 from seqr.views.utils.individual_utils import add_or_update_individuals_and_families
-from seqr.utils.file_utils import list_files
+from seqr.utils.google_storage_utils import get_gs_files
 from seqr.utils.add_data_utils import get_missing_family_samples, get_loaded_individual_ids, trigger_data_loading
 from seqr.utils.vcf_utils import validate_vcf_and_get_samples, get_vcf_list
 from seqr.utils.logging_utils import SeqrLogger
@@ -90,7 +90,7 @@ def _get_workspace_bucket(namespace, name, workspace_meta):
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
 def get_anvil_vcf_list(request, *args):
     bucket_path = _get_workspace_bucket(*args)
-    data_path_list = get_vcf_list(bucket_path, request.user)
+    data_path_list = get_vcf_list(bucket_path)
 
     return create_json_response({'dataPathList': data_path_list})
 
@@ -98,7 +98,7 @@ def get_anvil_vcf_list(request, *args):
 @anvil_workspace_access_required(meta_fields=['workspace.bucketName'])
 def get_anvil_igv_options(request, *args):
     bucket_path = _get_workspace_bucket(*args)
-    file_list = list_files(bucket_path, request.user, check_subfolders=True, allow_missing=False)
+    file_list = get_gs_files(bucket_path)
     igv_options = [
         {'name': path.replace(bucket_path, ''), 'value': path} for path in file_list
         if path.endswith(IgvSample.SAMPLE_TYPE_FILE_EXTENSIONS[IgvSample.SAMPLE_TYPE_ALIGNMENT])

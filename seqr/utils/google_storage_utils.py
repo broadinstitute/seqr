@@ -8,11 +8,16 @@ from seqr.utils.logging_utils import SeqrLogger
 logger = SeqrLogger(__name__)
 
 
-def _get_gs_blob(gs_path):
+def _get_gs_bucket(gs_path):
     if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
-    bucket_name, blob_name = gs_path.replace('gs://', '', 1).split('/', 1)
+    bucket_name, path = gs_path.replace('gs://', '', 1).split('/', 1)
     bucket = storage.Client().bucket(bucket_name, user_project=get_google_project(gs_path))
+    return bucket, path
+
+
+def _get_gs_blob(gs_path):
+    bucket, blob_name = _get_gs_bucket(gs_path)
     return bucket.blob(blob_name)
 
 
@@ -64,17 +69,16 @@ def cp_file_from_gs(gs_path, local_dir):
     blob.download_to_filename(local_path)
 
 
-def get_gs_file_list(gs_path, user, check_subfolders, allow_missing):
+def get_gs_files(gs_path):
+    bucket, prefix = _get_gs_bucket(gs_path.rstrip('/'))
+    return [f'gs://{bucket.name}/{blob.name}' for blob in bucket.list_blobs(prefix=f'{prefix}/')]
+
+
+def get_gs_wildcard_match_files(gs_path, user):
     gs_path = gs_path.rstrip('/')
     command = 'ls'
 
-    if check_subfolders:
-        # If a bucket is empty gsutil throws an error when running ls with ** instead of returning an empty list
-        subfolders = _run_gsutil_with_stdout(command, gs_path.replace('/**', ''), user)
-        if not subfolders:
-            return []
-
-    all_lines = _run_gsutil_with_stdout(command, gs_path, user, allow_missing=allow_missing)
+    all_lines = _run_gsutil_with_stdout(command, gs_path, user)
     return [line for line in all_lines if is_google_bucket_file_path(line)]
 
 
@@ -86,13 +90,10 @@ def _run_gsutil_with_wait(command, gs_path, user=None, **kwargs):
     return process
 
 
-def _run_gsutil_with_stdout(command, gs_path, user=None, allow_missing=False):
+def _run_gsutil_with_stdout(command, gs_path, user=None):
     process = _run_gsutil_command(command, gs_path, user=user, pipe_errors=True)
     output, errs = process.communicate()
     if errs:
         errors = errs.decode('utf-8').strip().replace('\n', ' ')
-        if allow_missing:
-            logger.info(errors, user)
-        else:
-            raise Exception(f'Run command failed: {errors}')
+        logger.info(errors, user)
     return [line for line in output.decode('utf-8').split('\n') if line]

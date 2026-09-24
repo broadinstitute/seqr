@@ -2,8 +2,8 @@ import glob
 import gzip
 import os
 
-from seqr.utils.google_storage_utils import is_google_bucket_file_path, does_gs_file_exist, get_gs_file_list, \
-    google_bucket_file_iter
+from seqr.utils.google_storage_utils import is_google_bucket_file_path, does_gs_file_exist, google_bucket_file_iter, \
+    get_gs_files, get_gs_wildcard_match_files
 
 
 def does_file_exist(file_path):
@@ -12,12 +12,20 @@ def does_file_exist(file_path):
     return os.path.isfile(file_path)
 
 
-def list_files(wildcard_path, user, check_subfolders=False, allow_missing=True):
-    if check_subfolders:
-        wildcard_path = f'{wildcard_path.rstrip("/")}/**'
+def list_files(files_dir):
+    if is_google_bucket_file_path(files_dir):
+        return get_gs_files(files_dir)
+    return _list_local_wildcard_files(f'{files_dir.rstrip("/")}/**', recursive=True)
+
+
+def list_wildcard_match_files(wildcard_path, user):
     if is_google_bucket_file_path(wildcard_path):
-        return get_gs_file_list(wildcard_path, user, check_subfolders, allow_missing)
-    return [file_path for file_path in glob.glob(wildcard_path, recursive=check_subfolders) if os.path.isfile(file_path)]
+        return get_gs_wildcard_match_files(wildcard_path, user)
+    return _list_local_wildcard_files(wildcard_path)
+
+
+def _list_local_wildcard_files(wildcard_path, **kwargs):
+    return [file_path for file_path in glob.glob(wildcard_path, **kwargs) if os.path.isfile(file_path)]
 
 
 def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs):

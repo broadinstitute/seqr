@@ -196,7 +196,7 @@ def loading_vcfs(request):
     if anvil_enabled():
         raise PermissionDenied()
     return create_json_response({
-        'vcfs': get_vcf_list(LOADING_DATASETS_DIR, request.user),
+        'vcfs': get_vcf_list(LOADING_DATASETS_DIR),
     })
 
 

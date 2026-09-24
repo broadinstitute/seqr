@@ -4,7 +4,7 @@ import re
 from collections import defaultdict
 
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.file_utils import file_iter, does_file_exist, list_files
+from seqr.utils.file_utils import file_iter, does_file_exist, list_files, list_wildcard_match_files
 from seqr.models import Dataset
 
 BLOCK_SIZE = 65536
@@ -129,7 +129,7 @@ def _validate_valid_vcf_name(data_path, user, allowed_exts):
 
     file_to_check = data_path
     if '*' in data_path:
-        files = list_files(data_path, user)
+        files = list_wildcard_match_files(data_path, user)
         if files:
             file_to_check = files[0]
     elif allowed_exts and data_path.endswith(allowed_exts):
@@ -140,8 +140,8 @@ def _validate_valid_vcf_name(data_path, user, allowed_exts):
     return file_to_check
 
 
-def get_vcf_list(data_path, user):
-    file_list = list_files(data_path, user, check_subfolders=True, allow_missing=False)
+def get_vcf_list(data_path):
+    file_list = list_files(data_path)
     data_path_list = [path.replace(data_path, '') for path in file_list if path.endswith(VCF_FILE_EXTENSIONS)]
     return _merge_sharded_vcf(data_path_list)
 
