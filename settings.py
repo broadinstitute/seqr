@@ -2,7 +2,6 @@ import json
 import os
 import random
 import string
-import subprocess  # nosec
 
 import google.auth
 import google.auth.transport.requests
@@ -474,13 +473,6 @@ if TERRA_API_ROOT_URL:
         SERVICE_ACCOUNT_FOR_ANVIL = SERVICE_ACCOUNT_CREDENTIALS.service_account_email
     except Exception:
         raise Exception('Error starting seqr - gcloud auth credentials are not properly configured')
-
-    # activate command line account if failed on start up
-    # TODO remove before removing CLI
-    activated_service_account = subprocess.run(['gcloud auth list --filter=status:ACTIVE --format="value(account)"'],
-                                               capture_output=True, text=True, shell=True).stdout.split('\n')[0] # nosec
-    if activated_service_account != SERVICE_ACCOUNT_FOR_ANVIL:
-        raise Exception('Error starting seqr - attempt to authenticate gcloud cli failed')
 
     SOCIAL_AUTH_GOOGLE_OAUTH2_AUTH_EXTRA_ARGUMENTS = {
         'access_type': 'offline',  # to make the access_token can be refreshed after expired (expiration time is 1 hour)
