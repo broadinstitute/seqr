@@ -2,7 +2,7 @@ import glob
 import gzip
 import os
 
-from seqr.utils.google_storage_utils import is_google_bucket_file_path, does_gs_file_exist, google_bucket_file_iter, \
+from seqr.utils.google_storage_utils import is_google_bucket_file_path, does_gs_file_exist, google_bucket_file_stream, \
     google_bucket_file_bytes_iter, get_gs_files, get_gs_wildcard_match_files
 
 
@@ -31,18 +31,14 @@ def _list_local_wildcard_files(wildcard_path, **kwargs):
 def file_iter(file_path, raw_content=False, user=None, no_project=False):
     if not does_file_exist(file_path):
         raise FileNotFoundError(f'Could not access file {file_path}')
-    if is_google_bucket_file_path(file_path):
-        for line in google_bucket_file_iter(file_path, raw_content=raw_content, user=user, no_project=no_project):
+    is_gz = file_path.endswith('gz')
+    mode = 'rb' if raw_content or is_gz else 'r'
+    file_stream = google_bucket_file_stream(no_project) if is_google_bucket_file_path(file_path) else open
+    with file_stream(file_path, mode) as f:
+        if is_gz:
+            f = gzip.open(f, 'r' if raw_content else 'rt')
+        for line in f:
             yield line
-    else:
-        mode = 'rb' if raw_content else 'r'
-        is_gz = file_path.endswith("gz")
-        open_func = gzip.open if is_gz else open
-        with open_func(file_path, mode) as f:
-            for line in f:
-                if is_gz and not raw_content:
-                    line = line.decode('utf-8')
-                yield line
 
 
 def file_bytes_iter(file_path, first_byte, last_byte, raw_content=False, user=None):

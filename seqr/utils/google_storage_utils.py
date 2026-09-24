@@ -1,3 +1,4 @@
+import gzip
 import os
 import re
 import subprocess # nosec
@@ -9,16 +10,17 @@ from seqr.utils.logging_utils import SeqrLogger
 logger = SeqrLogger(__name__)
 
 
-def _parse_gs_path(gs_path):
+def _parse_gs_path(gs_path, no_project=False):
     if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
     bucket_name, path = gs_path.replace('gs://', '', 1).split('/', 1)
-    bucket = storage.Client().bucket(bucket_name, user_project=get_google_project(gs_path))
+    user_project = get_google_project(gs_path) if not no_project else None
+    bucket = storage.Client().bucket(bucket_name, user_project=user_project)
     return bucket, path
 
 
-def _get_gs_blob(gs_path):
-    bucket, blob_name = _parse_gs_path(gs_path)
+def _get_gs_blob(gs_path, no_project=False):
+    bucket, blob_name = _parse_gs_path(gs_path, no_project=no_project)
     return bucket.blob(blob_name)
 
 
@@ -49,14 +51,11 @@ def does_gs_file_exist(file_path):
     return _get_gs_blob(file_path).exists()
 
 
-def google_bucket_file_iter(gs_path, raw_content=False, user=None, no_project=False):
-    process = _run_gsutil_command(
-        'cat', gs_path, gunzip=gs_path.endswith("gz") and not raw_content, user=user, no_project=no_project)
-    for line in process.stdout:
-        if not raw_content:
-            line = line.decode('utf-8')
-        yield line
-
+def google_bucket_file_stream(no_project):
+    def wrapper(gs_path, mode):
+        blob = _get_gs_blob(gs_path, no_project=no_project)
+        return blob.open(mode)
+    return wrapper
 
 def google_bucket_file_bytes_iter(gs_path, first_byte, last_byte, raw_content=False, user=None):
     process = _run_gsutil_command(
