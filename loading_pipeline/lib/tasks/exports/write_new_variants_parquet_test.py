@@ -396,6 +396,61 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             ],
         )
 
+    def test_mito_write_new_variants_parquet_all_existing_test(
+        self,
+    ) -> None:
+        _write_existing_variants_parquet_fixture(
+            ['M-3-T-C', 'M-8-G-T', 'M-12-T-C', 'M-16-A-T', 'M-18-C-T'],
+            ReferenceGenome.GRCh38,
+            DatasetType.MITO,
+            max_key_=997,
+        )
+        copy_project_pedigree_to_mocked_dir(
+            TEST_MITO_EXPORT_PEDIGREE,
+            ReferenceGenome.GRCh38,
+            DatasetType.MITO,
+            SampleType.WGS,
+            'R0116_test_project3',
+        )
+        worker = luigi.worker.Worker()
+        task = WriteNewVariantsParquetTask(
+            reference_genome=ReferenceGenome.GRCh38,
+            dataset_type=DatasetType.MITO,
+            sample_type=SampleType.WGS,
+            callset_path=TEST_MITO_CALLSET,
+            project_guids=[
+                'R0116_test_project3',
+            ],
+            validations_to_skip=[ALL_VALIDATIONS],
+            run_id=TEST_RUN_ID,
+            skip_expect_tdr_metrics=True,
+        )
+        worker.add(task)
+        worker.run()
+        self.assertTrue(task.output().exists())
+        self.assertTrue(task.complete())
+        df = pd.read_parquet(
+            new_variants_parquet_path(
+                ReferenceGenome.GRCh38,
+                DatasetType.MITO,
+                TEST_RUN_ID,
+            ),
+        )
+        self.assertEqual(len(df), 0)
+        self.assertEqual(
+            list(df.columns),
+            [
+                'key',
+                'variantId',
+                'rsid',
+                'liftedOverPos',
+                'commonLowHeteroplasmy',
+                'haplogroupDefining',
+                'mitotip',
+                'sortedTranscriptConsequences',
+            ],
+        )
+
     @mock.patch(
         'loading_pipeline.lib.tasks.write_new_variants_table.load_gencode_gene_symbol_to_gene_id',
     )
