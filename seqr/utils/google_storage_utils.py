@@ -88,12 +88,3 @@ def _run_gsutil_with_wait(command, gs_path, user=None, **kwargs):
         errors = [line.decode('utf-8').strip() for line in process.stdout]
         raise Exception('Run command failed: ' + ' '.join(errors))
     return process
-
-
-def _run_gsutil_with_stdout(command, gs_path, user=None):
-    process = _run_gsutil_command(command, gs_path, user=user, pipe_errors=True)
-    output, errs = process.communicate()
-    if errs:
-        errors = errs.decode('utf-8').strip().replace('\n', ' ')
-        logger.info(errors, user)
-    return [line for line in output.decode('utf-8').split('\n') if line]
