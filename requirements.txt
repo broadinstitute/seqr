@@ -73,7 +73,9 @@ google-auth==2.56.0
 google-cloud-core==2.6.0
     # via google-cloud-storage
 google-cloud-storage==3.13.0
-    # via django-storages
+    # via
+    #   -r requirements.in
+    #   django-storages
 google-crc32c==1.8.0
     # via
     #   google-cloud-storage

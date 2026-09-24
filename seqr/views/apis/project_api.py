@@ -435,7 +435,7 @@ def load_rna_seq_sample_data(request, sample_guid):
 
     file_path = get_temp_file_path(f'{file_name}/{sample_guid}.json.gz')
     try:
-        data_rows = [json.loads(line) for line in file_iter(file_path, user=request.user)]
+        data_rows = [json.loads(line) for line in file_iter(file_path)]
         data_rows, error = post_process_rna_data(sample_guid, data_rows, request.user, **config.get('post_process_kwargs', {}))
     except FileNotFoundError:
         logger.error(f'No saved temp data found for {sample_guid} with file prefix {file_name}', request.user)
