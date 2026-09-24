@@ -28,11 +28,11 @@ def _list_local_wildcard_files(wildcard_path, **kwargs):
     return [file_path for file_path in glob.glob(wildcard_path, **kwargs) if os.path.isfile(file_path)]
 
 
-def file_iter(file_path, byte_range=None, raw_content=False, user=None, **kwargs):
+def file_iter(file_path, byte_range=None, raw_content=False, user=None, no_project=False):
     if not does_file_exist(file_path):
         raise FileNotFoundError(f'Could not access file {file_path}')
     if is_google_bucket_file_path(file_path):
-        for line in google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content, user=user, **kwargs):
+        for line in google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content, user=user, no_project=no_project):
             yield line
     elif byte_range:
         with open(file_path, 'rb') as f:

@@ -9,7 +9,7 @@ from seqr.utils.logging_utils import SeqrLogger
 logger = SeqrLogger(__name__)
 
 
-def _get_gs_bucket(gs_path):
+def _parse_gs_path(gs_path):
     if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
     bucket_name, path = gs_path.replace('gs://', '', 1).split('/', 1)
@@ -18,23 +18,23 @@ def _get_gs_bucket(gs_path):
 
 
 def _get_gs_blob(gs_path):
-    bucket, blob_name = _get_gs_bucket(gs_path)
+    bucket, blob_name = _parse_gs_path(gs_path)
     return bucket.blob(blob_name)
 
 
-def _run_gsutil_command(command, gs_path, gunzip=False, user=None, pipe_errors=False, no_project=False, additional_args=''):
+def _run_gsutil_command(command, gs_path, gunzip=False, user=None, no_project=False):
     if not is_google_bucket_file_path(gs_path):
         raise Exception('A Google Storage path is expected.')
 
     #  Anvil buckets are requester-pays and we bill them to the anvil project
     google_project = get_google_project(gs_path) if not no_project else None
     project_arg = '-u {} '.format(google_project) if google_project else ''
-    command = f'gsutil {project_arg}{command} {gs_path}{additional_args}'
+    command = f'gsutil {project_arg}{command} {gs_path}'
     if gunzip:
         command += " | gunzip -c -q - "
 
     logger.info('==> {}'.format(command), user)
-    return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE if pipe_errors else subprocess.STDOUT, shell=True) # nosec
+    return subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True) # nosec
 
 
 def is_google_bucket_file_path(file_path):
@@ -49,10 +49,10 @@ def does_gs_file_exist(file_path):
     return _get_gs_blob(file_path).exists()
 
 
-def google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=None, **kwargs):
+def google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=None, no_project=False):
     range_arg = ' -r {}-{}'.format(byte_range[0], byte_range[1]) if byte_range else ''
     process = _run_gsutil_command(
-        'cat{}'.format(range_arg), gs_path, gunzip=gs_path.endswith("gz") and not raw_content, user=user, **kwargs)
+        'cat{}'.format(range_arg), gs_path, gunzip=gs_path.endswith("gz") and not raw_content, user=user, no_project=no_project)
     for line in process.stdout:
         if not raw_content:
             line = line.decode('utf-8')
@@ -71,19 +71,19 @@ def cp_file_from_gs(gs_path, local_dir):
 
 
 def get_gs_files(gs_path):
-    bucket, prefix = _get_gs_bucket(gs_path.rstrip('/'))
+    bucket, prefix = _parse_gs_path(gs_path.rstrip('/'))
     return [f'gs://{bucket.name}/{blob.name}' for blob in bucket.list_blobs(prefix=f'{prefix}/')]
 
 
 def get_gs_wildcard_match_files(gs_path):
-    bucket, pattern = _get_gs_bucket(gs_path)
+    bucket, pattern = _parse_gs_path(gs_path)
     blobs = bucket.list_blobs(prefix=pattern.split('*')[0])
     regex = re.escape(pattern).replace(re.escape('*'), '.*')
     return [f'gs://{bucket.name}/{blob.name}' for blob in blobs if re.fullmatch(regex, blob.name)]
 
 
-def _run_gsutil_with_wait(command, gs_path, user=None, **kwargs):
-    process = _run_gsutil_command(command, gs_path, user=user, **kwargs)
+def _run_gsutil_with_wait(command, gs_path, user):
+    process = _run_gsutil_command(command, gs_path, user=user)
     if process.wait() != 0:
         errors = [line.decode('utf-8').strip() for line in process.stdout]
         raise Exception('Run command failed: ' + ' '.join(errors))
