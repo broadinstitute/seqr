@@ -115,7 +115,7 @@ class Command(BaseCommand):
         path_regex = cls._run_path(lambda field: f'(?P<{field}>[^/]+)')
 
         runs = defaultdict(lambda: {'files': set()})
-        for path in list_wildcard_match_files(path, user=None):
+        for path in list_wildcard_match_files(path):
             run_dirname = os.path.dirname(path)
             match_dict = re.match(f'{path_regex}?', path).groupdict()
             file_name = match_dict.pop('file_name')

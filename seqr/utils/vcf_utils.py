@@ -77,7 +77,7 @@ def _get_vcf_meta_info(line):
 def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None, dataset_type=None):
     allowed_exts = DATA_TYPE_FILE_EXTS.get(dataset_type)
 
-    vcf_filename = _validate_valid_vcf_name(data_path, user, allowed_exts)
+    vcf_filename = _validate_valid_vcf_name(data_path, allowed_exts)
 
     if vcf_filename is None:
         return None
@@ -120,7 +120,7 @@ def _get_vcf_header_line(vcf_file, meta):
                     meta[meta_info['field']].update({meta_info['id']: meta_info['type']})
 
 
-def _validate_valid_vcf_name(data_path, user, allowed_exts):
+def _validate_valid_vcf_name(data_path, allowed_exts):
     file_extensions = (allowed_exts or ()) + VCF_FILE_EXTENSIONS
     if not data_path.endswith(file_extensions):
         raise ErrorsWarningsException([
@@ -129,7 +129,7 @@ def _validate_valid_vcf_name(data_path, user, allowed_exts):
 
     file_to_check = data_path
     if '*' in data_path:
-        files = list_wildcard_match_files(data_path, user)
+        files = list_wildcard_match_files(data_path)
         if files:
             file_to_check = files[0]
     elif allowed_exts and data_path.endswith(allowed_exts):

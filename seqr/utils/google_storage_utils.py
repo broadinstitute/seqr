@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess # nosec
 
 from google.cloud import storage
@@ -74,12 +75,11 @@ def get_gs_files(gs_path):
     return [f'gs://{bucket.name}/{blob.name}' for blob in bucket.list_blobs(prefix=f'{prefix}/')]
 
 
-def get_gs_wildcard_match_files(gs_path, user):
-    gs_path = gs_path.rstrip('/')
-    command = 'ls'
-
-    all_lines = _run_gsutil_with_stdout(command, gs_path, user)
-    return [line for line in all_lines if is_google_bucket_file_path(line)]
+def get_gs_wildcard_match_files(gs_path):
+    bucket, pattern = _get_gs_bucket(gs_path)
+    blobs = bucket.list_blobs(prefix=pattern.split('*')[0])
+    regex = re.escape(pattern).replace(re.escape('*'), '.*')
+    return [f'gs://{bucket.name}/{blob.name}' for blob in blobs if re.fullmatch(regex, blob.name)]
 
 
 def _run_gsutil_with_wait(command, gs_path, user=None, **kwargs):

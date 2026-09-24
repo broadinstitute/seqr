@@ -18,9 +18,9 @@ def list_files(files_dir):
     return _list_local_wildcard_files(f'{files_dir.rstrip("/")}/**', recursive=True)
 
 
-def list_wildcard_match_files(wildcard_path, user):
+def list_wildcard_match_files(wildcard_path):
     if is_google_bucket_file_path(wildcard_path):
-        return get_gs_wildcard_match_files(wildcard_path, user)
+        return get_gs_wildcard_match_files(wildcard_path)
     return _list_local_wildcard_files(wildcard_path)
 
 
