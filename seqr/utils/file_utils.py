@@ -3,7 +3,7 @@ import gzip
 import os
 
 from seqr.utils.google_storage_utils import is_google_bucket_file_path, does_gs_file_exist, google_bucket_file_iter, \
-    get_gs_files, get_gs_wildcard_match_files
+    google_bucket_file_bytes_iter, get_gs_files, get_gs_wildcard_match_files
 
 
 def does_file_exist(file_path):
@@ -28,19 +28,12 @@ def _list_local_wildcard_files(wildcard_path, **kwargs):
     return [file_path for file_path in glob.glob(wildcard_path, **kwargs) if os.path.isfile(file_path)]
 
 
-def file_iter(file_path, byte_range=None, raw_content=False, user=None, no_project=False):
+def file_iter(file_path, raw_content=False, user=None, no_project=False):
     if not does_file_exist(file_path):
         raise FileNotFoundError(f'Could not access file {file_path}')
     if is_google_bucket_file_path(file_path):
-        for line in google_bucket_file_iter(file_path, byte_range=byte_range, raw_content=raw_content, user=user, no_project=no_project):
+        for line in google_bucket_file_iter(file_path, raw_content=raw_content, user=user, no_project=no_project):
             yield line
-    elif byte_range:
-        with open(file_path, 'rb') as f:
-            f.seek(byte_range[0])
-            data = f.read(byte_range[1] - byte_range[0]+1)
-        if file_path.endswith('gz'):
-            data = gzip.decompress(data)
-        yield data
     else:
         mode = 'rb' if raw_content else 'r'
         is_gz = file_path.endswith("gz")
@@ -50,3 +43,18 @@ def file_iter(file_path, byte_range=None, raw_content=False, user=None, no_proje
                 if is_gz and not raw_content:
                     line = line.decode('utf-8')
                 yield line
+
+
+def file_bytes_iter(file_path, first_byte, last_byte, raw_content=False, user=None):
+    if not does_file_exist(file_path):
+        raise FileNotFoundError(f'Could not access file {file_path}')
+    if is_google_bucket_file_path(file_path):
+        for line in google_bucket_file_bytes_iter(file_path, first_byte, last_byte, raw_content=raw_content, user=user):
+            yield line
+    else:
+        with open(file_path, 'rb') as f:
+            f.seek(first_byte)
+            data = f.read(last_byte - first_byte+1)
+        if file_path.endswith('gz'):
+            data = gzip.decompress(data)
+        yield data

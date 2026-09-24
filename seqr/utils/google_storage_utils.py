@@ -49,10 +49,18 @@ def does_gs_file_exist(file_path):
     return _get_gs_blob(file_path).exists()
 
 
-def google_bucket_file_iter(gs_path, byte_range=None, raw_content=False, user=None, no_project=False):
-    range_arg = ' -r {}-{}'.format(byte_range[0], byte_range[1]) if byte_range else ''
+def google_bucket_file_iter(gs_path, raw_content=False, user=None, no_project=False):
     process = _run_gsutil_command(
-        'cat{}'.format(range_arg), gs_path, gunzip=gs_path.endswith("gz") and not raw_content, user=user, no_project=no_project)
+        'cat', gs_path, gunzip=gs_path.endswith("gz") and not raw_content, user=user, no_project=no_project)
+    for line in process.stdout:
+        if not raw_content:
+            line = line.decode('utf-8')
+        yield line
+
+
+def google_bucket_file_bytes_iter(gs_path, first_byte, last_byte, raw_content=False, user=None):
+    process = _run_gsutil_command(
+        f'cat -r {first_byte}-{last_byte}', gs_path, gunzip=gs_path.endswith("gz") and not raw_content, user=user)
     for line in process.stdout:
         if not raw_content:
             line = line.decode('utf-8')

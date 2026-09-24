@@ -7,7 +7,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import StreamingHttpResponse
 
 from seqr.models import Individual, IgvSample
-from seqr.utils.file_utils import file_iter, does_file_exist
+from seqr.utils.file_utils import file_iter, file_bytes_iter, does_file_exist
 from seqr.utils.google_storage_utils import get_google_project, is_google_bucket_file_path
 from seqr.views.utils.file_utils import save_uploaded_file, load_uploaded_file
 from seqr.views.utils.json_to_orm_utils import get_or_create_model_from_json
@@ -253,7 +253,7 @@ def _stream_file(request, path):
         last_byte = int(last_byte)
         length = last_byte - first_byte + 1
         resp = StreamingHttpResponse(
-            file_iter(path, byte_range=(first_byte, last_byte), raw_content=True, user=request.user), status=206, content_type=content_type)
+            file_bytes_iter(path, first_byte, last_byte, raw_content=True, user=request.user), status=206, content_type=content_type)
         resp['Content-Length'] = str(length)
         resp['Content-Range'] = 'bytes %s-%s' % (first_byte, last_byte)
     else:

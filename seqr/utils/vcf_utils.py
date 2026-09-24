@@ -4,7 +4,7 @@ import re
 from collections import defaultdict
 
 from seqr.utils.middleware import ErrorsWarningsException
-from seqr.utils.file_utils import file_iter, does_file_exist, list_files, list_wildcard_match_files
+from seqr.utils.file_utils import file_iter, file_bytes_iter, does_file_exist, list_files, list_wildcard_match_files
 from seqr.models import Dataset
 
 BLOCK_SIZE = 65536
@@ -82,10 +82,10 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
     if vcf_filename is None:
         return None
 
-    byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
     meta = defaultdict(dict)
     try:
-        header_line = next(_get_vcf_header_line(file_iter(vcf_filename, byte_range=byte_range, user=user), meta))
+        file_content = file_iter(vcf_filename, user=user) if vcf_filename.endswith('.vcf') else file_bytes_iter(vcf_filename, 0, BLOCK_SIZE, user=user)
+        header_line = next(_get_vcf_header_line(file_content, meta))
     except FileNotFoundError:
         raise ErrorsWarningsException([f'Data file or path {path_name or data_path} is not found.'], [])
     except StopIteration:
