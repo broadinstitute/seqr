@@ -148,20 +148,12 @@ def get_variant_id_fields(
 
 def get_lifted_over_position_fields(ht: hl.Table, dataset_type: DatasetType):
     if dataset_type == DatasetType.MITO:
-        return {'liftedOverPos': ht.rg37_locus.position}
+        return {'liftedOverPos': ht.lifted_over_locus.position}
     return {
-        'liftedOverChrom': (
-            reference_independent_contig(ht.rg37_locus.contig)
-            if hasattr(ht, 'rg37_locus')
-            else reference_independent_contig(ht.rg38_locus.contig)
-        ),
-        'liftedOverPos': (
-            hl.or_missing(
-                hl.is_defined(reference_independent_contig(ht.rg37_locus.contig)),
-                ht.rg37_locus.position,
-            )
-            if hasattr(ht, 'rg37_locus')
-            else ht.rg38_locus.position
+        'liftedOverChrom': reference_independent_contig(ht.lifted_over_locus.contig),
+        'liftedOverPos': hl.or_missing(
+            hl.is_defined(reference_independent_contig(ht.lifted_over_locus.contig)),
+            ht.lifted_over_locus.position,
         ),
     }
 
@@ -205,7 +197,7 @@ def get_variants_export_fields(
     dataset_type: DatasetType,
 ):
     if dataset_type in {DatasetType.SV, DatasetType.GCNV}:
-        rg37_contig = reference_independent_contig(ht.rg37_locus_end.contig)
+        rg37_contig = reference_independent_contig(ht.lifted_over_locus_end.contig)
         position_fields = {
             'chrom': ht.chrom,
             'pos': ht.pos,
@@ -214,7 +206,7 @@ def get_variants_export_fields(
                 contig=rg37_contig,
                 position=hl.or_missing(
                     hl.is_defined(rg37_contig),
-                    ht.rg37_locus_end.position,
+                    ht.lifted_over_locus_end.position,
                 ),
             ),
         }

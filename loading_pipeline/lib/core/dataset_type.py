@@ -227,7 +227,6 @@ class DatasetType(StrEnum):
                 shared.variant_id,
                 shared.xpos,
                 shared.sorted_transcript_consequences,
-                snv_indel.rg38_locus,
             ],
             DatasetType.MITO: [
                 mito.common_low_heteroplasmy,
@@ -276,7 +275,6 @@ class DatasetType(StrEnum):
                 shared.rsid,
                 shared.variant_id,
                 shared.xpos,
-                shared.rg37_locus,
                 snv_indel.check_ref,
                 snv_indel.sorted_transcript_consequences,
                 snv_indel.sorted_regulatory_feature_consequences,
@@ -284,18 +282,34 @@ class DatasetType(StrEnum):
             ],
             DatasetType.MITO: [
                 *GRCh37_fns[DatasetType.MITO],
-                shared.rg37_locus,
             ],
             DatasetType.SV: [
                 *GRCh37_fns[DatasetType.SV],
-                shared.rg37_locus,
-                sv.rg37_locus_end,
             ],
             DatasetType.GCNV: [
                 *GRCh37_fns[DatasetType.GCNV],
-                gcnv.rg37_locus,
-                gcnv.rg37_locus_end,
             ],
+        }[self]
+
+    def liftover_annotation_fns(
+        self,
+        reference_genome: ReferenceGenome,
+    ) -> dict[str, Callable[..., hl.Expression]]:
+        if reference_genome == ReferenceGenome.GRCh37:
+            return {
+                DatasetType.SNV_INDEL: {'lifted_over_locus': snv_indel.rg38_locus},
+            }.get(self, {})
+        return {
+            DatasetType.SNV_INDEL: {'lifted_over_locus': shared.rg37_locus},
+            DatasetType.MITO: {'lifted_over_locus': shared.rg37_locus},
+            DatasetType.SV: {
+                'lifted_over_locus': shared.rg37_locus,
+                'lifted_over_locus_end': sv.rg37_locus_end,
+            },
+            DatasetType.GCNV: {
+                'lifted_over_locus': gcnv.rg37_locus,
+                'lifted_over_locus_end': gcnv.rg37_locus_end,
+            },
         }[self]
 
     @property

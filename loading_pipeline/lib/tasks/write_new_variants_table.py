@@ -166,6 +166,15 @@ class WriteNewVariantsTableTask(BaseWriteTask):
         # the combination of VEP/repartition is potentially unsafe.
         new_variants_ht = new_variants_ht.distinct()
 
+        # Run liftover
+        new_variants_ht = new_variants_ht.annotate(
+            **{
+                name: fn(new_variants_ht) for name, fn in self.dataset_type.liftover_annotation_fns(
+                    self.reference_genome,
+                ).items()
+            },
+        )
+
         # Select down to the formatting annotations fields and
         # any reference dataset collection annotations.
         new_variants_ht = new_variants_ht.select(
