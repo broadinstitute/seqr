@@ -220,76 +220,173 @@ class DatasetType(StrEnum):
     def formatting_annotation_fns(
         self,
         reference_genome: ReferenceGenome,
-    ) -> list[Callable[..., hl.Expression]]:
+    ) -> dict[str, Callable[..., hl.Expression]]:
         GRCh37_fns = {  # noqa: N806
-            DatasetType.SNV_INDEL: [
-                shared.rsid,
-                shared.variant_id,
-                shared.xpos,
-                shared.sorted_transcript_consequences,
-            ],
-            DatasetType.MITO: [
-                mito.common_low_heteroplasmy,
-                mito.haplogroupDefining,
-                mito.mitotip,
-                mito.rsid,
-                shared.variant_id,
-                shared.xpos,
-                shared.sorted_transcript_consequences,
-            ],
-            DatasetType.SV: [
-                sv.algorithms,
-                sv.bothsides_support,
-                sv.chrom,
-                sv.cpx_intervals,
-                sv.end,
-                sv.end_locus,
-                sv.pos,
-                sv.populations,
-                sv.predictions,
-                sv.sorted_gene_consequences,
-                sv.start_locus,
-                sv.sv_type,
-                sv.sv_type_detail,
-                sv.sv_len,
-                shared.xpos,
-            ],
-            DatasetType.GCNV: [
-                gcnv.chrom,
-                gcnv.end,
-                gcnv.end_locus,
-                gcnv.num_exon,
-                gcnv.pos,
-                gcnv.populations,
-                gcnv.predictions,
-                gcnv.sorted_gene_consequences,
-                gcnv.start_locus,
-                gcnv.sv_type,
-                gcnv.xpos,
-            ],
+            DatasetType.SNV_INDEL: {
+                'rsid': shared.rsid,
+                'variantId': shared.variant_id,
+                'xpos': shared.xpos,
+                'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences_grch37,
+                'transcripts': shared.sorted_transcript_consequences,
+                'CAID': snv_indel.caid,
+                'liftedOverChrom': shared.lifted_over_chrom,
+                'liftedOverPos': shared.lifted_over_pos,
+            },
+            DatasetType.MITO: {
+                'commonLowHeteroplasmy': mito.common_low_heteroplasmy,
+                'haplogroupDefining': mito.haplogroupDefining,
+                'mitotip': mito.mitotip,
+                'rsid': mito.rsid,
+                'variantId': shared.variant_id,
+                'xpos': shared.xpos,
+                'sortedTranscriptConsequences': shared.sorted_transcript_consequences,
+                'liftedOverPos': shared.lifted_over_pos,
+            },
+            DatasetType.SV: {
+                'algorithms': sv.algorithms,
+                'bothsidesSupport': sv.bothsides_support,
+                'chrom': sv.chrom,
+                'cpxIntervals': sv.cpx_intervals,
+                'end': sv.end,
+                'end_locus': sv.end_locus,
+                'pos': sv.pos,
+                'populations': sv.populations,
+                'predictions': sv.predictions,
+                'sortedGeneConsequences': sv.sorted_gene_consequences,
+                'start_locus': sv.start_locus,
+                'svType': sv.sv_type,
+                'svTypeDetail': sv.sv_type_detail,
+                'sv_len': sv.sv_len,
+                'variantId': sv.variant_id,
+                'xpos': shared.xpos,
+                'endChrom': sv.end_chrom,
+                'svSourceDetail': sv.sv_source_detail,
+                'liftedOverChrom': shared.lifted_over_chrom,
+                'liftedOverPos': shared.lifted_over_pos,
+                'rg37LocusEnd': shared.lifted_over_locus_end,
+            },
+            DatasetType.GCNV: {
+                'chrom': gcnv.chrom,
+                'end': gcnv.end,
+                'end_locus': gcnv.end_locus,
+                'numExon': gcnv.num_exon,
+                'pos': gcnv.pos,
+                'populations': gcnv.populations,
+                'predictions': gcnv.predictions,
+                'sortedGeneConsequences': gcnv.sorted_gene_consequences,
+                'start_locus': gcnv.start_locus,
+                'svType': gcnv.sv_type,
+                'variantId': gcnv.variant_id,
+                'xpos': gcnv.xpos,
+                'liftedOverChrom': shared.lifted_over_chrom,
+                'liftedOverPos': shared.lifted_over_pos,
+                'rg37LocusEnd': shared.lifted_over_locus_end,
+            },
         }
         if reference_genome == ReferenceGenome.GRCh37:
             return GRCh37_fns[self]
         return {
-            DatasetType.SNV_INDEL: [
-                shared.rsid,
-                shared.variant_id,
-                shared.xpos,
-                snv_indel.check_ref,
-                snv_indel.sorted_transcript_consequences,
-                snv_indel.sorted_regulatory_feature_consequences,
-                snv_indel.sorted_motif_feature_consequences,
-            ],
-            DatasetType.MITO: [
-                *GRCh37_fns[DatasetType.MITO],
-            ],
-            DatasetType.SV: [
-                *GRCh37_fns[DatasetType.SV],
-            ],
-            DatasetType.GCNV: [
-                *GRCh37_fns[DatasetType.GCNV],
-            ],
+            DatasetType.SNV_INDEL: {
+                'rsid': shared.rsid,
+                'variantId': shared.variant_id,
+                'xpos': shared.xpos,
+                'CAID': snv_indel.caid,
+                'liftedOverChrom': shared.lifted_over_chrom,
+                'liftedOverPos': shared.lifted_over_pos,
+                'check_ref': snv_indel.check_ref,
+                'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences,
+                'transcripts': snv_indel.sorted_transcript_consequences,
+                'sortedRegulatoryFeatureConsequences': snv_indel.sorted_regulatory_feature_consequences,
+                'sortedMotifFeatureConsequences': snv_indel.sorted_motif_feature_consequences,
+            },
+            DatasetType.MITO: {
+                **GRCh37_fns[DatasetType.MITO],
+            },
+            DatasetType.SV: {
+                **GRCh37_fns[DatasetType.SV],
+            },
+            DatasetType.GCNV: {
+                **GRCh37_fns[DatasetType.GCNV],
+            },
         }[self]
+
+    def variants_export_field_names(
+        self,
+        reference_genome: ReferenceGenome,
+    ) -> list[str]:
+        if self in {DatasetType.SV, DatasetType.GCNV}:
+            names = [
+                'key_',
+                'xpos',
+                'chrom',
+                'pos',
+                'end',
+                'rg37LocusEnd',
+                'variantId',
+                'liftedOverChrom',
+                'liftedOverPos',
+            ]
+            if self == DatasetType.SV:
+                names += [
+                    'algorithms',
+                    'bothsidesSupport',
+                    'cpxIntervals',
+                    'endChrom',
+                    'svSourceDetail',
+                    'svType',
+                    'svTypeDetail',
+                    'predictions',
+                    'populations',
+                    'sortedGeneConsequences',
+                ]
+            else:
+                names += [
+                    'numExon',
+                    'svType',
+                    'predictions',
+                    'populations',
+                    'sortedGeneConsequences',
+                ]
+            return names
+        if self == DatasetType.MITO:
+            return [
+                'key_',
+                'variantId',
+                'rsid',
+                'liftedOverPos',
+                'commonLowHeteroplasmy',
+                'haplogroupDefining',
+                'mitotip',
+                'sortedTranscriptConsequences',
+            ]
+        names = ['key_']
+        if reference_genome == ReferenceGenome.GRCh38:
+            names += [
+                'sortedMotifFeatureConsequences',
+                'sortedRegulatoryFeatureConsequences',
+            ]
+        names.append('sortedTranscriptConsequences')
+        return names
+
+    def variant_details_export_field_names(
+        self,
+        reference_genome: ReferenceGenome,
+    ) -> list[str]:
+        names = [
+            'key_',
+            'variantId',
+            'rsid',
+            'CAID',
+            'liftedOverChrom',
+            'liftedOverPos',
+        ]
+        if reference_genome == ReferenceGenome.GRCh38:
+            names += [
+                'sortedMotifFeatureConsequences',
+                'sortedRegulatoryFeatureConsequences',
+            ]
+        names.append('transcripts')
+        return names
 
     def liftover_annotation_fns(
         self,

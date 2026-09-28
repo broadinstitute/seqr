@@ -171,6 +171,6 @@ def transcript_consequences_sort(
             )
         ),
         c.biotype == PROTEIN_CODING_BIOTYPE,
-        hl.set(c.consequence_terms).contains(ht.vep.most_severe_consequence),
+        hl.set(c.consequenceTerms).contains(ht.vep.most_severe_consequence),
         hl.or_else(c.canonical, 0) == 1,
     )

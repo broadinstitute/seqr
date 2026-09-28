@@ -107,12 +107,36 @@ def algorithms(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.str(',').join(ht['info.ALGORITHMS'])
 
 
+def variant_id(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.variant_id
+
+
 def bothsides_support(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht['info.BOTHSIDES_SUPPORT']
 
 
 def chrom(ht: hl.Table, **_: Any) -> hl.Expression:
     return reference_independent_contig(ht.locus.contig)
+
+
+def end_chrom(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.or_missing(
+        (
+            (sv_type(ht) != 'INS')
+            & (ht.locus.contig != end_locus(ht).contig)
+        ),
+        reference_independent_contig(end_locus(ht).contig),
+    )
+
+
+def sv_source_detail(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.or_missing(
+        (
+            (sv_type(ht) == 'INS')
+            & (ht.locus.contig != end_locus(ht).contig)
+        ),
+        hl.Struct(chrom=reference_independent_contig(end_locus(ht).contig)),
+    )
 
 
 def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
@@ -174,14 +198,14 @@ def populations(
     gnomad_svs_ht: hl.Table,
     **_: Any,
 ) -> hl.Expression:
-    gnomad_svs_ht = gnomad_svs_ht.drop('locus', 'alleles')
-    gnomad_sv = gnomad_svs_ht[ht['info.GNOMAD_V4.1_TRUTH_VID']]
+    gnomad_sv_id = ht['info.GNOMAD_V4.1_TRUTH_VID']
+    gnomad_sv = gnomad_svs_ht[gnomad_sv_id]
     return hl.struct(
         gnomad_svs=hl.struct(
             af=gnomad_sv.AF,
             het=gnomad_sv.N_HET,
             hom=gnomad_sv.N_HOM,
-            id=gnomad_sv.KEY,
+            id=gnomad_sv_id,
         ),
     )
 

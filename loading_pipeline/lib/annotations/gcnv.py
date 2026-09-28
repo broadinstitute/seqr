@@ -21,6 +21,10 @@ def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return mt.CN
 
 
+def variant_id(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.variant_id
+
+
 def concordance(
     mt: hl.MatrixTable,
     is_new_gcnv_joint_call: bool,

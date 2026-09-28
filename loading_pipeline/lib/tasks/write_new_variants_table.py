@@ -4,7 +4,6 @@ import hail as hl
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.annotations.fields import get_fields
 from loading_pipeline.lib.misc.io import checkpoint, import_parquet, remap_pedigree_hash
 from loading_pipeline.lib.misc.math import constrain
 from loading_pipeline.lib.misc.vep import run_vep
@@ -178,12 +177,16 @@ class WriteNewVariantsTableTask(BaseWriteTask):
         # Select down to the formatting annotations fields and
         # any reference dataset collection annotations.
         new_variants_ht = new_variants_ht.select(
-            **get_fields(
-                new_variants_ht,
-                self.dataset_type.formatting_annotation_fns(self.reference_genome),
-                **self.annotation_dependencies,
-                **self.param_kwargs,
-            ),
+            **{
+                name: fn(
+                    new_variants_ht,
+                    **self.annotation_dependencies,
+                    **self.param_kwargs,
+                )
+                for name, fn in self.dataset_type.formatting_annotation_fns(
+                    self.reference_genome,
+                ).items()
+            },
         )
 
         # Add serial integer index
