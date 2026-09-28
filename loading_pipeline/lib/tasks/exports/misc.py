@@ -33,20 +33,9 @@ def array_structexpression_fields(ht: hl.Table):
 
 
 def reformat_transcripts_for_export(i: int, s: hl.StructExpression):
-    formatted_s = (
-        s.annotate(
-            majorConsequence=s.consequenceTerms.first(),
-            transcriptRank=i,
-        )
-        if hasattr(s, 'loftee')
-        else s.annotate(
-            loftee=hl.Struct(
-                isLofNagnag=s.isLofNagnag,
-                lofFilters=s.lofFilters,
-            ),
-            majorConsequence=s.consequenceTerms.first(),
-            transcriptRank=i,
-        ).drop('isLofNagnag', 'lofFilters')
+    formatted_s = s.annotate(
+        majorConsequence=s.consequenceTerms.first(),
+        transcriptRank=i,
     )
     return sorted_hl_struct(formatted_s)
 

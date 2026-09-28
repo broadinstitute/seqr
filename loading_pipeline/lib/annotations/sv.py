@@ -210,8 +210,8 @@ def sorted_gene_consequences(
     mapped_genes = [
         ht[gene_col].map(
             lambda gene: hl.struct(
-                gene_id=gencode_gene_symbol_to_gene_id_mapping.get(gene),
-                major_consequence=validated_enum_member(
+                geneId=gencode_gene_symbol_to_gene_id_mapping.get(gene),
+                majorConsequence=validated_enum_member(
                     gene_col.replace(CONSEQ_PREDICTED_PREFIX, '', 1),  # noqa: B023
                     SV_CONSEQUENCE_RANKS,
                 ),

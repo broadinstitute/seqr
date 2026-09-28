@@ -122,8 +122,8 @@ def sorted_gene_consequences(
     return hl.array(
         ht.gene_ids.map(
             lambda gene: hl.Struct(
-                gene_id=gene,
-                major_consequence=hl.if_else(
+                geneId=gene,
+                majorConsequence=hl.if_else(
                     ht.cg_genes.contains(gene),
                     'COPY_GAIN',
                     hl.or_missing(
