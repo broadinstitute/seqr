@@ -11,9 +11,6 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.exports.fields import get_variant_details_export_fields
-from loading_pipeline.lib.tasks.exports.misc import (
-    camelcase_array_structexpression_fields,
-)
 from loading_pipeline.lib.tasks.files import GCSorLocalFolderTarget, GCSorLocalTarget
 from loading_pipeline.lib.tasks.write_new_variants_table import (
     WriteNewVariantsTableTask,
@@ -44,11 +41,6 @@ class WriteNewVariantDetailsParquetTask(BaseWriteParquetTask):
                 self.dataset_type,
                 self.run_id,
             ),
-        )
-        ht = camelcase_array_structexpression_fields(
-            ht,
-            self.reference_genome,
-            self.dataset_type,
         )
         ht = ht.key_by()
         return ht.select(
