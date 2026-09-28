@@ -26,7 +26,7 @@ REGULATORY_CONSEQUENCE_TERMS_LOOKUP = hl.dict(
 )
 
 
-def caid(__:Any, **_: Any) -> hl.Expression:
+def caid(__: Any, **_: Any) -> hl.Expression:
     return hl.missing(hl.tstr)
 
 
