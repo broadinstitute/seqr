@@ -10,6 +10,9 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPES,
     validated_enum_member,
 )
+from loading_pipeline.lib.annotations.expression_helpers import (
+    reference_independent_contig,
+)
 from loading_pipeline.lib.core.definitions import ReferenceGenome
 
 CONSEQ_PREDICTED_PREFIX = 'info.PREDICTED_'
@@ -51,7 +54,6 @@ PREVIOUS_GENOTYPE_N_ALT_ALLELES = hl.dict(
 
 def _get_cpx_interval(
     x: hl.StringExpression,
-    reference_genome: ReferenceGenome,
 ) -> hl.StructExpression:
     # an example format of CPX_INTERVALS is "DUP_chr1:1499897-1499974"
     type_contig = x.split('_')
@@ -59,16 +61,9 @@ def _get_cpx_interval(
     pos = contig_pos[1].split('-')
     return hl.struct(
         type=validated_enum_member(type_contig[0], SV_TYPES),
-        start=hl.locus(
-            contig_pos[0],
-            hl.int32(pos[0]),
-            reference_genome.value,
-        ),
-        end=hl.locus(
-            contig_pos[0],
-            hl.int32(pos[1]),
-            reference_genome.value,
-        ),
+        chrom=reference_independent_contig(contig_pos[0]),
+        start=hl.int32(pos[0]),
+        end=hl.int32(pos[1]),
     )
 
 
@@ -116,6 +111,10 @@ def bothsides_support(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht['info.BOTHSIDES_SUPPORT']
 
 
+def chrom(ht: hl.Table, **_: Any) -> hl.Expression:
+    return reference_independent_contig(ht.locus.contig)
+
+
 def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return mt.RD_CN
 
@@ -143,12 +142,11 @@ def concordance(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
 
 def cpx_intervals(
     ht: hl.Table,
-    reference_genome: ReferenceGenome,
     **_: Any,
 ) -> hl.Expression:
     return hl.or_missing(
         hl.is_defined(ht['info.CPX_INTERVALS']),
-        ht['info.CPX_INTERVALS'].map(lambda x: _get_cpx_interval(x, reference_genome)),
+        ht['info.CPX_INTERVALS'].map(_get_cpx_interval),
     )
 
 
@@ -167,15 +165,25 @@ def end_locus(ht: hl.Table, **_: Any) -> hl.StructExpression:
     )
 
 
-def gnomad_svs(
+def end(ht: hl.Table, **_: Any) -> hl.Expression:
+    return end_locus(ht).position
+
+
+def populations(
     ht: hl.Table,
     gnomad_svs_ht: hl.Table,
     **_: Any,
 ) -> hl.Expression:
     gnomad_svs_ht = gnomad_svs_ht.drop('locus', 'alleles')
-    return gnomad_svs_ht.annotate(
-        ID=gnomad_svs_ht.KEY,
-    )[ht['info.GNOMAD_V4.1_TRUTH_VID']]
+    gnomad_sv = gnomad_svs_ht[ht['info.GNOMAD_V4.1_TRUTH_VID']]
+    return hl.struct(
+        gnomad_svs=hl.struct(
+            af=gnomad_sv.AF,
+            het=gnomad_sv.N_HET,
+            hom=gnomad_sv.N_HOM,
+            id=gnomad_sv.KEY,
+        ),
+    )
 
 
 def rg37_locus_end(
@@ -195,6 +203,10 @@ def rg37_locus_end(
             ReferenceGenome.GRCh37.value,
         ),
     )
+
+
+def pos(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.locus.position
 
 
 def start_locus(ht: hl.Table, **_: Any):
@@ -222,8 +234,8 @@ def sorted_gene_consequences(
     return hl.filter(hl.is_defined, mapped_genes).flatmap(lambda x: x)
 
 
-def strvctvre(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.struct(score=hl.parse_float32(ht['info.StrVCTVRE']))
+def predictions(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.struct(strvctvre=hl.parse_float32(ht['info.StrVCTVRE']))
 
 
 def sv_len(ht: hl.Table, **_: Any) -> hl.Expression:

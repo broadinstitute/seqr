@@ -11,6 +11,12 @@ from loading_pipeline.lib.core.definitions import ReferenceGenome
 from loading_pipeline.lib.misc.gcnv import parse_gcnv_genes
 
 
+def chrom(ht: hl.Table, reference_genome: ReferenceGenome, **_: Any) -> hl.Expression:
+    return expression_helpers.reference_independent_contig(
+        start_locus(ht, reference_genome).contig,
+    )
+
+
 def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return mt.CN
 
@@ -43,6 +49,10 @@ def defragged(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.defragmented
 
 
+def end(ht: hl.Table, reference_genome: ReferenceGenome, **_: Any) -> hl.Expression:
+    return end_locus(ht, reference_genome).position
+
+
 def end_locus(
     ht: hl.Table,
     reference_genome: ReferenceGenome,
@@ -52,13 +62,15 @@ def end_locus(
 
 
 def populations(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.Struct(sv_callset=hl.Struct(
-        ac=ht.sc,
-        af=hl.float32(ht.sf),
-        an=hl.int32(ht.sc / ht.sf),
-        het=hl.missing(hl.tint32),
-        hom=hl.missing(hl.tint32),
-    ))
+    return hl.Struct(
+        sv_callset=hl.Struct(
+            ac=ht.sc,
+            af=hl.float32(ht.sf),
+            an=hl.int32(ht.sc / ht.sf),
+            het=hl.missing(hl.tint32),
+            hom=hl.missing(hl.tint32),
+        ),
+    )
 
 
 def GT(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
@@ -71,6 +83,10 @@ def GT(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
 
 def num_exon(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht.num_exon
+
+
+def pos(ht: hl.Table, reference_genome: ReferenceGenome, **_: Any) -> hl.Expression:
+    return start_locus(ht, reference_genome).position
 
 
 def QS(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
@@ -144,8 +160,8 @@ def start_locus(
     return hl.locus(ht.chr, ht.start, reference_genome.value)
 
 
-def strvctvre(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.struct(score=hl.parse_float32(ht.strvctvre_score))
+def predictions(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.struct(strvctvre=hl.parse_float32(ht.strvctvre_score))
 
 
 def sv_type(ht: hl.Table, **_: Any) -> hl.Expression:

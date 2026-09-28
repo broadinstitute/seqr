@@ -1,6 +1,11 @@
 import hail as hl
 
 from loading_pipeline.lib.annotations.enums import TRANSCRIPT_CONSEQUENCE_TERMS
+from loading_pipeline.lib.core.definitions import ReferenceGenome
+
+STANDARD_CONTIGS = hl.set(
+    [c.replace('MT', 'M') for c in ReferenceGenome.GRCh37.standard_contigs],
+)
 
 TRANSCRIPT_CONSEQUENCE_TERM_RANK_LOOKUP = hl.dict(
     hl.enumerate(TRANSCRIPT_CONSEQUENCE_TERMS, index_first=False),
@@ -107,6 +112,17 @@ def get_expr_for_variant_id(table, max_length=None):
     if max_length is not None:
         return variant_id[0:max_length]
     return variant_id
+
+
+def reference_independent_contig(contig: hl.StringExpression):
+    contig = contig.replace('^chr', '').replace('MT', 'M')
+    return hl.or_missing(
+        # lifted over alternate contigs may be present
+        # even though the primary contig is filtered to
+        # standard contigs earlier in the pipeline
+        STANDARD_CONTIGS.contains(contig),
+        contig,
+    )
 
 
 def get_expr_for_xpos(locus: hl.expr.LocusExpression) -> hl.expr.Int64Expression:

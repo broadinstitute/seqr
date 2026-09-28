@@ -1,25 +1,13 @@
 import hail as hl
 
+from loading_pipeline.lib.annotations.expression_helpers import (
+    reference_independent_contig,
+)
 from loading_pipeline.lib.annotations.shared import variant_id, xpos
 from loading_pipeline.lib.core import DatasetType, ReferenceGenome, SampleType
 from loading_pipeline.lib.tasks.exports.misc import (
     reformat_transcripts_for_export,
 )
-
-STANDARD_CONTIGS = hl.set(
-    [c.replace('MT', 'M') for c in ReferenceGenome.GRCh37.standard_contigs],
-)
-
-
-def reference_independent_contig(locus: hl.LocusExpression):
-    contig = locus.contig.replace('^chr', '').replace('MT', 'M')
-    return hl.or_missing(
-        # lifted over alternate contigs may be present
-        # even though the primary contig is filtered to
-        # standard contigs earlier in the pipeline
-        STANDARD_CONTIGS.contains(contig),
-        contig,
-    )
 
 
 def get_dataset_type_specific_variants_annotations(
@@ -29,54 +17,36 @@ def get_dataset_type_specific_variants_annotations(
     return {
         DatasetType.MITO: lambda ht: {
             'commonLowHeteroplasmy': ht.common_low_heteroplasmy,
-            'haplogroupDefining': ht.haplogroup.is_defining,
-            'mitotip': ht.mitotip.trna_prediction,
+            'haplogroupDefining': ht.haplogroupDefining,
+            'mitotip': ht.mitotip,
         },
         DatasetType.SV: lambda ht: {
             'algorithms': ht.algorithms,
             'bothsidesSupport': ht.bothsides_support,
-            'cpxIntervals': ht.cpxIntervals.map(
-                lambda cpx_i: hl.Struct(
-                    chrom=reference_independent_contig(cpx_i.start),
-                    start=cpx_i.start.position,
-                    end=cpx_i.end.position,
-                    type=cpx_i.type,
-                ),
-            ),
+            'cpxIntervals': ht.cpxIntervals,
             'endChrom': hl.or_missing(
                 (
                     (ht.sv_type != 'INS')
                     & (ht.start_locus.contig != ht.end_locus.contig)
                 ),
-                reference_independent_contig(ht.end_locus),
+                reference_independent_contig(ht.end_locus.contig),
             ),
             'svSourceDetail': hl.or_missing(
                 (
                     (ht.sv_type == 'INS')
                     & (ht.start_locus.contig != ht.end_locus.contig)
                 ),
-                hl.Struct(chrom=reference_independent_contig(ht.end_locus)),
+                hl.Struct(chrom=reference_independent_contig(ht.end_locus.contig)),
             ),
             'svType': ht.sv_type,
             'svTypeDetail': ht.sv_type_detail,
-            'predictions': hl.Struct(
-                strvctvre=ht.strvctvre.score,
-            ),
-            'populations': hl.Struct(
-                gnomad_svs=hl.Struct(
-                    af=ht.gnomad_svs.AF,
-                    het=ht.gnomad_svs.N_HET,
-                    hom=ht.gnomad_svs.N_HOM,
-                    id=ht.gnomad_svs.ID,
-                ),
-            ),
+            'predictions': ht.predictions,
+            'populations': ht.populations,
         },
         DatasetType.GCNV: lambda ht: {
             'numExon': ht.num_exon,
             'svType': ht.sv_type,
-            'predictions': hl.Struct(
-                strvctvre=ht.strvctvre.score,
-            ),
+            'predictions': ht.predictions,
             'populations': ht.populations,
         },
     }[dataset_type](ht)
@@ -181,13 +151,13 @@ def get_lifted_over_position_fields(ht: hl.Table, dataset_type: DatasetType):
         return {'liftedOverPos': ht.rg37_locus.position}
     return {
         'liftedOverChrom': (
-            reference_independent_contig(ht.rg37_locus)
+            reference_independent_contig(ht.rg37_locus.contig)
             if hasattr(ht, 'rg37_locus')
-            else reference_independent_contig(ht.rg38_locus)
+            else reference_independent_contig(ht.rg38_locus.contig)
         ),
         'liftedOverPos': (
             hl.or_missing(
-                hl.is_defined(reference_independent_contig(ht.rg37_locus)),
+                hl.is_defined(reference_independent_contig(ht.rg37_locus.contig)),
                 ht.rg37_locus.position,
             )
             if hasattr(ht, 'rg37_locus')
@@ -235,11 +205,11 @@ def get_variants_export_fields(
     dataset_type: DatasetType,
 ):
     if dataset_type in {DatasetType.SV, DatasetType.GCNV}:
-        rg37_contig = reference_independent_contig(ht.rg37_locus_end)
+        rg37_contig = reference_independent_contig(ht.rg37_locus_end.contig)
         position_fields = {
-            'chrom': reference_independent_contig(ht.start_locus),
-            'pos': ht.start_locus.position,
-            'end': ht.end_locus.position,
+            'chrom': ht.chrom,
+            'pos': ht.pos,
+            'end': ht.end,
             'rg37LocusEnd': hl.Struct(
                 contig=rg37_contig,
                 position=hl.or_missing(
