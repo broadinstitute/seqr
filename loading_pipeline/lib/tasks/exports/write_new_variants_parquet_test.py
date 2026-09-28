@@ -147,6 +147,7 @@ SNV_INDEL_GRCH37_MOCK_VEP_DATA = MOCK_37_VEP_DATA.annotate(
 
 class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     def setUp(self) -> None:
+        self.maxDiff = None
         super().setUp()
         _write_existing_variants_parquet_fixture(
             EXISTING_SNV_INDEL_VARIANT_IDS,
