@@ -73,5 +73,3 @@ def get_entries_export_fields(
         ),
         'sign': 1,
     }
-
-

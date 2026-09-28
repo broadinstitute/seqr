@@ -121,20 +121,14 @@ def chrom(ht: hl.Table, **_: Any) -> hl.Expression:
 
 def end_chrom(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.or_missing(
-        (
-            (sv_type(ht) != 'INS')
-            & (ht.locus.contig != end_locus(ht).contig)
-        ),
+        ((sv_type(ht) != 'INS') & (ht.locus.contig != end_locus(ht).contig)),
         reference_independent_contig(end_locus(ht).contig),
     )
 
 
 def sv_source_detail(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.or_missing(
-        (
-            (sv_type(ht) == 'INS')
-            & (ht.locus.contig != end_locus(ht).contig)
-        ),
+        ((sv_type(ht) == 'INS') & (ht.locus.contig != end_locus(ht).contig)),
         hl.Struct(chrom=reference_independent_contig(end_locus(ht).contig)),
     )
 

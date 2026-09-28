@@ -168,7 +168,8 @@ class WriteNewVariantsTableTask(BaseWriteTask):
         # Run liftover
         new_variants_ht = new_variants_ht.annotate(
             **{
-                name: fn(new_variants_ht) for name, fn in self.dataset_type.liftover_annotation_fns(
+                name: fn(new_variants_ht)
+                for name, fn in self.dataset_type.liftover_annotation_fns(
                     self.reference_genome,
                 ).items()
             },
