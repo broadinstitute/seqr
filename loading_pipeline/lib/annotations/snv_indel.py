@@ -14,11 +14,9 @@ from loading_pipeline.lib.annotations.shared import (
     sorted_transcript_consequences as shared_sorted_transcript_consequences,
 )
 from loading_pipeline.lib.annotations.vep import (
-    transcript_consequences_sort,
     vep_110_transcript_consequences_select,
 )
 from loading_pipeline.lib.core.definitions import ReferenceGenome
-from loading_pipeline.lib.tasks.exports.misc import sorted_hl_struct
 
 MOTIF_CONSEQUENCE_TERMS_LOOKUP = hl.dict(
     hl.enumerate(MOTIF_CONSEQUENCE_TERMS, index_first=False),
@@ -123,20 +121,10 @@ def sorted_transcript_consequences(
     gencode_ensembl_to_refseq_id_mapping: hl.tdict(hl.tstr, hl.tstr),
     **_: Any,
 ) -> hl.Expression:
-    sorted_consequences = hl.sorted(
-        ht.vep.transcript_consequences.map(
-            vep_110_transcript_consequences_select(
-                gencode_ensembl_to_refseq_id_mapping,
-            ),
-        ).filter(lambda c: c.consequenceTerms.size() > 0),
-        transcript_consequences_sort(ht),
-    )
-    return hl.enumerate(sorted_consequences).starmap(
-        lambda i, s: sorted_hl_struct(
-            s.annotate(
-                majorConsequence=s.consequenceTerms.first(),
-                transcriptRank=i,
-            ),
+    return shared_sorted_transcript_consequences(
+        ht,
+        consequences_select=vep_110_transcript_consequences_select(
+            gencode_ensembl_to_refseq_id_mapping,
         ),
     )
 
