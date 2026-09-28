@@ -1,4 +1,3 @@
-
 import hail as hl
 
 from loading_pipeline.lib.core import ReferenceGenome
