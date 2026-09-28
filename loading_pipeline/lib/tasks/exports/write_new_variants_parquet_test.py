@@ -15,8 +15,6 @@ from loading_pipeline.lib.misc.validation import ALL_VALIDATIONS
 from loading_pipeline.lib.paths import (
     existing_variants_parquet_path,
     new_variants_parquet_path,
-    new_variants_table_path,
-    remapped_and_subsetted_callset_path,
 )
 from loading_pipeline.lib.tasks.exports.write_new_variants_parquet import (
     WriteNewVariantsParquetTask,
@@ -25,7 +23,6 @@ from loading_pipeline.lib.test.misc import (
     convert_ndarray_to_list,
     copy_project_pedigree_to_mocked_dir,
 )
-from loading_pipeline.lib.test.mock_complete_task import MockCompleteTask
 from loading_pipeline.lib.test.mocked_reference_datasets_testcase import (
     MockedReferenceDatasetsTestCase,
 )
@@ -43,7 +40,7 @@ TEST_MITO_EXPORT_PEDIGREE = (
 TEST_SV_VCF = 'loading_pipeline/var/test/callsets/sv_1.vcf'
 TEST_PEDIGREE_5 = 'loading_pipeline/var/test/pedigrees/test_pedigree_5.tsv'
 
-TEST_GCNV_ANNOTATIONS = 'loading_pipeline/var/test/exports/GRCh38/GCNV/annotations.ht'
+TEST_GCNV_BED_FILE = 'loading_pipeline/var/test/callsets/gcnv_1.tsv'
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
@@ -174,21 +171,6 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             ReferenceGenome.GRCh38,
             DatasetType.SV,
             max_key_=726,
-        )
-        ht = hl.read_table(TEST_GCNV_ANNOTATIONS)
-        ht.write(
-            new_variants_table_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-                TEST_RUN_ID,
-            ),
-        )
-        ht.write(
-            remapped_and_subsetted_callset_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-                'fake_callset',
-            ),
         )
 
     @mock.patch(
@@ -528,22 +510,24 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             ],
         )
 
-    @mock.patch(
-        'loading_pipeline.lib.tasks.exports.write_new_variants_parquet.WriteNewVariantsTableTask',
-    )
     def test_gcnv_write_new_variants_parquet_test(
         self,
-        write_new_variants_table_task: Mock,
     ) -> None:
-        write_new_variants_table_task.return_value = MockCompleteTask()
+        copy_project_pedigree_to_mocked_dir(
+            TEST_PEDIGREE_5,
+            ReferenceGenome.GRCh38,
+            DatasetType.GCNV,
+            SampleType.WES,
+            'R0115_test_project2',
+        )
         worker = luigi.worker.Worker()
         task = WriteNewVariantsParquetTask(
             reference_genome=ReferenceGenome.GRCh38,
             dataset_type=DatasetType.GCNV,
             sample_type=SampleType.WES,
-            callset_path='fake_callset',
+            callset_path=TEST_GCNV_BED_FILE,
             project_guids=[
-                'fake_project',
+                'R0115_test_project2',
             ],
             validations_to_skip=[ALL_VALIDATIONS],
             run_id=TEST_RUN_ID,

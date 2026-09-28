@@ -51,14 +51,14 @@ def end_locus(
     return hl.locus(ht.chr, ht.end, reference_genome.value)
 
 
-def gt_stats(ht: hl.Table, callset_ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.struct(
-        AF=hl.float32(callset_ht[ht.variant_id].sf),
-        AC=callset_ht[ht.variant_id].sc,
-        AN=hl.int32(callset_ht[ht.variant_id].sc / callset_ht[ht.variant_id].sf),
-        Hom=hl.missing(hl.tint32),
-        Het=hl.missing(hl.tint32),
-    )
+def populations(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.Struct(sv_callset=hl.Struct(
+        ac=ht.sc,
+        af=hl.float32(ht.sf),
+        an=hl.int32(ht.sc / ht.sf),
+        het=hl.missing(hl.tint32),
+        hom=hl.missing(hl.tint32),
+    ))
 
 
 def GT(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802

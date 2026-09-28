@@ -255,6 +255,7 @@ class DatasetType(StrEnum):
             DatasetType.GCNV: [
                 gcnv.end_locus,
                 gcnv.num_exon,
+                gcnv.populations,
                 gcnv.sorted_gene_consequences,
                 gcnv.start_locus,
                 gcnv.strvctvre,

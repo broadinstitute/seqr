@@ -77,15 +77,7 @@ def get_dataset_type_specific_variants_annotations(
             'predictions': hl.Struct(
                 strvctvre=ht.strvctvre.score,
             ),
-            'populations': hl.Struct(
-                sv_callset=hl.Struct(
-                    ac=ht.gt_stats.AC,
-                    af=ht.gt_stats.AF,
-                    an=ht.gt_stats.AN,
-                    het=ht.gt_stats.Het,
-                    hom=ht.gt_stats.Hom,
-                ),
-            ),
+            'populations': ht.populations,
         },
     }[dataset_type](ht)
 
