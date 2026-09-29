@@ -2,7 +2,6 @@ import hail as hl
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.annotations.fields import get_fields
 from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
@@ -49,11 +48,10 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
         ht = compute_callset_family_entries_ht(
             self.dataset_type,
             mt,
-            get_fields(
-                mt,
-                self.dataset_type.genotype_entry_annotation_fns,
-                **self.param_kwargs,
-            ),
+            {
+                name: fn(mt, **self.param_kwargs)
+                for name, fn in self.dataset_type.genotype_entry_annotation_fns.items()
+            },
         )
         ht = deglobalize_ids(ht)
         ht = deduplicate_by_most_non_ref_calls(ht)

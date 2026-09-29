@@ -83,12 +83,8 @@ def populations(ht: hl.Table, **_: Any) -> hl.Expression:
     )
 
 
-def GT(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
-    return hl.if_else(
-        (mt.CN == 0) | (mt.CN > 3),  # noqa: PLR2004
-        hl.Call([1, 1], phased=False),
-        hl.Call([0, 1], phased=False),
-    )
+def gt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+    return hl.if_else((mt.CN == 0) | (mt.CN > 3), 2, 1)  # noqa: PLR2004
 
 
 def num_exon(ht: hl.Table, **_: Any) -> hl.Expression:

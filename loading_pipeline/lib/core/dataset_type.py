@@ -414,43 +414,43 @@ class DatasetType(StrEnum):
         }[self]
 
     @property
-    def genotype_entry_annotation_fns(self) -> list[Callable[..., hl.Expression]]:
+    def genotype_entry_annotation_fns(self) -> dict[str, Callable[..., hl.Expression]]:
         return {
-            DatasetType.SNV_INDEL: [
-                shared.GQ,
-                snv_indel.AB,
-                snv_indel.DP,
-                shared.gt,
-            ],
-            DatasetType.MITO: [
-                mito.contamination,
-                mito.DP,
-                mito.HL,
-                mito.mito_cn,
-                mito.GQ,
-                shared.gt,
-            ],
-            DatasetType.SV: [
-                sv.CN,
-                sv.newCall,
-                sv.prevCall,
-                sv.prevNumAlt,
-                shared.GQ,
-                shared.gt,
-            ],
-            DatasetType.GCNV: [
-                gcnv.newCall,
-                gcnv.prevCall,
-                gcnv.prevOverlap,
-                gcnv.defragged,
-                gcnv.sample_end,
-                gcnv.geneIds,
-                gcnv.numExon,
-                gcnv.start,
-                gcnv.CN,
-                gcnv.GT,
-                gcnv.QS,
-            ],
+            DatasetType.SNV_INDEL: {
+                'gq': shared.GQ,
+                'ab': snv_indel.AB,
+                'dp': snv_indel.DP,
+                'gt': shared.gt,
+            },
+            DatasetType.MITO: {
+                'contamination': mito.contamination,
+                'dp': mito.DP,
+                'hl': mito.HL,
+                'mitoCn': mito.mito_cn,
+                'gq': mito.GQ,
+                'gt': shared.gt,
+            },
+            DatasetType.SV: {
+                'cn': sv.CN,
+                'newCall': sv.newCall,
+                'prevCall': sv.prevCall,
+                'prevNumAlt': sv.prevNumAlt,
+                'gq': shared.GQ,
+                'gt': shared.gt,
+            },
+            DatasetType.GCNV: {
+                'newCall': gcnv.newCall,
+                'prevCall': gcnv.prevCall,
+                'prevOverlap': gcnv.prevOverlap,
+                'defragged': gcnv.defragged,
+                'end': gcnv.sample_end,
+                'geneIds': gcnv.geneIds,
+                'numExon': gcnv.numExon,
+                'start': gcnv.start,
+                'cn': gcnv.CN,
+                'gt': gcnv.gt,
+                'qs': gcnv.QS,
+            },
         }[self]
 
     @property
