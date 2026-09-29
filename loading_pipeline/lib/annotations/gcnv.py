@@ -25,7 +25,7 @@ def variant_id(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht.variant_id
 
 
-def newCall(  # noqa: N802
+def new_call(
     mt: hl.MatrixTable,
     is_new_gcnv_joint_call: bool,
     **_: Any,
@@ -35,7 +35,7 @@ def newCall(  # noqa: N802
     return hl.or_missing(hl.is_defined(mt.GT), False)
 
 
-def prevCall(  # noqa: N802
+def prev_call(
     mt: hl.MatrixTable,
     is_new_gcnv_joint_call: bool,
     **_: Any,
@@ -45,7 +45,7 @@ def prevCall(  # noqa: N802
     return hl.or_missing(hl.is_defined(mt.GT), ~mt.is_latest)
 
 
-def prevOverlap(  # noqa: N802
+def prev_overlap(
     mt: hl.MatrixTable,
     is_new_gcnv_joint_call: bool,
     **_: Any,
@@ -125,7 +125,7 @@ def sample_end(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.sample_end
 
 
-def geneIds(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
+def gene_ids(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return parse_gcnv_genes(mt.genes_any_overlap_Ensemble_ID)
 
 
@@ -133,7 +133,7 @@ def start(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.sample_start
 
 
-def numExon(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
+def sample_num_exon(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.genes_any_overlap_totalExons
 
 

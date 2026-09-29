@@ -137,7 +137,7 @@ def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return mt.RD_CN
 
 
-def newCall(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
+def new_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     is_called = hl.is_defined(mt.GT)
     was_previously_called = hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains(
         'EMPTY',
@@ -152,7 +152,7 @@ def newCall(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return hl.or_missing(is_called, ~was_previously_called | novel_genotype)
 
 
-def prevCall(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
+def prev_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     is_called = hl.is_defined(mt.GT)
     was_previously_called = hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains(
         'EMPTY',
@@ -167,7 +167,7 @@ def prevCall(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return hl.or_missing(is_called, was_previously_called & concordant_genotype)
 
 
-def prevNumAlt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
+def prev_num_alt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     is_called = hl.is_defined(mt.GT)
     was_previously_called = hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains(
         'EMPTY',
