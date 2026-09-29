@@ -243,6 +243,7 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
                 'sortedRegulatoryFeatureConsequences',
             ],
         )
+        self.maxDiff = None
         self.assertEqual(
             export_json[0]['key'],
             0,
