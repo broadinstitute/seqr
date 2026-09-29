@@ -112,7 +112,7 @@ def deglobalize_ids(ht: hl.Table) -> hl.Table:
 def deduplicate_by_most_non_ref_calls(ht: hl.Table) -> hl.Table:
     ht = ht.annotate(
         non_ref_count=hl.len(
-            hl.flatten(ht.family_entries).filter(lambda s: s.GT.is_non_ref()),
+            hl.flatten(ht.family_entries).filter(lambda s: s.gt > 0),
         ),
     )
     return ht.group_by(*ht.key).aggregate(

@@ -202,8 +202,8 @@ class DatasetType(StrEnum):
     @property
     def family_entries_filter_fn(self) -> Callable[[hl.StructExpression], bool]:
         return {
-            DatasetType.GCNV: lambda e: hl.is_defined(e.GT),
-        }.get(self, lambda e: e.GT.is_non_ref())
+            DatasetType.GCNV: lambda e: hl.is_defined(e.gt),
+        }.get(self, lambda e: e.gt > 0)
 
     @property
     def can_run_validation(self) -> bool:
@@ -420,7 +420,7 @@ class DatasetType(StrEnum):
                 shared.GQ,
                 snv_indel.AB,
                 snv_indel.DP,
-                shared.GT,
+                shared.gt,
             ],
             DatasetType.MITO: [
                 mito.contamination,
@@ -428,21 +428,25 @@ class DatasetType(StrEnum):
                 mito.HL,
                 mito.mito_cn,
                 mito.GQ,
-                shared.GT,
+                shared.gt,
             ],
             DatasetType.SV: [
                 sv.CN,
-                sv.concordance,
+                sv.newCall,
+                sv.prevCall,
+                sv.prevNumAlt,
                 shared.GQ,
-                shared.GT,
+                shared.gt,
             ],
             DatasetType.GCNV: [
-                gcnv.concordance,
+                gcnv.newCall,
+                gcnv.prevCall,
+                gcnv.prevOverlap,
                 gcnv.defragged,
                 gcnv.sample_end,
-                gcnv.sample_gene_ids,
-                gcnv.sample_num_exon,
-                gcnv.sample_start,
+                gcnv.geneIds,
+                gcnv.numExon,
+                gcnv.start,
                 gcnv.CN,
                 gcnv.GT,
                 gcnv.QS,

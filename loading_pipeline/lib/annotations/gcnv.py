@@ -25,28 +25,34 @@ def variant_id(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht.variant_id
 
 
-def concordance(
+def newCall(  # noqa: N802
     mt: hl.MatrixTable,
     is_new_gcnv_joint_call: bool,
     **_: Any,
 ) -> hl.Expression:
     if is_new_gcnv_joint_call:
-        return hl.or_missing(
-            hl.is_defined(mt.GT),
-            hl.struct(
-                new_call=mt.no_ovl,
-                prev_call=hl.len(mt.identical_ovl) > 0,
-                prev_overlap=hl.len(mt.any_ovl) > 0,
-            ),
-        )
-    return hl.or_missing(
-        hl.is_defined(mt.GT),
-        hl.struct(
-            new_call=False,
-            prev_call=~mt.is_latest,
-            prev_overlap=False,
-        ),
-    )
+        return hl.or_missing(hl.is_defined(mt.GT), mt.no_ovl)
+    return hl.or_missing(hl.is_defined(mt.GT), False)
+
+
+def prevCall(  # noqa: N802
+    mt: hl.MatrixTable,
+    is_new_gcnv_joint_call: bool,
+    **_: Any,
+) -> hl.Expression:
+    if is_new_gcnv_joint_call:
+        return hl.or_missing(hl.is_defined(mt.GT), hl.len(mt.identical_ovl) > 0)
+    return hl.or_missing(hl.is_defined(mt.GT), ~mt.is_latest)
+
+
+def prevOverlap(  # noqa: N802
+    mt: hl.MatrixTable,
+    is_new_gcnv_joint_call: bool,
+    **_: Any,
+) -> hl.Expression:
+    if is_new_gcnv_joint_call:
+        return hl.or_missing(hl.is_defined(mt.GT), hl.len(mt.any_ovl) > 0)
+    return hl.or_missing(hl.is_defined(mt.GT), False)
 
 
 def defragged(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
@@ -123,15 +129,15 @@ def sample_end(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.sample_end
 
 
-def sample_gene_ids(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+def geneIds(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return parse_gcnv_genes(mt.genes_any_overlap_Ensemble_ID)
 
 
-def sample_start(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+def start(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.sample_start
 
 
-def sample_num_exon(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+def numExon(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return mt.genes_any_overlap_totalExons
 
 

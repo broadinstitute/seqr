@@ -11,8 +11,8 @@ from loading_pipeline.lib.annotations.vep import (
 from loading_pipeline.lib.core.definitions import ReferenceGenome
 
 
-def GT(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
-    return mt.GT
+def gt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+    return mt.GT.n_alt_alleles()
 
 
 def GQ(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
