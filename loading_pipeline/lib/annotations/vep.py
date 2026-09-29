@@ -72,7 +72,7 @@ def vep_110_transcript_consequences_select(
             lofFilters=_lof_filters(c),
         ),
         spliceregion=hl.struct(
-            extendedIntronicSpliceRegionVariant=(
+            extended_intronic_splice_region_variant=(
                 hl.is_defined(c.spliceregion)
                 & c.spliceregion.contains(
                     EXTENDED_INTRONIC_SPLICE_REGION_VARIANT,

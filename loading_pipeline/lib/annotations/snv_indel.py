@@ -161,7 +161,7 @@ def subsetted_sorted_transcript_consequences(
             'consequenceTerms',
             'geneId',
             alphamissensePathogenicity=c.alphamissense.pathogenicity,
-            extendedIntronicSpliceRegionVariant=c.spliceregion.extendedIntronicSpliceRegionVariant,
+            extendedIntronicSpliceRegionVariant=c.spliceregion.extended_intronic_splice_region_variant,
             fiveutrConsequence=c.utrannotator.fiveutrConsequence,
             isManeSelect=hl.is_defined(c.maneSelect),
         ),
