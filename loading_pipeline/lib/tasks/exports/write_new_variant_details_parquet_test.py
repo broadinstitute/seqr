@@ -238,9 +238,9 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
                 'CAID',
                 'liftedOverChrom',
                 'liftedOverPos',
+                'transcripts',
                 'sortedMotifFeatureConsequences',
                 'sortedRegulatoryFeatureConsequences',
-                'transcripts',
             ],
         )
         self.assertEqual(
