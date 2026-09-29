@@ -287,18 +287,13 @@ class DatasetType(StrEnum):
             return GRCh37_fns[self]
         return {
             DatasetType.SNV_INDEL: {
-                'rsid': shared.rsid,
-                'variantId': shared.variant_id,
-                'xpos': shared.xpos,
-                'CAID': snv_indel.caid,
-                'liftedOverChrom': shared.lifted_over_chrom,
-                'liftedOverPos': shared.lifted_over_pos,
+                **GRCh37_fns[DatasetType.SNV_INDEL],
                 'check_ref': snv_indel.check_ref,
                 'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences,
                 'transcripts': snv_indel.sorted_transcript_consequences,
                 'sortedRegulatoryFeatureConsequences': snv_indel.subsetted_sorted_regulatory_feature_consequences,
-                'sortedMotifFeatureConsequences': snv_indel.subsetted_sorted_motif_feature_consequences,
                 'sortedRegulatoryFeatureConsequences_detail': snv_indel.sorted_regulatory_feature_consequences,
+                'sortedMotifFeatureConsequences': snv_indel.subsetted_sorted_motif_feature_consequences,
                 'sortedMotifFeatureConsequences_detail': snv_indel.sorted_motif_feature_consequences,
             },
             DatasetType.MITO: {
