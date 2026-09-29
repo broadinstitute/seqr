@@ -655,9 +655,18 @@ def insert_new_entries(
         )
     ]
     common, overrides = [c for c in dst_cols if c in src_cols], {}
-    if 'geneId_ids' in dst_cols and 'geneIds' in src_cols:
-        common = [c for c in common if c not in ('geneId_ids', 'geneIds')]
+    common.insert(0, 'key')
+    if 'xpos' not in common:
+        common.append('xpos')
+        overrides['xpos'] = 'v.xpos'
+
+    if 'geneId_ids' in dst_cols:
         common.append('geneId_ids')
+        gene_list_field = (
+            'sortedGeneConsequences'
+            if table_name_builder.dataset_type == DatasetType.SV
+            else 'sortedTranscriptConsequences'
+        )
         overrides['geneId_ids'] = f"""
             arrayFilter(
                 x -> x IS NOT NULL,
@@ -667,7 +676,7 @@ def insert_new_entries(
                         'seqrdb_id',
                         g
                     ),
-                    geneIds
+                    arrayDistinct(v.{gene_list_field}.geneId)
                 )
             )
         """
@@ -678,16 +687,25 @@ def insert_new_entries(
     ):
         common.append('is_gnomad_gt_5_percent')
         overrides['is_gnomad_gt_5_percent'] = f"""
-            dictGetOrDefault({ClickhouseReferenceDataset.GNOMAD_GENOMES.search_path(table_name_builder)}, 'filter_af', key, 0) > 0.05
+            dictGetOrDefault({ClickhouseReferenceDataset.GNOMAD_GENOMES.search_path(table_name_builder)}, 'filter_af', e.key, 0) > 0.05
         """
 
     dst_list = ', '.join(common)
-    src_list = ', '.join([overrides.get(c, c) for c in common])
+    src_list = ', '.join([overrides.get(c, f'e.{c}') for c in common])
     logged_query(
         f"""
         INSERT INTO {table_name_builder.staging_dst_table(ClickHouseTable.ENTRIES)} ({dst_list})
         SELECT {src_list}
-        FROM {table_name_builder.src_table(ClickHouseTable.ENTRIES)}
+        FROM (
+            SELECT
+                dst.key,
+                COLUMNS('.*') EXCEPT(variantId, key)
+            FROM {table_name_builder.src_table(ClickHouseTable.ENTRIES)} src
+            INNER JOIN {table_name_builder.dst_table(ClickHouseTable.KEY_LOOKUP)} dst
+            ON {ClickHouseTable.KEY_LOOKUP.join_condition}
+        ) e
+        INNER JOIN {table_name_builder.dst_table(ClickHouseTable.VARIANTS_MEMORY)} v
+        ON assumeNotNull(e.key) = v.key
         """,  # nosec B608
     )
 
@@ -952,7 +970,6 @@ def export_existing_variants_to_parquet(
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
     run_id: str,
-    export_select_fields: str,
 ) -> None:
     table_name_builder = TableNameBuilder(
         reference_genome,
@@ -960,7 +977,7 @@ def export_existing_variants_to_parquet(
         run_id,
     )
     variants_table = table_name_builder.dst_table(
-        ClickHouseTable.VARIANT_DETAILS
+        ClickHouseTable.KEY_LOOKUP
         if dataset_type.should_write_new_variant_details
         else ClickHouseTable.VARIANTS_MEMORY,
     )
@@ -970,11 +987,13 @@ def export_existing_variants_to_parquet(
         '/*.parquet',
         '',
     )
+    dt_fields = ', end, endChrom' if dataset_type == DatasetType.SV else ''
     logged_query(
         f"""
         INSERT INTO FUNCTION {export_table}
-        SELECT {export_select_fields}
+        SELECT key AS key_, variantId AS variant_id {dt_fields}
         FROM {variants_table}
+        SETTINGS output_format_parquet_use_custom_encoder=1
         """,  # nosec B608
     )
 

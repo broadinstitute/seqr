@@ -203,7 +203,11 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         with connections['clickhouse_write'].cursor() as cursor:
             cursor.execute(
                 f'INSERT INTO {Env.CLICKHOUSE_DATABASE}.`seqrdb_gene_ids_src` VALUES',
-                [('GENE1', 123), ('GENE2', 12), ('GENE3', 1)],
+                [
+                    ('ENSG00000141510', 123),
+                    ('ENSG00000012048', 12),
+                    ('ENSG00000139618', 1),
+                ],
             )
             cursor.execute(
                 f'SYSTEM RELOAD DICTIONARY {Env.CLICKHOUSE_DATABASE}.`seqrdb_gene_ids`',
@@ -211,6 +215,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
 
     def setUp(self):
         super().setUp()
+        sleep_patch = patch('time.sleep')
+        sleep_patch.start()
+        self.addCleanup(sleep_patch.stop)
+
         base_path = runs_path(
             ReferenceGenome.GRCh38,
             DatasetType.SNV_INDEL,
@@ -273,7 +281,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         # New Variants parquet.
         df = pd.DataFrame(
             {
-                'key': [10, 11, 12, 13],
+                'key': [20, 11, 12, 13],
                 'variantId': [
                     '1-3-A-C',
                     '2-4-A-T',
@@ -290,8 +298,19 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 TEST_RUN_ID,
             ),
         )
+        gcnv_variants_df = pd.DataFrame(
+            {
+                'key': [10, 11, 12, 13],
+                'variantId': [
+                    'suffix_1000_DEL',
+                    'suffix_1001_DUP',
+                    'suffix_1002_DEL',
+                    'suffix_1003_DUP',
+                ],
+            },
+        )
         write_test_parquet(
-            df,
+            gcnv_variants_df,
             new_variants_parquet_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
@@ -302,7 +321,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         # New Entries Parquet
         df = pd.DataFrame(
             {
-                'key': [10, 3, 4],
                 'project_guid': [
                     'project_d',
                     'project_d',
@@ -323,10 +341,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                     'WES',
                     'WES',
                 ],
-                'geneIds': [
-                    [],
-                    ['GENE1', 'GENE2'],
-                    ['GENE3'],
+                'variantId': [
+                    '10-987654-G-A',
+                    '3-133456789-A-G',
+                    '4-133456789-C-T',
                 ],
                 'calls': [
                     [('sample_d1', 0), ('sample_d11', 2)],
@@ -342,12 +360,11 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         schema = pa.schema(
             [
-                ('key', pa.int64()),
                 ('project_guid', pa.string()),
                 ('family_guid', pa.string()),
                 ('xpos', pa.int64()),
                 ('sample_type', pa.string()),
-                ('geneIds', pa.list_(pa.string())),
+                ('variantId', pa.string()),
                 (
                     'calls',
                     pa.list_(
@@ -366,14 +383,101 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
             ),
             schema,
         )
+        gcnv_entries_df = pd.DataFrame(
+            {
+                'project_guid': [
+                    'project_d',
+                    'project_d',
+                    'project_d',
+                ],
+                'family_guid': [
+                    'family_d1',
+                    'family_d2',
+                    'family_d3',
+                ],
+                'variantId': [
+                    'suffix_1000_DEL',
+                    'suffix_1002_DEL',
+                    'suffix_1003_DUP',
+                ],
+                'calls': [
+                    [
+                        {
+                            'sampleId': 'sample_d1',
+                            'gt': 0,
+                            'cn': 2,
+                            'qs': 4,
+                            'defragged': False,
+                            'start': 100006937,
+                            'end': 100007881,
+                            'numExon': 2,
+                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
+                            'newCall': False,
+                            'prevCall': True,
+                            'prevOverlap': False,
+                        },
+                        {
+                            'sampleId': 'sample_d11',
+                            'gt': 2,
+                            'cn': 0,
+                            'qs': 30,
+                            'defragged': False,
+                            'start': 100006937,
+                            'end': 100007881,
+                            'numExon': 2,
+                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
+                            'newCall': True,
+                            'prevCall': False,
+                            'prevOverlap': False,
+                        },
+                    ],
+                    [
+                        {
+                            'sampleId': 'sample_d2',
+                            'gt': 0,
+                            'cn': 2,
+                            'qs': 5,
+                            'defragged': False,
+                            'start': 100017585,
+                            'end': 100023213,
+                            'numExon': 1,
+                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
+                            'newCall': False,
+                            'prevCall': True,
+                            'prevOverlap': False,
+                        },
+                    ],
+                    [
+                        {
+                            'sampleId': 'sample_d3',
+                            'gt': 1,
+                            'cn': 1,
+                            'qs': 20,
+                            'defragged': False,
+                            'start': 100017585,
+                            'end': 100023213,
+                            'numExon': 1,
+                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
+                            'newCall': True,
+                            'prevCall': False,
+                            'prevOverlap': False,
+                        },
+                    ],
+                ],
+                'sign': [
+                    1,
+                    1,
+                    1,
+                ],
+            },
+        )
         write_test_parquet(
-            df.drop('geneIds', axis=1),
+            gcnv_entries_df,
             new_entries_parquet_path(
                 ReferenceGenome.GRCh38,
                 DatasetType.GCNV,
                 TEST_RUN_ID,
             ),
-            schema.remove(5).remove(5),
         )
 
     def test_get_clickhouse_client(self):
@@ -973,6 +1077,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
            SELECT *
            FROM
            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_memory`
+           WHERE key > 5
            """,  # nosec B608
         )
         variants_memory = cursor.fetchall()
@@ -983,6 +1088,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 (11, [], [], []),
                 (12, [], [], []),
                 (13, [], [], []),
+                (20, [], [], []),
             ],
         )
         cursor.execute(
@@ -990,13 +1096,14 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
            SELECT *
            FROM
            {Env.CLICKHOUSE_DATABASE}.`GRCh38/SNV_INDEL/variants_disk`
+           WHERE key > 5
            """,  # nosec B608
         )
         variants_disk = cursor.fetchall()
         self.assertCountEqual(
             variants_disk,
             [
-                (10, [], [], []),
+                (20, [], [], []),
                 (11, [], [], []),
                 (12, [], [], []),
                 (13, [], [], []),
@@ -1058,6 +1165,12 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         self.assertEqual(key_lookup_count, 4)
 
     def test_load_run_entries_gcnv(self):
+        load_run_variants(
+            ReferenceGenome.GRCh38,
+            DatasetType.GCNV,
+            TEST_RUN_ID,
+        )
+
         load_run_entries(
             ReferenceGenome.GRCh38,
             DatasetType.GCNV,
