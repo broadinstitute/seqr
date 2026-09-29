@@ -371,7 +371,8 @@ class DatasetType(StrEnum):
     ) -> dict[str, str]:
         fields = {
             DatasetType.SNV_INDEL: {
-                field: field for field in [
+                field: field
+                for field in [
                     'key_',
                     'variantId',
                     'rsid',
@@ -383,10 +384,12 @@ class DatasetType(StrEnum):
             },
         }
         if reference_genome == ReferenceGenome.GRCh38:
-            fields[DatasetType.SNV_INDEL].update({
-                'sortedMotifFeatureConsequences': 'sortedMotifFeatureConsequences_detail',
-                'sortedRegulatoryFeatureConsequences': 'sortedRegulatoryFeatureConsequences_detail',
-            })
+            fields[DatasetType.SNV_INDEL].update(
+                {
+                    'sortedMotifFeatureConsequences': 'sortedMotifFeatureConsequences_detail',
+                    'sortedRegulatoryFeatureConsequences': 'sortedRegulatoryFeatureConsequences_detail',
+                },
+            )
         return fields.get(self, {})
 
     def liftover_annotation_fns(
