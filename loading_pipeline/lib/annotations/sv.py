@@ -194,10 +194,10 @@ def populations(
 ) -> hl.Expression:
     gnomad_sv_id = ht['info.GNOMAD_V4.1_TRUTH_VID']
     gnomad_sv = gnomad_svs_ht[gnomad_sv_id]
-    return hl.or_missing(
-        hl.is_defined(gnomad_sv),
-        hl.struct(
-            gnomad_svs=hl.struct(
+    return hl.struct(
+        gnomad_svs=hl.or_missing(
+            hl.is_defined(gnomad_sv),
+            hl.struct(
                 af=gnomad_sv.AF,
                 het=gnomad_sv.N_HET,
                 hom=gnomad_sv.N_HOM,

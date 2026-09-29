@@ -322,13 +322,13 @@ class SNVTest(unittest.TestCase):
             [
                 hl.Struct(
                     biotype='enhancer',
-                    consequence_terms=['regulatory_region_ablation'],
-                    regulatory_feature_id='regulatory_2',
+                    consequenceTerms=['regulatory_region_ablation'],
+                    regulatoryFeatureId='regulatory_2',
                 ),
                 hl.Struct(
                     biotype='enhancer',
-                    consequence_terms=['regulatory_region_variant'],
-                    regulatory_feature_id='regulatory_1',
+                    consequenceTerms=['regulatory_region_variant'],
+                    regulatoryFeatureId='regulatory_1',
                 ),
             ],
         )
