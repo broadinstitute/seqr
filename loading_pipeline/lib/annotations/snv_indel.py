@@ -88,6 +88,15 @@ def sorted_motif_feature_consequences(
     )
 
 
+def subsetted_sorted_motif_feature_consequences(
+    ht: hl.Table,
+    **_: Any,
+) -> hl.Expression:
+    return sorted_motif_feature_consequences(ht).map(
+        lambda c: c.select('consequenceTerms'),
+    )
+
+
 def sorted_regulatory_feature_consequences(
     ht: hl.Table,
     **_: Any,
@@ -113,6 +122,15 @@ def sorted_regulatory_feature_consequences(
                 ),
             ),
         ),
+    )
+
+
+def subsetted_sorted_regulatory_feature_consequences(
+    ht: hl.Table,
+    **_: Any,
+) -> hl.Expression:
+    return sorted_regulatory_feature_consequences(ht).map(
+        lambda c: c.select('consequenceTerms'),
     )
 
 

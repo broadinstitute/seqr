@@ -296,8 +296,10 @@ class DatasetType(StrEnum):
                 'check_ref': snv_indel.check_ref,
                 'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences,
                 'transcripts': snv_indel.sorted_transcript_consequences,
-                'sortedRegulatoryFeatureConsequences': snv_indel.sorted_regulatory_feature_consequences,
-                'sortedMotifFeatureConsequences': snv_indel.sorted_motif_feature_consequences,
+                'sortedRegulatoryFeatureConsequences': snv_indel.subsetted_sorted_regulatory_feature_consequences,
+                'sortedMotifFeatureConsequences': snv_indel.subsetted_sorted_motif_feature_consequences,
+                'sortedRegulatoryFeatureConsequences_detail': snv_indel.sorted_regulatory_feature_consequences,
+                'sortedMotifFeatureConsequences_detail': snv_indel.sorted_motif_feature_consequences,
             },
             DatasetType.MITO: {
                 **GRCh37_fns[DatasetType.MITO],
@@ -368,25 +370,29 @@ class DatasetType(StrEnum):
         names.append('sortedTranscriptConsequences')
         return names
 
-    def variant_details_export_field_names(
+    def variant_details_export_fields(
         self,
         reference_genome: ReferenceGenome,
-    ) -> list[str]:
-        names = [
-            'key_',
-            'variantId',
-            'rsid',
-            'CAID',
-            'liftedOverChrom',
-            'liftedOverPos',
-        ]
+    ) -> dict[str, str]:
+        fields = {
+            DatasetType.SNV_INDEL: {
+                field: field for field in [
+                    'key_',
+                    'variantId',
+                    'rsid',
+                    'CAID',
+                    'liftedOverChrom',
+                    'liftedOverPos',
+                    'transcripts',
+                ]
+            },
+        }
         if reference_genome == ReferenceGenome.GRCh38:
-            names += [
-                'sortedMotifFeatureConsequences',
-                'sortedRegulatoryFeatureConsequences',
-            ]
-        names.append('transcripts')
-        return names
+            fields[DatasetType.SNV_INDEL].update({
+                'sortedMotifFeatureConsequences': 'sortedMotifFeatureConsequences_detail',
+                'sortedRegulatoryFeatureConsequences': 'sortedRegulatoryFeatureConsequences_detail',
+            })
+        return fields.get(self, {})
 
     def liftover_annotation_fns(
         self,

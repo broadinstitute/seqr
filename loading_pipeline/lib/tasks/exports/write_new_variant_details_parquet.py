@@ -43,7 +43,10 @@ class WriteNewVariantDetailsParquetTask(BaseWriteParquetTask):
         )
         ht = ht.key_by()
         return ht.select(
-            *self.dataset_type.variant_details_export_field_names(
-                self.reference_genome,
-            ),
+            **{
+                name: getattr(ht, field)
+                for name, field in self.dataset_type.variant_details_export_fields(
+                    self.reference_genome,
+                ).items()
+            },
         )
