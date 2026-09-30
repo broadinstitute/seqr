@@ -317,8 +317,8 @@ class DatasetType(StrEnum):
         reference_genome: ReferenceGenome,
     ) -> set[str]:
         annotations = {'key_', *self.formatting_annotation_fns(reference_genome).keys()}
-        detail_fields = set(self.variant_details_export_fields(reference_genome).values())
-        return annotations - detail_fields
+        detail_fields = self.variant_details_export_fields(reference_genome).values()
+        return annotations - set(detail_fields)
 
     def variant_details_export_fields(
         self,

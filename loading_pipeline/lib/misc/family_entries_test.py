@@ -48,7 +48,9 @@ class FamilyEntriesTest(unittest.TestCase):
                 'project_families': {'p1': ['1'], 'p2': ['2', '3']},
             },
         )
-        ht = compute_callset_family_entries_ht(DatasetType.SNV_INDEL, mt, {'GT': mt.GT}, SampleType.WGS)
+        ht = compute_callset_family_entries_ht(
+            DatasetType.SNV_INDEL, mt, {'GT': mt.GT}, SampleType.WGS,
+        )
         self.maxDiff = None
         self.assertCountEqual(
             ht.globals.collect(),
