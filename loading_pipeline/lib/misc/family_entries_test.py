@@ -49,7 +49,10 @@ class FamilyEntriesTest(unittest.TestCase):
             },
         )
         ht = compute_callset_family_entries_ht(
-            DatasetType.SNV_INDEL, mt, {'GT': mt.GT}, SampleType.WGS,
+            DatasetType.SNV_INDEL,
+            mt,
+            {'GT': mt.GT},
+            SampleType.WGS,
         )
         self.maxDiff = None
         self.assertCountEqual(
