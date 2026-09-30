@@ -4,7 +4,7 @@ from enum import StrEnum
 import hail as hl
 
 from loading_pipeline.lib.annotations import gcnv, mito, shared, snv_indel, sv
-from loading_pipeline.lib.core.definitions import ReferenceGenome
+from loading_pipeline.lib.core.definitions import ReferenceGenome, SampleType
 from loading_pipeline.lib.core.environment import Env
 
 
@@ -45,6 +45,20 @@ class DatasetType(StrEnum):
         return (
             lambda s: f'{s.locus.contig if reference_genome == ReferenceGenome.GRCh37 else s.locus.contig.replace("chr", "")}-{s.locus.position}-{"-".join(s.alleles)}'
         )
+
+    def entries_table_key_expression(
+        self,
+        ht: hl.Table,
+        sample_type: SampleType,
+    ) -> dict[str, hl.Expression]:
+        if self in {DatasetType.GCNV, DatasetType.SV}:
+            return {'sign': 1, 'variantId': ht.variant_id}
+        return {
+            'sample_type': sample_type.value,
+            'sign': 1,
+            'variantId': shared.variant_id(ht),
+            'xpos': shared.xpos(ht),
+        }
 
     @property
     def col_fields(

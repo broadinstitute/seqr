@@ -5,7 +5,6 @@ import luigi.util
 from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
-    deglobalize_ids,
 )
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
@@ -14,9 +13,6 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
-from loading_pipeline.lib.tasks.exports.fields import (
-    get_entries_export_fields,
-)
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.write_metadata_for_run import (
     WriteMetadataForRunTask,
@@ -52,8 +48,8 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
                 name: fn(mt, **self.param_kwargs)
                 for name, fn in self.dataset_type.genotype_entry_annotation_fns.items()
             },
+            self.sample_type,
         )
-        ht = deglobalize_ids(ht)
         ht = deduplicate_by_most_non_ref_calls(ht)
 
         # the family entries ht will contain rows
@@ -61,12 +57,5 @@ class WriteNewEntriesParquetTask(BaseWriteParquetTask):
         # rows where a family is not defined should be removed.
         ht = ht.explode(ht.family_entries)
         ht = ht.filter(hl.is_defined(ht.family_entries))
-        ht = ht.key_by()
         ht = ht.select_globals()
-        return ht.select(
-            **get_entries_export_fields(
-                ht,
-                self.dataset_type,
-                self.sample_type,
-            ),
-        )
+        return ht.transmute(**ht.family_entries)
