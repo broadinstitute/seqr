@@ -76,3 +76,19 @@ test('test getHpoTermsForCategory', () => {
   ])
 })
 
+test('getHpoTermsForCategory treats a non-array as empty', () => {
+  expect(getHpoTermsForCategory('[]', '[]')).toEqual([])
+  expect(getHpoTermsForCategory(null, '[]')).toEqual([])
+  expect(getHpoTermsForCategory(
+    [{ category: 'HP:0001507', id: 'HP:0004325', label: 'Decreased body weight' }],
+    '[]',
+  )).toEqual([
+    {
+      categoryName: 'Growth Abnormality',
+      terms: [
+        { category: 'HP:0001507', id: 'HP:0004325', label: 'Decreased body weight' },
+      ],
+    },
+  ])
+})
+
