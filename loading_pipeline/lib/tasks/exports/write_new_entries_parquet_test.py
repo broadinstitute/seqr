@@ -210,7 +210,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
         export_json = convert_ndarray_to_list(df.to_dict('records'))
         self.assertEqual(len(export_json), 3)
         self.assertEqual(
-            export_json[:1],
+            export_json[1:],
             [
                 {
                     'project_guid': 'R0116_test_project3',

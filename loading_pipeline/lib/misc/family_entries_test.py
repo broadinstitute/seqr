@@ -19,6 +19,16 @@ class FamilyEntriesTest(unittest.TestCase):
                     {'HIGH_SR_BACKGROUND'},
                     hl.empty_set(hl.tstr),
                 ],
+                'locus': [
+                    hl.Struct(contig='1', position=123),
+                    hl.Struct(contig='1', position=456),
+                    hl.Struct(contig='1', position=789),
+                ],
+                'alleles': [
+                    ['A', 'C'],
+                    ['A', 'AGT'],
+                    ['G', 'T'],
+                ],
             },
             cols={'s': ['a', 'b', 'd', 'c']},
             entries={

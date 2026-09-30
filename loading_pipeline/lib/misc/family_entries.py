@@ -40,12 +40,12 @@ def compute_callset_family_entries_ht(
                 .items()
                 .starmap(
                     lambda family_guid, entries: hl.Struct(
-                        familyGuid=family_guid,
-                        projectGuid=family_guid_to_project_guid[family_guid],
+                        family_guid=family_guid,
+                        project_guid=family_guid_to_project_guid[family_guid],
                         calls=hl.sorted(entries, key=lambda e: e.sampleId),
                     ),
                 ),
-                lambda fe: fe.familyGuid,
+                lambda fe: fe.family_guid,
             )
         ),
     ).rows()

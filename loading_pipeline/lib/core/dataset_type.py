@@ -315,10 +315,10 @@ class DatasetType(StrEnum):
     def variants_export_field_names(
         self,
         reference_genome: ReferenceGenome,
-    ) -> set[str]:
-        annotations = {'key_', *self.formatting_annotation_fns(reference_genome).keys()}
+    ) -> list[str]:
+        annotations = self.formatting_annotation_fns(reference_genome).keys()
         detail_fields = self.variant_details_export_fields(reference_genome).values()
-        return annotations - set(detail_fields)
+        return sorted(set(annotations) - set(detail_fields))
 
     def variant_details_export_fields(
         self,

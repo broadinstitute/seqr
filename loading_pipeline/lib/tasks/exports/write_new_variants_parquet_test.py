@@ -423,13 +423,13 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             list(df.columns),
             [
                 'key',
-                'variantId',
-                'rsid',
-                'liftedOverPos',
                 'commonLowHeteroplasmy',
                 'haplogroupDefining',
+                'liftedOverPos',
                 'mitotip',
+                'rsid',
                 'sortedTranscriptConsequences',
+                'variantId',
             ],
         )
 

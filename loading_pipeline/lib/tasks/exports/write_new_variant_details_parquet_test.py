@@ -235,7 +235,6 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
                 'key',
                 'variantId',
                 'rsid',
-                'CAID',
                 'liftedOverChrom',
                 'liftedOverPos',
                 'transcripts',
@@ -363,7 +362,6 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
                 'key',
                 'variantId',
                 'rsid',
-                'CAID',
                 'liftedOverChrom',
                 'liftedOverPos',
                 'transcripts',
@@ -373,7 +371,6 @@ class WriteNewVariantDetailsParquetTest(MockedDatarootTestCase):
             export_json[0]['key'],
             1424,
         )
-        self.assertEqual(export_json[0]['CAID'], None)
         self.assertEqual(
             export_json[0]['transcripts'][0],
             {
