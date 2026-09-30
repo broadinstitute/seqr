@@ -11,10 +11,8 @@ from loading_pipeline.lib.core.definitions import ReferenceGenome
 from loading_pipeline.lib.misc.gcnv import parse_gcnv_genes
 
 
-def chrom(ht: hl.Table, reference_genome: ReferenceGenome, **_: Any) -> hl.Expression:
-    return expression_helpers.reference_independent_contig(
-        start_locus(ht, reference_genome).contig,
-    )
+def chrom(ht: hl.Table, **_: Any) -> hl.Expression:
+    return expression_helpers.reference_independent_contig(ht.chr)
 
 
 def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
@@ -59,16 +57,8 @@ def defragged(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.defragmented
 
 
-def end(ht: hl.Table, reference_genome: ReferenceGenome, **_: Any) -> hl.Expression:
-    return end_locus(ht, reference_genome).position
-
-
-def end_locus(
-    ht: hl.Table,
-    reference_genome: ReferenceGenome,
-    **_: Any,
-) -> hl.LocusExpression:
-    return hl.locus(ht.chr, ht.end, reference_genome.value)
+def end(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.end
 
 
 def populations(ht: hl.Table, **_: Any) -> hl.Expression:
@@ -91,8 +81,8 @@ def num_exon(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht.num_exon
 
 
-def pos(ht: hl.Table, reference_genome: ReferenceGenome, **_: Any) -> hl.Expression:
-    return start_locus(ht, reference_genome).position
+def pos(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.start
 
 
 def QS(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
@@ -116,7 +106,7 @@ def rg37_locus_end(
 ) -> hl.Expression | None:
     liftover.add_rg38_liftover()
     return hl.liftover(
-        end_locus(ht, ReferenceGenome.GRCh38),
+        hl.locus(ht.chr, ht.end, ReferenceGenome.GRCh38),
         ReferenceGenome.GRCh37.value,
     )
 

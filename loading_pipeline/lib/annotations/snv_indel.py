@@ -26,10 +26,6 @@ REGULATORY_CONSEQUENCE_TERMS_LOOKUP = hl.dict(
 )
 
 
-def caid(__: Any, **_: Any) -> hl.Expression:
-    return hl.missing(hl.tstr)
-
-
 def AB(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     is_called = hl.is_defined(mt.GT)
     return hl.bind(
@@ -57,10 +53,6 @@ def rg38_locus(
 ) -> hl.Expression | None:
     liftover.add_rg37_liftover()
     return hl.liftover(ht.locus, ReferenceGenome.GRCh38.value)
-
-
-def check_ref(ht: hl.Table, **_: Any) -> hl.BooleanExpression:
-    return hl.is_defined(ht.vep.check_ref)
 
 
 def sorted_motif_feature_consequences(

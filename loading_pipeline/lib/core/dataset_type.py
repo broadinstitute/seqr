@@ -239,10 +239,8 @@ class DatasetType(StrEnum):
             DatasetType.SNV_INDEL: {
                 'rsid': shared.rsid,
                 'variantId': shared.variant_id,
-                'xpos': shared.xpos,
                 'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences_grch37,
                 'transcripts': shared.sorted_transcript_consequences,
-                'CAID': snv_indel.caid,
                 'liftedOverChrom': shared.lifted_over_chrom,
                 'liftedOverPos': shared.lifted_over_pos,
             },
@@ -252,7 +250,6 @@ class DatasetType(StrEnum):
                 'mitotip': mito.mitotip,
                 'rsid': mito.rsid,
                 'variantId': shared.variant_id,
-                'xpos': shared.xpos,
                 'sortedTranscriptConsequences': shared.sorted_transcript_consequences,
                 'liftedOverPos': shared.lifted_over_pos,
             },
@@ -262,15 +259,12 @@ class DatasetType(StrEnum):
                 'chrom': sv.chrom,
                 'cpxIntervals': sv.cpx_intervals,
                 'end': sv.end,
-                'end_locus': sv.end_locus,
                 'pos': sv.pos,
                 'populations': sv.populations,
                 'predictions': sv.predictions,
                 'sortedGeneConsequences': sv.sorted_gene_consequences,
-                'start_locus': sv.start_locus,
                 'svType': sv.sv_type,
                 'svTypeDetail': sv.sv_type_detail,
-                'sv_len': sv.sv_len,
                 'variantId': sv.variant_id,
                 'xpos': shared.xpos,
                 'endChrom': sv.end_chrom,
@@ -282,13 +276,11 @@ class DatasetType(StrEnum):
             DatasetType.GCNV: {
                 'chrom': gcnv.chrom,
                 'end': gcnv.end,
-                'end_locus': gcnv.end_locus,
                 'numExon': gcnv.num_exon,
                 'pos': gcnv.pos,
                 'populations': gcnv.populations,
                 'predictions': gcnv.predictions,
                 'sortedGeneConsequences': gcnv.sorted_gene_consequences,
-                'start_locus': gcnv.start_locus,
                 'svType': gcnv.sv_type,
                 'variantId': gcnv.variant_id,
                 'xpos': gcnv.xpos,
@@ -302,7 +294,6 @@ class DatasetType(StrEnum):
         return {
             DatasetType.SNV_INDEL: {
                 **GRCh37_fns[DatasetType.SNV_INDEL],
-                'check_ref': snv_indel.check_ref,
                 'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences,
                 'transcripts': snv_indel.sorted_transcript_consequences,
                 'sortedRegulatoryFeatureConsequences': snv_indel.subsetted_sorted_regulatory_feature_consequences,
@@ -324,60 +315,10 @@ class DatasetType(StrEnum):
     def variants_export_field_names(
         self,
         reference_genome: ReferenceGenome,
-    ) -> list[str]:
-        if self in {DatasetType.SV, DatasetType.GCNV}:
-            names = [
-                'key_',
-                'xpos',
-                'chrom',
-                'pos',
-                'end',
-                'rg37LocusEnd',
-                'variantId',
-                'liftedOverChrom',
-                'liftedOverPos',
-            ]
-            if self == DatasetType.SV:
-                names += [
-                    'algorithms',
-                    'bothsidesSupport',
-                    'cpxIntervals',
-                    'endChrom',
-                    'svSourceDetail',
-                    'svType',
-                    'svTypeDetail',
-                    'predictions',
-                    'populations',
-                    'sortedGeneConsequences',
-                ]
-            else:
-                names += [
-                    'numExon',
-                    'svType',
-                    'predictions',
-                    'populations',
-                    'sortedGeneConsequences',
-                ]
-            return names
-        if self == DatasetType.MITO:
-            return [
-                'key_',
-                'variantId',
-                'rsid',
-                'liftedOverPos',
-                'commonLowHeteroplasmy',
-                'haplogroupDefining',
-                'mitotip',
-                'sortedTranscriptConsequences',
-            ]
-        names = ['key_']
-        if reference_genome == ReferenceGenome.GRCh38:
-            names += [
-                'sortedMotifFeatureConsequences',
-                'sortedRegulatoryFeatureConsequences',
-            ]
-        names.append('sortedTranscriptConsequences')
-        return names
+    ) -> set[str]:
+        annotations = {'key_', *self.formatting_annotation_fns(reference_genome).keys()}
+        detail_fields = set(self.variant_details_export_fields(reference_genome).values())
+        return annotations - detail_fields
 
     def variant_details_export_fields(
         self,
@@ -390,7 +331,6 @@ class DatasetType(StrEnum):
                     'key_',
                     'variantId',
                     'rsid',
-                    'CAID',
                     'liftedOverChrom',
                     'liftedOverPos',
                     'transcripts',
@@ -468,30 +408,8 @@ class DatasetType(StrEnum):
         }[self]
 
     @property
-    def variant_frequency_annotation_fns(self) -> list[Callable[..., hl.Expression]]:
-        return {
-            DatasetType.GCNV: [
-                gcnv.gt_stats,
-            ],
-        }.get(self, [])
-
-    @property
     def filter_invalid_sites(self):
         return self == DatasetType.SNV_INDEL
-
-    @property
-    def should_export_to_vcf(self):
-        return self == DatasetType.SV
-
-    @property
-    def export_vcf_annotation_fns(self) -> list[Callable[..., hl.Expression]]:
-        return {
-            DatasetType.SV: [
-                sv.locus,
-                sv.alleles,
-                sv.info,
-            ],
-        }[self]
 
     @property
     def should_write_new_variant_details(self):

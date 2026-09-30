@@ -71,38 +71,6 @@ def _sv_types(ht: hl.Table) -> hl.ArrayExpression:
     return ht.alleles[1].replace('[<>]', '').split(':', 2)
 
 
-def alleles(ht: hl.Table, **_: Any) -> hl.ArrayExpression:
-    return hl.array(
-        [
-            'N',
-            hl.if_else(
-                (hl.is_defined(ht.sv_type_detail) & (ht.sv_type != 'CPX')),
-                hl.format(
-                    '<%s:%s>',
-                    ht.sv_type,
-                    ht.sv_type_detail,
-                ),
-                hl.format('<%s>', ht.sv_type),
-            ),
-        ],
-    )
-
-
-def info(ht: hl.Table, **_: Any) -> hl.StructExpression:
-    return hl.Struct(
-        ALGORITHMS=ht.algorithms,
-        END=ht.start_locus.position,
-        CHR2=ht.end_locus.contig,
-        END2=ht.end_locus.position,
-        SVTYPE=ht.sv_type,
-        SVLEN=ht.sv_len,
-    )
-
-
-def locus(ht: hl.Table, **_: Any) -> hl.LocusExpression:
-    return ht.start_locus
-
-
 def algorithms(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.str(',').join(ht['info.ALGORITHMS'])
 
@@ -281,10 +249,6 @@ def sorted_gene_consequences(
 
 def predictions(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.struct(strvctvre=hl.parse_float32(ht['info.StrVCTVRE']))
-
-
-def sv_len(ht: hl.Table, **_: Any) -> hl.Expression:
-    return ht['info.SVLEN']
 
 
 def sv_type(ht: hl.Table, **_: Any) -> hl.Expression:
