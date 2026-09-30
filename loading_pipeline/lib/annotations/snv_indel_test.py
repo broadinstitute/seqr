@@ -171,7 +171,7 @@ class SNVTest(unittest.TestCase):
                         lofFilters=['END_TRUNC', 'INCOMPLETE_CDS'],
                     ),
                     spliceregion=hl.Struct(
-                        extendedIntronicSpliceRegionVariant=False,
+                        extended_intronic_splice_region_variant=False,
                     ),
                     utrannotator=hl.Struct(
                         existingInframeOorfs=None,
@@ -207,7 +207,7 @@ class SNVTest(unittest.TestCase):
                         lofFilters=None,
                     ),
                     spliceregion=hl.Struct(
-                        extendedIntronicSpliceRegionVariant=False,
+                        extended_intronic_splice_region_variant=False,
                     ),
                     utrannotator=hl.Struct(
                         existingInframeOorfs=None,
@@ -244,7 +244,7 @@ class SNVTest(unittest.TestCase):
                         lofFilters=None,
                     ),
                     spliceregion=hl.Struct(
-                        extendedIntronicSpliceRegionVariant=True,
+                        extended_intronic_splice_region_variant=True,
                     ),
                     utrannotator=hl.Struct(
                         existingInframeOorfs=0,
