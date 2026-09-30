@@ -37,6 +37,8 @@ TEST_RUN_ID = 'manual__2024-04-03'
 
 
 class WriteNewEntriesParquetTest(MockedDatarootTestCase):
+    maxDiff = None
+
     def test_write_new_entries_parquet(self):
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_3_REMAP,

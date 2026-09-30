@@ -2,7 +2,7 @@ import unittest
 
 import hail as hl
 
-from loading_pipeline.lib.core import DatasetType
+from loading_pipeline.lib.core import DatasetType, SampleType
 from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
@@ -48,7 +48,8 @@ class FamilyEntriesTest(unittest.TestCase):
                 'project_families': {'p1': ['1'], 'p2': ['2', '3']},
             },
         )
-        ht = compute_callset_family_entries_ht(DatasetType.SNV_INDEL, mt, {'GT': mt.GT})
+        ht = compute_callset_family_entries_ht(DatasetType.SNV_INDEL, mt, {'GT': mt.GT}, SampleType.WGS)
+        self.maxDiff = None
         self.assertCountEqual(
             ht.globals.collect(),
             [
