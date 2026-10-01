@@ -64,7 +64,6 @@ class FamilyEntriesTest(unittest.TestCase):
             {'gt': mt.GT.n_alt_alleles()},
             SampleType.WGS,
         )
-        self.maxDiff = None
         self.assertCountEqual(
             ht.filters.collect(),
             [{'HIGH_SR_BACKGROUND'}, set()],
