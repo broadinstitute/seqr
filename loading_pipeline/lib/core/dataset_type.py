@@ -381,7 +381,6 @@ class DatasetType(StrEnum):
                 'dp': mito.DP,
                 'hl': mito.HL,
                 'mitoCn': mito.mito_cn,
-                'gq': mito.GQ,
                 'gt': shared.gt,
             },
             DatasetType.SV: {

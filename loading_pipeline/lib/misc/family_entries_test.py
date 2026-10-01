@@ -61,7 +61,7 @@ class FamilyEntriesTest(unittest.TestCase):
         ht = compute_callset_family_entries_ht(
             DatasetType.SNV_INDEL,
             mt,
-            {'GT': mt.GT},
+            {'gt': mt.GT.n_alt_alleles()},
             SampleType.WGS,
         )
         self.maxDiff = None
