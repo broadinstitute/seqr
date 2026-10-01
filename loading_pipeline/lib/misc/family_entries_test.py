@@ -73,20 +73,34 @@ class FamilyEntriesTest(unittest.TestCase):
             ht.family_entries.collect(),
             [
                 [
-                    [
-                        hl.Struct(GT=hl.Call(alleles=[0, 0], phased=False)),
-                        hl.Struct(GT=hl.Call(alleles=[0, 0], phased=False)),
-                        hl.Struct(GT=hl.Call(alleles=[1, 1], phased=False)),
-                    ],
+                    hl.Struct(
+                        family_guid='1',
+                        project_guid='p1',
+                        calls=[
+                            hl.Struct(sampleId='b', gt=0),
+                            hl.Struct(sampleId='c', gt=0),
+                            hl.Struct(sampleId='d', gt=2),
+                        ],
+                    ),
                     None,
                 ],
                 [
-                    [
-                        hl.Struct(GT=hl.Call(alleles=[0, 0], phased=False)),
-                        hl.Struct(GT=hl.Call(alleles=[0, 0], phased=False)),
-                        hl.Struct(GT=hl.Call(alleles=[1, 1], phased=False)),
-                    ],
-                    [hl.Struct(GT=hl.Call(alleles=[0, 1], phased=False))],
+                    hl.Struct(
+                        family_guid='1',
+                        project_guid='p1',
+                        calls=[
+                            hl.Struct(sampleId='b', gt=0),
+                            hl.Struct(sampleId='c', gt=0),
+                            hl.Struct(sampleId='d', gt=2),
+                        ],
+                    ),
+                    hl.Struct(
+                        family_guid='2',
+                        project_guid='p2',
+                        calls=[
+                            hl.Struct(sampleId='a', gt=1),
+                        ],
+                    ),
                 ],
             ],
         )
@@ -98,26 +112,29 @@ class FamilyEntriesTest(unittest.TestCase):
                     'id': 0,
                     'filters': {'PASS', 'HIGH_SR_BACKGROUND'},
                     'family_entries': [
-                        [
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 1], phased=False),
-                                family_guid='family_a',
-                                s='sample_1',
-                            ),
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 0], phased=False),
-                                family_guid='family_a',
-                                s='sample_2',
-                            ),
-                        ],
-                        [
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 1], phased=False),
-                                family_guid='family_b',
-                                s='sample_3',
-                            ),
-                            None,
-                        ],
+                        hl.Struct(
+                            family_guid='family_a',
+                            calls=[
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 1], phased=False),
+                                    s='sample_1',
+                                ),
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 0], phased=False),
+                                    s='sample_2',
+                                ),
+                            ],
+                        ),
+                        hl.Struct(
+                            family_guid='family_b',
+                            calls=[
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 1], phased=False),
+                                    s='sample_3',
+                                ),
+                                None,
+                            ],
+                        ),
                         None,
                     ],
                 },
@@ -125,22 +142,29 @@ class FamilyEntriesTest(unittest.TestCase):
                     'id': 0,
                     'filters': {'PASS'},
                     'family_entries': [
-                        [
-                            None,
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 0], phased=False),
-                                family_guid='family_a',
-                                s='sample_2',
-                            ),
-                        ],
-                        [
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 1], phased=False),
-                                family_guid='family_b',
-                                s='sample_3',
-                            ),
-                            None,
-                        ],
+                        hl.Struct(
+                            family_guid='family_a',
+                            calls=[
+                                None,
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 0], phased=False),
+                                    s='sample_2',
+                                ),
+                            ],
+                        ),
+                        hl.Struct(
+                            family_guid='family_b',
+                            calls=[
+                                None,
+                                hl.Struct(
+                                    hl.Struct(
+                                        GT=hl.Call(alleles=[0, 1], phased=False),
+                                        s='sample_3',
+                                    ),
+                                    None,
+                                ),
+                            ],
+                        ),
                         None,
                     ],
                 },
@@ -156,18 +180,19 @@ class FamilyEntriesTest(unittest.TestCase):
                     'id': 3,
                     'filters': {'PASS'},
                     'family_entries': [
-                        [
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 1], phased=False),
-                                family_guid='family_a',
-                                s='sample_1',
-                            ),
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 1], phased=False),
-                                family_guid='family_a',
-                                s='sample_2',
-                            ),
-                        ],
+                        hl.Struct(
+                            family_guid='family_a',
+                            calls=[
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 1], phased=False),
+                                    s='sample_1',
+                                ),
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 1], phased=False),
+                                    s='sample_2',
+                                ),
+                            ],
+                        ),
                         None,
                     ],
                 },
@@ -176,11 +201,13 @@ class FamilyEntriesTest(unittest.TestCase):
                 id=hl.tint32,
                 filters=hl.tset(hl.tstr),
                 family_entries=hl.tarray(
-                    hl.tarray(
-                        hl.tstruct(
-                            GT=hl.tcall,
-                            family_guid=hl.tstr,
-                            s=hl.tstr,
+                    hl.tstruct(
+                        family_guid=hl.tstr,
+                        calls=hl.tarray(
+                            hl.tstruct(
+                                GT=hl.tcall,
+                                s=hl.tstr,
+                            ),
                         ),
                     ),
                 ),
@@ -195,26 +222,29 @@ class FamilyEntriesTest(unittest.TestCase):
                     id=0,
                     filters={'PASS', 'HIGH_SR_BACKGROUND'},
                     family_entries=[
-                        [
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 1], phased=False),
-                                family_guid='family_a',
-                                s='sample_1',
-                            ),
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 0], phased=False),
-                                family_guid='family_a',
-                                s='sample_2',
-                            ),
-                        ],
-                        [
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 1], phased=False),
-                                family_guid='family_b',
-                                s='sample_3',
-                            ),
-                            None,
-                        ],
+                        hl.Struct(
+                            family_guid='family_a',
+                            calls=[
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 1], phased=False),
+                                    s='sample_1',
+                                ),
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 0], phased=False),
+                                    s='sample_2',
+                                ),
+                            ],
+                        ),
+                        hl.Struct(
+                            family_guid='family_b',
+                            calls=[
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 1], phased=False),
+                                    s='sample_3',
+                                ),
+                                None,
+                            ],
+                        ),
                         None,
                     ],
                 ),
@@ -227,18 +257,19 @@ class FamilyEntriesTest(unittest.TestCase):
                     id=3,
                     filters={'PASS'},
                     family_entries=[
-                        [
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 1], phased=False),
-                                family_guid='family_a',
-                                s='sample_1',
-                            ),
-                            hl.Struct(
-                                GT=hl.Call(alleles=[0, 1], phased=False),
-                                family_guid='family_a',
-                                s='sample_2',
-                            ),
-                        ],
+                        hl.Struct(
+                            family_guid='family_a',
+                            calls=[
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 1], phased=False),
+                                    s='sample_1',
+                                ),
+                                hl.Struct(
+                                    GT=hl.Call(alleles=[0, 1], phased=False),
+                                    s='sample_2',
+                                ),
+                            ],
+                        ),
                         None,
                     ],
                 ),
