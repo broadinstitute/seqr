@@ -105,48 +105,32 @@ def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return mt.RD_CN
 
 
-def new_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    is_called = hl.is_defined(mt.GT)
-    was_previously_called = hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains(
-        'EMPTY',
-    )
-    num_alt = hl.if_else(is_called, mt.GT.n_alt_alleles(), -1)
-    prev_num_alt = hl.if_else(
-        was_previously_called,
+def _prev_num_alt(mt: hl.MatrixTable) -> hl.Expression:
+    return hl.or_missing(
+        hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains('EMPTY'),
         PREVIOUS_GENOTYPE_N_ALT_ALLELES[hl.set(mt.CONC_ST)],
-        -1,
     )
-    novel_genotype = (num_alt != prev_num_alt) & (prev_num_alt == 0)
-    return hl.or_missing(is_called, ~was_previously_called | novel_genotype)
+
+
+def new_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+    prev_num_alt = _prev_num_alt(mt)
+    novel_genotype = hl.if_else(
+        hl.is_defined(prev_num_alt),
+        (mt.GT.n_alt_alleles() != prev_num_alt) & (prev_num_alt == 0),
+        True,
+    )
+    return hl.or_missing(hl.is_defined(mt.GT), novel_genotype)
 
 
 def prev_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    is_called = hl.is_defined(mt.GT)
-    was_previously_called = hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains(
-        'EMPTY',
-    )
-    num_alt = hl.if_else(is_called, mt.GT.n_alt_alleles(), -1)
-    prev_num_alt = hl.if_else(
-        was_previously_called,
-        PREVIOUS_GENOTYPE_N_ALT_ALLELES[hl.set(mt.CONC_ST)],
-        -1,
-    )
-    concordant_genotype = num_alt == prev_num_alt
-    return hl.or_missing(is_called, was_previously_called & concordant_genotype)
+    concordant_genotype = hl.is_defined(prev_num_alt) & mt.GT.n_alt_alleles() == prev_num_alt
+    return hl.or_missing(hl.is_defined(mt.GT), concordant_genotype)
 
 
 def prev_num_alt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    is_called = hl.is_defined(mt.GT)
-    was_previously_called = hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains(
-        'EMPTY',
-    )
-    num_alt = hl.if_else(is_called, mt.GT.n_alt_alleles(), -1)
-    prev_num_alt = hl.if_else(
-        was_previously_called,
-        PREVIOUS_GENOTYPE_N_ALT_ALLELES[hl.set(mt.CONC_ST)],
-        -1,
-    )
-    discordant_genotype = (num_alt != prev_num_alt) & (prev_num_alt > 0)
+    num_alt = hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1)
+    prev_num_alt = _prev_num_alt(mt)
+    discordant_genotype = num_alt != prev_num_alt
     return hl.or_missing(discordant_genotype, prev_num_alt)
 
 
