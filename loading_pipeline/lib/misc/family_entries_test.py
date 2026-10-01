@@ -155,14 +155,11 @@ class FamilyEntriesTest(unittest.TestCase):
                         hl.Struct(
                             family_guid='family_b',
                             calls=[
-                                None,
                                 hl.Struct(
-                                    hl.Struct(
-                                        GT=hl.Call(alleles=[0, 1], phased=False),
-                                        s='sample_3',
-                                    ),
-                                    None,
+                                    GT=hl.Call(alleles=[0, 1], phased=False),
+                                    s='sample_3',
                                 ),
+                                None,
                             ],
                         ),
                         None,
