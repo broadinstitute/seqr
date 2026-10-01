@@ -149,12 +149,12 @@ def subsetted_sorted_transcript_consequences(
         gencode_ensembl_to_refseq_id_mapping,
     ).map(
         lambda c: c.select(
-            'canonical',
-            'consequenceTerms',
-            'geneId',
             alphamissensePathogenicity=c.alphamissense.pathogenicity,
+            canonical=c.canonical,
+            consequenceTerms=c.consequenceTerms,
             extendedIntronicSpliceRegionVariant=c.spliceregion.extended_intronic_splice_region_variant,
             fiveutrConsequence=c.utrannotator.fiveutrConsequence,
+            geneId=c.geneId,
             isManeSelect=hl.is_defined(c.maneSelect),
         ),
     )
