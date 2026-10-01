@@ -238,7 +238,7 @@ class DatasetType(StrEnum):
         GRCh37_fns = {  # noqa: N806
             DatasetType.SNV_INDEL: {
                 'rsid': shared.rsid,
-                'CAID': lambda *args, **kwargs: hl.missing(hl.tstr),
+                'CAID': lambda *_, **__: hl.missing(hl.tstr),
                 'variantId': shared.variant_id,
                 'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences_grch37,
                 'transcripts': shared.sorted_transcript_consequences,
