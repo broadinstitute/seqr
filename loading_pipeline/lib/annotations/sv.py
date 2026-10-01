@@ -124,8 +124,8 @@ def new_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
 
 def prev_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     prev_num_alt = _prev_num_alt(mt)
-    concordant_genotype = (
-        hl.is_defined(prev_num_alt) & (mt.GT.n_alt_alleles() == prev_num_alt)
+    concordant_genotype = hl.is_defined(prev_num_alt) & (
+        mt.GT.n_alt_alleles() == prev_num_alt
     )
     return hl.or_missing(hl.is_defined(mt.GT), concordant_genotype)
 
