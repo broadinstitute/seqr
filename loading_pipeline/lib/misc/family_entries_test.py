@@ -114,23 +114,14 @@ class FamilyEntriesTest(unittest.TestCase):
                         hl.Struct(
                             family_guid='family_a',
                             calls=[
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 1], phased=False),
-                                    s='sample_1',
-                                ),
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 0], phased=False),
-                                    s='sample_2',
-                                ),
+                                hl.Struct(gt=1, s='sample_1'),
+                                hl.Struct(gt=0, s='sample_2'),
                             ],
                         ),
                         hl.Struct(
                             family_guid='family_b',
                             calls=[
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 1], phased=False),
-                                    s='sample_3',
-                                ),
+                                hl.Struct(gt=1, s='sample_3'),
                                 None,
                             ],
                         ),
@@ -145,19 +136,13 @@ class FamilyEntriesTest(unittest.TestCase):
                             family_guid='family_a',
                             calls=[
                                 None,
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 0], phased=False),
-                                    s='sample_2',
-                                ),
+                                hl.Struct(gt=0, s='sample_2'),
                             ],
                         ),
                         hl.Struct(
                             family_guid='family_b',
                             calls=[
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 1], phased=False),
-                                    s='sample_3',
-                                ),
+                                hl.Struct(gt=1, s='sample_3'),
                                 None,
                             ],
                         ),
@@ -179,14 +164,8 @@ class FamilyEntriesTest(unittest.TestCase):
                         hl.Struct(
                             family_guid='family_a',
                             calls=[
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 1], phased=False),
-                                    s='sample_1',
-                                ),
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 1], phased=False),
-                                    s='sample_2',
-                                ),
+                                hl.Struct(gt=1, s='sample_1'),
+                                hl.Struct(gt=1, s='sample_2'),
                             ],
                         ),
                         None,
@@ -201,7 +180,7 @@ class FamilyEntriesTest(unittest.TestCase):
                         family_guid=hl.tstr,
                         calls=hl.tarray(
                             hl.tstruct(
-                                GT=hl.tcall,
+                                gt=hl.tint,
                                 s=hl.tstr,
                             ),
                         ),
@@ -221,23 +200,14 @@ class FamilyEntriesTest(unittest.TestCase):
                         hl.Struct(
                             family_guid='family_a',
                             calls=[
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 1], phased=False),
-                                    s='sample_1',
-                                ),
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 0], phased=False),
-                                    s='sample_2',
-                                ),
+                                hl.Struct(gt=1, s='sample_1'),
+                                hl.Struct(gt=0, s='sample_2'),
                             ],
                         ),
                         hl.Struct(
                             family_guid='family_b',
                             calls=[
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 1], phased=False),
-                                    s='sample_3',
-                                ),
+                                hl.Struct(gt=1, s='sample_3'),
                                 None,
                             ],
                         ),
@@ -256,14 +226,8 @@ class FamilyEntriesTest(unittest.TestCase):
                         hl.Struct(
                             family_guid='family_a',
                             calls=[
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 1], phased=False),
-                                    s='sample_1',
-                                ),
-                                hl.Struct(
-                                    GT=hl.Call(alleles=[0, 1], phased=False),
-                                    s='sample_2',
-                                ),
+                                hl.Struct(gt=1, s='sample_1'),
+                                hl.Struct(gt=1, s='sample_2'),
                             ],
                         ),
                         None,
