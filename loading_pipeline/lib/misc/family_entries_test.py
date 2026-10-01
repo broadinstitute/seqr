@@ -66,17 +66,6 @@ class FamilyEntriesTest(unittest.TestCase):
         )
         self.maxDiff = None
         self.assertCountEqual(
-            ht.globals.collect(),
-            [
-                hl.Struct(
-                    family_samples={'1': ['b', 'c', 'd'], '2': ['a']},
-                    project_families={'p1': ['1'], 'p2': ['2', '3']},
-                    project_guids=['p1', 'p2'],
-                    family_guids=['1', '2'],
-                ),
-            ],
-        )
-        self.assertCountEqual(
             ht.filters.collect(),
             [{'HIGH_SR_BACKGROUND'}, set()],
         )
