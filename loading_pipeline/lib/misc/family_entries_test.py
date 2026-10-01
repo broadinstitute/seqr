@@ -57,7 +57,7 @@ class FamilyEntriesTest(unittest.TestCase):
                 'family_samples': {'2': ['a'], '1': ['b', 'c', 'd']},
                 'project_families': {'p1': ['1'], 'p2': ['2', '3']},
             },
-        )
+        ).key_rows_by('locus', 'alleles')
         ht = compute_callset_family_entries_ht(
             DatasetType.SNV_INDEL,
             mt,

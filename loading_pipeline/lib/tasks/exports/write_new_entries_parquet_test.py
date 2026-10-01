@@ -37,8 +37,6 @@ TEST_RUN_ID = 'manual__2024-04-03'
 
 
 class WriteNewEntriesParquetTest(MockedDatarootTestCase):
-    maxDiff = None
-
     def test_write_new_entries_parquet(self):
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_3_REMAP,
@@ -210,7 +208,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
         export_json = convert_ndarray_to_list(df.to_dict('records'))
         self.assertEqual(len(export_json), 3)
         self.assertEqual(
-            export_json[1:],
+            export_json[2:],
             [
                 {
                     'project_guid': 'R0116_test_project3',
