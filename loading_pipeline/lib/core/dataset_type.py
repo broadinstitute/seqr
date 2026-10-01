@@ -238,6 +238,7 @@ class DatasetType(StrEnum):
         GRCh37_fns = {  # noqa: N806
             DatasetType.SNV_INDEL: {
                 'rsid': shared.rsid,
+                'CAID': lambda *args, **kwargs: hl.missing(hl.tstr),
                 'variantId': shared.variant_id,
                 'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences_grch37,
                 'transcripts': shared.sorted_transcript_consequences,
@@ -331,9 +332,9 @@ class DatasetType(StrEnum):
                     'key_',
                     'variantId',
                     'rsid',
+                    'CAID',
                     'liftedOverChrom',
                     'liftedOverPos',
-                    'transcripts',
                 ]
             },
         }
@@ -344,6 +345,7 @@ class DatasetType(StrEnum):
                     'sortedRegulatoryFeatureConsequences': 'sortedRegulatoryFeatureConsequences_detail',
                 },
             )
+        fields[DatasetType.SNV_INDEL]['transcripts'] = 'transcripts'
         return fields.get(self, {})
 
     def liftover_annotation_fns(

@@ -60,10 +60,10 @@ def _get_cpx_interval(
     contig_pos = type_contig[1].split(':')
     pos = contig_pos[1].split('-')
     return hl.struct(
-        type=validated_enum_member(type_contig[0], SV_TYPES),
         chrom=reference_independent_contig(contig_pos[0]),
         start=hl.int32(pos[0]),
         end=hl.int32(pos[1]),
+        type=validated_enum_member(type_contig[0], SV_TYPES),
     )
 
 
