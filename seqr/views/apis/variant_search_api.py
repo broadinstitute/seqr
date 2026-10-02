@@ -417,7 +417,7 @@ def search_context_handler(request):
     family_project_guids = families.values_list('project__guid', flat=True)
     project_guid = family_project_guids[0] if len(family_project_guids) == 1 else None
 
-    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user)
+    project_guids, analysis_group_guids = get_project_analysis_group_guids_user_can_view(request.user, limit_data_manager=False)
     full_access_projects = set(family_project_guids).intersection(project_guids)
     partial_access_projects = set(family_project_guids) - set(project_guids)
     family_q = group_project_q = Q(project__guid__in=full_access_projects)
