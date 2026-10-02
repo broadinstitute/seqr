@@ -10,6 +10,9 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPES,
     validated_enum_member,
 )
+from loading_pipeline.lib.annotations.expression_helpers import (
+    reference_independent_contig,
+)
 from loading_pipeline.lib.core.definitions import ReferenceGenome
 
 CONSEQ_PREDICTED_PREFIX = 'info.PREDICTED_'
@@ -51,24 +54,16 @@ PREVIOUS_GENOTYPE_N_ALT_ALLELES = hl.dict(
 
 def _get_cpx_interval(
     x: hl.StringExpression,
-    reference_genome: ReferenceGenome,
 ) -> hl.StructExpression:
     # an example format of CPX_INTERVALS is "DUP_chr1:1499897-1499974"
     type_contig = x.split('_')
     contig_pos = type_contig[1].split(':')
     pos = contig_pos[1].split('-')
     return hl.struct(
+        chrom=reference_independent_contig(contig_pos[0]),
+        start=hl.int32(pos[0]),
+        end=hl.int32(pos[1]),
         type=validated_enum_member(type_contig[0], SV_TYPES),
-        start=hl.locus(
-            contig_pos[0],
-            hl.int32(pos[0]),
-            reference_genome.value,
-        ),
-        end=hl.locus(
-            contig_pos[0],
-            hl.int32(pos[1]),
-            reference_genome.value,
-        ),
     )
 
 
@@ -76,79 +71,79 @@ def _sv_types(ht: hl.Table) -> hl.ArrayExpression:
     return ht.alleles[1].replace('[<>]', '').split(':', 2)
 
 
-def alleles(ht: hl.Table, **_: Any) -> hl.ArrayExpression:
-    return hl.array(
-        [
-            'N',
-            hl.if_else(
-                (hl.is_defined(ht.sv_type_detail) & (ht.sv_type != 'CPX')),
-                hl.format(
-                    '<%s:%s>',
-                    ht.sv_type,
-                    ht.sv_type_detail,
-                ),
-                hl.format('<%s>', ht.sv_type),
-            ),
-        ],
-    )
-
-
-def info(ht: hl.Table, **_: Any) -> hl.StructExpression:
-    return hl.Struct(
-        ALGORITHMS=ht.algorithms,
-        END=ht.start_locus.position,
-        CHR2=ht.end_locus.contig,
-        END2=ht.end_locus.position,
-        SVTYPE=ht.sv_type,
-        SVLEN=ht.sv_len,
-    )
-
-
-def locus(ht: hl.Table, **_: Any) -> hl.LocusExpression:
-    return ht.start_locus
-
-
 def algorithms(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.str(',').join(ht['info.ALGORITHMS'])
+
+
+def variant_id(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.variant_id
 
 
 def bothsides_support(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht['info.BOTHSIDES_SUPPORT']
 
 
+def chrom(ht: hl.Table, **_: Any) -> hl.Expression:
+    return reference_independent_contig(ht.locus.contig)
+
+
+def end_chrom(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.or_missing(
+        ((sv_type(ht) != 'INS') & (ht.locus.contig != end_locus(ht).contig)),
+        reference_independent_contig(end_locus(ht).contig),
+    )
+
+
+def sv_source_detail(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.or_missing(
+        ((sv_type(ht) == 'INS') & (ht.locus.contig != end_locus(ht).contig)),
+        hl.Struct(chrom=reference_independent_contig(end_locus(ht).contig)),
+    )
+
+
 def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return mt.RD_CN
 
 
-def concordance(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    is_called = hl.is_defined(mt.GT)
-    was_previously_called = hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains(
-        'EMPTY',
-    )
-    num_alt = hl.if_else(is_called, mt.GT.n_alt_alleles(), -1)
-    prev_num_alt = hl.if_else(
-        was_previously_called,
+def _prev_num_alt(mt: hl.MatrixTable) -> hl.Expression:
+    return hl.or_missing(
+        hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains('EMPTY'),
         PREVIOUS_GENOTYPE_N_ALT_ALLELES[hl.set(mt.CONC_ST)],
-        -1,
     )
-    concordant_genotype = num_alt == prev_num_alt
+
+
+def new_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+    prev_num_alt = _prev_num_alt(mt)
+    novel_genotype = hl.if_else(
+        hl.is_defined(prev_num_alt),
+        (mt.GT.n_alt_alleles() != prev_num_alt) & (prev_num_alt == 0),
+        True,
+    )
+    return hl.or_missing(hl.is_defined(mt.GT), novel_genotype)
+
+
+def prev_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+    prev_num_alt = _prev_num_alt(mt)
+    concordant_genotype = hl.is_defined(prev_num_alt) & (
+        mt.GT.n_alt_alleles() == prev_num_alt
+    )
+    return hl.or_missing(hl.is_defined(mt.GT), concordant_genotype)
+
+
+def prev_num_alt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+    num_alt = hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1)
+    prev_num_alt = _prev_num_alt(mt)
     discordant_genotype = (num_alt != prev_num_alt) & (prev_num_alt > 0)
-    novel_genotype = (num_alt != prev_num_alt) & (prev_num_alt == 0)
-    return hl.struct(
-        prev_num_alt=hl.or_missing(discordant_genotype, prev_num_alt),
-        prev_call=hl.or_missing(is_called, was_previously_called & concordant_genotype),
-        new_call=hl.or_missing(is_called, ~was_previously_called | novel_genotype),
-    )
+    return hl.or_missing(discordant_genotype, prev_num_alt)
 
 
 def cpx_intervals(
     ht: hl.Table,
-    reference_genome: ReferenceGenome,
     **_: Any,
 ) -> hl.Expression:
     return hl.or_missing(
         hl.is_defined(ht['info.CPX_INTERVALS']),
-        ht['info.CPX_INTERVALS'].map(lambda x: _get_cpx_interval(x, reference_genome)),
+        ht['info.CPX_INTERVALS'].map(_get_cpx_interval),
     )
 
 
@@ -167,15 +162,28 @@ def end_locus(ht: hl.Table, **_: Any) -> hl.StructExpression:
     )
 
 
-def gnomad_svs(
+def end(ht: hl.Table, **_: Any) -> hl.Expression:
+    return end_locus(ht).position
+
+
+def populations(
     ht: hl.Table,
     gnomad_svs_ht: hl.Table,
     **_: Any,
 ) -> hl.Expression:
-    gnomad_svs_ht = gnomad_svs_ht.drop('locus', 'alleles')
-    return gnomad_svs_ht.annotate(
-        ID=gnomad_svs_ht.KEY,
-    )[ht['info.GNOMAD_V4.1_TRUTH_VID']]
+    gnomad_sv_id = ht['info.GNOMAD_V4.1_TRUTH_VID']
+    gnomad_sv = gnomad_svs_ht[gnomad_sv_id]
+    return hl.struct(
+        gnomad_svs=hl.or_missing(
+            hl.is_defined(gnomad_sv),
+            hl.struct(
+                af=gnomad_sv.AF,
+                het=gnomad_sv.N_HET,
+                hom=gnomad_sv.N_HOM,
+                id=gnomad_sv_id,
+            ),
+        ),
+    )
 
 
 def rg37_locus_end(
@@ -197,6 +205,10 @@ def rg37_locus_end(
     )
 
 
+def pos(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.locus.position
+
+
 def start_locus(ht: hl.Table, **_: Any):
     return ht.locus
 
@@ -210,8 +222,8 @@ def sorted_gene_consequences(
     mapped_genes = [
         ht[gene_col].map(
             lambda gene: hl.struct(
-                gene_id=gencode_gene_symbol_to_gene_id_mapping.get(gene),
-                major_consequence=validated_enum_member(
+                geneId=gencode_gene_symbol_to_gene_id_mapping.get(gene),
+                majorConsequence=validated_enum_member(
                     gene_col.replace(CONSEQ_PREDICTED_PREFIX, '', 1),  # noqa: B023
                     SV_CONSEQUENCE_RANKS,
                 ),
@@ -222,12 +234,8 @@ def sorted_gene_consequences(
     return hl.filter(hl.is_defined, mapped_genes).flatmap(lambda x: x)
 
 
-def strvctvre(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.struct(score=hl.parse_float32(ht['info.StrVCTVRE']))
-
-
-def sv_len(ht: hl.Table, **_: Any) -> hl.Expression:
-    return ht['info.SVLEN']
+def predictions(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.struct(strvctvre=hl.parse_float32(ht['info.StrVCTVRE']))
 
 
 def sv_type(ht: hl.Table, **_: Any) -> hl.Expression:

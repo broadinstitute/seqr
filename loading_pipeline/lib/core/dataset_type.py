@@ -4,7 +4,7 @@ from enum import StrEnum
 import hail as hl
 
 from loading_pipeline.lib.annotations import gcnv, mito, shared, snv_indel, sv
-from loading_pipeline.lib.core.definitions import ReferenceGenome
+from loading_pipeline.lib.core.definitions import ReferenceGenome, SampleType
 from loading_pipeline.lib.core.environment import Env
 
 
@@ -45,6 +45,20 @@ class DatasetType(StrEnum):
         return (
             lambda s: f'{s.locus.contig if reference_genome == ReferenceGenome.GRCh37 else s.locus.contig.replace("chr", "")}-{s.locus.position}-{"-".join(s.alleles)}'
         )
+
+    def entries_table_key_expression(
+        self,
+        ht: hl.Table,
+        sample_type: SampleType,
+    ) -> dict[str, hl.Expression]:
+        if self in {DatasetType.GCNV, DatasetType.SV}:
+            return {'sign': 1, 'variantId': ht.variant_id}
+        return {
+            'sample_type': sample_type.value,
+            'sign': 1,
+            'variantId': shared.variant_id(ht),
+            'xpos': shared.xpos(ht),
+        }
 
     @property
     def col_fields(
@@ -202,8 +216,8 @@ class DatasetType(StrEnum):
     @property
     def family_entries_filter_fn(self) -> Callable[[hl.StructExpression], bool]:
         return {
-            DatasetType.GCNV: lambda e: hl.is_defined(e.GT),
-        }.get(self, lambda e: e.GT.is_non_ref())
+            DatasetType.GCNV: lambda e: hl.is_defined(e.gt),
+        }.get(self, lambda e: e.gt > 0)
 
     @property
     def can_run_validation(self) -> bool:
@@ -220,138 +234,183 @@ class DatasetType(StrEnum):
     def formatting_annotation_fns(
         self,
         reference_genome: ReferenceGenome,
-    ) -> list[Callable[..., hl.Expression]]:
+    ) -> dict[str, Callable[..., hl.Expression]]:
         GRCh37_fns = {  # noqa: N806
-            DatasetType.SNV_INDEL: [
-                shared.rsid,
-                shared.variant_id,
-                shared.xpos,
-                shared.sorted_transcript_consequences,
-                snv_indel.rg38_locus,
-            ],
-            DatasetType.MITO: [
-                mito.common_low_heteroplasmy,
-                mito.haplogroup,
-                mito.mitotip,
-                mito.rsid,
-                shared.variant_id,
-                shared.xpos,
-                shared.sorted_transcript_consequences,
-            ],
-            DatasetType.SV: [
-                sv.algorithms,
-                sv.bothsides_support,
-                sv.cpx_intervals,
-                sv.end_locus,
-                sv.gnomad_svs,
-                sv.sorted_gene_consequences,
-                sv.start_locus,
-                sv.strvctvre,
-                sv.sv_type,
-                sv.sv_type_detail,
-                sv.sv_len,
-                shared.xpos,
-            ],
-            DatasetType.GCNV: [
-                gcnv.end_locus,
-                gcnv.num_exon,
-                gcnv.sorted_gene_consequences,
-                gcnv.start_locus,
-                gcnv.strvctvre,
-                gcnv.sv_type,
-                gcnv.xpos,
-            ],
+            DatasetType.SNV_INDEL: {
+                'rsid': shared.rsid,
+                'CAID': lambda *_, **__: hl.missing(hl.tstr),
+                'variantId': shared.variant_id,
+                'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences_grch37,
+                'transcripts': shared.sorted_transcript_consequences,
+                'liftedOverChrom': shared.lifted_over_chrom,
+                'liftedOverPos': shared.lifted_over_pos,
+            },
+            DatasetType.MITO: {
+                'commonLowHeteroplasmy': mito.common_low_heteroplasmy,
+                'haplogroupDefining': mito.haplogroupDefining,
+                'mitotip': mito.mitotip,
+                'rsid': mito.rsid,
+                'variantId': shared.variant_id,
+                'sortedTranscriptConsequences': shared.sorted_transcript_consequences,
+                'liftedOverPos': shared.lifted_over_pos,
+            },
+            DatasetType.SV: {
+                'algorithms': sv.algorithms,
+                'bothsidesSupport': sv.bothsides_support,
+                'chrom': sv.chrom,
+                'cpxIntervals': sv.cpx_intervals,
+                'end': sv.end,
+                'pos': sv.pos,
+                'populations': sv.populations,
+                'predictions': sv.predictions,
+                'sortedGeneConsequences': sv.sorted_gene_consequences,
+                'svType': sv.sv_type,
+                'svTypeDetail': sv.sv_type_detail,
+                'variantId': sv.variant_id,
+                'xpos': shared.xpos,
+                'endChrom': sv.end_chrom,
+                'svSourceDetail': sv.sv_source_detail,
+                'liftedOverChrom': shared.lifted_over_chrom,
+                'liftedOverPos': shared.lifted_over_pos,
+                'rg37LocusEnd': shared.lifted_over_locus_end,
+            },
+            DatasetType.GCNV: {
+                'chrom': gcnv.chrom,
+                'end': gcnv.end,
+                'numExon': gcnv.num_exon,
+                'pos': gcnv.pos,
+                'populations': gcnv.populations,
+                'predictions': gcnv.predictions,
+                'sortedGeneConsequences': gcnv.sorted_gene_consequences,
+                'svType': gcnv.sv_type,
+                'variantId': gcnv.variant_id,
+                'xpos': gcnv.xpos,
+                'liftedOverChrom': shared.lifted_over_chrom,
+                'liftedOverPos': shared.lifted_over_pos,
+                'rg37LocusEnd': shared.lifted_over_locus_end,
+            },
         }
         if reference_genome == ReferenceGenome.GRCh37:
             return GRCh37_fns[self]
         return {
-            DatasetType.SNV_INDEL: [
-                shared.rsid,
-                shared.variant_id,
-                shared.xpos,
-                shared.rg37_locus,
-                snv_indel.check_ref,
-                snv_indel.sorted_transcript_consequences,
-                snv_indel.sorted_regulatory_feature_consequences,
-                snv_indel.sorted_motif_feature_consequences,
-            ],
-            DatasetType.MITO: [
-                *GRCh37_fns[DatasetType.MITO],
-                shared.rg37_locus,
-            ],
-            DatasetType.SV: [
-                *GRCh37_fns[DatasetType.SV],
-                shared.rg37_locus,
-                sv.rg37_locus_end,
-            ],
-            DatasetType.GCNV: [
-                *GRCh37_fns[DatasetType.GCNV],
-                gcnv.rg37_locus,
-                gcnv.rg37_locus_end,
-            ],
+            DatasetType.SNV_INDEL: {
+                **GRCh37_fns[DatasetType.SNV_INDEL],
+                'sortedTranscriptConsequences': snv_indel.subsetted_sorted_transcript_consequences,
+                'transcripts': snv_indel.sorted_transcript_consequences,
+                'sortedRegulatoryFeatureConsequences': snv_indel.subsetted_sorted_regulatory_feature_consequences,
+                'sortedRegulatoryFeatureConsequences_detail': snv_indel.sorted_regulatory_feature_consequences,
+                'sortedMotifFeatureConsequences': snv_indel.subsetted_sorted_motif_feature_consequences,
+                'sortedMotifFeatureConsequences_detail': snv_indel.sorted_motif_feature_consequences,
+            },
+            DatasetType.MITO: {
+                **GRCh37_fns[DatasetType.MITO],
+            },
+            DatasetType.SV: {
+                **GRCh37_fns[DatasetType.SV],
+            },
+            DatasetType.GCNV: {
+                **GRCh37_fns[DatasetType.GCNV],
+            },
+        }[self]
+
+    def variants_export_field_names(
+        self,
+        reference_genome: ReferenceGenome,
+    ) -> list[str]:
+        annotations = self.formatting_annotation_fns(reference_genome).keys()
+        detail_fields = self.variant_details_export_fields(reference_genome).values()
+        return sorted(set(annotations) - set(detail_fields))
+
+    def variant_details_export_fields(
+        self,
+        reference_genome: ReferenceGenome,
+    ) -> dict[str, str]:
+        fields = {
+            DatasetType.SNV_INDEL: {
+                field: field
+                for field in [
+                    'key_',
+                    'variantId',
+                    'rsid',
+                    'CAID',
+                    'liftedOverChrom',
+                    'liftedOverPos',
+                ]
+            },
+        }
+        if reference_genome == ReferenceGenome.GRCh38:
+            fields[DatasetType.SNV_INDEL].update(
+                {
+                    'sortedMotifFeatureConsequences': 'sortedMotifFeatureConsequences_detail',
+                    'sortedRegulatoryFeatureConsequences': 'sortedRegulatoryFeatureConsequences_detail',
+                },
+            )
+        fields[DatasetType.SNV_INDEL]['transcripts'] = 'transcripts'
+        return fields.get(self, {})
+
+    def liftover_annotation_fns(
+        self,
+        reference_genome: ReferenceGenome,
+    ) -> dict[str, Callable[..., hl.Expression]]:
+        if reference_genome == ReferenceGenome.GRCh37:
+            return {
+                DatasetType.SNV_INDEL: {'lifted_over_locus': snv_indel.rg38_locus},
+            }.get(self, {})
+        return {
+            DatasetType.SNV_INDEL: {'lifted_over_locus': shared.rg37_locus},
+            DatasetType.MITO: {'lifted_over_locus': shared.rg37_locus},
+            DatasetType.SV: {
+                'lifted_over_locus': shared.rg37_locus,
+                'lifted_over_locus_end': sv.rg37_locus_end,
+            },
+            DatasetType.GCNV: {
+                'lifted_over_locus': gcnv.rg37_locus,
+                'lifted_over_locus_end': gcnv.rg37_locus_end,
+            },
         }[self]
 
     @property
-    def genotype_entry_annotation_fns(self) -> list[Callable[..., hl.Expression]]:
+    def genotype_entry_annotation_fns(self) -> dict[str, Callable[..., hl.Expression]]:
         return {
-            DatasetType.SNV_INDEL: [
-                shared.GQ,
-                snv_indel.AB,
-                snv_indel.DP,
-                shared.GT,
-            ],
-            DatasetType.MITO: [
-                mito.contamination,
-                mito.DP,
-                mito.HL,
-                mito.mito_cn,
-                mito.GQ,
-                shared.GT,
-            ],
-            DatasetType.SV: [
-                sv.CN,
-                sv.concordance,
-                shared.GQ,
-                shared.GT,
-            ],
-            DatasetType.GCNV: [
-                gcnv.concordance,
-                gcnv.defragged,
-                gcnv.sample_end,
-                gcnv.sample_gene_ids,
-                gcnv.sample_num_exon,
-                gcnv.sample_start,
-                gcnv.CN,
-                gcnv.GT,
-                gcnv.QS,
-            ],
+            DatasetType.SNV_INDEL: {
+                'gt': shared.gt,
+                'gq': shared.GQ,
+                'ab': snv_indel.AB,
+                'dp': snv_indel.DP,
+            },
+            DatasetType.MITO: {
+                'gt': shared.gt,
+                'dp': mito.DP,
+                'hl': mito.HL,
+                'mitoCn': mito.mito_cn,
+                'contamination': mito.contamination,
+            },
+            DatasetType.SV: {
+                'gt': shared.gt,
+                'cn': sv.CN,
+                'gq': shared.GQ,
+                'newCall': sv.new_call,
+                'prevCall': sv.prev_call,
+                'prevNumAlt': sv.prev_num_alt,
+            },
+            DatasetType.GCNV: {
+                'gt': gcnv.gt,
+                'cn': gcnv.CN,
+                'qs': gcnv.QS,
+                'defragged': gcnv.defragged,
+                'start': gcnv.start,
+                'end': gcnv.sample_end,
+                'numExon': gcnv.sample_num_exon,
+                'geneIds': gcnv.gene_ids,
+                'newCall': gcnv.new_call,
+                'prevCall': gcnv.prev_call,
+                'prevOverlap': gcnv.prev_overlap,
+            },
         }[self]
-
-    @property
-    def variant_frequency_annotation_fns(self) -> list[Callable[..., hl.Expression]]:
-        return {
-            DatasetType.GCNV: [
-                gcnv.gt_stats,
-            ],
-        }.get(self, [])
 
     @property
     def filter_invalid_sites(self):
         return self == DatasetType.SNV_INDEL
-
-    @property
-    def should_export_to_vcf(self):
-        return self == DatasetType.SV
-
-    @property
-    def export_vcf_annotation_fns(self) -> list[Callable[..., hl.Expression]]:
-        return {
-            DatasetType.SV: [
-                sv.locus,
-                sv.alleles,
-                sv.info,
-            ],
-        }[self]
 
     @property
     def should_write_new_variant_details(self):
