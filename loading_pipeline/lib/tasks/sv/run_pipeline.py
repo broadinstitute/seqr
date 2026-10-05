@@ -10,7 +10,9 @@ from loading_pipeline.lib.tasks.sv.write_new_entries_parquet import (
 from loading_pipeline.lib.tasks.sv.write_new_variants_parquet import (
     WriteNewSvVariantsParquetTask,
 )
-from loading_pipeline.lib.tasks.sv.write_metadata_for_run import WriteMetadataForSvRunTask
+from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
+    WriteMetadataForSvRunTask,
+)
 
 
 @luigi.util.inherits(BaseLoadingRunParams)

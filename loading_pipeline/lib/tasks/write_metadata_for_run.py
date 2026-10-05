@@ -9,11 +9,14 @@ from loading_pipeline.lib.core import FeatureFlag
 from loading_pipeline.lib.paths import (
     sample_qc_json_path,
 )
-from loading_pipeline.lib.tasks.base.base_write_metadata_for_run import BaseWriteMetadataForRunTask
+from loading_pipeline.lib.tasks.base.base_write_metadata_for_run import (
+    BaseWriteMetadataForRunTask,
+)
 from loading_pipeline.lib.tasks.write_remapped_and_subsetted_callset import (
     WriteRemappedAndSubsettedCallsetTask,
 )
 from loading_pipeline.lib.tasks.write_sample_qc_json import WriteSampleQCJsonTask
+
 
 class WriteMetadataForRunTask(BaseWriteMetadataForRunTask):
     priority = 2

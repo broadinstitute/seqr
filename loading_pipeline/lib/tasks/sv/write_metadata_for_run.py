@@ -2,10 +2,13 @@ import hail as hl
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.tasks.base.base_write_metadata_for_run import BaseWriteMetadataForRunTask
+from loading_pipeline.lib.tasks.base.base_write_metadata_for_run import (
+    BaseWriteMetadataForRunTask,
+)
 from loading_pipeline.lib.tasks.sv.write_remapped_and_subsetted_callset import (
     WriteRemappedAndSubsettedSvCallsetTask,
 )
+
 
 class WriteMetadataForSvRunTask(BaseWriteMetadataForRunTask):
     def requires(self) -> list[luigi.Task]:

@@ -23,7 +23,9 @@ from loading_pipeline.lib.paths import (
 from loading_pipeline.lib.tasks.base.base_loading_run_params import BaseLoadingRunParams
 from loading_pipeline.lib.tasks.base.base_write import BaseWriteTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget, RawFileTask
-from loading_pipeline.lib.tasks.sv.write_postprocessed_callset import WritePostprocessedSvCallsetTask
+from loading_pipeline.lib.tasks.sv.write_postprocessed_callset import (
+    WritePostprocessedSvCallsetTask,
+)
 from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
     with_persisted_validation_errors,
 )
@@ -124,10 +126,7 @@ class WriteRemappedAndSubsettedSvCallsetTask(BaseWriteTask):
             families,
         )
 
-        loadable_families = (
-            families
-            - families_failed_missing_samples.keys()
-        )
+        loadable_families = families - families_failed_missing_samples.keys()
         if not len(loadable_families):
             msg = 'All families failed validation checks'
             raise SeqrValidationError(

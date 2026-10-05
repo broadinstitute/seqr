@@ -18,7 +18,9 @@ from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
     WriteExistingVariantsParquetTask,
 )
-from loading_pipeline.lib.tasks.sv.write_imported_callset import WriteImportedSvCallsetTask
+from loading_pipeline.lib.tasks.sv.write_imported_callset import (
+    WriteImportedSvCallsetTask,
+)
 from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
     with_persisted_validation_errors,
 )
