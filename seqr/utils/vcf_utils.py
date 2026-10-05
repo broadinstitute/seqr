@@ -25,7 +25,6 @@ DATA_TYPE_FORMAT_FIELDS = {
 
 DATA_TYPE_FILE_EXTS = {
     Dataset.DATASET_TYPE_MITO_CALLS: ('.mt',),
-    Dataset.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
 REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
@@ -75,13 +74,20 @@ def _get_vcf_meta_info(line):
 
 
 def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None, dataset_type=None):
-    allowed_exts = DATA_TYPE_FILE_EXTS.get(dataset_type)
+    vcf_filenames = _validate_valid_vcf_name(data_path, user, dataset_type)
 
-    vcf_filename = _validate_valid_vcf_name(data_path, user, allowed_exts)
-
-    if vcf_filename is None:
+    if vcf_filenames is None:
         return None
 
+    samples = set()
+    for vcf_filename in vcf_filenames:
+        samples.update(
+            _validate_vcf_and_get_samples(vcf_filename, user, genome_version, dataset_type, data_path, path_name)
+        )
+    return samples
+
+
+def _validate_vcf_and_get_samples(vcf_filename, user, genome_version, dataset_type, data_path, path_name):
     byte_range = None if vcf_filename.endswith('.vcf') else (0, BLOCK_SIZE)
     meta = defaultdict(dict)
     try:
@@ -103,6 +109,13 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
     _validate_vcf_header(header)
     if not samples:
         raise ErrorsWarningsException(['No samples found in the provided VCF.'], [])
+    if dataset_type == Dataset.DATASET_TYPE_SV_CALLS:
+        if len(samples) > 1:
+            raise ErrorsWarningsException([f'Multiple samples found in {vcf_filename}'], [])
+        sample_id = next(iter(samples))
+        if data_path.replace('*', sample_id) != vcf_filename:
+            raise ErrorsWarningsException([f'VCF {vcf_filename} contains unexpected sample "{sample_id}"'])
+
     _validate_vcf_meta(meta, genome_version, dataset_type)
 
     return samples
@@ -120,24 +133,27 @@ def _get_vcf_header_line(vcf_file, meta):
                     meta[meta_info['field']].update({meta_info['id']: meta_info['type']})
 
 
-def _validate_valid_vcf_name(data_path, user, allowed_exts):
+def _validate_valid_vcf_name(data_path, user, dataset_type):
+    allowed_exts = DATA_TYPE_FILE_EXTS.get(dataset_type)
     file_extensions = (allowed_exts or ()) + VCF_FILE_EXTENSIONS
     if not data_path.endswith(file_extensions):
         raise ErrorsWarningsException([
             'Invalid VCF file format - file path must end with {}'.format(' or '.join(file_extensions))
         ])
 
-    file_to_check = data_path
+    files_to_check = [data_path]
     if '*' in data_path:
-        files = list_files(data_path, user)
-        if files:
-            file_to_check = files[0]
+        files_to_check = list_files(data_path, user)
+        if not files_to_check:
+            raise ErrorsWarningsException([f'Data file(s) {data_path} are not found.'])
+        if dataset_type != Dataset.DATASET_TYPE_SV_CALLS:
+            files_to_check = files_to_check[:1]
     elif allowed_exts and data_path.endswith(allowed_exts):
         if not does_file_exist(data_path, user=user):
             raise ErrorsWarningsException([f'Data file or path {data_path} is not found.'])
-        file_to_check = None
+        files_to_check = None
 
-    return file_to_check
+    return files_to_check
 
 
 def get_vcf_list(data_path, user):
