@@ -75,6 +75,7 @@ EXISTING_SNV_INDEL_VARIANT_IDS = [
 
 EXISTING_MITO_VARIANT_IDS = ['M-3-T-C', 'M-12-T-C']
 
+
 def _write_existing_variants_parquet_fixture(
     variant_ids: list[str],
     reference_genome: ReferenceGenome,
