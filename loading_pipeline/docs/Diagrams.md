@@ -55,7 +55,43 @@
                      LoadClickhouseEntries
 ```
 
-ClickHouse LSM-Tree
+# SV Pipeline flow, as of October 2026
+
+```
+             WriteImportedSvCallsetTask         WriteExistingVariantsParquetTask
+             (VCF → Hail Matrix Table)                     |
+                       |___________________________________|
+                                |                              
+                                v
+                   WritePostprocessedSvCallsetTask
+                   (merge and deduplicate)
+                                |
+                                v
+               WriteRemappedAndSubsettedSvCallsetTask
+                                |
+                                v
+                     WriteMetadataForSvRunTask
+                                |
+               _________________+_________________          
+               |                                 |          
+               v                                 v
+     WriteNewEntriesParquetTask        WriteNewVariantsParquetTask
+               |_________________________________|
+                               |
+                               v
+                     RunSvPipelineTask (all parquets ready)
+                               |
+                               v
+                     WriteSuccessFileTask
+                               |
+                               v
+                     LoadClickhouseVariants
+                               |
+                               v
+                     LoadClickhouseEntries
+```
+
+# ClickHouse LSM-Tree
 
 ```
 ┌────────────────────────────────────────────────────────────┐
