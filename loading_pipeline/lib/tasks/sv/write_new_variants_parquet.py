@@ -4,9 +4,7 @@ import luigi.util
 
 from loading_pipeline.lib.misc.io import import_parquet
 from loading_pipeline.lib.paths import (
-    existing_variants_parquet_path,
     new_variants_parquet_path,
-    remapped_and_subsetted_callset_path,
     valid_reference_dataset_path,
 )
 from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
@@ -18,11 +16,11 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
-    WriteMetadataForSvRunTask,
-)
 from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
     WriteExistingVariantsParquetTask,
+)
+from loading_pipeline.lib.tasks.sv.write_remapped_and_subsetted_callset import (
+    WriteRemappedAndSubsettedSvCallsetTask,
 )
 
 GENCODE_RELEASE = 42
@@ -63,26 +61,16 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
 
     def requires(self) -> list[luigi.Task]:
         return [
-            self.clone(WriteMetadataForSvRunTask),
+            self.clone(WriteRemappedAndSubsettedSvCallsetTask),
             self.clone(WriteExistingVariantsParquetTask),
         ]
 
     def create_table(self) -> hl.Table:
-        callset_ht = hl.read_matrix_table(
-            remapped_and_subsetted_callset_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.callset_path,
-            ),
-        ).rows()
+        callset_ht = hl.read_matrix_table(self.input()[0].path).rows()
 
         # 1) Identify new variants.
         annotations_ht = import_parquet(
-            existing_variants_parquet_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.run_id,
-            ),
+            self.input()[1].path,
             self.reference_genome,
             self.dataset_type,
         )
