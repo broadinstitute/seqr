@@ -60,4 +60,4 @@ class BaseWriteMetadataForRunTask(luigi.Task):
             json.dump(metadata_json, f)
 
     def populate_metadata_families(self, metadata_json) -> None:
-        raise NotImplementedError()
+        raise NotImplementedError

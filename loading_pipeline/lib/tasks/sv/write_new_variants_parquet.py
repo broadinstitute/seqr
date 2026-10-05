@@ -18,11 +18,11 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
-    WriteExistingVariantsParquetTask,
-)
 from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
     WriteMetadataForSvRunTask,
+)
+from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
+    WriteExistingVariantsParquetTask,
 )
 
 GENCODE_RELEASE = 42

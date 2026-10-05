@@ -4,14 +4,14 @@ import luigi.util
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
+from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
+    WriteMetadataForSvRunTask,
+)
 from loading_pipeline.lib.tasks.sv.write_new_entries_parquet import (
     WriteNewSvEntriesParquetTask,
 )
 from loading_pipeline.lib.tasks.sv.write_new_variants_parquet import (
     WriteNewSvVariantsParquetTask,
-)
-from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
-    WriteMetadataForSvRunTask,
 )
 
 
