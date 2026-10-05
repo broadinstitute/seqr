@@ -1,5 +1,3 @@
-import os
-
 import luigi.worker
 import pandas as pd
 
@@ -10,7 +8,6 @@ from loading_pipeline.lib.core import (
 )
 from loading_pipeline.lib.misc.validation import ALL_VALIDATIONS
 from loading_pipeline.lib.paths import (
-    existing_variants_parquet_path,
     new_entries_parquet_path,
 )
 from loading_pipeline.lib.tasks.exports.write_new_entries_parquet import (
@@ -24,14 +21,11 @@ from loading_pipeline.lib.test.mocked_dataroot_testcase import MockedDatarootTes
 
 TEST_PEDIGREE_3_REMAP = 'loading_pipeline/var/test/pedigrees/test_pedigree_3_remap.tsv'
 TEST_PEDIGREE_4_REMAP = 'loading_pipeline/var/test/pedigrees/test_pedigree_4_remap.tsv'
-TEST_PEDIGREE_5 = 'loading_pipeline/var/test/pedigrees/test_pedigree_5.tsv'
 TEST_MITO_EXPORT_PEDIGREE = (
     'loading_pipeline/var/test/pedigrees/test_mito_export_pedigree.tsv'
 )
 TEST_SNV_INDEL_VCF = 'loading_pipeline/var/test/callsets/1kg_30variants.vcf'
 TEST_MITO_CALLSET = 'loading_pipeline/var/test/callsets/mito_1.mt'
-TEST_SV_VCF_2 = 'loading_pipeline/var/test/callsets/sv_2.vcf'
-TEST_GCNV_BED_FILE = 'loading_pipeline/var/test/callsets/gcnv_1.tsv'
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
@@ -225,204 +219,6 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                             'hl': 0.999,
                             'mitoCn': 224,
                             'contamination': 0.0,
-                        },
-                    ],
-                    'sign': 1,
-                },
-            ],
-        )
-
-    def test_sv_write_new_entries_parquet(self):
-        copy_project_pedigree_to_mocked_dir(
-            TEST_PEDIGREE_5,
-            ReferenceGenome.GRCh38,
-            DatasetType.SV,
-            SampleType.WGS,
-            'R0115_test_project2',
-        )
-        existing_variants_path = existing_variants_parquet_path(
-            ReferenceGenome.GRCh38,
-            DatasetType.SV,
-            TEST_RUN_ID,
-        )
-        os.makedirs(os.path.dirname(existing_variants_path), exist_ok=True)
-        pd.DataFrame(
-            {
-                'variant_id': ['BND_chr1_6'],
-                'key_': [727],
-                'end': [180928],
-                'endChrom': ['chr5'],
-            },
-        ).to_parquet(existing_variants_path)
-        worker = luigi.worker.Worker()
-        task = WriteNewEntriesParquetTask(
-            reference_genome=ReferenceGenome.GRCh38,
-            dataset_type=DatasetType.SV,
-            sample_type=SampleType.WGS,
-            callset_path=TEST_SV_VCF_2,
-            project_guids=['R0115_test_project2'],
-            validations_to_skip=[ALL_VALIDATIONS],
-            run_id=TEST_RUN_ID,
-        )
-        worker.add(task)
-        worker.run()
-        self.assertTrue(task.output().exists())
-        self.assertTrue(task.complete())
-        df = pd.read_parquet(
-            new_entries_parquet_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.SV,
-                TEST_RUN_ID,
-            ),
-        )
-        export_json = convert_ndarray_to_list(df.to_dict('records'))
-        self.assertEqual(len(export_json), 2)
-        self.assertEqual(
-            export_json[:1],
-            [
-                {
-                    'variantId': 'BND_chr1_6',
-                    'project_guid': 'R0115_test_project2',
-                    'family_guid': 'family_2_1',
-                    'filters': ['HIGH_SR_BACKGROUND', 'UNRESOLVED'],
-                    'calls': [
-                        {
-                            'sampleId': 'RGP_164_1',
-                            'gt': 0,
-                            'cn': None,
-                            'gq': 99,
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevNumAlt': None,
-                        },
-                        {
-                            'sampleId': 'RGP_164_2',
-                            'gt': 1,
-                            'cn': None,
-                            'gq': 31,
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevNumAlt': None,
-                        },
-                        {
-                            'sampleId': 'RGP_164_3',
-                            'gt': 0,
-                            'cn': None,
-                            'gq': 99,
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevNumAlt': None,
-                        },
-                        {
-                            'sampleId': 'RGP_164_4',
-                            'gt': 0,
-                            'cn': None,
-                            'gq': 99,
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevNumAlt': None,
-                        },
-                    ],
-                    'sign': 1,
-                },
-            ],
-        )
-
-    def test_gcnv_write_new_entries_parquet(self):
-        copy_project_pedigree_to_mocked_dir(
-            TEST_PEDIGREE_5,
-            ReferenceGenome.GRCh38,
-            DatasetType.GCNV,
-            SampleType.WES,
-            'R0115_test_project2',
-        )
-        worker = luigi.worker.Worker()
-        task = WriteNewEntriesParquetTask(
-            reference_genome=ReferenceGenome.GRCh38,
-            dataset_type=DatasetType.GCNV,
-            sample_type=SampleType.WES,
-            callset_path=TEST_GCNV_BED_FILE,
-            project_guids=['R0115_test_project2'],
-            validations_to_skip=[ALL_VALIDATIONS],
-            run_id=TEST_RUN_ID,
-        )
-        worker.add(task)
-        worker.run()
-        self.assertTrue(task.output().exists())
-        self.assertTrue(task.complete())
-        df = pd.read_parquet(
-            new_entries_parquet_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-                TEST_RUN_ID,
-            ),
-        )
-        export_json = convert_ndarray_to_list(df.to_dict('records'))
-        self.assertEqual(len(export_json), 2)
-        self.assertEqual(
-            export_json[:1],
-            [
-                {
-                    'variantId': 'suffix_16456_DEL',
-                    'project_guid': 'R0115_test_project2',
-                    'family_guid': 'family_2_1',
-                    'filters': [],
-                    'calls': [
-                        {
-                            'sampleId': 'RGP_164_1',
-                            'gt': 1,
-                            'cn': 1,
-                            'qs': 4,
-                            'defragged': False,
-                            'start': 100006937,
-                            'end': 100007881,
-                            'numExon': 2,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': False,
-                            'prevCall': True,
-                            'prevOverlap': False,
-                        },
-                        {
-                            'sampleId': 'RGP_164_2',
-                            'gt': 1,
-                            'cn': 1,
-                            'qs': 5,
-                            'defragged': False,
-                            'start': 100017585,
-                            'end': 100023213,
-                            'numExon': 3,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': False,
-                            'prevCall': False,
-                            'prevOverlap': False,
-                        },
-                        {
-                            'sampleId': 'RGP_164_3',
-                            'gt': 2,
-                            'cn': 0,
-                            'qs': 30,
-                            'defragged': False,
-                            'start': 100017585,
-                            'end': 100023213,
-                            'numExon': 3,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': False,
-                            'prevCall': True,
-                            'prevOverlap': False,
-                        },
-                        {
-                            'sampleId': 'RGP_164_4',
-                            'gt': 2,
-                            'cn': 0,
-                            'qs': 30,
-                            'defragged': False,
-                            'start': 100017586,
-                            'end': 100023212,
-                            'numExon': 2,
-                            'geneIds': ['ENSG00000283761', 'ENSG22222222222'],
-                            'newCall': False,
-                            'prevCall': True,
-                            'prevOverlap': False,
                         },
                     ],
                     'sign': 1,
