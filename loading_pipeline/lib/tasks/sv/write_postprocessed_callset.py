@@ -85,7 +85,7 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
             )
 
         if self.dataset_type.overwrite_male_non_par_calls:
-            with open(self.input()[-1].path) as f:
+            with self.input()[-1].open() as f:
                 metadata_json = json.load(f)
             mt = overwrite_male_non_par_calls(mt, metadata_json['male_sample_ids'])
 
