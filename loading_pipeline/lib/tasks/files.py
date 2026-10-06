@@ -13,11 +13,11 @@ def CallsetTask(pathname: str) -> luigi.Task:  # noqa: N802
     return RawFileTask(pathname)
 
 
-def GCSorLocalTarget(pathname: str) -> luigi.Target:  # noqa: N802
+def GCSorLocalTarget(pathname: str, **kwargs) -> luigi.Target:  # noqa: N802
     return (
-        gcs.GCSTarget(pathname)
+        gcs.GCSTarget(pathname, **kwargs)
         if pathname.startswith('gs://')
-        else luigi.LocalTarget(pathname)
+        else luigi.LocalTarget(pathname, **kwargs)
     )
 
 
