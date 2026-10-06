@@ -37,8 +37,8 @@ class WriteSuccessFileTaskTest(MockedDatarootTestCase):
         'loading_pipeline.lib.tasks.write_success_file.RunSvPipelineTask',
     )
     def test_sv_write_success_file_task(
-            self,
-            mock_run_pipeline_task: mock.Mock,
+        self,
+        mock_run_pipeline_task: mock.Mock,
     ) -> None:
         mock_run_pipeline_task.return_value = MockCompleteTask()
         worker = luigi.worker.Worker()
