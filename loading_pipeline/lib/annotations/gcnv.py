@@ -11,66 +11,78 @@ from loading_pipeline.lib.core.definitions import ReferenceGenome
 from loading_pipeline.lib.misc.gcnv import parse_gcnv_genes
 
 
+def chrom(ht: hl.Table, **_: Any) -> hl.Expression:
+    return expression_helpers.reference_independent_contig(ht.chr)
+
+
 def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return mt.CN
 
 
-def concordance(
+def variant_id(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.variant_id
+
+
+def new_call(
     mt: hl.MatrixTable,
     is_new_gcnv_joint_call: bool,
     **_: Any,
 ) -> hl.Expression:
     if is_new_gcnv_joint_call:
-        return hl.or_missing(
-            hl.is_defined(mt.GT),
-            hl.struct(
-                new_call=mt.no_ovl,
-                prev_call=hl.len(mt.identical_ovl) > 0,
-                prev_overlap=hl.len(mt.any_ovl) > 0,
-            ),
-        )
-    return hl.or_missing(
-        hl.is_defined(mt.GT),
-        hl.struct(
-            new_call=False,
-            prev_call=~mt.is_latest,
-            prev_overlap=False,
-        ),
-    )
+        return hl.or_missing(hl.is_defined(mt.GT), mt.no_ovl)
+    return hl.or_missing(hl.is_defined(mt.GT), False)
+
+
+def prev_call(
+    mt: hl.MatrixTable,
+    is_new_gcnv_joint_call: bool,
+    **_: Any,
+) -> hl.Expression:
+    if is_new_gcnv_joint_call:
+        return hl.or_missing(hl.is_defined(mt.GT), hl.len(mt.identical_ovl) > 0)
+    return hl.or_missing(hl.is_defined(mt.GT), ~mt.is_latest)
+
+
+def prev_overlap(
+    mt: hl.MatrixTable,
+    is_new_gcnv_joint_call: bool,
+    **_: Any,
+) -> hl.Expression:
+    if is_new_gcnv_joint_call:
+        return hl.or_missing(hl.is_defined(mt.GT), hl.len(mt.any_ovl) > 0)
+    return hl.or_missing(hl.is_defined(mt.GT), False)
 
 
 def defragged(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.defragmented
 
 
-def end_locus(
-    ht: hl.Table,
-    reference_genome: ReferenceGenome,
-    **_: Any,
-) -> hl.LocusExpression:
-    return hl.locus(ht.chr, ht.end, reference_genome.value)
+def end(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.end
 
 
-def gt_stats(ht: hl.Table, callset_ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.struct(
-        AF=hl.float32(callset_ht[ht.variant_id].sf),
-        AC=callset_ht[ht.variant_id].sc,
-        AN=hl.int32(callset_ht[ht.variant_id].sc / callset_ht[ht.variant_id].sf),
-        Hom=hl.missing(hl.tint32),
-        Het=hl.missing(hl.tint32),
+def populations(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.Struct(
+        sv_callset=hl.Struct(
+            ac=ht.sc,
+            af=hl.float32(ht.sf),
+            an=hl.int32(ht.sc / ht.sf),
+            het=hl.missing(hl.tint32),
+            hom=hl.missing(hl.tint32),
+        ),
     )
 
 
-def GT(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
-    return hl.if_else(
-        (mt.CN == 0) | (mt.CN > 3),  # noqa: PLR2004
-        hl.Call([1, 1], phased=False),
-        hl.Call([0, 1], phased=False),
-    )
+def gt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+    return hl.if_else((mt.CN == 0) | (mt.CN > 3), 2, 1)  # noqa: PLR2004
 
 
 def num_exon(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht.num_exon
+
+
+def pos(ht: hl.Table, **_: Any) -> hl.Expression:
+    return ht.start
 
 
 def QS(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
@@ -94,7 +106,7 @@ def rg37_locus_end(
 ) -> hl.Expression | None:
     liftover.add_rg38_liftover()
     return hl.liftover(
-        end_locus(ht, ReferenceGenome.GRCh38),
+        hl.locus(ht.chr, ht.end, ReferenceGenome.GRCh38),
         ReferenceGenome.GRCh37.value,
     )
 
@@ -103,11 +115,11 @@ def sample_end(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.sample_end
 
 
-def sample_gene_ids(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+def gene_ids(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return parse_gcnv_genes(mt.genes_any_overlap_Ensemble_ID)
 
 
-def sample_start(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
+def start(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     return mt.sample_start
 
 
@@ -122,8 +134,8 @@ def sorted_gene_consequences(
     return hl.array(
         ht.gene_ids.map(
             lambda gene: hl.Struct(
-                gene_id=gene,
-                major_consequence=hl.if_else(
+                geneId=gene,
+                majorConsequence=hl.if_else(
                     ht.cg_genes.contains(gene),
                     'COPY_GAIN',
                     hl.or_missing(
@@ -144,8 +156,8 @@ def start_locus(
     return hl.locus(ht.chr, ht.start, reference_genome.value)
 
 
-def strvctvre(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.struct(score=hl.parse_float32(ht.strvctvre_score))
+def predictions(ht: hl.Table, **_: Any) -> hl.Expression:
+    return hl.struct(strvctvre=hl.parse_float32(ht.strvctvre_score))
 
 
 def sv_type(ht: hl.Table, **_: Any) -> hl.Expression:

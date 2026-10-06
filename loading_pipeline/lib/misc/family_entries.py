@@ -1,12 +1,13 @@
 import hail as hl
 
-from loading_pipeline.lib.core import DatasetType
+from loading_pipeline.lib.core import DatasetType, SampleType
 
 
 def compute_callset_family_entries_ht(
     dataset_type: DatasetType,
     mt: hl.MatrixTable,
     entries_fields: dict[str, hl.Expression],
+    sample_type: SampleType,
 ) -> hl.Table:
     sample_id_to_family_guid = hl.dict(
         {
@@ -31,30 +32,31 @@ def compute_callset_family_entries_ht(
             hl.sorted(
                 hl.agg.collect(
                     hl.Struct(
-                        s=mt.s,
-                        family_guid=sample_id_to_family_guid[mt.s],
-                        project_guid=family_guid_to_project_guid[
-                            sample_id_to_family_guid[mt.s]
-                        ],
+                        sampleId=mt.s,
                         **entries_fields,
                     ),
                 )
-                .group_by(lambda e: e.family_guid)
-                .values()
-                .map(
-                    lambda fe: hl.sorted(fe, key=lambda e: e.s),
+                .group_by(lambda e: sample_id_to_family_guid[e.sampleId])
+                .items()
+                .starmap(
+                    lambda family_guid, entries: hl.Struct(
+                        family_guid=family_guid,
+                        project_guid=family_guid_to_project_guid[family_guid],
+                        calls=hl.sorted(entries, key=lambda e: e.sampleId),
+                    ),
                 ),
-                lambda fe: fe[0].family_guid,
+                lambda fe: fe.family_guid,
             )
         ),
     ).rows()
-    # NB: globalize before we set families to missing
-    ht = globalize_ids(ht)
+    ht = ht.key_by(
+        **dataset_type.entries_table_key_expression(ht, sample_type),
+    )
     ht = ht.annotate(
         family_entries=(
             ht.family_entries.map(
                 lambda fe: hl.or_missing(
-                    fe.any(dataset_type.family_entries_filter_fn),
+                    fe.calls.any(dataset_type.family_entries_filter_fn),
                     fe,
                 ),
             )
@@ -64,55 +66,10 @@ def compute_callset_family_entries_ht(
     return ht.filter(ht.family_entries.any(hl.is_defined))
 
 
-def globalize_ids(ht: hl.Table) -> hl.Table:
-    row = ht.take(1)[0] if ht.count() > 0 else None
-    has_family_entries = row and len(row.family_entries) > 0
-    ht = ht.annotate_globals(
-        project_guids=(
-            [fe[0].project_guid for fe in row.family_entries]
-            if has_family_entries
-            else hl.empty_array(hl.tstr)
-        ),
-        family_guids=(
-            [fe[0].family_guid for fe in row.family_entries]
-            if has_family_entries
-            else hl.empty_array(hl.tstr)
-        ),
-        family_samples=(
-            {fe[0].family_guid: [e.s for e in fe] for fe in row.family_entries}
-            if has_family_entries
-            else hl.empty_dict(hl.tstr, hl.tarray(hl.tstr))
-        ),
-    )
-    return ht.annotate(
-        family_entries=ht.family_entries.map(
-            lambda fe: fe.map(lambda se: se.drop('s', 'family_guid', 'project_guid')),
-        ),
-    )
-
-
-def deglobalize_ids(ht: hl.Table) -> hl.Table:
-    ht = ht.annotate(
-        family_entries=(
-            hl.enumerate(ht.family_entries).starmap(
-                lambda i, fe: hl.enumerate(fe).starmap(
-                    lambda j, e: hl.Struct(
-                        **e,
-                        s=ht.family_samples[ht.family_guids[i]][j],
-                        family_guid=ht.family_guids[i],
-                        project_guid=ht.project_guids[i],
-                    ),
-                ),
-            )
-        ),
-    )
-    return ht.drop('family_guids', 'family_samples', 'project_guids')
-
-
 def deduplicate_by_most_non_ref_calls(ht: hl.Table) -> hl.Table:
     ht = ht.annotate(
         non_ref_count=hl.len(
-            hl.flatten(ht.family_entries).filter(lambda s: s.GT.is_non_ref()),
+            hl.flatten(ht.family_entries.calls).filter(lambda s: s.gt > 0),
         ),
     )
     return ht.group_by(*ht.key).aggregate(
