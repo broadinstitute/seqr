@@ -75,7 +75,7 @@
                _________________+_________________          
                |                                 |          
                v                                 v
-     WriteNewEntriesParquetTask        WriteNewVariantsParquetTask
+     WriteNewSvEntriesParquetTask        WriteNewSvVariantsParquetTask
                |_________________________________|
                                |
                                v
