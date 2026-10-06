@@ -30,7 +30,7 @@ class WriteSuccessFileTask(luigi.Task):
 
     def requires(self) -> luigi.Task:
         task = RunPipelineTask
-        if self.dataset_type in {DatasetType.SV, DatasetType.GCNV}:
+        if self.dataset_type == DatasetType.SV:
             task = RunSvPipelineTask
         elif FeatureFlag.RUN_PIPELINE_ON_DATAPROC:
             task = RunPipelineOnDataprocTask

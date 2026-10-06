@@ -133,7 +133,7 @@ def prev_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
 def prev_num_alt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
     num_alt = hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1)
     prev_num_alt = _prev_num_alt(mt)
-    discordant_genotype = num_alt != prev_num_alt
+    discordant_genotype = (num_alt != prev_num_alt) & (prev_num_alt > 0)
     return hl.or_missing(discordant_genotype, prev_num_alt)
 
 
