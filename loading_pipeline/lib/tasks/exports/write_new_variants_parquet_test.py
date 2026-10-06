@@ -411,7 +411,6 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             ],
         )
 
-
     def test_gcnv_write_new_variants_parquet_test(
         self,
     ) -> None:
