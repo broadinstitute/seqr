@@ -78,21 +78,6 @@ EXISTING_SNV_INDEL_VARIANT_IDS = [
 
 EXISTING_MITO_VARIANT_IDS = ['M-3-T-C', 'M-12-T-C']
 
-EXISTING_SV_VARIANT_IDS = [
-    'BND_chr1_6',
-    'DUP_chr1_5',
-    'DEL_chr1_12',
-    'BND_chr1_9',
-    'INS_chr1_65',
-    'CPX_chr1_41',
-    'INS_chr1_268',
-    'CPX_chr1_54',
-    'INS_chr1_688',
-    'CPX_chr1_251',
-    'CPX_chrX_251',
-    'CPX_chrX_252',
-]
-
 
 def _write_existing_variants_parquet_fixture(
     variant_ids: list[str],
@@ -430,12 +415,6 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     def test_gcnv_write_new_variants_parquet_test(
         self,
     ) -> None:
-        _write_existing_variants_parquet_fixture(
-            EXISTING_SV_VARIANT_IDS,
-            ReferenceGenome.GRCh38,
-            DatasetType.SV,
-            max_key_=726,
-        )
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_5,
             ReferenceGenome.GRCh38,
