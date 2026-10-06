@@ -2,6 +2,7 @@ import json
 import luigi
 import luigi.format
 import luigi.util
+import subprocess
 
 from loading_pipeline.lib.paths import (
     imported_callset_path,
@@ -57,7 +58,8 @@ class WriteMergedSvVcf(luigi.Task):
         yield sample_file_tasks
 
         vcf_paths = [task.output().path for task in sample_file_tasks]
-        out_file = self.output().path
+        cmd = ['bcftools', 'merge', '-m', 'none', '-Oz', '-o', self.output().path]
+        subprocess.run(cmd + vcf_paths, check=True)
 
     def _sample_ids(self) -> set[str]:
         with open(self.input()[0].path) as f:
