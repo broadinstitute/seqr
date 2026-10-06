@@ -1,4 +1,5 @@
 import hail as hl
+import json
 import luigi
 import luigi.util
 
@@ -6,10 +7,8 @@ from loading_pipeline.lib.misc.callsets import get_additional_row_fields
 from loading_pipeline.lib.misc.io import (
     import_parquet,
 )
-from loading_pipeline.lib.misc.sv import deduplicate_merged_sv_concordance_calls
+from loading_pipeline.lib.misc.sv import deduplicate_merged_sv_concordance_calls, overwrite_male_non_par_calls
 from loading_pipeline.lib.paths import (
-    existing_variants_parquet_path,
-    imported_callset_path,
     postprocessed_callset_path,
 )
 from loading_pipeline.lib.tasks.base.base_loading_run_params import BaseLoadingRunParams
@@ -17,6 +16,9 @@ from loading_pipeline.lib.tasks.base.base_write import BaseWriteTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.sv.write_imported_callset import (
     WriteImportedSvCallsetTask,
+)
+from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
+    WriteMetadataForSvRunTask,
 )
 from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
     WriteExistingVariantsParquetTask,
@@ -54,17 +56,13 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
         requires = [self.clone(WriteImportedSvCallsetTask)]
         if self.dataset_type.re_key_by_seqr_internal_truth_vid:
             requires.append(self.clone(WriteExistingVariantsParquetTask))
+        if self.dataset_type.overwrite_male_non_par_calls:
+            requires.append(self.clone(WriteMetadataForSvRunTask))
         return requires
 
     @with_persisted_validation_errors
     def create_table(self) -> hl.MatrixTable:
-        mt = hl.read_matrix_table(
-            imported_callset_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.callset_path,
-            ),
-        )
+        mt = hl.read_matrix_table(self.input()[0].path)
 
         if self.dataset_type.re_key_by_seqr_internal_truth_vid and hasattr(
             mt,
@@ -73,11 +71,7 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
             mt = deduplicate_merged_sv_concordance_calls(
                 mt,
                 import_parquet(
-                    existing_variants_parquet_path(
-                        self.reference_genome,
-                        self.dataset_type,
-                        self.run_id,
-                    ),
+                    self.input()[1].path,
                     self.reference_genome,
                     self.dataset_type,
                 ),
@@ -89,6 +83,11 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
                     mt.variant_id,
                 ),
             )
+
+        if self.dataset_type.overwrite_male_non_par_calls:
+            with open(self.input()[-1].path) as f:
+                metadata_json = json.load(f)
+            mt = overwrite_male_non_par_calls(mt, metadata_json['male_sample_ids'])
 
         return mt.select_globals(
             callset_path=self.callset_path,

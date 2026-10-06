@@ -14,7 +14,6 @@ from loading_pipeline.lib.misc.pedigree import (
     parse_pedigree_ht_to_remap_ht,
 )
 from loading_pipeline.lib.misc.sample_ids import remap_sample_ids, subset_samples
-from loading_pipeline.lib.misc.sv import overwrite_male_non_par_calls
 from loading_pipeline.lib.misc.validation import SeqrValidationError
 from loading_pipeline.lib.paths import (
     project_pedigree_path,
@@ -153,8 +152,7 @@ class WriteRemappedAndSubsettedSvCallsetTask(BaseWriteTask):
             ),
         )
 
-        if self.dataset_type.overwrite_male_non_par_calls:
-            mt = overwrite_male_non_par_calls(mt, loadable_families)
+
         return mt.select_globals(
             remap_pedigree_hashes=[
                 remap_pedigree_hash(

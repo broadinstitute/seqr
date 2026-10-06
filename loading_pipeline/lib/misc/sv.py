@@ -4,8 +4,7 @@ import math
 import hail as hl
 
 from loading_pipeline.lib.annotations import sv
-from loading_pipeline.lib.core import ReferenceGenome, Sex
-from loading_pipeline.lib.misc.pedigree import Family
+from loading_pipeline.lib.core import ReferenceGenome
 
 WRONG_CHROM_PENALTY = 1e9
 
@@ -106,11 +105,8 @@ def deduplicate_merged_sv_concordance_calls(
 
 def overwrite_male_non_par_calls(
     mt: hl.MatrixTable,
-    families: set[Family],
+    male_sample_ids: list[str],
 ) -> hl.MatrixTable:
-    male_sample_ids = {
-        s.sample_id for f in families for s in f.samples.values() if s.sex == Sex.MALE
-    }
     male_sample_ids = (
         hl.set(male_sample_ids) if male_sample_ids else hl.empty_set(hl.tstr)
     )
