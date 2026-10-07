@@ -40,5 +40,6 @@ class WriteMetadataForSvRunTask(BaseWriteMetadataForRunTask):
                 )
             if self.dataset_type.overwrite_male_non_par_calls:
                 metadata_json['male_sample_ids'] += df.loc[
-                    df['Sex'] == 'M', 'Individual_ID',
+                    df['Sex'] == 'M',
+                    'Individual_ID',
                 ].to_list()

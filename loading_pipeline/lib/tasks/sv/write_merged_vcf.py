@@ -21,7 +21,7 @@ class WriteMergedSvVcf(luigi.Task):
     def complete(self) -> bool:
         if not super().complete():
             return False
-        if not self.input().exists():
+        if not self.input()[0].exists():
             return False
 
         samples = None
@@ -42,7 +42,7 @@ class WriteMergedSvVcf(luigi.Task):
                 self.reference_genome,
                 self.dataset_type,
                 self.callset_path,
-            ).replace('.mt', '.merged.vcf.gz'),
+            ).replace('.mt', '.vcf.gz'),
             format=luigi.format.Gzip,
         )
 
@@ -60,7 +60,7 @@ class WriteMergedSvVcf(luigi.Task):
 
         vcf_paths = [task.output().path for task in sample_file_tasks]
         cmd = ['bcftools', 'merge', '-m', 'none', '-Oz', '-o', self.output().path]
-        subprocess.run(cmd + vcf_paths, check=True)   # noqa: S603 # nosec B603
+        subprocess.run(cmd + vcf_paths, check=True)  # noqa: S603 # nosec B603
 
     def _sample_ids(self) -> set[str]:
         with open(self.input()[0].path) as f:
