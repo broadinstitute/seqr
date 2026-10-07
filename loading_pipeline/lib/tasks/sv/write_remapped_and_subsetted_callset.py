@@ -153,8 +153,7 @@ class WriteRemappedAndSubsettedSvCallsetTask(BaseWriteTask):
             ),
         )
 
-        if self.dataset_type.overwrite_male_non_par_calls:
-            mt = overwrite_male_non_par_calls(mt, loadable_families)
+        mt = overwrite_male_non_par_calls(mt, loadable_families)
         return mt.select_globals(
             remap_pedigree_hashes=[
                 remap_pedigree_hash(

@@ -30,7 +30,11 @@ GENCODE_RELEASE = 42
 class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
     @property
     def annotation_dependencies(self) -> dict[str, hl.Table]:
-        deps = {}
+        deps = {
+            'gencode_gene_symbol_to_gene_id_mapping': hl.literal(
+                load_gencode_gene_symbol_to_gene_id(GENCODE_RELEASE),
+            ),
+        }
         for reference_dataset in ReferenceDataset:
             if (
                 reference_dataset.formatting_annotation
@@ -43,11 +47,6 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
                         reference_dataset,
                     ),
                 )
-
-        if self.dataset_type.has_gencode_gene_symbol_to_gene_id_mapping:
-            deps['gencode_gene_symbol_to_gene_id_mapping'] = hl.literal(
-                load_gencode_gene_symbol_to_gene_id(GENCODE_RELEASE),
-            )
         return deps
 
     def output(self) -> luigi.Target:

@@ -2,7 +2,6 @@ import hail as hl
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.misc.callsets import get_additional_row_fields
 from loading_pipeline.lib.misc.io import (
     import_callset,
     select_relevant_fields,
@@ -23,21 +22,6 @@ from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteImportedSvCallsetTask(BaseWriteTask):
-    priority = 2
-
-    def complete(self) -> luigi.Target:
-        if super().complete():
-            mt = hl.read_matrix_table(self.output().path)
-            # Handle case where callset was previously imported
-            # with a different sex/relatedness flag.
-            additional_row_fields = get_additional_row_fields(
-                mt,
-                self.dataset_type,
-                self.skip_check_sex_and_relatedness,
-            )
-            return all(hasattr(mt, field) for field in additional_row_fields)
-        return False
-
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
             imported_callset_path(
@@ -60,16 +44,10 @@ class WriteImportedSvCallsetTask(BaseWriteTask):
             self.reference_genome,
             self.dataset_type,
         )
-        additional_row_fields = get_additional_row_fields(
-            mt,
-            self.dataset_type,
-            self.skip_check_sex_and_relatedness,
-        )
         # NB: throws SeqrValidationError
         mt = select_relevant_fields(
             mt,
             self.dataset_type,
-            additional_row_fields,
         )
         # This validation isn't override-able by the skip option.
         # If a field is the wrong type, the pipeline will likely hard-fail downstream.
@@ -77,7 +55,7 @@ class WriteImportedSvCallsetTask(BaseWriteTask):
         validate_imported_field_types(
             mt,
             self.dataset_type,
-            additional_row_fields,
+            additional_row_fields={},
         )
         return mt.select_globals(
             callset_path=self.callset_path,
