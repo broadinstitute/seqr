@@ -96,7 +96,7 @@ def trigger_data_loading(projects: list[Project], individual_ids: list[int], sam
                          success_message: str = None,  error_message: str = None, success_slack_channel: str = SEQR_SLACK_LOADING_NOTIFICATION_CHANNEL):
     variables = {
         'projects_to_run': sorted([p.guid for p in projects]) if projects else None,
-        'dataset_type': dataset_type,
+        'dataset_type': _loading_dataset_type(sample_type, dataset_type),
         'reference_genome': GENOME_VERSION_LOOKUP[genome_version],
         'callset_path': data_path,
         'sample_type': sample_type,
@@ -159,6 +159,11 @@ def _enqueue_pipeline_request(name: str, variables: dict, user: User, raise_erro
     return error
 
 
+def _loading_dataset_type(sample_type: str, dataset_type: str):
+    return 'GCNV' if dataset_type == Dataset.DATASET_TYPE_SV_CALLS and sample_type == Dataset.SAMPLE_TYPE_WES \
+        else dataset_type
+
+
 def _upload_data_loading_files(individual_ids: list[int], vcf_sample_id_map: dict, user: User, file_path: str, raise_error: bool):
     file_annotations = OrderedDict({
         'Project_GUID': F('family__project__guid'), 'Family_GUID': F('family__guid'),
@@ -209,7 +214,8 @@ def _write_gene_id_file(user):
 
 
 def _get_pedigree_path(genome_version: str, sample_type: str, dataset_type: str):
-    return f'{LOADING_DATASETS_DIR}/{GENOME_VERSION_LOOKUP[genome_version]}/{dataset_type}/pedigrees/{sample_type}'
+    loading_dataset_type = _loading_dataset_type(sample_type, dataset_type)
+    return f'{LOADING_DATASETS_DIR}/{GENOME_VERSION_LOOKUP[genome_version]}/{loading_dataset_type}/pedigrees/{sample_type}'
 
 
 def get_missing_family_samples(expected_sample_set, record_family_ids, previous_loaded_individuals):
