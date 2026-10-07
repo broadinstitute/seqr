@@ -53,7 +53,8 @@ class WriteMergedSvVcf(luigi.Task):
 
     def run(self) -> None:
         sample_file_tasks = [
-            RawFileTask(self.callset_path.replace('*', sample_id)) for sample_id in self._sample_ids()
+            RawFileTask(self.callset_path.replace('*', sample_id))
+            for sample_id in self._sample_ids()
         ]
         yield sample_file_tasks
 
@@ -66,5 +67,7 @@ class WriteMergedSvVcf(luigi.Task):
             metadata_json = json.load(f)
 
         return {
-            sample_id for samples in metadata_json['family_samples'].values() for sample_id in samples
+            sample_id
+            for samples in metadata_json['family_samples'].values()
+            for sample_id in samples
         }

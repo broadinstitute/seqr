@@ -7,7 +7,10 @@ from loading_pipeline.lib.misc.callsets import get_additional_row_fields
 from loading_pipeline.lib.misc.io import (
     import_parquet,
 )
-from loading_pipeline.lib.misc.sv import deduplicate_merged_sv_concordance_calls, overwrite_male_non_par_calls
+from loading_pipeline.lib.misc.sv import (
+    deduplicate_merged_sv_concordance_calls,
+    overwrite_male_non_par_calls,
+)
 from loading_pipeline.lib.paths import (
     postprocessed_callset_path,
 )
