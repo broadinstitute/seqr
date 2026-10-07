@@ -36,7 +36,7 @@ class WriteImportedSvCallsetTask(BaseWriteTask):
 
     def requires(self) -> list[luigi.Task]:
         return [
-            WriteCombinedSvVcf(self.callset_path),
+            self.clone(WriteCombinedSvVcf),
         ]
 
     @with_persisted_validation_errors
