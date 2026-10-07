@@ -10,10 +10,10 @@ from loading_pipeline.lib.paths import (
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
+from loading_pipeline.lib.tasks.files import GCSorLocalTarget, RawFileTask
 from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
     WriteMetadataForSvRunTask,
 )
-from loading_pipeline.lib.tasks.files import GCSorLocalTarget, RawFileTask
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
@@ -60,7 +60,7 @@ class WriteMergedSvVcf(luigi.Task):
 
         vcf_paths = [task.output().path for task in sample_file_tasks]
         cmd = ['bcftools', 'merge', '-m', 'none', '-Oz', '-o', self.output().path]
-        subprocess.run(cmd + vcf_paths, check=True)  # nosec B603
+        subprocess.run(cmd + vcf_paths, check=True)   # noqa: S603 # nosec B603
 
     def _sample_ids(self) -> set[str]:
         with open(self.input()[0].path) as f:
