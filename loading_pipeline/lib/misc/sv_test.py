@@ -56,15 +56,7 @@ class SVTest(unittest.TestCase):
         )
         mt = overwrite_male_non_par_calls(
             mt,
-            {
-                Family(
-                    family_guid='family_1',
-                    samples={
-                        'RGP_164_1': Sample(sample_id='RGP_164_1', sex=Sex.FEMALE),
-                        'RGP_164_2': Sample(sample_id='RGP_164_2', sex=Sex.MALE),
-                    },
-                ),
-            },
+            ['RGP_164_2'],
         )
         mt = mt.filter_rows(mt.locus.contig == 'chrX')
         self.assertEqual(
