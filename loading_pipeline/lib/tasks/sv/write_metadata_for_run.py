@@ -33,13 +33,12 @@ class WriteMetadataForSvRunTask(BaseWriteMetadataForRunTask):
             metadata_json['family_samples'].update(
                 df.groupby('Family_GUID')['Individual_ID'].apply(list).to_dict(),
             )
+            metadata_json['male_sample_ids'] += df.loc[
+                df['Sex'] == 'M',
+                'Individual_ID',
+            ].to_list()
             if 'VCF_ID' in df.columns:
                 remap_df = df[df['VCF_ID'].notnull() & (df['VCF_ID'] != '')]
                 metadata_json['remap_ids'].update(
                     remap_df.set_index('VCF_ID')['Individual_ID'].to_dict(),
                 )
-            if self.dataset_type.overwrite_male_non_par_calls:
-                metadata_json['male_sample_ids'] += df.loc[
-                    df['Sex'] == 'M',
-                    'Individual_ID',
-                ].to_list()
