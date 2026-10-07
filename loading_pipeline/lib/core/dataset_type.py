@@ -146,6 +146,7 @@ class DatasetType(StrEnum):
                 'info.N_HET': hl.tint32,
                 'info.N_HOMALT': hl.tint32,
                 'info.GNOMAD_V4.1_TRUTH_VID': hl.tstr,
+                'info.SEQR_INTERNAL_TRUTH_VID': hl.tstr,
                 'info.StrVCTVRE': hl.tstr,
                 'info.SVLEN': hl.tint32,
                 **sv.CONSEQ_PREDICTED_GENE_COLS,
@@ -204,10 +205,6 @@ class DatasetType(StrEnum):
         return (
             self == DatasetType.SNV_INDEL and reference_genome == ReferenceGenome.GRCh38
         )
-
-    @property
-    def has_gencode_gene_symbol_to_gene_id_mapping(self) -> bool:
-        return self == DatasetType.SV
 
     @property
     def has_multi_allelic_variants(self) -> bool:
@@ -415,14 +412,6 @@ class DatasetType(StrEnum):
     @property
     def should_write_new_variant_details(self):
         return self == DatasetType.SNV_INDEL
-
-    @property
-    def overwrite_male_non_par_calls(self) -> None:
-        return self == DatasetType.SV
-
-    @property
-    def re_key_by_seqr_internal_truth_vid(self) -> None:
-        return self == DatasetType.SV
 
     @property
     def dataproc_primary_workers(self) -> int:
