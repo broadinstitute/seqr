@@ -25,6 +25,7 @@ DATA_TYPE_FORMAT_FIELDS = {
 
 DATA_TYPE_FILE_EXTS = {
     Dataset.DATASET_TYPE_MITO_CALLS: ('.mt',),
+    Dataset.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
 REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
@@ -74,7 +75,7 @@ def _get_vcf_meta_info(line):
 
 
 def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None, dataset_type=None):
-    vcf_filenames = _validate_valid_vcf_name(data_path, user, dataset_type)
+    vcf_filenames = _validate_valid_vcf_name(data_path, user, dataset_type, path_name)
 
     if vcf_filenames is None:
         return None
@@ -133,7 +134,7 @@ def _get_vcf_header_line(vcf_file, meta):
                     meta[meta_info['field']].update({meta_info['id']: meta_info['type']})
 
 
-def _validate_valid_vcf_name(data_path, user, dataset_type):
+def _validate_valid_vcf_name(data_path, user, dataset_type, path_name):
     allowed_exts = DATA_TYPE_FILE_EXTS.get(dataset_type)
     file_extensions = (allowed_exts or ()) + VCF_FILE_EXTENSIONS
     if not data_path.endswith(file_extensions):
@@ -145,7 +146,7 @@ def _validate_valid_vcf_name(data_path, user, dataset_type):
     if '*' in data_path:
         files_to_check = list_files(data_path, user)
         if not files_to_check:
-            raise ErrorsWarningsException([f'Data file(s) {data_path} are not found.'])
+            raise ErrorsWarningsException([f'Data file or path {path_name or data_path} is not found.'])
         if dataset_type != Dataset.DATASET_TYPE_SV_CALLS:
             files_to_check = files_to_check[:1]
     elif allowed_exts and data_path.endswith(allowed_exts):
