@@ -61,7 +61,7 @@
                     WriteMetadataForSvRunTask
                                 |
                                 v
-                          WriteMergedSvVcf
+                        WriteCombinedSvVcf
                                 |
                                 V
              WriteImportedSvCallsetTask         WriteExistingVariantsParquetTask

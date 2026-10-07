@@ -1,8 +1,9 @@
 import json
+import subprocess  # nosec B404
+
 import luigi
 import luigi.format
 import luigi.util
-import subprocess  # nosec B404
 
 from loading_pipeline.lib.paths import (
     imported_callset_path,
@@ -17,7 +18,7 @@ from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteMergedSvVcf(luigi.Task):
+class WriteCombinedSvVcf(luigi.Task):
     def complete(self) -> bool:
         if not super().complete():
             return False
