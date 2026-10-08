@@ -1557,7 +1557,7 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         formatted_files = '\n'.join([f'{self.CALLSET_DIR}/{file}' for file in file_list])
         self.mock_does_file_exist.communicate.return_value = (f'{formatted_files}\n'.encode('utf-8'), b'')
         self.mock_does_file_exist.wait.return_value = 0
-        self.mock_file_iter.stdout += [row.encode('utf-8') for row in stdout]
+        self.mock_file_iter.stdout = [row.encode('utf-8') for row in stdout]
         self.mock_subprocess.side_effect = [
             self.mock_does_file_exist, self.mock_does_file_exist,  self.mock_file_iter, self.mock_does_file_exist, self.mock_does_file_exist, self.mock_file_iter,
         ]
@@ -1776,7 +1776,7 @@ Loading pipeline should be triggered with:
             'Invalid VCF file format - file path must end with .bed or .bed.gz or .vcf or .vcf.gz or .vcf.bgz',
         ])
 
-        body['filePath'] = f'{self.CALLSET_DIR}/sv_callset.vcf'
+        body['filePath'] = f'{self.CALLSET_DIR}/sv_callsets/*.vcf'
         vcf_file_rows = [
             '##fileformat=VCFv4.3\n',
             '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
@@ -1786,10 +1786,45 @@ Loading pipeline should be triggered with:
             '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
             '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
         ]
-        self._add_file_iter(vcf_file_rows, is_gz=False)
+        self._add_file_list_iter(['sv_callsets/merged.vcf'], vcf_file_rows)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Multiple samples found in gs://test_bucket/sv_callsets/merged.vcf',
+        ])
+
+        vcf_header_row_2 = '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\n'
+        vcf_file_rows[-1] = vcf_header_row_2
+        sv_vcfs = ['sv_callsets/NA19675_1.vcf', 'sv_callsets/HG00735.vcf']
+        self._add_file_list_iter(sv_vcfs, vcf_file_rows)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'],[
+            'VCF gs://test_bucket/sv_callsets/NA19675_1.vcf contains unexpected sample "HG00735"',
+        ])
+
+        vcf_header_row_1 = '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNA19675_1\n'
+        vcf_file_rows[-1] = vcf_header_row_1
+        self._add_file_list_iter(sv_vcfs, vcf_file_rows)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], ['Missing required FORMAT field(s) GQ, GT'])
+
+        vcf_file_rows = vcf_file_rows[:5] + [
+            '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
+            '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+        ]
+        self._add_file_list_iter(sv_vcfs, vcf_file_rows + [vcf_header_row_1])
+        mock_file_iter_2 = mock.MagicMock()
+        mock_file_iter_2.wait.return_value = 0
+        mock_file_iter_2.stdout = [row.encode('utf-8') for row in vcf_file_rows + [vcf_header_row_2]]
+        self.mock_subprocess.side_effect = [
+            self.mock_does_file_exist, self.mock_does_file_exist,  self.mock_file_iter,
+            self.mock_does_file_exist, mock_file_iter_2,
+        ]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfSamples': ['HG00735', 'NA19675_1']})
 
         self._set_file_not_found()
 
