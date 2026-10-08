@@ -11,8 +11,6 @@ from loading_pipeline.lib.core import DatasetType, ReferenceGenome
 from loading_pipeline.lib.core.environment import Env
 from loading_pipeline.lib.misc.clickhouse import (
     STAGING_CLICKHOUSE_DATABASE,
-    ClickHouseDictionary,
-    ClickHouseMaterializedView,
     ClickhouseReferenceDataset,
     ClickHouseTable,
     TableNameBuilder,
@@ -461,15 +459,9 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         create_staging_tables(
             table_name_builder,
-            ClickHouseTable.for_dataset_type_atomic_entries_update(
-                DatasetType.SNV_INDEL,
-            ),
         )
         create_staging_materialized_views(
             table_name_builder,
-            ClickHouseMaterializedView.for_dataset_type_atomic_entries_update(
-                DatasetType.SNV_INDEL,
-            ),
         )
         stage_existing_project_partitions(
             table_name_builder,
@@ -478,9 +470,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 'project_b',
                 'project_d',  # Partition does not exist already.
             ],
-            ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
-                DatasetType.SNV_INDEL,
-            ),
         )
         cursor.execute(
             f"""
@@ -590,16 +579,10 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         refresh_materialized_views(
             table_name_builder,
-            ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
-                DatasetType.SNV_INDEL,
-            ),
             staging=True,
         )
         replace_project_partitions(
             table_name_builder,
-            ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
-                DatasetType.SNV_INDEL,
-            ),
             ['project_a', 'project_d'],
         )
         cursor.execute(
@@ -833,9 +816,7 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         exchange_tables(
             table_name_builder,
-            ClickHouseTable.for_dataset_type_atomic_entries_update_unpartitioned(
-                DatasetType.SNV_INDEL,
-            ),
+            ClickHouseTable.atomic_entries_update_unpartitioned(),
         )
         cursor.execute(
             f"""
@@ -857,7 +838,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         reload_dictionaries(
             table_name_builder,
-            ClickHouseDictionary.for_dataset_type(DatasetType.SNV_INDEL),
         )
         cursor.execute(
             f"""
@@ -1037,9 +1017,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         refresh_materialized_views(
             table_name_builder,
-            ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
-                DatasetType.SNV_INDEL,
-            ),
             staging=False,
         )
         cursor.execute(
@@ -1121,9 +1098,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
         )
         refresh_materialized_views(
             table_name_builder,
-            ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
-                DatasetType.SNV_INDEL,
-            ),
             staging=False,
         )
         cursor.execute(
