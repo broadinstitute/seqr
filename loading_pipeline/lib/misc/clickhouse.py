@@ -863,9 +863,7 @@ def direct_insert_annotations(
         )
         """,  # nosec B608
     )
-    for (
-        clickhouse_table
-    ) in [
+    for clickhouse_table in [
         ClickHouseTable.VARIANTS_DISK,
         ClickHouseTable.VARIANTS_MEMORY,
     ]:
