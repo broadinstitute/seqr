@@ -64,7 +64,7 @@ class WriteCombinedSvVcf(luigi.Task):
         bcftools_cmd = ['bcftools', 'merge', '-m', 'none', '-Oz', '-o', out_path]
         subprocess.run(bcftools_cmd + vcf_paths, check=True, capture_output=True)  # noqa: S603 # nosec B603
         tabix_cmd = ['tabix', '-f', '-p', 'vcf', out_path]
-        subprocess.run(tabix_cmd, check=True, capture_output=True)  # noqa: S603 S607 # nosec B603 B607
+        subprocess.run(tabix_cmd, check=True, capture_output=True)  # noqa: S603 # nosec B603
 
     def _sample_ids(self) -> set[str]:
         with open(self.input()[0].path) as f:
