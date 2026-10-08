@@ -10,7 +10,7 @@ from loading_pipeline.lib.misc.sv import (
     overwrite_male_non_par_calls,
 )
 
-TEST_SV_VCF = 'loading_pipeline/var/test/callsets/sv_1.vcf'
+TEST_SV_VCF = 'loading_pipeline/var/test/callsets/sv_1/RGP_164_2.vcf.gz'
 ANNOTATIONS_HT = hl.Table.parallelize(
     [
         {
