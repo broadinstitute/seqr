@@ -61,14 +61,8 @@ class WriteCombinedSvVcf(luigi.Task):
 
         vcf_paths = [task.output().path for task in sample_file_tasks]
         out_path = self.output().path
-        bcftools_cmd = ['bcftools', 'merge', '-m', 'none', '-Oz', '-o', out_path]
-        tabix_cmd = ['tabix', '-f', '-p', 'vcf', out_path]
-        try:
-            subprocess.run(bcftools_cmd + vcf_paths, check=True, capture_output=True, text=True)  # noqa: S603 # nosec B603
-            subprocess.run(tabix_cmd, check=True, capture_output=True, text=True)  # noqa: S603 # nosec B603
-        except subprocess.CalledProcessError as e:
-            e.add_note(e.stderr)
-            raise
+        self._run_command(['bcftools', 'merge', '-m', 'none', '-Oz', '-o', out_path] + vcf_paths)
+        self._run_command(['tabix', '-f', '-p', 'vcf', out_path])
 
     def _sample_ids(self) -> set[str]:
         with open(self.input()[0].path) as f:
@@ -79,3 +73,11 @@ class WriteCombinedSvVcf(luigi.Task):
             for samples in metadata_json['family_samples'].values()
             for sample_id in samples
         }
+
+    @staticmethod
+    def _run_command(cmd: list[str]):
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)  # noqa: S603 # nosec B603
+        except subprocess.CalledProcessError as e:
+            e.add_note(e.stderr)
+            raise
