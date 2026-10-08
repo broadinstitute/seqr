@@ -1,6 +1,5 @@
 import json
 import subprocess  # nosec B404
-import sys
 
 import luigi
 import luigi.format
@@ -63,9 +62,13 @@ class WriteCombinedSvVcf(luigi.Task):
         vcf_paths = [task.output().path for task in sample_file_tasks]
         out_path = self.output().path
         bcftools_cmd = ['bcftools', 'merge', '-m', 'none', '-Oz', '-o', out_path]
-        subprocess.run(bcftools_cmd + vcf_paths, check=True, stderr=sys.stderr)  # noqa: S603 # nosec B603
         tabix_cmd = ['tabix', '-f', '-p', 'vcf', out_path]
-        subprocess.run(tabix_cmd, check=True, stderr=sys.stderr)  # noqa: S603 # nosec B603
+        try:
+            subprocess.run(bcftools_cmd + vcf_paths, check=True, capture_output=True, text=True)  # noqa: S603 # nosec B603
+            subprocess.run(tabix_cmd, check=True, capture_output=True, text=True)  # noqa: S603 # nosec B603
+        except subprocess.CalledProcessError as e:
+            e.add_note(e.stderr)
+            raise
 
     def _sample_ids(self) -> set[str]:
         with open(self.input()[0].path) as f:
