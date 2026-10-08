@@ -49,6 +49,11 @@ def validate_allele_type(
         raise SeqrValidationError(msg)
 
 
+def variant_format(s:hl.StructExpression, reference_genome: ReferenceGenome) -> str:
+    contig = s.locus.contig if reference_genome == ReferenceGenome.GRCh37 else s.locus.contig.replace('chr', '')
+    return f'{contig}-{s.locus.position}-{"-".join(s.alleles)}'
+
+
 def validate_allele_depth_length(
     mt: hl.MatrixTable,
     reference_genome: ReferenceGenome,

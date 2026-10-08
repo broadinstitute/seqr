@@ -33,16 +33,6 @@ class DatasetType(StrEnum):
             DatasetType.SV: hl.tstruct(variant_id=hl.tstr),
         }.get(self, default_key)
 
-    def table_key_format_fn(
-        self,
-        reference_genome: ReferenceGenome,
-    ) -> Callable[[hl.StructExpression], str]:
-        if self == DatasetType.SV:
-            return lambda s: s.variant_id
-        return (
-            lambda s: f'{s.locus.contig if reference_genome == ReferenceGenome.GRCh37 else s.locus.contig.replace("chr", "")}-{s.locus.position}-{"-".join(s.alleles)}'
-        )
-
     def entries_table_key_expression(
         self,
         ht: hl.Table,
