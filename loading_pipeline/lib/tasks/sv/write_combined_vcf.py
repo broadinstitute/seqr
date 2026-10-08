@@ -61,8 +61,7 @@ class WriteCombinedSvVcf(luigi.Task):
 
         vcf_paths = [task.output().path for task in sample_file_tasks]
         out_path = self.output().path
-        cmd = ['bcftools', 'merge', '-m', 'none', '-Oz', '-o', out_path] + vcf_paths
-        self._run_command(cmd)
+        self._run_command(['bcftools', 'merge', '-m', 'none', '-Oz', '-o', out_path, *vcf_paths])
         self._run_command(['tabix', '-f', '-p', 'vcf', out_path])
 
     def _sample_ids(self) -> set[str]:
