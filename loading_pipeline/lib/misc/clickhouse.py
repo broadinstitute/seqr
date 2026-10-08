@@ -733,7 +733,9 @@ def refresh_materialized_views(
     table_name_builder,
     staging=False,
 ):
-    for materialized_view in [ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV]:
+    for materialized_view in [
+        ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV,
+    ]:
         logged_query(
             f"""
             SYSTEM START VIEW {table_name_builder.staging_dst_table(materialized_view) if staging else table_name_builder.dst_table(materialized_view)}
@@ -863,23 +865,19 @@ def direct_insert_annotations(
     )
     for (
         clickhouse_table
-    ) in [ClickHouseTable.VARIANTS_DISK]:
-        disk_backed_dst_table = table_name_builder.dst_table(clickhouse_table)
-        disk_backed_src_table = table_name_builder.src_table(clickhouse_table)
+    ) in [
+        ClickHouseTable.VARIANTS_DISK,
+        ClickHouseTable.VARIANTS_MEMORY,
+    ]:
+        curr_dst_table = table_name_builder.dst_table(clickhouse_table)
+        curr_src_table = table_name_builder.src_table(clickhouse_table)
         logged_query(
             f"""
-            INSERT INTO {disk_backed_dst_table}
+            INSERT INTO {curr_dst_table}
             SELECT {clickhouse_table.select_fields}
-            FROM {disk_backed_src_table} WHERE {clickhouse_table.key_field} IN {table_name_builder.staging_dst_prefix}/_tmp_loadable_keys`
+            FROM {curr_src_table} WHERE {clickhouse_table.key_field} IN {table_name_builder.staging_dst_prefix}/_tmp_loadable_keys`
             """,  # nosec B608
         )
-    logged_query(
-        f"""
-        INSERT INTO {dst_table}
-        SELECT {ClickHouseTable.VARIANTS_MEMORY.select_fields}
-        FROM {src_table} WHERE {ClickHouseTable.VARIANTS_MEMORY.key_field} IN {table_name_builder.staging_dst_prefix}/_tmp_loadable_keys`
-        """,  # nosec B608
-    )
     drop_staging_db()
 
 

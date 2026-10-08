@@ -181,10 +181,6 @@ class DatasetType(StrEnum):
         return self == DatasetType.SNV_INDEL
 
     @property
-    def family_entries_filter_fn(self) -> Callable[[hl.StructExpression], bool]:
-        return lambda e: e.gt > 0
-
-    @property
     def can_run_validation(self) -> bool:
         return self == DatasetType.SNV_INDEL
 
