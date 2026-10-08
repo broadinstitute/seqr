@@ -3,13 +3,12 @@ from enum import StrEnum
 
 import hail as hl
 
-from loading_pipeline.lib.annotations import gcnv, mito, shared, snv_indel, sv
+from loading_pipeline.lib.annotations import mito, shared, snv_indel, sv
 from loading_pipeline.lib.core.definitions import ReferenceGenome, SampleType
 from loading_pipeline.lib.core.environment import Env
 
 
 class DatasetType(StrEnum):
-    GCNV = 'GCNV'
     MITO = 'MITO'
     SNV_INDEL = 'SNV_INDEL'
     SV = 'SV'
@@ -19,7 +18,6 @@ class DatasetType(StrEnum):
         return {
             DatasetType.SNV_INDEL: [ReferenceGenome.GRCh37, ReferenceGenome.GRCh38],
             DatasetType.MITO: [ReferenceGenome.GRCh38],
-            DatasetType.GCNV: [ReferenceGenome.GRCh38],
             DatasetType.SV: [ReferenceGenome.GRCh38],
         }[self]
 
@@ -32,7 +30,6 @@ class DatasetType(StrEnum):
             alleles=hl.tarray(hl.tstr),
         )
         return {
-            DatasetType.GCNV: hl.tstruct(variant_id=hl.tstr),
             DatasetType.SV: hl.tstruct(variant_id=hl.tstr),
         }.get(self, default_key)
 
@@ -40,7 +37,7 @@ class DatasetType(StrEnum):
         self,
         reference_genome: ReferenceGenome,
     ) -> Callable[[hl.StructExpression], str]:
-        if self in {DatasetType.GCNV, DatasetType.SV}:
+        if self == DatasetType.SV:
             return lambda s: s.variant_id
         return (
             lambda s: f'{s.locus.contig if reference_genome == ReferenceGenome.GRCh37 else s.locus.contig.replace("chr", "")}-{s.locus.position}-{"-".join(s.alleles)}'
@@ -51,7 +48,7 @@ class DatasetType(StrEnum):
         ht: hl.Table,
         sample_type: SampleType,
     ) -> dict[str, hl.Expression]:
-        if self in {DatasetType.GCNV, DatasetType.SV}:
+        if self == DatasetType.SV:
             return {'sign': 1, 'variantId': ht.variant_id}
         return {
             'sample_type': sample_type.value,
@@ -71,7 +68,6 @@ class DatasetType(StrEnum):
                 'mito_cn': hl.tfloat64,
             },
             DatasetType.SV: {},
-            DatasetType.GCNV: {},
         }[self]
 
     @property
@@ -95,20 +91,6 @@ class DatasetType(StrEnum):
                 'CONC_ST': hl.tarray(hl.tstr),
                 'GQ': hl.tint32,
                 'RD_CN': hl.tint32,
-            },
-            DatasetType.GCNV: {
-                'any_ovl': hl.tstr,
-                'defragmented': hl.tbool,
-                'genes_any_overlap_Ensemble_ID': hl.tstr,
-                'genes_any_overlap_totalExons': hl.tint32,
-                'identical_ovl': hl.tstr,
-                'is_latest': hl.tbool,
-                'no_ovl': hl.tbool,
-                'sample_start': hl.tint32,
-                'sample_end': hl.tint32,
-                'CN': hl.tint32,
-                'GT': hl.tstr,
-                'QS': hl.tint32,
             },
         }[self]
 
@@ -150,20 +132,6 @@ class DatasetType(StrEnum):
                 'info.SVLEN': hl.tint32,
                 **sv.CONSEQ_PREDICTED_GENE_COLS,
             },
-            DatasetType.GCNV: {
-                'cg_genes': hl.tset(hl.tstr),
-                'chr': hl.tstr,
-                'end': hl.tint32,
-                'filters': hl.tset(hl.tstr),
-                'gene_ids': hl.tset(hl.tstr),
-                'lof_genes': hl.tset(hl.tstr),
-                'num_exon': hl.tint32,
-                'sc': hl.tint32,
-                'sf': hl.tfloat64,
-                'start': hl.tint32,
-                'strvctvre_score': hl.tstr,
-                'svtype': hl.tstr,
-            },
         }[self]
 
     @property
@@ -172,7 +140,6 @@ class DatasetType(StrEnum):
             DatasetType.SNV_INDEL: hl.empty_set(hl.tstr),
             DatasetType.MITO: hl.set(['PASS']),
             DatasetType.SV: hl.set(['PASS', 'BOTHSIDES_SUPPORT']),
-            DatasetType.GCNV: hl.empty_set(hl.tstr),
         }[self]
 
     @property
@@ -212,12 +179,6 @@ class DatasetType(StrEnum):
     @property
     def has_multi_allelic_variants(self) -> bool:
         return self == DatasetType.SNV_INDEL
-
-    @property
-    def family_entries_filter_fn(self) -> Callable[[hl.StructExpression], bool]:
-        return {
-            DatasetType.GCNV: lambda e: hl.is_defined(e.gt),
-        }.get(self, lambda e: e.gt > 0)
 
     @property
     def can_run_validation(self) -> bool:
@@ -274,21 +235,6 @@ class DatasetType(StrEnum):
                 'liftedOverPos': shared.lifted_over_pos,
                 'rg37LocusEnd': shared.lifted_over_locus_end,
             },
-            DatasetType.GCNV: {
-                'chrom': gcnv.chrom,
-                'end': gcnv.end,
-                'numExon': gcnv.num_exon,
-                'pos': gcnv.pos,
-                'populations': gcnv.populations,
-                'predictions': gcnv.predictions,
-                'sortedGeneConsequences': gcnv.sorted_gene_consequences,
-                'svType': gcnv.sv_type,
-                'variantId': gcnv.variant_id,
-                'xpos': gcnv.xpos,
-                'liftedOverChrom': shared.lifted_over_chrom,
-                'liftedOverPos': shared.lifted_over_pos,
-                'rg37LocusEnd': shared.lifted_over_locus_end,
-            },
         }
         if reference_genome == ReferenceGenome.GRCh37:
             return GRCh37_fns[self]
@@ -307,9 +253,6 @@ class DatasetType(StrEnum):
             },
             DatasetType.SV: {
                 **GRCh37_fns[DatasetType.SV],
-            },
-            DatasetType.GCNV: {
-                **GRCh37_fns[DatasetType.GCNV],
             },
         }[self]
 
@@ -363,10 +306,6 @@ class DatasetType(StrEnum):
                 'lifted_over_locus': shared.rg37_locus,
                 'lifted_over_locus_end': sv.rg37_locus_end,
             },
-            DatasetType.GCNV: {
-                'lifted_over_locus': gcnv.rg37_locus,
-                'lifted_over_locus_end': gcnv.rg37_locus_end,
-            },
         }[self]
 
     @property
@@ -392,19 +331,6 @@ class DatasetType(StrEnum):
                 'newCall': sv.new_call,
                 'prevCall': sv.prev_call,
                 'prevNumAlt': sv.prev_num_alt,
-            },
-            DatasetType.GCNV: {
-                'gt': gcnv.gt,
-                'cn': gcnv.CN,
-                'qs': gcnv.QS,
-                'defragged': gcnv.defragged,
-                'start': gcnv.start,
-                'end': gcnv.sample_end,
-                'numExon': gcnv.sample_num_exon,
-                'geneIds': gcnv.gene_ids,
-                'newCall': gcnv.new_call,
-                'prevCall': gcnv.prev_call,
-                'prevOverlap': gcnv.prev_overlap,
             },
         }[self]
 

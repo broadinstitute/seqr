@@ -1246,11 +1246,11 @@ class DataManagerAPITest(AirtableTest):
     def _trigger_error(self, url, body, variables, mock_open, mock_gzip_open, mock_mkdir):
         responses.add(responses.POST, PIPELINE_RUNNER_URL, status=400)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES', skip_tdr=True)
+        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='SV', sample_type='WES', skip_tdr=True)
         self._assert_trigger_error(response, body, variables, response_body={
             'error': f'400 Client Error: Bad Request for url: {PIPELINE_RUNNER_URL}'
         })
-        self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'GCNV', sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'SV', sample_type='WES')
 
         self._set_file_not_found(has_mv_commands=True)
         self.reset_logs()
@@ -1340,7 +1340,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
             'project_guid': 'R0001_1kg',
             'family_guids': ['F000002_2'],
-            'dataset_types': ['SNV_INDEL', 'SV', 'GCNV'],
+            'dataset_types': ['SNV_INDEL', 'SV'],
         })
 
 
@@ -1588,7 +1588,7 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
 
     def _assert_expected_load_data_requests(self, *args, dataset_type='SNV_INDEL', skip_project=False, **kwargs):
         num_calls = 1
-        is_gcnv = dataset_type == 'GCNV'
+        is_gcnv = dataset_type == 'SV'
         required_sample_field = 'gCNV_CallsetPath' if is_gcnv else None
         logs = []
         if not skip_project:
@@ -1645,7 +1645,7 @@ Loading pipeline is triggered with:
         error = response_body.get('error') or response_body['errors'][0]
         variables = {
             **variables,
-            'dataset_type': 'GCNV',
+            'dataset_type': 'SV',
             'callset_path': variables['callset_path'].replace('callset.vcf', 'sv_callset.vcf'),
         }
         self.assert_json_logs(self.data_manager_user, [
@@ -1773,7 +1773,7 @@ Loading pipeline should be triggered with:
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Invalid VCF file format - file path must end with .bed or .bed.gz or .vcf or .vcf.gz or .vcf.bgz',
+            'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz',
         ])
 
         body['filePath'] = f'{self.CALLSET_DIR}/sv_callset.vcf'

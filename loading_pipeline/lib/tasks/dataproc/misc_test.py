@@ -43,8 +43,6 @@ class MiscTest(unittest.TestCase):
                 'False',
                 '--validations-to-skip',
                 '[]',
-                '--is-new-gcnv-joint-call',
-                'False',
                 '--attempt-id',
                 '0',
             ],
