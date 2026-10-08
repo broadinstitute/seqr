@@ -25,7 +25,6 @@ DATA_TYPE_FORMAT_FIELDS = {
 
 DATA_TYPE_FILE_EXTS = {
     Dataset.DATASET_TYPE_MITO_CALLS: ('.mt',),
-    Dataset.DATASET_TYPE_SV_CALLS: ('.bed', '.bed.gz'),
 }
 
 REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
