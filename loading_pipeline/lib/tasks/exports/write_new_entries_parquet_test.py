@@ -31,7 +31,6 @@ TEST_MITO_EXPORT_PEDIGREE = (
 TEST_SNV_INDEL_VCF = 'loading_pipeline/var/test/callsets/1kg_30variants.vcf'
 TEST_MITO_CALLSET = 'loading_pipeline/var/test/callsets/mito_1.mt'
 TEST_SV_VCF_2 = 'loading_pipeline/var/test/callsets/sv_2.vcf'
-TEST_GCNV_BED_FILE = 'loading_pipeline/var/test/callsets/gcnv_1.tsv'
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
@@ -321,108 +320,6 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                             'newCall': True,
                             'prevCall': False,
                             'prevNumAlt': None,
-                        },
-                    ],
-                    'sign': 1,
-                },
-            ],
-        )
-
-    def test_gcnv_write_new_entries_parquet(self):
-        copy_project_pedigree_to_mocked_dir(
-            TEST_PEDIGREE_5,
-            ReferenceGenome.GRCh38,
-            DatasetType.GCNV,
-            SampleType.WES,
-            'R0115_test_project2',
-        )
-        worker = luigi.worker.Worker()
-        task = WriteNewEntriesParquetTask(
-            reference_genome=ReferenceGenome.GRCh38,
-            dataset_type=DatasetType.GCNV,
-            sample_type=SampleType.WES,
-            callset_path=TEST_GCNV_BED_FILE,
-            project_guids=['R0115_test_project2'],
-            validations_to_skip=[ALL_VALIDATIONS],
-            run_id=TEST_RUN_ID,
-        )
-        worker.add(task)
-        worker.run()
-        self.assertTrue(task.output().exists())
-        self.assertTrue(task.complete())
-        df = pd.read_parquet(
-            new_entries_parquet_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-                TEST_RUN_ID,
-            ),
-        )
-        export_json = convert_ndarray_to_list(df.to_dict('records'))
-        self.assertEqual(len(export_json), 2)
-        self.assertEqual(
-            export_json[:1],
-            [
-                {
-                    'variantId': 'suffix_16456_DEL',
-                    'project_guid': 'R0115_test_project2',
-                    'family_guid': 'family_2_1',
-                    'filters': [],
-                    'calls': [
-                        {
-                            'sampleId': 'RGP_164_1',
-                            'gt': 1,
-                            'cn': 1,
-                            'qs': 4,
-                            'defragged': False,
-                            'start': 100006937,
-                            'end': 100007881,
-                            'numExon': 2,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': False,
-                            'prevCall': True,
-                            'prevOverlap': False,
-                        },
-                        {
-                            'sampleId': 'RGP_164_2',
-                            'gt': 1,
-                            'cn': 1,
-                            'qs': 5,
-                            'defragged': False,
-                            'start': 100017585,
-                            'end': 100023213,
-                            'numExon': 3,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': False,
-                            'prevCall': False,
-                            'prevOverlap': False,
-                        },
-                        {
-                            'sampleId': 'RGP_164_3',
-                            'gt': 2,
-                            'cn': 0,
-                            'qs': 30,
-                            'defragged': False,
-                            'start': 100017585,
-                            'end': 100023213,
-                            'numExon': 3,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': False,
-                            'prevCall': True,
-                            'prevOverlap': False,
-                        },
-                        {
-                            'sampleId': 'RGP_164_4',
-                            'gt': 2,
-                            'cn': 0,
-                            'qs': 30,
-                            'defragged': False,
-                            'start': 100017586,
-                            'end': 100023212,
-                            'numExon': 2,
-                            'geneIds': ['ENSG00000283761', 'ENSG22222222222'],
-                            'newCall': False,
-                            'prevCall': True,
-                            'prevOverlap': False,
                         },
                     ],
                     'sign': 1,

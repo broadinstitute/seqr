@@ -298,25 +298,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 TEST_RUN_ID,
             ),
         )
-        gcnv_variants_df = pd.DataFrame(
-            {
-                'key': [10, 11, 12, 13],
-                'variantId': [
-                    'suffix_1000_DEL',
-                    'suffix_1001_DUP',
-                    'suffix_1002_DEL',
-                    'suffix_1003_DUP',
-                ],
-            },
-        )
-        write_test_parquet(
-            gcnv_variants_df,
-            new_variants_parquet_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-                TEST_RUN_ID,
-            ),
-        )
 
         # New Entries Parquet
         df = pd.DataFrame(
@@ -382,102 +363,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 TEST_RUN_ID,
             ),
             schema,
-        )
-        gcnv_entries_df = pd.DataFrame(
-            {
-                'project_guid': [
-                    'project_d',
-                    'project_d',
-                    'project_d',
-                ],
-                'family_guid': [
-                    'family_d1',
-                    'family_d2',
-                    'family_d3',
-                ],
-                'variantId': [
-                    'suffix_1000_DEL',
-                    'suffix_1002_DEL',
-                    'suffix_1003_DUP',
-                ],
-                'calls': [
-                    [
-                        {
-                            'sampleId': 'sample_d1',
-                            'gt': 0,
-                            'cn': 2,
-                            'qs': 4,
-                            'defragged': False,
-                            'start': 100006937,
-                            'end': 100007881,
-                            'numExon': 2,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': False,
-                            'prevCall': True,
-                            'prevOverlap': False,
-                        },
-                        {
-                            'sampleId': 'sample_d11',
-                            'gt': 2,
-                            'cn': 0,
-                            'qs': 30,
-                            'defragged': False,
-                            'start': 100006937,
-                            'end': 100007881,
-                            'numExon': 2,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevOverlap': False,
-                        },
-                    ],
-                    [
-                        {
-                            'sampleId': 'sample_d2',
-                            'gt': 0,
-                            'cn': 2,
-                            'qs': 5,
-                            'defragged': False,
-                            'start': 100017585,
-                            'end': 100023213,
-                            'numExon': 1,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': False,
-                            'prevCall': True,
-                            'prevOverlap': False,
-                        },
-                    ],
-                    [
-                        {
-                            'sampleId': 'sample_d3',
-                            'gt': 1,
-                            'cn': 1,
-                            'qs': 20,
-                            'defragged': False,
-                            'start': 100017585,
-                            'end': 100023213,
-                            'numExon': 1,
-                            'geneIds': ['ENSG00000117620', 'ENSG00000283761'],
-                            'newCall': True,
-                            'prevCall': False,
-                            'prevOverlap': False,
-                        },
-                    ],
-                ],
-                'sign': [
-                    1,
-                    1,
-                    1,
-                ],
-            },
-        )
-        write_test_parquet(
-            gcnv_entries_df,
-            new_entries_parquet_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-                TEST_RUN_ID,
-            ),
         )
 
     def test_get_clickhouse_client(self):
@@ -1128,66 +1013,6 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 (10, '10-987654-G-A'),
             ],
         )
-
-    def test_load_run_variants_gcnv(self):
-        load_run_variants(
-            ReferenceGenome.GRCh38,
-            DatasetType.GCNV,
-            TEST_RUN_ID,
-        )
-        cursor = connections['clickhouse_write'].cursor()
-        cursor.execute(
-            f"""
-           SELECT COUNT(*)
-           FROM
-           {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/variants_memory`
-           """,  # nosec B608
-        )
-        variants_disk_count = cursor.fetchone()[0]
-        self.assertEqual(variants_disk_count, 4)
-        cursor.execute(
-            f"""
-           SELECT COUNT(*)
-           FROM
-           {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/variants_disk`
-           """,  # nosec B608
-        )
-        variants_disk_count = cursor.fetchone()[0]
-        self.assertEqual(variants_disk_count, 4)
-        cursor.execute(
-            f"""
-           SELECT COUNT(*)
-           FROM
-           {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/key_lookup`
-           """,  # nosec B608
-        )
-        key_lookup_count = cursor.fetchone()[0]
-        self.assertEqual(key_lookup_count, 4)
-
-    def test_load_run_entries_gcnv(self):
-        load_run_variants(
-            ReferenceGenome.GRCh38,
-            DatasetType.GCNV,
-            TEST_RUN_ID,
-        )
-
-        load_run_entries(
-            ReferenceGenome.GRCh38,
-            DatasetType.GCNV,
-            TEST_RUN_ID,
-            ['project_d'],
-            ['family_d1', 'family_d2'],
-        )
-        cursor = connections['clickhouse_write'].cursor()
-        cursor.execute(
-            f"""
-           SELECT COUNT(*)
-           FROM
-           {Env.CLICKHOUSE_DATABASE}.`GRCh38/GCNV/entries`
-           """,  # nosec B608
-        )
-        entries_count = cursor.fetchone()[0]
-        self.assertEqual(entries_count, 3)
 
     def test_delete_families(self):
         table_name_builder = TableNameBuilder(

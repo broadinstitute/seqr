@@ -22,8 +22,6 @@ class RunsTest(MockedDatarootTestCase):
         for reference_genome, dataset_type in [
             (ReferenceGenome.GRCh38, DatasetType.SNV_INDEL),
             (ReferenceGenome.GRCh37, DatasetType.SNV_INDEL),
-            (ReferenceGenome.GRCh38, DatasetType.GCNV),
-            (ReferenceGenome.GRCh37, DatasetType.GCNV),
         ]:
             for run_id in run_ids:
                 base_path = runs_path(reference_genome, dataset_type)

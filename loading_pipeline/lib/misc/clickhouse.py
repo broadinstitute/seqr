@@ -130,8 +130,6 @@ class ClickHouseTable(StrEnum):
         cls,
         dataset_type: DatasetType,
     ) -> list['ClickHouseTable']:
-        if dataset_type == DatasetType.GCNV:
-            return [ClickHouseTable.ENTRIES]
         return [
             ClickHouseTable.ENTRIES,
             ClickHouseTable.PROJECT_GT_STATS,
@@ -142,8 +140,6 @@ class ClickHouseTable(StrEnum):
         cls,
         dataset_type: DatasetType,
     ) -> list['ClickHouseTable']:
-        if dataset_type == DatasetType.GCNV:
-            return []
         return [ClickHouseTable.GT_STATS]
 
 
@@ -155,8 +151,6 @@ class ClickHouseDictionary(StrEnum):
         cls,
         dataset_type: DatasetType,
     ) -> list['ClickHouseDictionary']:
-        if dataset_type == DatasetType.GCNV:
-            return []
         return list(cls)
 
 
@@ -169,8 +163,6 @@ class ClickHouseMaterializedView(StrEnum):
         cls,
         dataset_type: DatasetType,
     ) -> list['ClickHouseMaterializedView']:
-        if dataset_type == DatasetType.GCNV:
-            return []
         return [
             ClickHouseMaterializedView.ENTRIES_TO_PROJECT_GT_STATS_MV,
             ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV,
@@ -181,8 +173,6 @@ class ClickHouseMaterializedView(StrEnum):
         cls,
         dataset_type: DatasetType,
     ) -> list['ClickHouseMaterializedView']:
-        if dataset_type == DatasetType.GCNV:
-            return []
         return [ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV]
 
 
@@ -280,7 +270,7 @@ class ClickhouseReferenceDataset(StrEnum):
         reference_genome: ReferenceGenome,
         dataset_type: DatasetType,
     ):
-        if dataset_type in {DatasetType.SV, DatasetType.GCNV}:
+        if dataset_type == DatasetType.SV:
             return []
         return {
             (ReferenceGenome.GRCh38, DatasetType.MITO): [

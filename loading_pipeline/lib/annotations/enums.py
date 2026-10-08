@@ -160,8 +160,6 @@ MITOTIP_PATHOGENICITIES = [
 ]
 
 SV_TYPES = [
-    'gCNV_DEL',
-    'gCNV_DUP',
     'BND',
     'CPX',
     'CTX',
