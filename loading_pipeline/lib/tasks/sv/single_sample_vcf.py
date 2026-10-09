@@ -1,7 +1,7 @@
 import luigi
 
 from loading_pipeline.lib.misc.sv import run_command
-from loading_pipeline.lib.tasks.files import LocalizableFileTask, LocalizableTarget
+from loading_pipeline.lib.tasks.files import LocalizableFileTask
 
 
 class SingleSampleVCFTask(luigi.Task):
@@ -19,7 +19,7 @@ class SingleSampleVCFTask(luigi.Task):
         file_id = self.sample_id
         if self.vcf_sample_id is not None:
             file_id = f'{self.vcf_sample_id}__{file_id}'
-        return [LocalizableTarget(pathname) for pathname in self._file_names(file_id)]
+        return [luigi.LocalTarget(pathname) for pathname in self._file_names(file_id)]
 
     def _file_names(self, file_id: str) -> list[str]:
         pathname = self.path_template.replace('*', file_id)
@@ -30,6 +30,7 @@ class SingleSampleVCFTask(luigi.Task):
             target.localize()
 
         if self.vcf_sample_id:
+            out_path = self.output()[0].path
             run_command(
                 [
                     'bcftools',
@@ -37,7 +38,8 @@ class SingleSampleVCFTask(luigi.Task):
                     '-n',
                     self.sample_id,
                     '-o',
-                    self.output()[0].path,
+                    out_path,
                     self.input()[0].path,
                 ],
             )
+            run_command(['tabix', '-p', 'vcf', out_path])
