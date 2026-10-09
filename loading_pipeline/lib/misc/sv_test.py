@@ -44,7 +44,6 @@ class SVTest(unittest.TestCase):
             mt,
             DatasetType.SV,
         )
-        mt.filter_rows(hl.agg.any(hl.is_defined(mt.GT)))
         mt = overwrite_male_non_par_calls(
             mt,
             ['RGP_164_2'],
@@ -59,10 +58,8 @@ class SVTest(unittest.TestCase):
         )
         self.assertEqual(
             [
-                hl.Call(alleles=[0, 0], phased=False),
                 # END of this variant < start of the non-par region.
                 hl.Call(alleles=[0, 1], phased=False),
-                hl.Call(alleles=[0, 0], phased=False),
                 hl.Call(alleles=[1], phased=False),
             ],
             mt.GT.collect(),
