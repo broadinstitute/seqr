@@ -1,5 +1,3 @@
-import json
-
 import hail as hl
 import luigi
 import luigi.util
