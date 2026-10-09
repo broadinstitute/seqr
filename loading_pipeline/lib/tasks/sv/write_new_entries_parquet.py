@@ -60,6 +60,10 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetTask):
                 ),
             )
 
+        mt = mt.annotate_globals(
+            family_samples=metadata_json['family_samples'],
+            project_families=metadata_json['project_families'],
+        )
         ht = compute_callset_family_entries_ht(
             self.dataset_type,
             mt,

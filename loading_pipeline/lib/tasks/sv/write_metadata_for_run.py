@@ -27,12 +27,13 @@ class WriteMetadataForSvRunTask(BaseWriteMetadataForRunTask):
 
     def populate_metadata_families(self, metadata_json) -> None:
         metadata_json['remap_ids'] = {}
+        metadata_json['project_families'] = {}
         metadata_json['male_sample_ids'] = []
-        for target in self.input():
+        for i, target in enumerate(self.input()):
             df = pd.read_csv(target.path, sep='\t')
-            metadata_json['family_samples'].update(
-                df.groupby('Family_GUID')['Individual_ID'].apply(list).to_dict(),
-            )
+            project_family_samples = df.groupby('Family_GUID')['Individual_ID'].apply(list).to_dict(),
+            metadata_json['family_samples'].update(project_family_samples)
+            metadata_json['project_families'][self.project_guids[i]] = sorted(project_family_samples.keys())
             metadata_json['male_sample_ids'] += df.loc[
                 df['Sex'] == 'M',
                 'Individual_ID',
