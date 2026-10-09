@@ -63,7 +63,9 @@ class WriteCombinedSvVcf(luigi.Task):
     def run(self) -> None:
         sample_file_tasks = [
             SingleSampleVCFTask(
-                path_template=self.callset_path, sample_id=sample_id, vcf_sample_id=vcf_sample_id,
+                path_template=self.callset_path,
+                sample_id=sample_id,
+                vcf_sample_id=vcf_sample_id,
             )
             for sample_id, vcf_sample_id in self._sample_ids().items()
         ]

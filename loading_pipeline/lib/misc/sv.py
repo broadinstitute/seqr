@@ -147,6 +147,7 @@ def overwrite_male_non_par_calls(
     )
     return mt.drop('start_locus', 'end_locus')
 
+
 def run_command(cmd: list[str]):
     try:
         subprocess.run(cmd, check=True, capture_output=True, text=True)  # noqa: S603 # nosec B603
