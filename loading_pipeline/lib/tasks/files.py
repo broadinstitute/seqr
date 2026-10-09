@@ -52,6 +52,31 @@ class LocalizableTarget(luigi.LocalTarget):
             gcs.GCSClient().put(self.path, self.remote_path)
 
 
+class LocalizableFileTask(luigi.Task):
+    pathname = luigi.Parameter()
+    run = None
+
+    def output(self) -> LocalizableTarget:
+        return LocalizableTarget(self.pathname)
+
+
+class LocalizedVCFTask(luigi.Task):
+    pathname = luigi.Parameter()
+
+    def requires(self) -> list[luigi.Task]:
+        return [
+            LocalizableFileTask(self.pathname),
+            LocalizableFileTask(f'{self.pathname}.tbi'),
+        ]
+
+    def output(self) -> list[luigi.LocalTarget]:
+        return [luigi.LocalTarget(target.path) for target in self.input()]
+
+    def run(self) -> None:
+        for target in self.input():
+            target.localize()
+
+
 class RawFileTask(luigi.Task):
     pathname = luigi.Parameter()
     run = None
