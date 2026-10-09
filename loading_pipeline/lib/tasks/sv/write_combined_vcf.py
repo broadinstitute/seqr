@@ -26,7 +26,7 @@ class WriteCombinedSvVcf(luigi.Task):
             return False
 
         samples = None
-        with self.output().open() as f:
+        with self.output().open('r') as f:
             for line in f:
                 if line.startswith('#CHROM'):
                     samples = set(line.split('FORMAT', 1)[-1].strip().split())
