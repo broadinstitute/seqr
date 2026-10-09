@@ -63,7 +63,17 @@ class WriteCombinedSvVcf(luigi.Task):
         out_path = self.output().path
         self.output().makedirs()
         self._run_command(
-            ['bcftools', 'merge', '-m', 'none', '-Oz', '-o', out_path, *vcf_paths],
+            [
+                'bcftools',
+                'merge',
+                '-m',
+                'none',
+                '--missing-to-ref',
+                '-Oz',
+                '-o',
+                out_path,
+                *vcf_paths,
+            ],
         )
         self._run_command(['tabix', '-f', '-p', 'vcf', out_path])
 
