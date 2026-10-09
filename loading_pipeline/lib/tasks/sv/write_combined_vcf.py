@@ -26,7 +26,7 @@ class WriteCombinedSvVcf(luigi.Task):
             return False
 
         samples = None
-        with self.output().open('r') as f:
+        with self.output().open() as f:
             for line in f:
                 if line.startswith('#CHROM'):
                     samples = set(line.split('FORMAT', 1)[-1].strip().split())
@@ -44,7 +44,7 @@ class WriteCombinedSvVcf(luigi.Task):
                 self.dataset_type,
                 self.callset_path,
             ).replace('.mt', '.vcf.gz'),
-            format=luigi.format.Gzip,
+            format=luigi.format.UTF8 >> luigi.format.Gzip,
         )
 
     def requires(self) -> list[luigi.Task]:
