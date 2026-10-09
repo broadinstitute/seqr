@@ -17,10 +17,13 @@ class SingleSampleVCFTask(luigi.Task):
         ]
 
     def output(self) -> list[luigi.LocalTarget]:
-        output_paths = [target.path for target in self.input()]
+        output_path = self.input()[0].path
         if self.vcf_sample_id is not None:
-            output_paths = [path.replace(self.vcf_sample_id, self.sample_id) for path in output_paths]
-        return [luigi.LocalTarget(path) for path in output_paths]
+            output_path = output_path.replace(self.vcf_sample_id, self.sample_id)
+        return [
+            LocalizableFileTask(output_path),
+            LocalizableFileTask(f'{output_path}.tbi'),
+        ]
 
     def run(self) -> None:
         for target in self.input():
