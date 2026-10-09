@@ -14,7 +14,10 @@ from loading_pipeline.lib.paths import (
 )
 from loading_pipeline.lib.tasks.base.base_loading_run_params import BaseLoadingRunParams
 from loading_pipeline.lib.tasks.base.base_write import BaseWriteTask
-from loading_pipeline.lib.tasks.files import CallsetTask, GCSorLocalTarget
+from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.sv.write_combined_vcf import (
+    WriteCombinedSvVcf,
+)
 from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
     with_persisted_validation_errors,
 )
@@ -33,14 +36,14 @@ class WriteImportedSvCallsetTask(BaseWriteTask):
 
     def requires(self) -> list[luigi.Task]:
         return [
-            CallsetTask(self.callset_path),
+            self.clone(WriteCombinedSvVcf),
         ]
 
     @with_persisted_validation_errors
     def create_table(self) -> hl.MatrixTable:
         # NB: throws SeqrValidationError
         mt = import_callset(
-            self.callset_path,
+            self.input()[0][0].remote_path or self.input()[0][0].path,
             self.reference_genome,
             self.dataset_type,
         )

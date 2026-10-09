@@ -16,8 +16,8 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.sv.write_remapped_and_subsetted_callset import (
-    WriteRemappedAndSubsettedSvCallsetTask,
+from loading_pipeline.lib.tasks.sv.write_postprocessed_callset import (
+    WritePostprocessedSvCallsetTask,
 )
 from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
     WriteExistingVariantsParquetTask,
@@ -60,7 +60,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
 
     def requires(self) -> list[luigi.Task]:
         return [
-            self.clone(WriteRemappedAndSubsettedSvCallsetTask),
+            self.clone(WritePostprocessedSvCallsetTask),
             self.clone(WriteExistingVariantsParquetTask),
         ]
 

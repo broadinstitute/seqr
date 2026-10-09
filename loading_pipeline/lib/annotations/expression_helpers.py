@@ -4,7 +4,7 @@ from loading_pipeline.lib.annotations.enums import TRANSCRIPT_CONSEQUENCE_TERMS
 from loading_pipeline.lib.core.definitions import ReferenceGenome
 
 STANDARD_CONTIGS = hl.set(
-    [c.replace('MT', 'M') for c in ReferenceGenome.GRCh37.standard_contigs],
+    {'M', *ReferenceGenome.GRCh38.contig_recoding()},
 )
 
 TRANSCRIPT_CONSEQUENCE_TERM_RANK_LOOKUP = hl.dict(

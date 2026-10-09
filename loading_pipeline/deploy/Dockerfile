@@ -17,7 +17,7 @@ ENV VIRTUAL_ENV="/.venv"
 # Note that these are getting added into the final runtime image and not the build...
 # I (BPB) ran into challenges getting the uv virtual environment synced properly due
 # to mismatches between the uv:python3.11-alpine and hail docker python environments.
-RUN apt-get update && apt-get install -y build-essential && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y build-essential bcftools tabix && rm -rf /var/lib/apt/lists/*
 
 COPY loading_pipeline/pyproject.toml loading_pipeline/uv.lock .
 RUN uv sync --group prod --no-group dev --locked
