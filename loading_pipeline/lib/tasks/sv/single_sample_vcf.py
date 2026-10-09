@@ -20,7 +20,8 @@ class SingleSampleVCFTask(luigi.Task):
         output_path = self.input()[0].path
         if self.vcf_sample_id is not None:
             output_path = output_path.replace(
-                self.vcf_sample_id, f'{self.vcf_sample_id}__{self.sample_id}',
+                self.vcf_sample_id,
+                f'{self.vcf_sample_id}__{self.sample_id}',
             )
         return [
             LocalizableFileTask(output_path),
