@@ -4,7 +4,6 @@ import hail as hl
 
 from loading_pipeline.lib.core import DatasetType, ReferenceGenome
 from loading_pipeline.lib.misc.io import import_callset, select_relevant_fields
-from loading_pipeline.lib.misc.sample_ids import subset_samples
 from loading_pipeline.lib.misc.sv import (
     deduplicate_merged_sv_concordance_calls,
     overwrite_male_non_par_calls,
