@@ -45,14 +45,7 @@ class SVTest(unittest.TestCase):
             mt,
             DatasetType.SV,
         )
-        mt = subset_samples(
-            mt,
-            hl.Table.parallelize(
-                [{'s': sample_id} for sample_id in ['RGP_164_1', 'RGP_164_2']],
-                hl.tstruct(s=hl.dtype('str')),
-                key='s',
-            ),
-        )
+        mt.filter_rows(hl.agg.any(hl.is_defined(mt.GT)))
         mt = overwrite_male_non_par_calls(
             mt,
             ['RGP_164_2'],
