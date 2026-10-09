@@ -4,10 +4,10 @@ import luigi
 import luigi.format
 import luigi.util
 
+from loading_pipeline.lib.misc.sv import run_command
 from loading_pipeline.lib.paths import (
     imported_callset_path,
 )
-from loading_pipeline.lib.misc.sv import run_command
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
