@@ -61,6 +61,7 @@ class WriteCombinedSvVcf(luigi.Task):
 
         vcf_paths = [task.output().path for task in sample_file_tasks]
         out_path = self.output().path
+        self.output().makedirs()
         self._run_command(
             ['bcftools', 'merge', '-m', 'none', '-Oz', '-o', out_path, *vcf_paths],
         )
