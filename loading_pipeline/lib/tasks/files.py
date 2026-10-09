@@ -27,6 +27,7 @@ def GCSorLocalFolderTarget(pathname: str) -> luigi.Target:  # noqa: N802
 
 class RawFileTask(luigi.Task):
     pathname = luigi.Parameter()
+    run = None
 
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(self.pathname)
