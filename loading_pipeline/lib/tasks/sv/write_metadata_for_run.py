@@ -31,7 +31,9 @@ class WriteMetadataForSvRunTask(BaseWriteMetadataForRunTask):
         metadata_json['male_sample_ids'] = []
         for i, target in enumerate(self.input()):
             df = pd.read_csv(target.path, sep='\t')
-            family_samples = df.groupby('Family_GUID')['Individual_ID'].apply(list).to_dict()
+            family_samples = (
+                df.groupby('Family_GUID')['Individual_ID'].apply(list).to_dict()
+            )
             metadata_json['family_samples'].update(family_samples)
             metadata_json['project_families'][self.project_guids[i]] = sorted(
                 family_samples.keys(),
