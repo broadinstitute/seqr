@@ -11,7 +11,10 @@ from loading_pipeline.lib.paths import (
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
-from loading_pipeline.lib.tasks.files import LocalizableTarget, LocalizedVCFTask
+from loading_pipeline.lib.tasks.files import LocalizableTarget
+from loading_pipeline.lib.tasks.sv.single_sample_vcf import (
+    SingleSampleVCFTask,
+)
 from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
     WriteMetadataForSvRunTask,
 )
@@ -59,7 +62,7 @@ class WriteCombinedSvVcf(luigi.Task):
 
     def run(self) -> None:
         sample_file_tasks = [
-            LocalizedVCFTask(self.callset_path.replace('*', sample_id))
+            SingleSampleVCFTask(self.callset_path, sample_id)
             for sample_id in self._sample_ids()
         ]
         yield sample_file_tasks
