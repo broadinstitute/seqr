@@ -1,5 +1,4 @@
 import json
-import subprocess  # nosec B404
 
 import luigi
 import luigi.format
@@ -8,6 +7,7 @@ import luigi.util
 from loading_pipeline.lib.paths import (
     imported_callset_path,
 )
+from loading_pipeline.lib.misc.sv import run_command
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
@@ -62,15 +62,17 @@ class WriteCombinedSvVcf(luigi.Task):
 
     def run(self) -> None:
         sample_file_tasks = [
-            SingleSampleVCFTask(self.callset_path, sample_id)
-            for sample_id in self._sample_ids()
+            SingleSampleVCFTask(
+                path_template=self.callset_path, sample_id=sample_id, vcf_sample_id=vcf_sample_id,
+            )
+            for sample_id, vcf_sample_id in self._sample_ids().items()
         ]
         yield sample_file_tasks
 
         vcf_paths = [task.output()[0].path for task in sample_file_tasks]
         out_path = self.output()[0].path
         self.output()[0].makedirs()
-        self._run_command(
+        run_command(
             [
                 'bcftools',
                 'merge',
@@ -83,25 +85,17 @@ class WriteCombinedSvVcf(luigi.Task):
                 *vcf_paths,
             ],
         )
-        self._run_command(['tabix', '-f', '-p', 'vcf', out_path])
+        run_command(['tabix', '-f', '-p', 'vcf', out_path])
 
         for target in self.output():
             target.persist()
 
-    def _sample_ids(self) -> set[str]:
+    def _sample_ids(self) -> dict[str, str]:
         with open(self.input()[0].path) as f:
             metadata_json = json.load(f)
 
         return {
-            sample_id
+            sample_id: metadata_json['remap_ids'].get(sample_id)
             for samples in metadata_json['family_samples'].values()
             for sample_id in samples
         }
-
-    @staticmethod
-    def _run_command(cmd: list[str]):
-        try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)  # noqa: S603 # nosec B603
-        except subprocess.CalledProcessError as e:
-            e.add_note(e.stderr)
-            raise

@@ -45,5 +45,5 @@ class WriteMetadataForSvRunTask(BaseWriteMetadataForRunTask):
             if 'VCF_ID' in df.columns:
                 remap_df = df[df['VCF_ID'].notnull() & (df['VCF_ID'] != '')]
                 metadata_json['remap_ids'].update(
-                    remap_df.set_index('VCF_ID')['Individual_ID'].to_dict(),
+                    remap_df.set_index('Individual_ID')['VCF_ID'].to_dict(),
                 )

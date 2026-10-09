@@ -75,4 +75,6 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
 
         return mt.select_globals(
             callset_path=self.callset_path,
+            family_samples=metadata_json['family_samples'],
+            project_families=metadata_json['project_families'],
         )

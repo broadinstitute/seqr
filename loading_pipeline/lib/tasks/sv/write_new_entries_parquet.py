@@ -8,7 +8,6 @@ from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
 )
-from loading_pipeline.lib.misc.sample_ids import remap_sample_ids
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
 )
@@ -17,9 +16,6 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
-    WriteMetadataForSvRunTask,
-)
 from loading_pipeline.lib.tasks.sv.write_postprocessed_callset import (
     WritePostprocessedSvCallsetTask,
 )
@@ -39,31 +35,11 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetTask):
     def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WritePostprocessedSvCallsetTask),
-            self.clone(WriteMetadataForSvRunTask),
         ]
 
     def create_table(self) -> hl.Table:
         mt = hl.read_matrix_table(self.input()[0].path)
 
-        with self.input()[1].open() as f:
-            metadata_json = json.load(f)
-        if metadata_json.get('remap_ids'):
-            mt = remap_sample_ids(
-                mt,
-                hl.Table.parallelize(
-                    [
-                        {'s': sample_id, 'seqr_id': seqr_id}
-                        for sample_id, seqr_id in metadata_json['remap_ids'].items()
-                    ],
-                    hl.tstruct(s=hl.dtype('str'), seqr_id=hl.dtype('str')),
-                    key='s',
-                ),
-            )
-
-        mt = mt.annotate_globals(
-            family_samples=metadata_json['family_samples'],
-            project_families=metadata_json['project_families'],
-        )
         ht = compute_callset_family_entries_ht(
             self.dataset_type,
             mt,
