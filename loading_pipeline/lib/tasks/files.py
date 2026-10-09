@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 import hailtop.fs as hfs
 import luigi
@@ -23,6 +24,32 @@ def GCSorLocalTarget(pathname: str, **kwargs) -> luigi.Target:  # noqa: N802
 
 def GCSorLocalFolderTarget(pathname: str) -> luigi.Target:  # noqa: N802
     return GCSorLocalTarget(os.path.join(pathname, '_SUCCESS'))
+
+
+class LocalizableTarget(luigi.LocalTarget):
+    def __init__(self, pathname: str, **kwargs):
+        self.remote_path = None
+        if pathname.startswith('gs://'):
+            self.remote_path = pathname
+            pathname = os.path.join(
+                tempfile.gettempdir(),
+                pathname.removeprefix('gs://'),
+            )
+        super().__init__(pathname, **kwargs)
+
+    def exists(self) -> bool:
+        if self.remote_path:
+            return gcs.GCSClient().exists(self.remote_path)
+        return super().exists()
+
+    def localize(self) -> None:
+        if self.remote_path and not super().exists():
+            with gcs.GCSClient().download(self.remote_path) as f:
+                self.fs.copy(f.name, self.path)
+
+    def persist(self) -> None:
+        if self.remote_path:
+            gcs.GCSClient().put(self.path, self.remote_path)
 
 
 class RawFileTask(luigi.Task):

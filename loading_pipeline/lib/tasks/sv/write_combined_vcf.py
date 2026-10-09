@@ -11,7 +11,7 @@ from loading_pipeline.lib.paths import (
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
-from loading_pipeline.lib.tasks.files import GCSorLocalTarget, RawFileTask
+from loading_pipeline.lib.tasks.files import LocalizableTarget, RawFileTask
 from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
     WriteMetadataForSvRunTask,
 )
@@ -26,7 +26,8 @@ class WriteCombinedSvVcf(luigi.Task):
             return False
 
         samples = None
-        with self.output().open() as f:
+        self.output()[0].localize()
+        with self.output()[0].open() as f:
             for line in f:
                 if line.startswith('#CHROM'):
                     samples = set(line.split('FORMAT', 1)[-1].strip().split())
@@ -37,15 +38,19 @@ class WriteCombinedSvVcf(luigi.Task):
         expected_samples = set(self._sample_ids())
         return samples == expected_samples
 
-    def output(self) -> luigi.Target:
-        return GCSorLocalTarget(
-            imported_callset_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.callset_path,
-            ).replace('.mt', '.vcf.gz'),
-            format=luigi.format.UTF8 >> luigi.format.Gzip,
-        )
+    def output(self) -> list[luigi.Target]:
+        vcf_path = imported_callset_path(
+            self.reference_genome,
+            self.dataset_type,
+            self.callset_path,
+        ).replace('.mt', '.vcf.gz')
+        return [
+            LocalizableTarget(
+                vcf_path,
+                format=luigi.format.UTF8 >> luigi.format.Gzip,
+            ),
+            LocalizableTarget(f'{vcf_path}.tbi'),
+        ]
 
     def requires(self) -> list[luigi.Task]:
         return [
@@ -60,8 +65,8 @@ class WriteCombinedSvVcf(luigi.Task):
         yield sample_file_tasks
 
         vcf_paths = [task.output().path for task in sample_file_tasks]
-        out_path = self.output().path
-        self.output().makedirs()
+        out_path = self.output()[0].path
+        self.output()[0].makedirs()
         self._run_command(
             [
                 'bcftools',
@@ -76,6 +81,9 @@ class WriteCombinedSvVcf(luigi.Task):
             ],
         )
         self._run_command(['tabix', '-f', '-p', 'vcf', out_path])
+
+        for target in self.output():
+            target.persist()
 
     def _sample_ids(self) -> set[str]:
         with open(self.input()[0].path) as f:

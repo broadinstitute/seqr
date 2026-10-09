@@ -43,7 +43,7 @@ class WriteImportedSvCallsetTask(BaseWriteTask):
     def create_table(self) -> hl.MatrixTable:
         # NB: throws SeqrValidationError
         mt = import_callset(
-            self.input()[0].path,
+            self.input()[0][0].remote_path or self.input()[0][0].path,
             self.reference_genome,
             self.dataset_type,
         )
