@@ -105,85 +105,31 @@ class ClickHouseTable(StrEnum):
         return tables
 
     @classmethod
-    def for_dataset_type_disk_backed_variants_tables(
-        cls,
-        _dataset_type: DatasetType,
-    ) -> list['ClickHouseTable']:
+    def atomic_entries_update(cls) -> list['ClickHouseTable']:
         return [
-            ClickHouseTable.VARIANTS_DISK,
+            *cls.atomic_entries_update_project_partitioned(),
+            *cls.atomic_entries_update_unpartitioned(),
         ]
 
     @classmethod
-    def for_dataset_type_atomic_entries_update(
-        cls,
-        dataset_type: DatasetType,
-    ) -> list['ClickHouseTable']:
-        return [
-            *cls.for_dataset_type_atomic_entries_update_project_partitioned(
-                dataset_type,
-            ),
-            *cls.for_dataset_type_atomic_entries_update_unpartitioned(dataset_type),
-        ]
-
-    @classmethod
-    def for_dataset_type_atomic_entries_update_project_partitioned(
-        cls,
-        dataset_type: DatasetType,
-    ) -> list['ClickHouseTable']:
-        if dataset_type == DatasetType.GCNV:
-            return [ClickHouseTable.ENTRIES]
+    def atomic_entries_update_project_partitioned(cls) -> list['ClickHouseTable']:
         return [
             ClickHouseTable.ENTRIES,
             ClickHouseTable.PROJECT_GT_STATS,
         ]
 
     @classmethod
-    def for_dataset_type_atomic_entries_update_unpartitioned(
-        cls,
-        dataset_type: DatasetType,
-    ) -> list['ClickHouseTable']:
-        if dataset_type == DatasetType.GCNV:
-            return []
+    def atomic_entries_update_unpartitioned(cls) -> list['ClickHouseTable']:
         return [ClickHouseTable.GT_STATS]
 
 
 class ClickHouseDictionary(StrEnum):
     GT_STATS_DICT = 'gt_stats_dict'
 
-    @classmethod
-    def for_dataset_type(
-        cls,
-        dataset_type: DatasetType,
-    ) -> list['ClickHouseDictionary']:
-        if dataset_type == DatasetType.GCNV:
-            return []
-        return list(cls)
-
 
 class ClickHouseMaterializedView(StrEnum):
     ENTRIES_TO_PROJECT_GT_STATS_MV = 'entries_to_project_gt_stats_mv'
     PROJECT_GT_STATS_TO_GT_STATS_MV = 'project_gt_stats_to_gt_stats_mv'
-
-    @classmethod
-    def for_dataset_type_atomic_entries_update(
-        cls,
-        dataset_type: DatasetType,
-    ) -> list['ClickHouseMaterializedView']:
-        if dataset_type == DatasetType.GCNV:
-            return []
-        return [
-            ClickHouseMaterializedView.ENTRIES_TO_PROJECT_GT_STATS_MV,
-            ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV,
-        ]
-
-    @classmethod
-    def for_dataset_type_atomic_entries_update_refreshable(
-        cls,
-        dataset_type: DatasetType,
-    ) -> list['ClickHouseMaterializedView']:
-        if dataset_type == DatasetType.GCNV:
-            return []
-        return [ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV]
 
 
 ClickHouseEntity = ClickHouseDictionary | ClickHouseTable | ClickHouseMaterializedView
@@ -280,7 +226,7 @@ class ClickhouseReferenceDataset(StrEnum):
         reference_genome: ReferenceGenome,
         dataset_type: DatasetType,
     ):
-        if dataset_type in {DatasetType.SV, DatasetType.GCNV}:
+        if dataset_type == DatasetType.SV:
             return []
         return {
             (ReferenceGenome.GRCh38, DatasetType.MITO): [
@@ -485,14 +431,13 @@ def drop_staging_db():
 
 def create_staging_tables(
     table_name_builder: TableNameBuilder,
-    clickhouse_tables: list[ClickHouseTable],
 ) -> None:
     logged_query(
         f"""
         CREATE DATABASE {STAGING_CLICKHOUSE_DATABASE}
         """,
     )
-    for clickhouse_table in clickhouse_tables:
+    for clickhouse_table in ClickHouseTable.atomic_entries_update():
         logged_query(
             f"""
             CREATE
@@ -572,10 +517,9 @@ def get_partitions_for_projects(
 
 def create_staging_materialized_views(
     table_name_builder: TableNameBuilder,
-    clickhouse_mvs: list[ClickHouseMaterializedView],
     mv_overrides: dict[ClickHouseMaterializedView, list[list[str]]] | None = None,
 ):
-    for clickhouse_mv in clickhouse_mvs:
+    for clickhouse_mv in ClickHouseMaterializedView:
         create_table_statement = get_create_mv_statements(
             table_name_builder,
             clickhouse_mv,
@@ -594,9 +538,8 @@ def create_staging_materialized_views(
 def stage_existing_project_partitions(
     table_name_builder: TableNameBuilder,
     project_guids: list[str],
-    clickhouse_tables: list[ClickHouseTable],
 ):
-    for clickhouse_table in clickhouse_tables:
+    for clickhouse_table in ClickHouseTable.atomic_entries_update_project_partitioned():
         # Very important piece here:
         # ALL projects in the project_gt_stats table are staged, allowing us to rebuild
         # a production-quality gt_stats materialized view in the staging environment.
@@ -788,10 +731,11 @@ def optimize_entries(
 @retry(tries=2)
 def refresh_materialized_views(
     table_name_builder,
-    materialized_views: list[ClickHouseMaterializedView],
     staging=False,
 ):
-    for materialized_view in materialized_views:
+    for materialized_view in [
+        ClickHouseMaterializedView.PROJECT_GT_STATS_TO_GT_STATS_MV,
+    ]:
         logged_query(
             f"""
             SYSTEM START VIEW {table_name_builder.staging_dst_table(materialized_view) if staging else table_name_builder.dst_table(materialized_view)}
@@ -852,9 +796,8 @@ def validate_family_guid_counts(
 @retry(tries=2)
 def reload_dictionaries(
     table_name_builder: TableNameBuilder,
-    dictionaries: list[ClickHouseDictionary],
 ):
-    for dictionary in dictionaries:
+    for dictionary in ClickHouseDictionary:
         logged_query(
             f"""
             SYSTEM RELOAD DICTIONARY {table_name_builder.dst_table(dictionary)}
@@ -864,10 +807,9 @@ def reload_dictionaries(
 
 def replace_project_partitions(
     table_name_builder: TableNameBuilder,
-    clickhouse_tables: list[ClickHouseTable],
     project_guids: list[str],
 ) -> None:
-    for clickhouse_table in clickhouse_tables:
+    for clickhouse_table in ClickHouseTable.atomic_entries_update_project_partitioned():
         for partition in get_partitions_for_projects(
             table_name_builder,
             clickhouse_table,
@@ -921,27 +863,19 @@ def direct_insert_annotations(
         )
         """,  # nosec B608
     )
-    for (
-        clickhouse_table
-    ) in ClickHouseTable.for_dataset_type_disk_backed_variants_tables(
-        table_name_builder.dataset_type,
-    ):
-        disk_backed_dst_table = table_name_builder.dst_table(clickhouse_table)
-        disk_backed_src_table = table_name_builder.src_table(clickhouse_table)
+    for clickhouse_table in [
+        ClickHouseTable.VARIANTS_DISK,
+        ClickHouseTable.VARIANTS_MEMORY,
+    ]:
+        curr_dst_table = table_name_builder.dst_table(clickhouse_table)
+        curr_src_table = table_name_builder.src_table(clickhouse_table)
         logged_query(
             f"""
-            INSERT INTO {disk_backed_dst_table}
+            INSERT INTO {curr_dst_table}
             SELECT {clickhouse_table.select_fields}
-            FROM {disk_backed_src_table} WHERE {clickhouse_table.key_field} IN {table_name_builder.staging_dst_prefix}/_tmp_loadable_keys`
+            FROM {curr_src_table} WHERE {clickhouse_table.key_field} IN {table_name_builder.staging_dst_prefix}/_tmp_loadable_keys`
             """,  # nosec B608
         )
-    logged_query(
-        f"""
-        INSERT INTO {dst_table}
-        SELECT {ClickHouseTable.VARIANTS_MEMORY.select_fields}
-        FROM {src_table} WHERE {ClickHouseTable.VARIANTS_MEMORY.key_field} IN {table_name_builder.staging_dst_prefix}/_tmp_loadable_keys`
-        """,  # nosec B608
-    )
     drop_staging_db()
 
 
@@ -1003,31 +937,21 @@ def finalize_refresh_flow(
     table_name_builder: TableNameBuilder,
     project_guids: list[str],
 ):
-    dataset_type = table_name_builder.dataset_type
     refresh_materialized_views(
         table_name_builder,
-        ClickHouseMaterializedView.for_dataset_type_atomic_entries_update_refreshable(
-            dataset_type,
-        ),
         staging=True,
     )
     replace_project_partitions(
         table_name_builder,
-        ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
-            dataset_type,
-        ),
         project_guids,
     )
     exchange_tables(
         table_name_builder,
-        ClickHouseTable.for_dataset_type_atomic_entries_update_unpartitioned(
-            dataset_type,
-        ),
+        ClickHouseTable.atomic_entries_update_unpartitioned(),
     )
     drop_staging_db()
     reload_dictionaries(
         table_name_builder,
-        ClickHouseDictionary.for_dataset_type(dataset_type),
     )
 
 
@@ -1041,7 +965,6 @@ def atomic_insert_entries(
     drop_staging_db()
     create_staging_tables(
         table_name_builder,
-        ClickHouseTable.for_dataset_type_atomic_entries_update(dataset_type),
     )
 
     mv_overrides = None
@@ -1067,17 +990,11 @@ def atomic_insert_entries(
 
     create_staging_materialized_views(
         table_name_builder,
-        ClickHouseMaterializedView.for_dataset_type_atomic_entries_update(
-            dataset_type,
-        ),
         mv_overrides=mv_overrides,
     )
     stage_existing_project_partitions(
         table_name_builder,
         project_guids,
-        ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
-            dataset_type,
-        ),
     )
     delete_existing_families_from_staging_entries(
         table_name_builder,
@@ -1190,20 +1107,13 @@ def delete_family_guids(
     drop_staging_db()
     create_staging_tables(
         table_name_builder,
-        ClickHouseTable.for_dataset_type_atomic_entries_update(dataset_type),
     )
     create_staging_materialized_views(
         table_name_builder,
-        ClickHouseMaterializedView.for_dataset_type_atomic_entries_update(
-            dataset_type,
-        ),
     )
     stage_existing_project_partitions(
         table_name_builder,
         project_guids,
-        ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
-            dataset_type,
-        ),
     )
     delete_existing_families_from_staging_entries(
         table_name_builder,
@@ -1223,12 +1133,6 @@ def rebuild_gt_stats(
     run_id: str,
     project_guids: list[str],
 ) -> None:
-    if ClickHouseDictionary.GT_STATS_DICT not in ClickHouseDictionary.for_dataset_type(
-        dataset_type,
-    ):
-        msg = f'Skipping gt stats rebuild for {reference_genome.value}/{dataset_type.value} {project_guids[:10]}...'
-        logger.info(msg)
-        return
     table_name_builder = TableNameBuilder(
         reference_genome,
         dataset_type,
@@ -1248,20 +1152,13 @@ def rebuild_gt_stats(
     drop_staging_db()
     create_staging_tables(
         table_name_builder,
-        ClickHouseTable.for_dataset_type_atomic_entries_update(dataset_type),
     )
     create_staging_materialized_views(
         table_name_builder,
-        ClickHouseMaterializedView.for_dataset_type_atomic_entries_update(
-            dataset_type,
-        ),
     )
     stage_existing_project_partitions(
         table_name_builder,
         project_guids,
-        ClickHouseTable.for_dataset_type_atomic_entries_update_project_partitioned(
-            dataset_type,
-        ),
     )
     for partition in get_partitions_for_projects(
         table_name_builder,
