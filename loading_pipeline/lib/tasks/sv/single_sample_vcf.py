@@ -28,12 +28,15 @@ class SingleSampleVCFTask(luigi.Task):
 
         if self.vcf_sample_id:
             out_path = self.output()[0].path
+            samples_target = luigi.LocalTarget(is_tmp=True)
+            with samples_target.open('w') as f:
+                f.write(f'{self.sample_id}\n')
             run_command(
                 [
                     'bcftools',
                     'reheader',
-                    '-n',
-                    self.sample_id,
+                    '-s',
+                    samples_target.path,
                     '-o',
                     out_path,
                     self.input()[0].path,
