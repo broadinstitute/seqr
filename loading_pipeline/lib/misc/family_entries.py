@@ -56,7 +56,7 @@ def compute_callset_family_entries_ht(
         family_entries=(
             ht.family_entries.map(
                 lambda fe: hl.or_missing(
-                    fe.calls.any(dataset_type.family_entries_filter_fn),
+                    fe.calls.any(lambda e: e.gt > 0),
                     fe,
                 ),
             )

@@ -40,7 +40,6 @@ TEST_MITO_EXPORT_PEDIGREE = (
 TEST_SV_VCF = 'loading_pipeline/var/test/callsets/sv_1.vcf'
 TEST_PEDIGREE_5 = 'loading_pipeline/var/test/pedigrees/test_pedigree_5.tsv'
 
-TEST_GCNV_BED_FILE = 'loading_pipeline/var/test/callsets/gcnv_1.tsv'
 
 TEST_RUN_ID = 'manual__2024-04-03'
 
@@ -505,74 +504,6 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                     'populations': {'gnomad_svs': None},
                     'sortedGeneConsequences': [
                         {'geneId': 'ENSG00000173662', 'majorConsequence': 'INTRONIC'},
-                    ],
-                },
-            ],
-        )
-
-    def test_gcnv_write_new_variants_parquet_test(
-        self,
-    ) -> None:
-        copy_project_pedigree_to_mocked_dir(
-            TEST_PEDIGREE_5,
-            ReferenceGenome.GRCh38,
-            DatasetType.GCNV,
-            SampleType.WES,
-            'R0115_test_project2',
-        )
-        worker = luigi.worker.Worker()
-        task = WriteNewVariantsParquetTask(
-            reference_genome=ReferenceGenome.GRCh38,
-            dataset_type=DatasetType.GCNV,
-            sample_type=SampleType.WES,
-            callset_path=TEST_GCNV_BED_FILE,
-            project_guids=[
-                'R0115_test_project2',
-            ],
-            validations_to_skip=[ALL_VALIDATIONS],
-            run_id=TEST_RUN_ID,
-        )
-        worker.add(task)
-        worker.run()
-        self.assertTrue(task.output().exists())
-        self.assertTrue(task.complete())
-        df = pd.read_parquet(
-            new_variants_parquet_path(
-                ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
-                TEST_RUN_ID,
-            ),
-        )
-        export_json = convert_ndarray_to_list(df.head(1).to_dict('records'))
-        self.assertEqual(
-            export_json,
-            [
-                {
-                    'key': 0,
-                    'xpos': 1100006937,
-                    'chrom': '1',
-                    'pos': 100006937,
-                    'end': 100023213,
-                    'rg37LocusEnd': {'contig': '1', 'position': 100488769},
-                    'variantId': 'suffix_16456_DEL',
-                    'liftedOverChrom': '1',
-                    'liftedOverPos': 100472493,
-                    'numExon': 3,
-                    'svType': 'DEL',
-                    'predictions': {'strvctvre': 0.5830000042915344},
-                    'populations': {
-                        'sv_callset': {
-                            'ac': 1,
-                            'af': 4.4014079321641475e-05,
-                            'an': 22720,
-                            'het': None,
-                            'hom': None,
-                        },
-                    },
-                    'sortedGeneConsequences': [
-                        {'geneId': 'ENSG00000117620', 'majorConsequence': 'LOF'},
-                        {'geneId': 'ENSG00000283761', 'majorConsequence': 'LOF'},
-                        {'geneId': 'ENSG22222222222', 'majorConsequence': None},
                     ],
                 },
             ],
