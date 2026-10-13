@@ -33,6 +33,18 @@ from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WritePostprocessedSvCallsetTask(BaseWriteTask):
+    def complete(self) -> bool:
+        if not super().complete():
+            return False
+        if not self.input()[2].exists():
+            return False
+
+        mt = hl.read_matrix_table(self.output().path)
+        with self.input()[2].open() as f:
+            metadata_json = json.load(f)
+
+        return metadata_json['family_samples'] == hl.eval(mt.globals.family_samples)
+
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
             postprocessed_callset_path(
