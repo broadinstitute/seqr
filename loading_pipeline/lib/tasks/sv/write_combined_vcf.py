@@ -61,9 +61,11 @@ class WriteCombinedSvVcf(luigi.Task):
         ]
 
     def run(self) -> None:
+        out_path = self.output()[0].path
         sample_file_tasks = [
             SingleSampleVCFTask(
                 path_template=self.callset_path,
+                out_path=(self.output()[0].remote_path or out_path).rsplit('/', 1)[0],
                 sample_id=sample_id,
                 vcf_sample_id=vcf_sample_id,
             )
@@ -71,8 +73,11 @@ class WriteCombinedSvVcf(luigi.Task):
         ]
         yield sample_file_tasks
 
+        for task in sample_file_tasks:
+            for target in task.output():
+                target.localize()
+
         vcf_paths = [task.output()[0].path for task in sample_file_tasks]
-        out_path = self.output()[0].path
         self.output()[0].makedirs()
         run_command(
             [
