@@ -23,9 +23,4 @@ def get_additional_row_fields(
             if hasattr(mt, 'info') and hasattr(mt.info, 'CALIBRATION_SENSITIVITY')
             else {}
         ),
-        **(
-            {'info.SEQR_INTERNAL_TRUTH_VID': hl.tstr}
-            if dataset_type.re_key_by_seqr_internal_truth_vid
-            else {}
-        ),
     }

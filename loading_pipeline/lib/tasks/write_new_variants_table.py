@@ -12,13 +12,10 @@ from loading_pipeline.lib.paths import (
     new_variants_table_path,
     project_pedigree_path,
     remapped_and_subsetted_callset_path,
-    valid_reference_dataset_path,
 )
 from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
     load_gencode_ensembl_to_refseq_id,
-    load_gencode_gene_symbol_to_gene_id,
 )
-from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceDataset
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
@@ -34,7 +31,6 @@ from loading_pipeline.lib.tasks.write_metadata_for_run import (
 VARIANTS_PER_VEP_PARTITION = 1e3
 MIN_PARTITIONS = 10
 MAX_PARTITIONS = 10000
-GENCODE_RELEASE = 42
 GENCODE_FOR_VEP_RELEASE = 44
 
 
@@ -43,28 +39,11 @@ class WriteNewVariantsTableTask(BaseWriteTask):
     @property
     def annotation_dependencies(self) -> dict[str, hl.Table]:
         deps = {}
-        for reference_dataset in ReferenceDataset:
-            if (
-                reference_dataset.formatting_annotation
-                and self.dataset_type
-                in reference_dataset.dataset_types(self.reference_genome)
-            ):
-                deps[f'{reference_dataset.value}_ht'] = hl.read_table(
-                    valid_reference_dataset_path(
-                        self.reference_genome,
-                        reference_dataset,
-                    ),
-                )
-
         if self.dataset_type.has_gencode_ensembl_to_refseq_id_mapping(
             self.reference_genome,
         ):
             deps['gencode_ensembl_to_refseq_id_mapping'] = hl.literal(
                 load_gencode_ensembl_to_refseq_id(GENCODE_FOR_VEP_RELEASE),
-            )
-        if self.dataset_type.has_gencode_gene_symbol_to_gene_id_mapping:
-            deps['gencode_gene_symbol_to_gene_id_mapping'] = hl.literal(
-                load_gencode_gene_symbol_to_gene_id(GENCODE_RELEASE),
             )
         return deps
 
