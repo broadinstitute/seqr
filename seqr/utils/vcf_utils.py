@@ -136,6 +136,8 @@ def _get_vcf_header_line(vcf_file, meta):
 def _validate_valid_vcf_name(data_path, user, dataset_type, path_name):
     allowed_exts = DATA_TYPE_FILE_EXTS.get(dataset_type)
     file_extensions = (allowed_exts or ()) + VCF_FILE_EXTENSIONS
+    if dataset_type == Dataset.DATASET_TYPE_SV_CALLS:
+        file_extensions = tuple(ext for ext in file_extensions if ext != '.vcf')
     if not data_path.endswith(file_extensions):
         raise ErrorsWarningsException([
             'Invalid VCF file format - file path must end with {}'.format(' or '.join(file_extensions))

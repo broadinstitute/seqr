@@ -1773,10 +1773,10 @@ Loading pipeline should be triggered with:
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Invalid VCF file format - file path must end with .vcf or .vcf.gz or .vcf.bgz',
+            'Invalid VCF file format - file path must end with .vcf.gz or .vcf.bgz',
         ])
 
-        body['filePath'] = f'{self.CALLSET_DIR}/sv_callsets/*.vcf'
+        body['filePath'] = f'{self.CALLSET_DIR}/sv_callsets/*.vcf.gz'
         vcf_file_rows = [
             '##fileformat=VCFv4.3\n',
             '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
@@ -1786,21 +1786,21 @@ Loading pipeline should be triggered with:
             '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
             '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
         ]
-        self._add_file_list_iter(['sv_callsets/merged.vcf'], vcf_file_rows)
+        self._add_file_list_iter(['sv_callsets/merged.vcf.gz'], vcf_file_rows)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Multiple samples found in gs://test_bucket/sv_callsets/merged.vcf',
+            'Multiple samples found in gs://test_bucket/sv_callsets/merged.vcf.gz',
         ])
 
         vcf_header_row_2 = '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\n'
         vcf_file_rows[-1] = vcf_header_row_2
-        sv_vcfs = ['sv_callsets/NA19675_1.vcf', 'sv_callsets/HG00735.vcf']
+        sv_vcfs = ['sv_callsets/NA19675_1.vcf.gz', 'sv_callsets/HG00735.vcf.gz']
         self._add_file_list_iter(sv_vcfs, vcf_file_rows)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'],[
-            'VCF gs://test_bucket/sv_callsets/NA19675_1.vcf contains unexpected sample "HG00735"',
+            'VCF gs://test_bucket/sv_callsets/NA19675_1.vcf.gz contains unexpected sample "HG00735"',
         ])
 
         vcf_header_row_1 = '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNA19675_1\n'
