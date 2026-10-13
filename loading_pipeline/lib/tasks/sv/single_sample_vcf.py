@@ -20,9 +20,8 @@ class SingleSampleVCFTask(luigi.Task):
         paths = [target.path for target in self.input()]
         if self.vcf_sample_id is not None:
             paths = [
-                path.replace(
-                    self.vcf_sample_id,
-                    f'{self.vcf_sample_id}__{self.sample_id}',
+                f'{self.vcf_sample_id}__{self.sample_id}'.join(
+                    path.rsplit(self.vcf_sample_id, 1),
                 )
                 for path in paths
             ]
