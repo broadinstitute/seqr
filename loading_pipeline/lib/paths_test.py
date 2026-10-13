@@ -69,28 +69,28 @@ class TestPaths(unittest.TestCase):
         self.assertEqual(
             existing_variants_parquet_path(
                 ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
+                DatasetType.SV,
                 'manual__2023-06-26T18:30:09.349671+00:00',
             ),
-            '/var/seqr/pipeline-data/GRCh38/GCNV/runs/manual__2023-06-26T18:30:09.349671+00:00/existing_variants.parquet',
+            '/var/seqr/pipeline-data/GRCh38/SV/runs/manual__2023-06-26T18:30:09.349671+00:00/existing_variants.parquet',
         )
 
     def test_remapped_and_subsetted_callset_path(self) -> None:
         self.assertEqual(
             remapped_and_subsetted_callset_path(
                 ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
+                DatasetType.SV,
                 '/var/abc.efg/callset.vcf.gz',
             ),
-            '/var/seqr/seqr-loading-temp/GRCh38/GCNV/remapped_and_subsetted_callsets/f92b8ab6b5b8c41fa20d7d49a5626b96dcd2ba79fa6f61eab7ffb80d550d951c.mt',
+            '/var/seqr/seqr-loading-temp/GRCh38/SV/remapped_and_subsetted_callsets/f92b8ab6b5b8c41fa20d7d49a5626b96dcd2ba79fa6f61eab7ffb80d550d951c.mt',
         )
         self.assertEqual(
             remapped_and_subsetted_callset_path(
                 ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
+                DatasetType.SV,
                 '/var/abc.efg/callset/*.vcf.gz',
             ),
-            '/var/seqr/seqr-loading-temp/GRCh38/GCNV/remapped_and_subsetted_callsets/26f481b386721f9889250c6549905660728ec9f77be4b8f7eeb6c4facc76282e.mt',
+            '/var/seqr/seqr-loading-temp/GRCh38/SV/remapped_and_subsetted_callsets/26f481b386721f9889250c6549905660728ec9f77be4b8f7eeb6c4facc76282e.mt',
         )
 
     def test_imported_callset_path(self) -> None:
@@ -146,9 +146,9 @@ class TestPaths(unittest.TestCase):
         self.assertEqual(
             project_pedigree_path(
                 ReferenceGenome.GRCh38,
-                DatasetType.GCNV,
+                DatasetType.SV,
                 SampleType.WES,
                 'R0652_pipeline_test',
             ),
-            '/var/seqr/seqr-loading-temp/GRCh38/GCNV/pedigrees/WES/R0652_pipeline_test_pedigree.tsv',
+            '/var/seqr/seqr-loading-temp/GRCh38/SV/pedigrees/WES/R0652_pipeline_test_pedigree.tsv',
         )

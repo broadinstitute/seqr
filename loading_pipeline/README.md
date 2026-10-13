@@ -77,7 +77,7 @@ uv run ruff check .
 
 ## 🚪 Schema Entrypoints
 - The expected fields and types are defined in `dataset_type.py` as the `col_fields`, `entry_fields`, and `row_fields` properties.  Examples
-of the SNV_INDEL/MITO/SV/GCNV callset schemas may be found in the tests.
+of the SNV_INDEL/MITO/SV callset schemas may be found in the tests.
 - The VEP schema is defined in JSON within the vep*.json config files, then parsed into hail in `lib/annotations/vep.py`.
 - Examples of exported parquets may be found in `lib/tasks/exports/*_parquet_test.py`
 
