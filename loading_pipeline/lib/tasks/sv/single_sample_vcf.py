@@ -19,7 +19,13 @@ class SingleSampleVCFTask(luigi.Task):
     def output(self) -> list[luigi.LocalTarget]:
         paths = [target.path for target in self.input()]
         if self.vcf_sample_id is not None:
-            paths = [path.replace(self.vcf_sample_id, f'{self.vcf_sample_id}__{self.sample_id}') for path in paths]
+            paths = [
+                path.replace(
+                    self.vcf_sample_id,
+                    f'{self.vcf_sample_id}__{self.sample_id}',
+                )
+                for path in paths
+            ]
         return [luigi.LocalTarget(pathname) for pathname in paths]
 
     def run(self) -> None:
