@@ -93,7 +93,7 @@ class WriteCombinedSvVcf(luigi.Task):
             target.persist()
 
     def _sample_ids(self) -> dict[str, str]:
-        with open(self.input()[0].path) as f:
+        with self.input()[0].open() as f:
             metadata_json = json.load(f)
 
         return {

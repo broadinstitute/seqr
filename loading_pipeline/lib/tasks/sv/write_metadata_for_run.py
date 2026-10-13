@@ -30,7 +30,8 @@ class WriteMetadataForSvRunTask(BaseWriteMetadataForRunTask):
         metadata_json['project_families'] = {}
         metadata_json['male_sample_ids'] = []
         for i, target in enumerate(self.input()):
-            df = pd.read_csv(target.path, sep='\t')
+            with target.open('r') as f:
+                df = pd.read_csv(f, sep='\t')
             family_samples = (
                 df.groupby('Family_GUID')['Individual_ID'].apply(list).to_dict()
             )
