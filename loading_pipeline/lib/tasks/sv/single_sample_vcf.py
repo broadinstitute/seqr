@@ -59,7 +59,8 @@ class SingleSampleVCFTask(luigi.Task):
         pathname = self.path_template.replace('*', self.vcf_sample_id or self.sample_id)
         return [
             LocalizableFileTask(
-                pathname, format=luigi.format.UTF8 >> luigi.format.Gzip,
+                pathname,
+                format=luigi.format.UTF8 >> luigi.format.Gzip,
             ),
             LocalizableFileTask(f'{pathname}.tbi'),
         ]
