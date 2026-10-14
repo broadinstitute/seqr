@@ -1,5 +1,3 @@
-import json
-
 import hail as hl
 import luigi
 import luigi.util
@@ -20,9 +18,6 @@ from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.sv.write_combined_vcf import (
     WriteCombinedSvVcf,
 )
-from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
-    WriteMetadataForSvRunTask,
-)
 from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
     WriteExistingVariantsParquetTask,
 )
@@ -33,18 +28,6 @@ from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WritePostprocessedSvCallsetTask(BaseWriteTask):
-    def complete(self) -> bool:
-        if not super().complete():
-            return False
-        if not self.input()[2].exists():
-            return False
-
-        mt = hl.read_matrix_table(self.output().path)
-        with self.input()[2].open() as f:
-            metadata_json = json.load(f)
-
-        return metadata_json['family_samples'] == hl.eval(mt.globals.family_samples)
-
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
             postprocessed_callset_path(
@@ -58,7 +41,6 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
         return [
             self.clone(WriteCombinedSvVcf),
             self.clone(WriteExistingVariantsParquetTask),
-            self.clone(WriteMetadataForSvRunTask),
         ]
 
     @with_persisted_validation_errors
@@ -86,11 +68,6 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
             ),
         )
 
-        with self.input()[2].open() as f:
-            metadata_json = json.load(f)
-
         return mt.select_globals(
             callset_path=self.callset_path,
-            family_samples=metadata_json['family_samples'],
-            project_families=metadata_json['project_families'],
         )
