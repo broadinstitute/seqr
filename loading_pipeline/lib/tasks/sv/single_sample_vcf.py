@@ -167,6 +167,6 @@ class SingleSampleVCFTask(luigi.Task):
             ],
         )
         with header_target.open('w') as f:
-            f.write(f"{header}\n")
+            f.write(f'{header}\n')
 
         return header_target.path
