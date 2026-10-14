@@ -54,11 +54,10 @@ class SingleSampleVCFTask(luigi.Task):
     path_template = luigi.Parameter()
     out_path = luigi.Parameter()
     sample_id = luigi.Parameter()
-    vcf_sample_id = luigi.Parameter(default=None)
+    vcf_sample_id = luigi.OptionalParameter(default=None)
 
     def requires(self) -> list[luigi.Task]:
-        file_id = self.vcf_sample_id if self.vcf_sample_id else self.sample_id
-        pathname = self.path_template.replace('*', file_id)
+        pathname = self.path_template.replace('*', self.vcf_sample_id or self.sample_id)
         return [
             LocalizableFileTask(pathname),
             LocalizableFileTask(f'{pathname}.tbi'),
