@@ -3,6 +3,7 @@ import luigi.format
 
 from loading_pipeline.lib.tasks.files import LocalizableTarget
 
+
 class BaseVCFTask(luigi.Task):
     def output(self) -> list[LocalizableTarget]:
         vcf_path = self.vcf_path()
