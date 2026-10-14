@@ -109,14 +109,14 @@ class SingleSampleVCFTask(luigi.Task):
             ],
         )
 
-        header_path = self._write_header(self.input()[0])
+        header_target = self._write_header(self.input()[0])
         out_path = self.output()[0].path
         run_command(
             [
                 'bcftools',
                 'reheader',
                 '-h',
-                header_path,
+                header_target.path,
                 '-o',
                 out_path,
                 annotated_target.path,
@@ -127,7 +127,7 @@ class SingleSampleVCFTask(luigi.Task):
         for target in self.output():
             target.persist()
 
-    def _write_header(self, vcf_target: LocalizableTarget) -> str:
+    def _write_header(self, vcf_target: LocalizableTarget) -> luigi.LocalTarget:
         filter_lines = []
         with vcf_target.open() as f:
             for line in f:
@@ -156,4 +156,4 @@ class SingleSampleVCFTask(luigi.Task):
         with header_target.open('w') as f:
             f.write(f'{header}\n')
 
-        return header_target.path
+        return header_target
