@@ -84,7 +84,7 @@ class SingleSampleVCFTask(luigi.Task):
             [
                 'bcftools',
                 'view',
-                '-t',
+                '--regions',
                 ','.join(CONTIGS),
                 '-Ou',
                 '-o',
