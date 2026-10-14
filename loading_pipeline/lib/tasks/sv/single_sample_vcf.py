@@ -150,20 +150,7 @@ class SingleSampleVCFTask(luigi.Task):
                     for field, (number, field_type) in FORMAT_FIELDS.items()
                 ),
                 *(f'##contig=<ID={contig}>' for contig in CONTIGS),
-                '\t'.join(
-                    [
-                        '#CHROM',
-                        'POS',
-                        'ID',
-                        'REF',
-                        'ALT',
-                        'QUAL',
-                        'FILTER',
-                        'INFO',
-                        'FORMAT',
-                        self.sample_id,
-                    ],
-                ),
+                f'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{self.sample_id}',
             ],
         )
         with header_target.open('w') as f:
