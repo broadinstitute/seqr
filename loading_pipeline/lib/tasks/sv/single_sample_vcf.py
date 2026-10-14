@@ -137,34 +137,36 @@ class SingleSampleVCFTask(luigi.Task):
                     filter_lines.append(line.rstrip('\n'))
 
         header_target = luigi.LocalTarget(is_tmp=True)
-        header = [
-            '##fileformat=VCFv4.2',
-            *filter_lines,
-            *(
-                f'##INFO=<ID={field},Number={number},Type={field_type},Description="{field}">'
-                for field, (number, field_type) in INFO_FIELDS.items()
-            ),
-            *(
-                f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
-                for field, (number, field_type) in FORMAT_FIELDS.items()
-            ),
-            *(f'##contig=<ID={contig}>' for contig in CONTIGS),
-            '\t'.join(
-                [
-                    '#CHROM',
-                    'POS',
-                    'ID',
-                    'REF',
-                    'ALT',
-                    'QUAL',
-                    'FILTER',
-                    'INFO',
-                    'FORMAT',
-                    self.sample_id,
-                ],
-            ),
-        ]
+        header = '\n'.join(
+            [
+                '##fileformat=VCFv4.2',
+                *filter_lines,
+                *(
+                    f'##INFO=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                    for field, (number, field_type) in INFO_FIELDS.items()
+                ),
+                *(
+                    f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                    for field, (number, field_type) in FORMAT_FIELDS.items()
+                ),
+                *(f'##contig=<ID={contig}>' for contig in CONTIGS),
+                '\t'.join(
+                    [
+                        '#CHROM',
+                        'POS',
+                        'ID',
+                        'REF',
+                        'ALT',
+                        'QUAL',
+                        'FILTER',
+                        'INFO',
+                        'FORMAT',
+                        self.sample_id,
+                    ],
+                ),
+            ],
+        )
         with header_target.open('w') as f:
-            f.write('\n'.join(header) + '\n')
+            f.write(f"{header}\n")
 
         return header_target.path
