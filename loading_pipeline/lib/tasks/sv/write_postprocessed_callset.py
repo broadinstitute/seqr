@@ -5,6 +5,7 @@ import luigi
 import luigi.util
 
 from loading_pipeline.lib.misc.io import (
+    import_callset,
     import_parquet,
 )
 from loading_pipeline.lib.misc.sv import (
@@ -17,8 +18,8 @@ from loading_pipeline.lib.paths import (
 from loading_pipeline.lib.tasks.base.base_loading_run_params import BaseLoadingRunParams
 from loading_pipeline.lib.tasks.base.base_write import BaseWriteTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.sv.write_imported_callset import (
-    WriteImportedSvCallsetTask,
+from loading_pipeline.lib.tasks.sv.write_combined_vcf import (
+    WriteCombinedSvVcf,
 )
 from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
     WriteMetadataForSvRunTask,
@@ -56,14 +57,18 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
 
     def requires(self) -> list[luigi.Task]:
         return [
-            self.clone(WriteImportedSvCallsetTask),
+            self.clone(WriteCombinedSvVcf),
             self.clone(WriteExistingVariantsParquetTask),
             self.clone(WriteMetadataForSvRunTask),
         ]
 
     @with_persisted_validation_errors
     def create_table(self) -> hl.MatrixTable:
-        mt = hl.read_matrix_table(self.input()[0].path)
+        mt = import_callset(
+            self.input()[0][0].remote_path or self.input()[0][0].path,
+            self.reference_genome,
+            self.dataset_type,
+        )
 
         mt = deduplicate_merged_sv_concordance_calls(
             mt,
