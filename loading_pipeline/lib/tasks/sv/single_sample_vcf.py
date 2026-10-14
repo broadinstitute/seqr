@@ -3,6 +3,9 @@ import luigi.format
 
 from loading_pipeline.lib.core import ReferenceGenome
 from loading_pipeline.lib.misc.sv import run_command
+from loading_pipeline.lib.tasks.base.base_vcf import (
+    BaseVCFTask,
+)
 from loading_pipeline.lib.tasks.files import LocalizableFileTask, LocalizableTarget
 
 CONTIGS = list(ReferenceGenome.GRCh38.contig_recoding().values())
@@ -53,7 +56,7 @@ PAR1_END = 2781479
 PAR2_START = 155701383
 
 
-class SingleSampleVCFTask(luigi.Task):
+class SingleSampleVCFTask(BaseVCFTask):
     path_template = luigi.Parameter()
     out_path = luigi.Parameter()
     sample_id = luigi.Parameter()
@@ -67,7 +70,7 @@ class SingleSampleVCFTask(luigi.Task):
             LocalizableFileTask(f'{pathname}.tbi'),
         ]
 
-    def output(self) -> list[LocalizableTarget]:
+    def vcf_name(self) -> str:
         file_id = (
             f'{self.vcf_sample_id}__{self.sample_id}'
             if self.vcf_sample_id
@@ -75,13 +78,9 @@ class SingleSampleVCFTask(luigi.Task):
         )
         if self.is_male:
             file_id = f'{file_id}.male'
-        out_path = f'{self.out_path}{file_id}.norm.vcf.gz'
-        return [
-            LocalizableTarget(out_path),
-            LocalizableTarget(f'{out_path}.tbi'),
-        ]
+        return f'{self.out_path}{file_id}.norm.vcf.gz'
 
-    def run(self) -> None:
+    def write_vcf(self) -> None:
         for target in self.input():
             target.localize()
 
@@ -148,9 +147,6 @@ class SingleSampleVCFTask(luigi.Task):
             ],
         )
         run_command(['tabix', '-f', '-p', 'vcf', out_path])
-
-        for target in self.output():
-            target.persist()
 
     def _write_header(self, vcf_target: LocalizableTarget) -> luigi.LocalTarget:
         header = ['##fileformat=VCFv4.2']

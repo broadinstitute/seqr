@@ -1,7 +1,6 @@
 import json
 
 import luigi
-import luigi.format
 import luigi.util
 
 from loading_pipeline.lib.misc.sv import run_command
@@ -11,7 +10,9 @@ from loading_pipeline.lib.paths import (
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
-from loading_pipeline.lib.tasks.files import LocalizableTarget
+from loading_pipeline.lib.tasks.base.base_vcf import (
+    BaseVCFTask,
+)
 from loading_pipeline.lib.tasks.sv.single_sample_vcf import (
     SingleSampleVCFTask,
 )
@@ -21,7 +22,7 @@ from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteCombinedSvVcf(luigi.Task):
+class WriteCombinedSvVcf(BaseVCFTask):
     def complete(self) -> bool:
         if not super().complete():
             return False
@@ -41,26 +42,19 @@ class WriteCombinedSvVcf(luigi.Task):
         expected_samples, _ = self._sample_ids()
         return samples == set(expected_samples)
 
-    def output(self) -> list[luigi.Target]:
-        vcf_path = imported_callset_path(
+    def vcf_name(self) -> str:
+        return imported_callset_path(
             self.reference_genome,
             self.dataset_type,
             self.callset_path,
         ).replace('.mt', '.vcf.gz')
-        return [
-            LocalizableTarget(
-                vcf_path,
-                format=luigi.format.UTF8 >> luigi.format.Gzip,
-            ),
-            LocalizableTarget(f'{vcf_path}.tbi'),
-        ]
 
     def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WriteMetadataForSvRunTask),
         ]
 
-    def run(self) -> None:
+    def write_vcf(self) -> None:
         out_path = self.output()[0].path
         sample_ids, male_sample_ids = self._sample_ids()
         sample_file_tasks = [
@@ -95,9 +89,6 @@ class WriteCombinedSvVcf(luigi.Task):
             ],
         )
         run_command(['tabix', '-f', '-p', 'vcf', out_path])
-
-        for target in self.output():
-            target.persist()
 
     def _sample_ids(self) -> tuple[dict[str, str], list[str]]:
         with self.input()[0].open() as f:
