@@ -57,12 +57,10 @@ class SingleSampleVCFTask(luigi.Task):
     vcf_sample_id = luigi.Parameter(default=None)
 
     def requires(self) -> list[luigi.Task]:
-        pathname = self.path_template.replace('*', self.vcf_sample_id or self.sample_id)
+        file_id = self.vcf_sample_id if self.vcf_sample_id else self.sample_id
+        pathname = self.path_template.replace('*', file_id)
         return [
-            LocalizableFileTask(
-                pathname,
-                format=luigi.format.UTF8 >> luigi.format.Gzip,
-            ),
+            LocalizableFileTask(pathname),
             LocalizableFileTask(f'{pathname}.tbi'),
         ]
 
@@ -130,6 +128,7 @@ class SingleSampleVCFTask(luigi.Task):
 
     def _write_header(self, vcf_target: LocalizableTarget) -> luigi.LocalTarget:
         header = ['##fileformat=VCFv4.2']
+        vcf_target.format = luigi.format.UTF8 >> luigi.format.Gzip
         with vcf_target.open() as f:
             for line in f:
                 if not line.startswith('##'):
