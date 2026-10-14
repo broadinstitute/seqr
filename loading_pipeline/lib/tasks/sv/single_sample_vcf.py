@@ -58,12 +58,18 @@ class SingleSampleVCFTask(luigi.Task):
     def requires(self) -> list[luigi.Task]:
         pathname = self.path_template.replace('*', self.vcf_sample_id or self.sample_id)
         return [
-            LocalizableFileTask(pathname, format=luigi.format.UTF8 >> luigi.format.Gzip),
+            LocalizableFileTask(
+                pathname, format=luigi.format.UTF8 >> luigi.format.Gzip,
+            ),
             LocalizableFileTask(f'{pathname}.tbi'),
         ]
 
     def output(self) -> list[LocalizableTarget]:
-        file_id = f'{self.vcf_sample_id}__{self.sample_id}' if self.vcf_sample_id else self.sample_id
+        file_id = (
+            f'{self.vcf_sample_id}__{self.sample_id}'
+            if self.vcf_sample_id
+            else self.sample_id
+        )
         out_path = f'{self.out_path}{file_id}.norm.vcf.gz'
         return [
             LocalizableTarget(out_path),
@@ -130,35 +136,34 @@ class SingleSampleVCFTask(luigi.Task):
                     filter_lines.append(line.rstrip('\n'))
 
         header_target = luigi.LocalTarget(is_tmp=True)
-        with header_target.open('w') as f:
-            f.write('\n'.join(
+        header = [
+            '##fileformat=VCFv4.2',
+            *filter_lines,
+            *(
+                f'##INFO=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                for field, (number, field_type) in INFO_FIELDS.items()
+            ),
+            *(
+                f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                for field, (number, field_type) in FORMAT_FIELDS.items()
+            ),
+            *(f'##contig=<ID={contig}>' for contig in CONTIGS),
+            '\t'.join(
                 [
-                    '##fileformat=VCFv4.2',
-                    *filter_lines,
-                    *(
-                        f'##INFO=<ID={field},Number={number},Type={field_type},Description="{field}">'
-                        for field, (number, field_type) in INFO_FIELDS.items()
-                    ),
-                    *(
-                        f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
-                        for field, (number, field_type) in FORMAT_FIELDS.items()
-                    ),
-                    *(f'##contig=<ID={contig}>' for contig in CONTIGS),
-                    '\t'.join(
-                        [
-                            '#CHROM',
-                            'POS',
-                            'ID',
-                            'REF',
-                            'ALT',
-                            'QUAL',
-                            'FILTER',
-                            'INFO',
-                            'FORMAT',
-                            self.sample_id,
-                        ],
-                    ),
+                    '#CHROM',
+                    'POS',
+                    'ID',
+                    'REF',
+                    'ALT',
+                    'QUAL',
+                    'FILTER',
+                    'INFO',
+                    'FORMAT',
+                    self.sample_id,
                 ],
-            ) + '\n')
+            ),
+        ]
+        with header_target.open('w') as f:
+            f.write('\n'.join(header) + '\n')
 
         return header_target.path
