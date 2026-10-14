@@ -10,7 +10,6 @@ from loading_pipeline.lib.misc.io import (
 )
 from loading_pipeline.lib.misc.sv import (
     deduplicate_merged_sv_concordance_calls,
-    overwrite_male_non_par_calls,
 )
 from loading_pipeline.lib.paths import (
     postprocessed_callset_path,
@@ -89,7 +88,6 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
 
         with self.input()[2].open() as f:
             metadata_json = json.load(f)
-        mt = overwrite_male_non_par_calls(mt, metadata_json['male_sample_ids'])
 
         return mt.select_globals(
             callset_path=self.callset_path,
