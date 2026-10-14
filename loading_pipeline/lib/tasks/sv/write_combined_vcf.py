@@ -42,7 +42,7 @@ class WriteCombinedSvVcf(BaseVCFTask):
         expected_samples, _ = self._sample_ids()
         return samples == set(expected_samples)
 
-    def vcf_name(self) -> str:
+    def vcf_path(self) -> str:
         return imported_callset_path(
             self.reference_genome,
             self.dataset_type,

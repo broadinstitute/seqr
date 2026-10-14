@@ -70,7 +70,7 @@ class SingleSampleVCFTask(BaseVCFTask):
             LocalizableFileTask(f'{pathname}.tbi'),
         ]
 
-    def vcf_name(self) -> str:
+    def vcf_path(self) -> str:
         file_id = (
             f'{self.vcf_sample_id}__{self.sample_id}'
             if self.vcf_sample_id
