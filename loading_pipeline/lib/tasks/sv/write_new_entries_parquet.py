@@ -46,7 +46,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetTask):
 
         with self.input()[1].open() as f:
             metadata_json = json.load(f)
-        mt = mt.annnotate_globals(
+        mt = mt.annotate_globals(
             family_samples=metadata_json['family_samples'],
             project_families=metadata_json['project_families'],
         )
