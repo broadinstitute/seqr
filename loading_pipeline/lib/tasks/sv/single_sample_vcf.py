@@ -49,11 +49,15 @@ KEEP_FIELDS = ','.join(
     ],
 )
 
+PAR1_END = 2781479
+PAR2_START = 155701383
+
 
 class SingleSampleVCFTask(luigi.Task):
     path_template = luigi.Parameter()
     out_path = luigi.Parameter()
     sample_id = luigi.Parameter()
+    is_male = luigi.BoolParameter()
     vcf_sample_id = luigi.OptionalParameter(default=None)
 
     def requires(self) -> list[luigi.Task]:
@@ -69,6 +73,8 @@ class SingleSampleVCFTask(luigi.Task):
             if self.vcf_sample_id
             else self.sample_id
         )
+        if self.is_male:
+            file_id = f'{file_id}.male'
         out_path = f'{self.out_path}{file_id}.norm.vcf.gz'
         return [
             LocalizableTarget(out_path),
@@ -79,7 +85,7 @@ class SingleSampleVCFTask(luigi.Task):
         for target in self.input():
             target.localize()
 
-        contig_filtered_target = luigi.LocalTarget(is_tmp=True)
+        reformatted_target = luigi.LocalTarget(is_tmp=True)
         run_command(
             [
                 'bcftools',
@@ -88,10 +94,31 @@ class SingleSampleVCFTask(luigi.Task):
                 ','.join(CONTIGS),
                 '-Ou',
                 '-o',
-                contig_filtered_target.path,
+                reformatted_target.path,
                 self.input()[0].path,
             ],
         )
+
+        if self.is_male:
+            haploid_target = luigi.LocalTarget(is_tmp=True)
+            run_command(
+                [
+                    'bcftools',
+                    '+setGT',
+                    '-Ou',
+                    '-o',
+                    haploid_target.path,
+                    reformatted_target.path,
+                    '--',
+                    '--target-gt',
+                    'q',
+                    '--new-gt',
+                    'c:1',
+                    '--include',
+                    f'CHROM="chrY" || (CHROM="chrX" && ((POS>{PAR1_END} && POS<{PAR2_START}) || (POS<={PAR1_END} && INFO/END>{PAR1_END})))',
+                ],
+            )
+            reformatted_target = haploid_target
 
         annotated_target = luigi.LocalTarget(is_tmp=True)
         run_command(
@@ -103,7 +130,7 @@ class SingleSampleVCFTask(luigi.Task):
                 '-Oz',
                 '-o',
                 annotated_target.path,
-                contig_filtered_target.path,
+                reformatted_target.path,
             ],
         )
 

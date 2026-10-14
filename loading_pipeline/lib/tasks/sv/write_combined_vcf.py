@@ -38,7 +38,7 @@ class WriteCombinedSvVcf(luigi.Task):
                 if not line.startswith('#'):
                     break
 
-        expected_samples = set(self._sample_ids())
+        expected_samples, _ = set(self._sample_ids())
         return samples == expected_samples
 
     def output(self) -> list[luigi.Target]:
@@ -62,14 +62,16 @@ class WriteCombinedSvVcf(luigi.Task):
 
     def run(self) -> None:
         out_path = self.output()[0].path
+        sample_ids, male_sample_ids = self._sample_ids()
         sample_file_tasks = [
             SingleSampleVCFTask(
                 path_template=self.callset_path,
                 out_path=(self.output()[0].remote_path or out_path).rsplit('/', 1)[0],
                 sample_id=sample_id,
                 vcf_sample_id=vcf_sample_id,
+                is_male=sample_id in male_sample_ids,
             )
-            for sample_id, vcf_sample_id in self._sample_ids().items()
+            for sample_id, vcf_sample_id in sample_ids.items()
         ]
         yield sample_file_tasks
 
@@ -97,7 +99,7 @@ class WriteCombinedSvVcf(luigi.Task):
         for target in self.output():
             target.persist()
 
-    def _sample_ids(self) -> dict[str, str]:
+    def _sample_ids(self) -> tuple[dict[str, str], list[str]]:
         with self.input()[0].open() as f:
             metadata_json = json.load(f)
 
@@ -105,4 +107,4 @@ class WriteCombinedSvVcf(luigi.Task):
             sample_id: metadata_json['remap_ids'].get(sample_id)
             for samples in metadata_json['family_samples'].values()
             for sample_id in samples
-        }
+        }, metadata_json['male_sample_ids']
