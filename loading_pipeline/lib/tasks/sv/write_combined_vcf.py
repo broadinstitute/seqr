@@ -38,8 +38,8 @@ class WriteCombinedSvVcf(luigi.Task):
                 if not line.startswith('#'):
                     break
 
-        expected_samples, _ = set(self._sample_ids())
-        return samples == expected_samples
+        expected_samples, _ = self._sample_ids()
+        return samples == set(expected_samples)
 
     def output(self) -> list[luigi.Target]:
         vcf_path = imported_callset_path(
