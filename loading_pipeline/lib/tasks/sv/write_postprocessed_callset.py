@@ -69,10 +69,7 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
             self.reference_genome,
             self.dataset_type,
         )
-        mt = mt.transmute(**{
-            f'info.{field}': mt.info[field]
-            for field in mt.info
-        })
+        mt = mt.transmute(**{f'info.{field}': mt.info[field] for field in mt.info})
 
         mt = deduplicate_merged_sv_concordance_calls(
             mt,
