@@ -129,32 +129,33 @@ class SingleSampleVCFTask(luigi.Task):
             target.persist()
 
     def _write_header(self, vcf_target: LocalizableTarget) -> luigi.LocalTarget:
-        filter_lines = []
+        header = ['##fileformat=VCFv4.2']
         with vcf_target.open() as f:
             for line in f:
                 if not line.startswith('##'):
                     break
                 if line.startswith('##FILTER=<'):
-                    filter_lines.append(line.rstrip('\n'))
+                    header.append(line.rstrip('\n'))
+                elif line.startswith('##contig=<'):
+                    contig_id = line.removeprefix('##contig=<ID=').split(',')[0].split('>')[0]
+                    if contig_id in CONTIGS:
+                        header.append(line.rstrip('\n'))
 
+        header = [
+            *header,
+            *(
+                f'##INFO=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                for field, (number, field_type) in INFO_FIELDS.items()
+            ),
+            *(
+                f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                for field, (number, field_type) in FORMAT_FIELDS.items()
+            ),
+            f'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{self.sample_id}',
+        ]
         header_target = luigi.LocalTarget(is_tmp=True)
-        header = '\n'.join(
-            [
-                '##fileformat=VCFv4.2',
-                *filter_lines,
-                *(
-                    f'##INFO=<ID={field},Number={number},Type={field_type},Description="{field}">'
-                    for field, (number, field_type) in INFO_FIELDS.items()
-                ),
-                *(
-                    f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
-                    for field, (number, field_type) in FORMAT_FIELDS.items()
-                ),
-                *(f'##contig=<ID={contig}>' for contig in CONTIGS),
-                f'#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{self.sample_id}',
-            ],
-        )
         with header_target.open('w') as f:
-            f.write(f'{header}\n')
+            header_content = '\n'.join(header)
+            f.write(f'{header_content}\n')
 
         return header_target
