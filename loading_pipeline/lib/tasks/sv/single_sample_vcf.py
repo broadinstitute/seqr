@@ -136,7 +136,9 @@ class SingleSampleVCFTask(luigi.Task):
                 if line.startswith('##FILTER=<'):
                     header.append(line.rstrip('\n'))
                 elif line.startswith('##contig=<'):
-                    contig_id = line.removeprefix('##contig=<ID=').split(',')[0].split('>')[0]
+                    contig_id = (
+                        line.removeprefix('##contig=<ID=').split(',')[0].split('>')[0]
+                    )
                     if contig_id in CONTIGS:
                         header.append(line.rstrip('\n'))
 
