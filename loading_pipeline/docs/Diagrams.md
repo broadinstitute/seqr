@@ -58,11 +58,11 @@
 # SV Pipeline flow, as of October 2026
 
 ```
-            WriteMetadataForSvRunTask
-                       |
-                       v
-               WriteCombinedSvVcf          WriteExistingVariantsParquetTask
-                       |___________________________________|
+     WriteMetadataForSvRunTask
+               |
+               v
+        WriteCombinedSvVcf          WriteExistingVariantsParquetTask
+               |__________________________________|
                                 |                              
                                 v
                    WritePostprocessedSvCallsetTask
