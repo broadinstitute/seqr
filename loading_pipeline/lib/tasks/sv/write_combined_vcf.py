@@ -77,7 +77,7 @@ class WriteCombinedSvVcf(BaseVCFTask):
             for target in task.output():
                 target.localize()
 
-        return [task.output()[0] for task in sample_file_tasks]
+        return list([task.output()[0] for task in sample_file_tasks])
 
     def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
         return [
