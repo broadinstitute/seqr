@@ -8,7 +8,8 @@ import os
 from tqdm import tqdm
 
 from seqr.models import Individual, Project, RnaSample, RnaSeqOutlier, RnaSeqTpm, RnaSeqSpliceOutlier
-from seqr.utils.file_utils import file_iter, is_google_bucket_file_path, run_gsutil_with_wait
+from seqr.utils.file_utils import file_iter
+from seqr.utils.google_storage_utils import is_google_bucket_file_path, cp_file_from_gs
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 from seqr.utils.add_data_utils import basic_notify_search_data_loaded
@@ -160,7 +161,7 @@ def _load_rna_seq_file(
         allowed_column_map, allow_missing_gene=False, ignore_extra_samples=False, skip_new_sample_validation=False, optional_columns=None, sample_id_header_col_config=None,
         misconfigured_samples=None, sample_metadata_mapping=None,
 ):
-    f = file_iter(file_path, user=user)
+    f = file_iter(file_path)
     parsed_f = parse_file(file_path.split('/')[-1].replace('.gz', ''), f, iter_file=True)
     header = next(parsed_f)
     file_sample_id, column_map = _validate_rna_header(header, allowed_column_map, optional_columns, sample_id_header_col_config)
@@ -365,7 +366,7 @@ def _load_rna_seq(data_type, file_path, user, sample_metadata_mapping=None, proj
     os.mkdir(file_dir)
     if is_google_bucket_file_path(file_path):
         try:
-            run_gsutil_with_wait('cp', file_path, additional_args=f' {file_dir}', user=user)
+            cp_file_from_gs(file_path, file_dir)
         except Exception as e:
             # re-raise so error is properly handled upstream
             raise ValueError(e)
@@ -501,9 +502,9 @@ def _parse_phenotype_pri_row(row):
     yield record
 
 
-def load_phenotype_prioritization_data_file(file_path, user):
+def load_phenotype_prioritization_data_file(file_path):
     data_by_project_sample_id = defaultdict(lambda: defaultdict(list))
-    f = file_iter(file_path, user=user)
+    f = file_iter(file_path)
     header = _parse_tsv_row(next(f))
     missing_cols = [col for col in PHENOTYPE_PRIORITIZATION_REQUIRED_HEADER if col not in header]
     if missing_cols:

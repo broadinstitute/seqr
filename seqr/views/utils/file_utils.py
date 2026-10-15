@@ -9,7 +9,8 @@ import os
 import tempfile
 import openpyxl as xl
 
-from seqr.utils.file_utils import mv_file_to_gs, file_iter
+from seqr.utils.file_utils import file_iter
+from seqr.utils.google_storage_utils import mv_file_to_gs
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import login_and_policies_required
 from seqr.views.utils.terra_api_utils import anvil_enabled
@@ -133,7 +134,7 @@ def persist_temp_file(file_name, user, src_suffix=''):
 
     src_path = get_temp_file_path(f'{file_name}{src_suffix}', is_local=True)
     dest_path = get_temp_file_path(file_name, is_local=False)
-    mv_file_to_gs(src_path, dest_path, user)
+    mv_file_to_gs(src_path, dest_path)
 
 
 def load_uploaded_file(upload_file_id):

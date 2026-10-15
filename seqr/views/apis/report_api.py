@@ -11,7 +11,7 @@ import re
 import requests
 
 from clickhouse_search.search import get_variant_details_queryset
-from seqr.utils.file_utils import is_google_bucket_file_path, does_file_exist
+from seqr.utils.google_storage_utils import is_google_bucket_file_path, does_gs_file_exist
 from seqr.utils.logging_utils import SeqrLogger
 from seqr.utils.middleware import ErrorsWarningsException
 
@@ -434,7 +434,7 @@ def gregor_export(request):
     file_path = request_json['deliveryPath']
     if not is_google_bucket_file_path(file_path):
         raise ErrorsWarningsException(['Delivery Path must be a valid google bucket path (starts with gs://)'])
-    if not does_file_exist(file_path, user=request.user):
+    if not does_gs_file_exist(file_path):
         raise ErrorsWarningsException(['Invalid Delivery Path: folder not found'])
 
     projects = get_internal_projects().filter(
@@ -543,7 +543,7 @@ def gregor_export(request):
     else:
         warnings = errors + warnings
 
-    write_multiple_files(files, file_path, request.user, file_format='tsv')
+    write_multiple_files(files, file_path, file_format='tsv')
 
     return create_json_response({
         'info': [f'Successfully validated and uploaded Gregor Report for {len(family_map)} families'],

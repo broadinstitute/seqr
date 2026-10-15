@@ -7,6 +7,7 @@ django-hijack                     # allows admins to login as other user
 django-notifications-hq           # notification app
 django-cors-headers>=3.13,<4.0    # allows CORS requests for client-side development
 django-storages[google]           # alternative GCS storage backend for the django media_root
+google-cloud-storage               # GCS client library used to read/write files directly to Google Storage
 social-auth-app-django>5.0.0      # the package for Django to authenticate users with social medieas
 social-auth-core                  # the Python social authentication package. Required by social-auth-app-django
 gunicorn                          # web server
