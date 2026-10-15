@@ -80,7 +80,7 @@ class SingleSampleVCFTask(BaseVCFTask):
             file_id = f'{file_id}.male'
         return f'{self.out_path}{file_id}.norm.vcf.gz'
 
-    def write_vcf(self) -> None:
+    def prepare_vcf(self) -> list[luigi.LocalTarget]:
         for target in self.input():
             target.localize()
 
@@ -134,19 +134,18 @@ class SingleSampleVCFTask(BaseVCFTask):
         )
 
         header_target = self._write_header(self.input()[0])
-        out_path = self.output()[0].path
-        run_command(
-            [
-                'bcftools',
-                'reheader',
-                '-h',
-                header_target.path,
-                '-o',
-                out_path,
-                annotated_target.path,
-            ],
-        )
-        run_command(['tabix', '-f', '-p', 'vcf', out_path])
+        return [header_target, annotated_target]
+
+    def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
+        return [
+            'bcftools',
+            'reheader',
+            '-h',
+            targets[0].path,
+            '-o',
+            self.output()[0].path,
+            targets[1].path,
+        ]
 
     def _write_header(self, vcf_target: LocalizableTarget) -> luigi.LocalTarget:
         header = ['##fileformat=VCFv4.2']

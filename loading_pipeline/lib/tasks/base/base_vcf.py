@@ -1,6 +1,7 @@
 import luigi
 import luigi.format
 
+from loading_pipeline.lib.misc.sv import run_command
 from loading_pipeline.lib.tasks.files import LocalizableTarget
 
 
@@ -16,7 +17,10 @@ class BaseVCFTask(luigi.Task):
         ]
 
     def run(self) -> None:
-        self.write_vcf()
+        targets = self.prepare_vcf()
+        command = self.generate_vcf_command(targets)
+        run_command(command)
+        run_command(['tabix', '-f', '-p', 'vcf', self.output()[0].path])
 
         for target in self.output():
             target.persist()
@@ -24,5 +28,8 @@ class BaseVCFTask(luigi.Task):
     def vcf_path(self) -> str:
         raise NotImplementedError
 
-    def write_vcf(self) -> None:
+    def prepare_vcf(self) -> list[luigi.LocalTarget]:
+        raise NotImplementedError
+
+    def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
         raise NotImplementedError

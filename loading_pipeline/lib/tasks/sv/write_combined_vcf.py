@@ -54,13 +54,13 @@ class WriteCombinedSvVcf(BaseVCFTask):
             self.clone(WriteMetadataForSvRunTask),
         ]
 
-    def write_vcf(self) -> None:
-        out_path = self.output()[0].path
+    def prepare_vcf(self) -> list[luigi.LocalTarget]:
         sample_ids, male_sample_ids = self._sample_ids()
+        out_path = self.output()[0].remote_path or self.output()[0].path
         sample_file_tasks = [
             SingleSampleVCFTask(
                 path_template=self.callset_path,
-                out_path=(self.output()[0].remote_path or out_path).rsplit('/', 1)[0],
+                out_path=out_path.rsplit('/', 1)[0],
                 sample_id=sample_id,
                 vcf_sample_id=vcf_sample_id,
                 is_male=sample_id in male_sample_ids,
@@ -73,22 +73,22 @@ class WriteCombinedSvVcf(BaseVCFTask):
             for target in task.output():
                 target.localize()
 
-        vcf_paths = [task.output()[0].path for task in sample_file_tasks]
-        self.output()[0].makedirs()
-        run_command(
-            [
-                'bcftools',
-                'merge',
-                '-m',
-                'none',
-                '--missing-to-ref',
-                '-Oz',
-                '-o',
-                out_path,
-                *vcf_paths,
-            ],
-        )
-        run_command(['tabix', '-f', '-p', 'vcf', out_path])
+        return [task.output()[0] for task in sample_file_tasks]
+
+    def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
+        output = self.output()[0]
+        output.makedirs()
+        return [
+            'bcftools',
+            'merge',
+            '-m',
+            'none',
+            '--missing-to-ref',
+            '-Oz',
+            '-o',
+            output.path,
+            *[target.path for target in targets],
+        ]
 
     def _sample_ids(self) -> tuple[dict[str, str], list[str]]:
         with self.input()[0].open() as f:
