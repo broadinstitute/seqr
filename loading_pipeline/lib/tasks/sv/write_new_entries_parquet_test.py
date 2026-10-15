@@ -23,7 +23,7 @@ from loading_pipeline.lib.test.misc import (
 from loading_pipeline.lib.test.mocked_dataroot_testcase import MockedDatarootTestCase
 
 TEST_PEDIGREE_5 = 'loading_pipeline/var/test/pedigrees/test_pedigree_5.tsv'
-TEST_SV_VCF_2 = 'loading_pipeline/var/test/callsets/sv_2.vcf'
+TEST_SV_VCF_2 = 'loading_pipeline/var/test/callsets/sv_2/*.vcf.gz'
 
 TEST_RUN_ID = 'manual__2024-04-03'
 

@@ -14,11 +14,8 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
-    WriteMetadataForSvRunTask,
-)
-from loading_pipeline.lib.tasks.sv.write_remapped_and_subsetted_callset import (
-    WriteRemappedAndSubsettedSvCallsetTask,
+from loading_pipeline.lib.tasks.sv.write_postprocessed_callset import (
+    WritePostprocessedSvCallsetTask,
 )
 
 
@@ -35,12 +32,12 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetTask):
 
     def requires(self) -> list[luigi.Task]:
         return [
-            self.clone(WriteRemappedAndSubsettedSvCallsetTask),
-            self.clone(WriteMetadataForSvRunTask),
+            self.clone(WritePostprocessedSvCallsetTask),
         ]
 
     def create_table(self) -> hl.Table:
         mt = hl.read_matrix_table(self.input()[0].path)
+
         ht = compute_callset_family_entries_ht(
             self.dataset_type,
             mt,

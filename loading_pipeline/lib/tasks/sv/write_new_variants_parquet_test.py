@@ -27,7 +27,7 @@ from loading_pipeline.lib.test.mocked_reference_datasets_testcase import (
     MockedReferenceDatasetsTestCase,
 )
 
-TEST_SV_VCF = 'loading_pipeline/var/test/callsets/sv_1.vcf'
+TEST_SV_VCF = 'loading_pipeline/var/test/callsets/sv_1/*.vcf.gz'
 TEST_PEDIGREE_5 = 'loading_pipeline/var/test/pedigrees/test_pedigree_5.tsv'
 
 TEST_RUN_ID = 'manual__2024-04-03'
