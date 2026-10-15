@@ -56,12 +56,14 @@ class WriteCombinedSvVcf(BaseVCFTask):
             self.clone(WriteMetadataForSvRunTask),
         ]
 
-    def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
-        self.output()[0].makedirs()
+    def run(self) -> None:
+        yield self._sample_file_tasks()
+        super().run()
 
+    def _sample_file_tasks(self) -> list[SingleSampleVCFTask]:
         sample_ids, male_sample_ids = self._sample_ids()
         output_dir = self.output_dir()
-        sample_file_tasks = [
+        return [
             SingleSampleVCFTask(
                 path_template=self.callset_path,
                 output_dir=output_dir,
@@ -71,13 +73,16 @@ class WriteCombinedSvVcf(BaseVCFTask):
             )
             for sample_id, vcf_sample_id in sample_ids.items()
         ]
-        yield sample_file_tasks
 
+    def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
+        self.output()[0].makedirs()
+
+        sample_file_tasks = self._sample_file_tasks()
         for task in sample_file_tasks:
             for target in task.output():
                 target.localize()
 
-        return list([task.output()[0] for task in sample_file_tasks])
+        return [task.output()[0] for task in sample_file_tasks]
 
     def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
         return [
