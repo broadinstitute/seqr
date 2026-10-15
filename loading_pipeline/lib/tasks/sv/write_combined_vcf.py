@@ -3,7 +3,6 @@ import json
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.misc.sv import run_command
 from loading_pipeline.lib.paths import (
     imported_callset_path,
 )
