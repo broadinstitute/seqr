@@ -57,6 +57,7 @@ class WriteCombinedSvVcf(BaseVCFTask):
         ]
 
     def run(self) -> None:
+        self.output()[0].makedirs()
         yield self._sample_file_tasks()
         super().run()
 
@@ -75,8 +76,6 @@ class WriteCombinedSvVcf(BaseVCFTask):
         ]
 
     def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
-        self.output()[0].makedirs()
-
         sample_file_tasks = self._sample_file_tasks()
         for task in sample_file_tasks:
             for target in task.output():
