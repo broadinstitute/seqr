@@ -28,6 +28,13 @@ from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WritePostprocessedSvCallsetTask(BaseWriteTask):
+    def complete(self) -> bool:
+        if not super().complete():
+            return False
+
+        # Ensure input VCF has the correct samples for the current run
+        return self.requires()[0].complete()
+
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
             postprocessed_callset_path(

@@ -29,7 +29,7 @@ class BaseVCFTask(luigi.Task):
         raise NotImplementedError
 
     def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
-        raise NotImplementedError
+        return []
 
     def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
         raise NotImplementedError

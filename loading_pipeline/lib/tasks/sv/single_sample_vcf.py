@@ -58,7 +58,7 @@ PAR2_START = 155701383
 
 class SingleSampleVCFTask(BaseVCFTask):
     path_template = luigi.Parameter()
-    out_path = luigi.Parameter()
+    output_dir = luigi.Parameter()
     sample_id = luigi.Parameter()
     is_male = luigi.BoolParameter()
     vcf_sample_id = luigi.OptionalParameter(default=None)
@@ -78,7 +78,7 @@ class SingleSampleVCFTask(BaseVCFTask):
         )
         if self.is_male:
             file_id = f'{file_id}.male'
-        return f'{self.out_path}{file_id}.norm.vcf.gz'
+        return f'{self.output_dir}/{file_id}.norm.vcf.gz'
 
     def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
         for target in self.input():

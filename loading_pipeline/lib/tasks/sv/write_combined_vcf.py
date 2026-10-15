@@ -41,12 +41,15 @@ class WriteCombinedSvVcf(BaseVCFTask):
         expected_samples, _ = self._sample_ids()
         return samples == set(expected_samples)
 
-    def vcf_path(self) -> str:
+    def output_dir(self) -> str:
         return imported_callset_path(
             self.reference_genome,
             self.dataset_type,
             self.callset_path,
-        ).replace('.mt', '.vcf.gz')
+        ).removesuffix('.mt')
+
+    def vcf_path(self) -> str:
+        return f'{self.output_dir()}/combined.vcf.gz'
 
     def requires(self) -> list[luigi.Task]:
         return [
@@ -54,12 +57,14 @@ class WriteCombinedSvVcf(BaseVCFTask):
         ]
 
     def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
+        self.output()[0].makedirs()
+
         sample_ids, male_sample_ids = self._sample_ids()
-        out_path = self.output()[0].remote_path or self.output()[0].path
+        output_dir = self.output_dir()
         sample_file_tasks = [
             SingleSampleVCFTask(
                 path_template=self.callset_path,
-                out_path=out_path.rsplit('/', 1)[0],
+                output_dir=output_dir,
                 sample_id=sample_id,
                 vcf_sample_id=vcf_sample_id,
                 is_male=sample_id in male_sample_ids,
@@ -75,8 +80,6 @@ class WriteCombinedSvVcf(BaseVCFTask):
         return [task.output()[0] for task in sample_file_tasks]
 
     def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
-        output = self.output()[0]
-        output.makedirs()
         return [
             'bcftools',
             'merge',
@@ -85,7 +88,7 @@ class WriteCombinedSvVcf(BaseVCFTask):
             '--missing-to-ref',
             '-Oz',
             '-o',
-            output.path,
+            self.output()[0].path,
             *[target.path for target in targets],
         ]
 
