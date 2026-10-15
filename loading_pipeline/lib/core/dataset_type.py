@@ -67,7 +67,6 @@ class DatasetType(StrEnum):
                 'contamination': {hl.tstr, hl.tfloat64},
                 'mito_cn': hl.tfloat64,
             },
-            DatasetType.SV: {},
         }[self]
 
     @property
@@ -85,12 +84,6 @@ class DatasetType(StrEnum):
                 'DP': hl.tint32,
                 'MQ': {hl.tfloat64, hl.tint32},
                 'HL': hl.tfloat64,
-            },
-            DatasetType.SV: {
-                'GT': hl.tcall,
-                'CONC_ST': hl.tarray(hl.tstr),
-                'GQ': hl.tint32,
-                'RD_CN': hl.tint32,
             },
         }[self]
 
@@ -110,28 +103,6 @@ class DatasetType(StrEnum):
                 'hap_defining_variant': hl.tbool,
                 'mitotip_trna_prediction': hl.tstr,
                 'vep': hl.tstruct,
-            },
-            DatasetType.SV: {
-                'locus': hl.tlocus(ReferenceGenome.GRCh38.value),
-                'alleles': hl.tarray(hl.tstr),
-                'filters': hl.tset(hl.tstr),
-                'info.AC': hl.tarray(hl.tint32),
-                'info.AF': hl.tarray(hl.tfloat64),
-                'info.ALGORITHMS': hl.tarray(hl.tstr),
-                'info.BOTHSIDES_SUPPORT': hl.tbool,
-                'info.AN': hl.tint32,
-                'info.CHR2': hl.tstr,
-                'info.CPX_INTERVALS': hl.tarray(hl.tstr),
-                'info.CPX_TYPE': hl.tstr,
-                'info.END': hl.tint32,
-                'info.END2': hl.tint32,
-                'info.N_HET': hl.tint32,
-                'info.N_HOMALT': hl.tint32,
-                'info.GNOMAD_V4.1_TRUTH_VID': hl.tstr,
-                'info.SEQR_INTERNAL_TRUTH_VID': hl.tstr,
-                'info.StrVCTVRE': hl.tstr,
-                'info.SVLEN': hl.tint32,
-                **sv.CONSEQ_PREDICTED_GENE_COLS,
             },
         }[self]
 

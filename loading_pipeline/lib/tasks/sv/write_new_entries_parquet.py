@@ -1,3 +1,5 @@
+import json
+
 import hail as hl
 import luigi
 import luigi.util
@@ -14,6 +16,9 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
+    WriteMetadataForSvRunTask,
+)
 from loading_pipeline.lib.tasks.sv.write_postprocessed_callset import (
     WritePostprocessedSvCallsetTask,
 )
@@ -33,10 +38,18 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetTask):
     def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WritePostprocessedSvCallsetTask),
+            self.clone(WriteMetadataForSvRunTask),
         ]
 
     def create_table(self) -> hl.Table:
         mt = hl.read_matrix_table(self.input()[0].path)
+
+        with self.input()[1].open() as f:
+            metadata_json = json.load(f)
+        mt = mt.annotate_globals(
+            family_samples=metadata_json['family_samples'],
+            project_families=metadata_json['project_families'],
+        )
 
         ht = compute_callset_family_entries_ht(
             self.dataset_type,

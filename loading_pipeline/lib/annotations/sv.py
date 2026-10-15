@@ -209,10 +209,6 @@ def pos(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht.locus.position
 
 
-def start_locus(ht: hl.Table, **_: Any):
-    return ht.locus
-
-
 def sorted_gene_consequences(
     ht: hl.Table,
     gencode_gene_symbol_to_gene_id_mapping: hl.tdict(hl.tstr, hl.tstr),
