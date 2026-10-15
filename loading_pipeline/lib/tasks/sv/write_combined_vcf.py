@@ -53,7 +53,7 @@ class WriteCombinedSvVcf(BaseVCFTask):
             self.clone(WriteMetadataForSvRunTask),
         ]
 
-    def prepare_vcf(self) -> list[luigi.LocalTarget]:
+    def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
         sample_ids, male_sample_ids = self._sample_ids()
         out_path = self.output()[0].remote_path or self.output()[0].path
         sample_file_tasks = [

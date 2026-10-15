@@ -80,7 +80,7 @@ class SingleSampleVCFTask(BaseVCFTask):
             file_id = f'{file_id}.male'
         return f'{self.out_path}{file_id}.norm.vcf.gz'
 
-    def prepare_vcf(self) -> list[luigi.LocalTarget]:
+    def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
         for target in self.input():
             target.localize()
 
