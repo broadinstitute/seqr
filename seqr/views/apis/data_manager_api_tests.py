@@ -1779,6 +1779,7 @@ Loading pipeline should be triggered with:
         body['filePath'] = f'{self.CALLSET_DIR}/sv_callsets/*.vcf.gz'
         vcf_file_rows = [
             '##fileformat=VCFv4.3\n',
+            '##INFO=<ID=END,Number=1,Type=String,Description="End">\n',
             '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
             '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
             '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
@@ -1808,9 +1809,16 @@ Loading pipeline should be triggered with:
         self._add_file_list_iter(sv_vcfs, vcf_file_rows)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Missing required FORMAT field(s) GQ, GT'])
+        self.assertListEqual(response.json()['errors'], [
+            'Missing required INFO field(s) SVLEN, SVTYPE',
+            'Incorrect meta Type for INFO.END - expected "Integer", got "String"',
+            'Missing required FORMAT field(s) GQ, GT',
+        ])
 
-        vcf_file_rows = vcf_file_rows[:5] + [
+        vcf_file_rows = vcf_file_rows[:1] + vcf_file_rows[1:5] + [
+            '##INFO=<ID=END,Number=1,Type=Integer,Description="End">\n',
+            '##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="SV Length">\n',
+            '##INFO=<ID=SVTYPE,Number=1,Type=String,Description="SV Type">\n',
             '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
             '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
         ]

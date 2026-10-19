@@ -1,15 +1,13 @@
-import json
-
 import hail as hl
 import luigi
 import luigi.util
 
 from loading_pipeline.lib.misc.io import (
+    import_callset,
     import_parquet,
 )
 from loading_pipeline.lib.misc.sv import (
     deduplicate_merged_sv_concordance_calls,
-    overwrite_male_non_par_calls,
 )
 from loading_pipeline.lib.paths import (
     postprocessed_callset_path,
@@ -17,11 +15,8 @@ from loading_pipeline.lib.paths import (
 from loading_pipeline.lib.tasks.base.base_loading_run_params import BaseLoadingRunParams
 from loading_pipeline.lib.tasks.base.base_write import BaseWriteTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.sv.write_imported_callset import (
-    WriteImportedSvCallsetTask,
-)
-from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
-    WriteMetadataForSvRunTask,
+from loading_pipeline.lib.tasks.sv.write_combined_vcf import (
+    WriteCombinedSvVcf,
 )
 from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
     WriteExistingVariantsParquetTask,
@@ -36,14 +31,9 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
     def complete(self) -> bool:
         if not super().complete():
             return False
-        if not self.input()[2].exists():
-            return False
 
-        mt = hl.read_matrix_table(self.output().path)
-        with self.input()[2].open() as f:
-            metadata_json = json.load(f)
-
-        return metadata_json['family_samples'] == hl.eval(mt.globals.family_samples)
+        # Ensure input VCF has the correct samples for the current run
+        return self.requires()[0].complete()
 
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
@@ -56,14 +46,18 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
 
     def requires(self) -> list[luigi.Task]:
         return [
-            self.clone(WriteImportedSvCallsetTask),
+            self.clone(WriteCombinedSvVcf),
             self.clone(WriteExistingVariantsParquetTask),
-            self.clone(WriteMetadataForSvRunTask),
         ]
 
     @with_persisted_validation_errors
     def create_table(self) -> hl.MatrixTable:
-        mt = hl.read_matrix_table(self.input()[0].path)
+        mt = import_callset(
+            self.input()[0][0].remote_path or self.input()[0][0].path,
+            self.reference_genome,
+            self.dataset_type,
+        )
+        mt = mt.transmute_rows(**{f'info.{field}': mt.info[field] for field in mt.info})
 
         mt = deduplicate_merged_sv_concordance_calls(
             mt,
@@ -81,12 +75,6 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
             ),
         )
 
-        with self.input()[2].open() as f:
-            metadata_json = json.load(f)
-        mt = overwrite_male_non_par_calls(mt, metadata_json['male_sample_ids'])
-
         return mt.select_globals(
             callset_path=self.callset_path,
-            family_samples=metadata_json['family_samples'],
-            project_families=metadata_json['project_families'],
         )

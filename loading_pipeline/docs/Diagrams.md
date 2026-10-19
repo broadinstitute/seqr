@@ -58,15 +58,11 @@
 # SV Pipeline flow, as of October 2026
 
 ```
-                    WriteMetadataForSvRunTask
-                                |
-                                v
-                        WriteCombinedSvVcf
-                                |
-                                V
-             WriteImportedSvCallsetTask         WriteExistingVariantsParquetTask
-             (VCF → Hail Matrix Table)                     |
-                       |___________________________________|
+     WriteMetadataForSvRunTask
+               |
+               v
+        WriteCombinedSvVcf          WriteExistingVariantsParquetTask
+               |__________________________________|
                                 |                              
                                 v
                    WritePostprocessedSvCallsetTask

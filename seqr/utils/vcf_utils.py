@@ -23,6 +23,14 @@ DATA_TYPE_FORMAT_FIELDS = {
     Dataset.DATASET_TYPE_SV_CALLS: BASE_EXPECTED_FORMAT_FIELDS,
 }
 
+DATA_TYPE_INFO_FIELDS = {
+    Dataset.DATASET_TYPE_SV_CALLS: {
+        'END': 'Integer',
+        'SVLEN': 'Integer',
+        'SVTYPE': 'String',
+    },
+}
+
 DATA_TYPE_FILE_EXTS = {
     Dataset.DATASET_TYPE_MITO_CALLS: ('.mt',),
 }
@@ -39,18 +47,26 @@ def _validate_vcf_header(header):
         raise ErrorsWarningsException([f'Missing required VCF header field(s) {missing_fields}.'], [])
 
 
-def _validate_vcf_meta(meta, genome_version, dataset_type):
-    errors = []
-    expected_format_fields = DATA_TYPE_FORMAT_FIELDS.get(dataset_type, ALL_EXPECTED_FORMAT_FIELDS)
-    format_meta = meta.get('FORMAT', {})
-    missing_meta = [m for m in expected_format_fields if not format_meta.get(m)]
+def _validate_meta_type(meta_type, meta, expected_fields, errors):
+    format_meta = meta.get(meta_type, {})
+    missing_meta = [m for m in expected_fields if not format_meta.get(m)]
     if missing_meta:
         missing_fields = ', '.join(missing_meta)
-        errors.append(f'Missing required FORMAT field(s) {missing_fields}')
-    for sub_field, expected in expected_format_fields.items():
+        errors.append(f'Missing required {meta_type} field(s) {missing_fields}')
+    for sub_field, expected in expected_fields.items():
         value = format_meta.get(sub_field)
         if value and value != expected:
-            errors.append(f'Incorrect meta Type for FORMAT.{sub_field} - expected "{expected}", got "{value}"')
+            errors.append(f'Incorrect meta Type for {meta_type}.{sub_field} - expected "{expected}", got "{value}"')
+
+
+def _validate_vcf_meta(meta, genome_version, dataset_type):
+    errors = []
+
+    expected_info_fields = DATA_TYPE_INFO_FIELDS.get(dataset_type, {})
+    _validate_meta_type('INFO', meta, expected_info_fields, errors)
+
+    expected_format_fields = DATA_TYPE_FORMAT_FIELDS.get(dataset_type, ALL_EXPECTED_FORMAT_FIELDS)
+    _validate_meta_type('FORMAT', meta, expected_format_fields, errors)
 
     if 'reference' in meta and len(meta['reference']) == 1:
         meta_version = next(iter(meta['reference'].keys()))
