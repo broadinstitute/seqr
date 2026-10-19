@@ -1,5 +1,6 @@
 from datetime import datetime
 from django.core.management import call_command
+from django.core.management.base import CommandError
 import json
 import mock
 
@@ -132,7 +133,9 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         self.reset_logs()
         mock_email.reset_mock()
         mock_slack.reset_mock()
-        call_command('tag_seqr_prioritized_variants', PROJECT_GUID)
+        with self.assertRaises(CommandError) as e:
+            call_command('tag_seqr_prioritized_variants', 'invalid_guid', PROJECT_GUID)
+        self.assertEqual(str(e.exception), 'Failed to update 1 projects: invalid_guid - Project matching query does not exist.')
         self._assert_expected_logs(num_unchanged=7)
         mock_email.assert_not_called()
         mock_slack.assert_not_called()
@@ -158,6 +161,8 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             (f'  {criteria}: {count} variants', None) for criteria, (count, _) in  SV_MATCHES.items()
         ] + [(f'  {criteria}: {count} variants', None) for criteria, (count, _) in MITO_MATCHES.items()] + [
             (f'  {criteria}: {count} variants', None) for criteria, (count, _) in MULTI_TYPE_MATCHES.items()
+        ] + [
+            (f'1kg project nåme with uniçøde: {num_new} new and 0 previously tagged variants in 1 families', None),
         ])
 
     @classmethod

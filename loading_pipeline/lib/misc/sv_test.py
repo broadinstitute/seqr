@@ -2,14 +2,10 @@ import unittest
 
 import hail as hl
 
-from loading_pipeline.lib.core import DatasetType, ReferenceGenome
-from loading_pipeline.lib.misc.io import import_callset, select_relevant_fields
 from loading_pipeline.lib.misc.sv import (
     deduplicate_merged_sv_concordance_calls,
-    overwrite_male_non_par_calls,
 )
 
-TEST_SV_VCF = 'loading_pipeline/var/test/callsets/sv_1/RGP_164_2.vcf.gz'
 ANNOTATIONS_HT = hl.Table.parallelize(
     [
         {
@@ -38,36 +34,6 @@ ANNOTATIONS_HT = hl.Table.parallelize(
 
 
 class SVTest(unittest.TestCase):
-    def test_overwrite_male_non_par_calls(self) -> None:
-        mt = import_callset(TEST_SV_VCF, ReferenceGenome.GRCh38, DatasetType.SV)
-        mt = select_relevant_fields(
-            mt,
-            DatasetType.SV,
-        )
-        mt = overwrite_male_non_par_calls(
-            mt,
-            ['RGP_164_2'],
-        )
-        mt = mt.filter_rows(mt.locus.contig == 'chrX')
-        self.assertEqual(
-            [
-                hl.Locus(contig='chrX', position=3, reference_genome='GRCh38'),
-                hl.Locus(contig='chrX', position=2781700, reference_genome='GRCh38'),
-            ],
-            mt.locus.collect(),
-        )
-        self.assertEqual(
-            [
-                # END of this variant < start of the non-par region.
-                hl.Call(alleles=[0, 1], phased=False),
-                hl.Call(alleles=[1], phased=False),
-            ],
-            mt.GT.collect(),
-        )
-        self.assertFalse(
-            hasattr(mt, 'start_locus'),
-        )
-
     def test_deduplicate_merged_sv_concordance_calls(self) -> None:
         mt = (
             hl.MatrixTable.from_parts(

@@ -464,12 +464,27 @@ MULTI_DATA_TYPE_SEARCHES = {
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
-        parser.add_argument('project')
+        parser.add_argument('projects', nargs='+')
 
     def handle(self, *args, **options):
+        summaries = []
+        errors = []
+        for project_guid in options['projects']:
+            try:
+                summaries.append(self._tag_project(project_guid))
+            except Exception as e:
+                errors.append(f'{project_guid} - {e}')
+
+        for summary in summaries:
+            logger.info(summary)
+
+        if errors:
+            raise CommandError(f'Failed to update {len(errors)} projects: {"; ".join(errors)}')
+
+    def _tag_project(self, project_guid):
         family_guid_map = {}
         family_name_map = {}
-        project = Project.objects.get(guid=options['project'])
+        project = Project.objects.get(guid=project_guid)
         for db_id, guid, family_id in Family.objects.filter(project=project).values_list('id', 'guid', 'family_id'):
             family_guid_map[guid] = db_id
             family_name_map[db_id] = family_id
@@ -494,11 +509,13 @@ class Command(BaseCommand):
         )
 
         new_tag_keys = updates['new_tag_keys']
-        logger.info(f'Tagged {len(new_tag_keys)} new and {len(updates["update_tag_keys"])} previously tagged variants in {len(updates["matched_families"])} families, found {len(updates["skipped_tag_keys"])} unchanged tags:')
+        summary = f'{len(new_tag_keys)} new and {len(updates["update_tag_keys"])} previously tagged variants in {len(updates["matched_families"])} families'
+        logger.info(f'Tagged {summary}, found {len(updates["skipped_tag_keys"])} unchanged tags:')
+        project_summary = f'{project.name}: {summary}'
         for search_name, count in search_counts.items():
             logger.info(f'  {search_name}: {count} variants')
         if not new_tag_keys:
-            return
+            return project_summary
 
         family_new_counts = defaultdict(int)
         for family_id, _ in new_tag_keys:
@@ -514,6 +531,8 @@ class Command(BaseCommand):
                 f'{family_name_map[family_id]}: {count} new tags' for family_id, count in family_new_counts.items()
             ])),
         )
+
+        return project_summary
 
     @classmethod
     def _run_dataset_type_searches(cls, dataset_type, searches, sample_qs, updates, search_counts, samples_by_dataset_type, family_guid_map, project, exclude_intervals, gene_by_moi):
