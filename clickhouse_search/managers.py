@@ -773,7 +773,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
 
     def conditional_selects(self, query, prefix='', skip_entry_fields=False, **kwargs):
         genotype_override_fields = query.model.GENOTYPE_OVERRIDE_FIELDS
-        if skip_entry_fields or not genotype_override_fields:
+        if skip_entry_fields:
             return {}
 
         genotype_field = next(field for field in ['genotypes', 'familyGenotypes'] if field in query.query.annotations)
@@ -782,18 +782,33 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
             enumerate(query.query.annotations[genotype_field].output_field.base_fields)
         }
         override_field_map = {field: col for col, (field, _) in genotype_override_fields.items()}
+        genotype_output_field = query.query.annotations[genotype_field].output_field.clone()
+        genotype_output_field.base_fields = [
+            (field, ftype) for (field, ftype) in query.query.annotations[genotype_field].output_field.base_fields
+            if field not in {'newCall', 'prevCall', 'prevNumAlt', 'prevOverlap'}
+        ]
         genotype_fields = [
             self._genotype_override_expression(index_map[field], override_field_map[field], index_map['cn'])
             if field in override_field_map else (
                 f'ifNull(x.{index_map[field]}, 0)' if field == 'numAlt' else f'x.{index_map[field]}')
-            for (field, _) in query.query.annotations[genotype_field].output_field.base_fields
+            for (field, _) in genotype_output_field.base_fields
         ]
 
-        return {
-            genotype_field: ArrayMap(genotype_field, mapped_expression=f"tuple({', '.join(genotype_fields)})"),
-            'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
-            **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
+        override_selects = {
+            genotype_field: ArrayMap(
+                genotype_field,
+                mapped_expression=f"tuple({', '.join(genotype_fields)})",
+                output_field=genotype_output_field,
+            ),
         }
+        if genotype_override_fields:
+            override_selects.update({
+                'transcripts': F(query.GENOTYPE_GENE_CONSEQUENCE_FIELD),
+                **{col: F(f'sample_{col}') for col in genotype_override_fields if col != 'geneIds'},
+            })
+
+
+        return override_selects
 
     def add_genotype_override_annotations(self, results):
         if self.model.GENOTYPE_OVERRIDE_FIELDS:
