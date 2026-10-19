@@ -1451,8 +1451,6 @@ COMP_HET_ALL_PASS_FILTERS = {
     'annotations': {**ALL_SNV_INDEL_PASS_FILTERS['annotations'], 'structural': ['DEL', 'CPX', 'INS', 'gCNV_DEL', 'gCNV_DUP']},
 }
 
-NEW_SV_FILTER = {'new_structural_variants': ['NEW']}
-
 SV_GENE_COUNTS = {
     'ENSG00000171621': {'total': 2, 'families': {'F000014_14': 2}},
     'ENSG00000083544': {'total': 1, 'families': {'F000014_14': 1}},

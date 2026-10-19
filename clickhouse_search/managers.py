@@ -14,7 +14,7 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, DiscoveryVariantDict
 from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
-    EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
+    EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_LIKELY_PATH_FILTER, \
     CLINVAR_CONFLICTING_P_LP, CLINVAR_CONFLICTING_NO_P, CLINVAR_CONFLICTING, PATH_FREQ_OVERRIDE_CUTOFF, \
     HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, \
@@ -839,7 +839,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
                 if sv_type.startswith(self.model.SV_TYPE_FILTER_PREFIX)
             ]))
 
-        if not (filter_qs or transcript_filters) and (pathogenicity or any(key for key in annotations.keys() if key != NEW_SV_FIELD)):
+        if not (filter_qs or transcript_filters) and (pathogenicity or annotations):
             #  Annotation filters restrict search to other dataset types
             raise InvalidDatasetTypeException
 
@@ -1713,14 +1713,6 @@ class SvEntriesManager(BaseEntriesManager):
     @classmethod
     def _clinvar_path_q(cls, pathogenicity):
         return None
-
-    def _prefilter_entries(self, entries, annotations=None, **kwargs):
-        entries = super()._prefilter_entries(entries, **kwargs)
-
-        if (annotations or {}).get(NEW_SV_FIELD):
-            entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
-
-        return entries
 
     def _annotate_calls(self, entries, *args, **kwargs):
         genotype_override_annotations = {
