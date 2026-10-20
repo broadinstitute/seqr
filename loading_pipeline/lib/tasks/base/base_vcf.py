@@ -6,6 +6,9 @@ from loading_pipeline.lib.tasks.files import LocalizableTarget
 
 
 class BaseVCFTask(luigi.Task):
+    INFO_FIELDS = {}
+    FORMAT_FIELDS = {}
+
     def output(self) -> list[LocalizableTarget]:
         vcf_path = self.vcf_path()
         return [
@@ -33,3 +36,24 @@ class BaseVCFTask(luigi.Task):
 
     def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
         raise NotImplementedError
+
+    def format_vcf_header(self, sample_ids: list[str], additional_rows: list[str] | None = None) -> str:
+        columns = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']
+        if sample_ids:
+            columns = [*columns, 'FORMAT', *sample_ids]
+        header = [
+            '##fileformat=VCFv4.2',
+            *(
+                f'##INFO=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                for field, (number, field_type) in self.INFO_FIELDS.items()
+            ),
+            *(
+                f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                for field, (number, field_type) in self.FORMAT_FIELDS.items()
+            ),
+            *(additional_rows or []),
+            '\t'.join(columns),
+        ]
+
+        header_content = '\n'.join(header)
+        return f'{header_content}\n'
