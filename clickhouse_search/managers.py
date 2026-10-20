@@ -344,14 +344,15 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
         return self.annotate(**annotations)
 
-    def _get_join_query_values(self, query, alias, conditional_selects):
+    @staticmethod
+    def _get_join_query_values(query, alias, conditional_selects):
         query_select = query.annotation_values
         for select_func_name in (conditional_selects or []):
             query_select.update(getattr(query, select_func_name)(query, prefix=f'{alias}_'))
         annotation_fields = query.annotation_fields
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select and field not in self.skip_annotations},
-            **{f'{alias}_{field}': value for field, value in query_select.items() if field not in self.skip_annotations},
+            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select and field not in query.skip_annotations},
+            **{f'{alias}_{field}': value for field, value in query_select.items() if field not in query.skip_annotations},
         )
 
     def search(self, **kwargs):
@@ -758,6 +759,10 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
         annotations['transcripts'] = annotations.pop(self.model.sorted_gene_consequences.field.db_column)
         annotations['discoveryFamilies'] = DiscoveryVariantDict.dict_get_expression('key', dataset_type=f'SV_{self.entry_model.SAMPLE_TYPE}')
         return annotations
+
+    @property
+    def skip_annotations(self):
+        return {'algorithms', 'bothsidesSupport', 'numExon'}
 
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
@@ -1699,7 +1704,7 @@ class SvEntriesManager(BaseEntriesManager):
     def call_fields(self):
         return {
             k: v for k, v in super().call_fields.items()
-            if k not in {'newCall', 'prevCall', 'prevNumAlt', 'prevOverlap'}
+            if k not in {'newCall', 'prevCall', 'prevNumAlt', 'prevOverlap', 'defragged', 'numExon'}
         }
 
     @classmethod
