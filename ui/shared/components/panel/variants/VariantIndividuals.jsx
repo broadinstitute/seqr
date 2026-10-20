@@ -220,7 +220,6 @@ const GENOTYPE_DETAILS = [
 const SV_GENOTYPE_DETAILS = [
   { title: 'Start', field: 'start' },
   { title: 'End', field: 'end' },
-  { title: '# Exons', field: 'numExon' },
   {
     title: 'Genes',
     field: 'geneIds',
@@ -259,9 +258,7 @@ const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompou
   const hasCnCall = isCalled(genotype.cn)
 
   const warnings = []
-  if (genotype.defragged) {
-    warnings.push('Defragged')
-  } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
+  if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
     warnings.push('Potential UPD/ Hemizygosity')
   } else if (isCompoundHet &&
     [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
