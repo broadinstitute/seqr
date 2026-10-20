@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import luigi
 import luigi.format
 
@@ -6,8 +8,8 @@ from loading_pipeline.lib.tasks.files import LocalizableTarget
 
 
 class BaseVCFTask(luigi.Task):
-    INFO_FIELDS = {}
-    FORMAT_FIELDS = {}
+    INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {}
+    FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {}
 
     def output(self) -> list[LocalizableTarget]:
         vcf_path = self.vcf_path()

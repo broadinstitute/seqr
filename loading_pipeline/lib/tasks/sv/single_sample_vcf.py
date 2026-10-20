@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import luigi
 import luigi.format
 
@@ -21,7 +23,7 @@ class SingleSampleVCFTask(BaseVCFTask):
     is_male = luigi.BoolParameter()
     vcf_sample_id = luigi.OptionalParameter(default=None)
 
-    INFO_FIELDS = {
+    INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
         'ALGORITHMS': ('.', 'String'),
         'BOTHSIDES_SUPPORT': ('0', 'Flag'),
         'CHR2': ('1', 'String'),
@@ -49,14 +51,14 @@ class SingleSampleVCFTask(BaseVCFTask):
         'PREDICTED_UTR': ('.', 'String'),
     }
 
-    FORMAT_FIELDS = {
+    FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
         'GT': ('1', 'String'),
         'GQ': ('1', 'Integer'),
         'RD_CN': ('1', 'Integer'),
         'CONC_ST': ('.', 'String'),
     }
 
-    KEEP_FIELDS = ','.join(
+    KEEP_FIELDS: ClassVar[str] = ','.join(
         [
             *(f'^INFO/{field}' for field in INFO_FIELDS),
             *(f'^FORMAT/{field}' for field in FORMAT_FIELDS),

@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import luigi
 import luigi.format
 import luigi.util
@@ -17,7 +19,7 @@ from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteExistingVariantsVcfTask(BaseVCFTask):
-    INFO_FIELDS = {
+    INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
         'CHR2': ('1', 'String'),
         'END': ('1', 'Integer'),
         'SVTYPE': ('1', 'String'),
