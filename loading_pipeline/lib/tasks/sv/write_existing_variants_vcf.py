@@ -46,7 +46,7 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
         info[has_end_chrom] += ';CHR2=' + df.loc[has_end_chrom, 'endChrom']
         vcf_df = pd.DataFrame(
             {
-                'CHROM': df['chrom'],
+                'CHROM': 'chr' + df['chrom'],
                 'POS': df['pos'],
                 'ID': df['variant_id'],
                 'REF': 'N',
