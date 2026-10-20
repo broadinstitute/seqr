@@ -1246,11 +1246,11 @@ class DataManagerAPITest(AirtableTest):
     def _trigger_error(self, url, body, variables, mock_open, mock_gzip_open, mock_mkdir):
         responses.add(responses.POST, PIPELINE_RUNNER_URL, status=400)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
-        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='GCNV', sample_type='WES', skip_tdr=True)
+        self._assert_expected_load_data_requests(trigger_error=True, dataset_type='SV', sample_type='WES', skip_tdr=True)
         self._assert_trigger_error(response, body, variables, response_body={
             'error': f'400 Client Error: Bad Request for url: {PIPELINE_RUNNER_URL}'
         })
-        self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'GCNV', sample_type='WES')
+        self._has_expected_ped_files(mock_open, mock_gzip_open, mock_mkdir, 'SV', sample_type='WES')
 
         self._set_file_not_found(has_mv_commands=True)
         self.reset_logs()
@@ -1340,7 +1340,7 @@ class DataManagerAPITest(AirtableTest):
         self.assertDictEqual(json.loads(responses.calls[-1].request.body), {
             'project_guid': 'R0001_1kg',
             'family_guids': ['F000002_2'],
-            'dataset_types': ['SNV_INDEL', 'SV', 'GCNV'],
+            'dataset_types': ['SNV_INDEL', 'SV'],
         })
 
 
@@ -1557,7 +1557,7 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
         formatted_files = '\n'.join([f'{self.CALLSET_DIR}/{file}' for file in file_list])
         self.mock_does_file_exist.communicate.return_value = (f'{formatted_files}\n'.encode('utf-8'), b'')
         self.mock_does_file_exist.wait.return_value = 0
-        self.mock_file_iter.stdout += [row.encode('utf-8') for row in stdout]
+        self.mock_file_iter.stdout = [row.encode('utf-8') for row in stdout]
         self.mock_subprocess.side_effect = [
             self.mock_does_file_exist, self.mock_does_file_exist,  self.mock_file_iter, self.mock_does_file_exist, self.mock_does_file_exist, self.mock_file_iter,
         ]
@@ -1588,7 +1588,7 @@ class AnvilDataManagerAPITest(AnvilAuthenticationTestCase, DataManagerAPITest):
 
     def _assert_expected_load_data_requests(self, *args, dataset_type='SNV_INDEL', skip_project=False, **kwargs):
         num_calls = 1
-        is_gcnv = dataset_type == 'GCNV'
+        is_gcnv = dataset_type == 'SV'
         required_sample_field = 'gCNV_CallsetPath' if is_gcnv else None
         logs = []
         if not skip_project:
@@ -1645,7 +1645,7 @@ Loading pipeline is triggered with:
         error = response_body.get('error') or response_body['errors'][0]
         variables = {
             **variables,
-            'dataset_type': 'GCNV',
+            'dataset_type': 'SV',
             'callset_path': variables['callset_path'].replace('callset.vcf', 'sv_callset.vcf'),
         }
         self.assert_json_logs(self.data_manager_user, [
@@ -1773,12 +1773,13 @@ Loading pipeline should be triggered with:
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Invalid VCF file format - file path must end with .bed or .bed.gz or .vcf or .vcf.gz or .vcf.bgz',
+            'Invalid VCF file format - file path must end with .vcf.gz or .vcf.bgz',
         ])
 
-        body['filePath'] = f'{self.CALLSET_DIR}/sv_callset.vcf'
+        body['filePath'] = f'{self.CALLSET_DIR}/sv_callsets/*.vcf.gz'
         vcf_file_rows = [
             '##fileformat=VCFv4.3\n',
+            '##INFO=<ID=END,Number=1,Type=String,Description="End">\n',
             '##INFO=<ID=AA,Number=1,Type=String,Description="Ancestral Allele">',
             '##INFO=<ID=AC,Number=A,Type=Integer,Description="Allele count in genotypes, for each ALT allele, in the same order as listed">\n',
             '##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency, for each ALT allele, in the same order as listed">\n',
@@ -1786,10 +1787,52 @@ Loading pipeline should be triggered with:
             '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
             '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
         ]
-        self._add_file_iter(vcf_file_rows, is_gz=False)
+        self._add_file_list_iter(['sv_callsets/merged.vcf.gz'], vcf_file_rows)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
-        self.assertListEqual(response.json()['errors'], ['Missing required FORMAT field(s) GQ, GT'])
+        self.assertListEqual(response.json()['errors'], [
+            'Multiple samples found in gs://test_bucket/sv_callsets/merged.vcf.gz',
+        ])
+
+        vcf_header_row_2 = '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\n'
+        vcf_file_rows[-1] = vcf_header_row_2
+        sv_vcfs = ['sv_callsets/NA19675_1.vcf.gz', 'sv_callsets/HG00735.vcf.gz']
+        self._add_file_list_iter(sv_vcfs, vcf_file_rows)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'],[
+            'VCF gs://test_bucket/sv_callsets/NA19675_1.vcf.gz contains unexpected sample "HG00735"',
+        ])
+
+        vcf_header_row_1 = '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNA19675_1\n'
+        vcf_file_rows[-1] = vcf_header_row_1
+        self._add_file_list_iter(sv_vcfs, vcf_file_rows)
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Missing required INFO field(s) SVLEN, SVTYPE',
+            'Incorrect meta Type for INFO.END - expected "Integer", got "String"',
+            'Missing required FORMAT field(s) GQ, GT',
+        ])
+
+        vcf_file_rows = vcf_file_rows[:1] + vcf_file_rows[1:5] + [
+            '##INFO=<ID=END,Number=1,Type=Integer,Description="End">\n',
+            '##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="SV Length">\n',
+            '##INFO=<ID=SVTYPE,Number=1,Type=String,Description="SV Type">\n',
+            '##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">\n',
+            '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n',
+        ]
+        self._add_file_list_iter(sv_vcfs, vcf_file_rows + [vcf_header_row_1])
+        mock_file_iter_2 = mock.MagicMock()
+        mock_file_iter_2.wait.return_value = 0
+        mock_file_iter_2.stdout = [row.encode('utf-8') for row in vcf_file_rows + [vcf_header_row_2]]
+        self.mock_subprocess.side_effect = [
+            self.mock_does_file_exist, self.mock_does_file_exist,  self.mock_file_iter,
+            self.mock_does_file_exist, mock_file_iter_2,
+        ]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), {'vcfSamples': ['HG00735', 'NA19675_1']})
 
         self._set_file_not_found()
 

@@ -11,10 +11,6 @@ from loading_pipeline.lib.annotations.enums import (
 )
 
 EXTENDED_INTRONIC_SPLICE_REGION_VARIANT = 'extended_intronic_splice_region_variant'
-MANE_SELECT_ANNOTATIONS = [
-    'mane_select',
-    'mane_plus_clinical',
-]
 NAGNAG_SITE = 'NAGNAG_SITE'
 OMIT_TRANSCRIPT_CONSEQUENCE_TERMS = hl.set(
     [
@@ -23,15 +19,6 @@ OMIT_TRANSCRIPT_CONSEQUENCE_TERMS = hl.set(
     ],
 )
 PROTEIN_CODING_BIOTYPE = 'protein_coding'
-SELECTED_ANNOTATIONS = [
-    'amino_acids',
-    'canonical',
-    'codons',
-    'gene_id',
-    'hgvsc',
-    'hgvsp',
-    'transcript_id',
-]
 
 
 def _lof_filters(c: hl.StructExpression) -> hl.ArrayExpression:
@@ -51,10 +38,17 @@ def vep_110_transcript_consequences_select(
     gencode_ensembl_to_refseq_id_mapping: hl.tdict(hl.tstr, hl.tstr),
 ) -> hl.StructExpression:
     return lambda c: c.select(
-        *SELECTED_ANNOTATIONS,
-        *MANE_SELECT_ANNOTATIONS,
+        aminoAcids=c.amino_acids,
+        canonical=c.canonical,
+        codons=c.codons,
+        geneId=c.gene_id,
+        hgvsc=c.hgvsc,
+        hgvsp=c.hgvsp,
+        transcriptId=c.transcript_id,
+        maneSelect=c.mane_select,
+        manePlusClinical=c.mane_plus_clinical,
         biotype=validated_enum_member(c.biotype, BIOTYPES),
-        consequence_terms=_consequence_terms(c),
+        consequenceTerms=_consequence_terms(c),
         exon=hl.bind(
             lambda split: hl.or_missing(
                 hl.is_defined(split),
@@ -69,13 +63,13 @@ def vep_110_transcript_consequences_select(
             ),
             c.intron.split('/').map(hl.parse_int32),
         ),
-        refseq_transcript_id=gencode_ensembl_to_refseq_id_mapping.get(c.transcript_id),
+        refseqTranscriptId=gencode_ensembl_to_refseq_id_mapping.get(c.transcript_id),
         alphamissense=hl.struct(
             pathogenicity=c.am_pathogenicity,
         ),
         loftee=hl.struct(
-            is_lof_nagnag=c.lof_flags == NAGNAG_SITE,
-            lof_filters=_lof_filters(c),
+            isLofNagnag=c.lof_flags == NAGNAG_SITE,
+            lofFilters=_lof_filters(c),
         ),
         spliceregion=hl.struct(
             extended_intronic_splice_region_variant=(
@@ -86,17 +80,17 @@ def vep_110_transcript_consequences_select(
             ),
         ),
         utrannotator=hl.struct(
-            existing_inframe_oorfs=c.existing_inframe_oorfs,
-            existing_outofframe_oorfs=c.existing_outofframe_oorfs,
-            existing_uorfs=c.existing_uorfs,
-            fiveutr_consequence=validated_enum_member(
+            existingInframeOorfs=c.existing_inframe_oorfs,
+            existingOutofframeOorfs=c.existing_outofframe_oorfs,
+            existingUorfs=c.existing_uorfs,
+            fiveutrConsequence=validated_enum_member(
                 c.fiveutr_consequence,
                 FIVEUTR_CONSEQUENCES,
             ),
             # Annotation documentation here:
             # https://github.com/ImperialCardioGenetics/UTRannotator?tab=readme-ov-file#the-detailed-annotation-for-each-consequence
             # NB:
-            fiveutr_annotation=c.fiveutr_annotation['1'].annotate(
+            fiveutrAnnotation=c.fiveutr_annotation['1'].annotate(
                 AltStopDistanceToCDS=hl.parse_int32(
                     c.fiveutr_annotation['1'].AltStopDistanceToCDS,
                 ),
@@ -141,11 +135,19 @@ def vep_85_transcript_consequences_select(
     c: hl.StructExpression,
 ) -> hl.StructExpression:
     return c.select(
-        *SELECTED_ANNOTATIONS,
+        aminoAcids=c.amino_acids,
+        canonical=c.canonical,
+        codons=c.codons,
+        geneId=c.gene_id,
+        hgvsc=c.hgvsc,
+        hgvsp=c.hgvsp,
+        transcriptId=c.transcript_id,
         biotype=validated_enum_member(c.biotype, BIOTYPES),
-        consequence_terms=_consequence_terms(c),
-        is_lof_nagnag=c.lof_flags == NAGNAG_SITE,
-        lof_filters=_lof_filters(c),
+        consequenceTerms=_consequence_terms(c),
+        loftee=hl.struct(
+            isLofNagnag=c.lof_flags == NAGNAG_SITE,
+            lofFilters=_lof_filters(c),
+        ),
     )
 
 
@@ -169,6 +171,6 @@ def transcript_consequences_sort(
             )
         ),
         c.biotype == PROTEIN_CODING_BIOTYPE,
-        hl.set(c.consequence_terms).contains(ht.vep.most_severe_consequence),
+        hl.set(c.consequenceTerms).contains(ht.vep.most_severe_consequence),
         hl.or_else(c.canonical, 0) == 1,
     )

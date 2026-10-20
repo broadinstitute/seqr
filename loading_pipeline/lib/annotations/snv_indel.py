@@ -10,8 +10,10 @@ from loading_pipeline.lib.annotations.enums import (
     REGULATORY_CONSEQUENCE_TERMS,
     validated_enum_member,
 )
+from loading_pipeline.lib.annotations.shared import (
+    sorted_transcript_consequences as shared_sorted_transcript_consequences,
+)
 from loading_pipeline.lib.annotations.vep import (
-    transcript_consequences_sort,
     vep_110_transcript_consequences_select,
 )
 from loading_pipeline.lib.core.definitions import ReferenceGenome
@@ -53,10 +55,6 @@ def rg38_locus(
     return hl.liftover(ht.locus, ReferenceGenome.GRCh38.value)
 
 
-def check_ref(ht: hl.Table, **_: Any) -> hl.BooleanExpression:
-    return hl.is_defined(ht.vep.check_ref)
-
-
 def sorted_motif_feature_consequences(
     ht: hl.Table,
     **_: Any,
@@ -69,16 +67,25 @@ def sorted_motif_feature_consequences(
         hl.sorted(
             ht.vep.motif_feature_consequences.map(
                 lambda c: c.select(
-                    consequence_terms=c.consequence_terms.map(
+                    consequenceTerms=c.consequence_terms.map(
                         lambda t: validated_enum_member(t, MOTIF_CONSEQUENCE_TERMS),
                     ),
-                    motif_feature_id=c.motif_feature_id,
+                    motifFeatureId=c.motif_feature_id,
                 ),
-            ).filter(lambda c: c.consequence_terms.size() > 0),
+            ).filter(lambda c: c.consequenceTerms.size() > 0),
             lambda c: hl.min(
-                c.consequence_terms.map(lambda t: MOTIF_CONSEQUENCE_TERMS_LOOKUP[t]),
+                c.consequenceTerms.map(lambda t: MOTIF_CONSEQUENCE_TERMS_LOOKUP[t]),
             ),
         ),
+    )
+
+
+def subsetted_sorted_motif_feature_consequences(
+    ht: hl.Table,
+    **_: Any,
+) -> hl.Expression:
+    return sorted_motif_feature_consequences(ht).map(
+        lambda c: c.select('consequenceTerms'),
     )
 
 
@@ -92,21 +99,30 @@ def sorted_regulatory_feature_consequences(
             ht.vep.regulatory_feature_consequences.map(
                 lambda c: c.select(
                     biotype=validated_enum_member(c.biotype, REGULATORY_BIOTYPES),
-                    consequence_terms=c.consequence_terms.map(
+                    consequenceTerms=c.consequence_terms.map(
                         lambda t: validated_enum_member(
                             t,
                             REGULATORY_CONSEQUENCE_TERMS,
                         ),
                     ),
-                    regulatory_feature_id=c.regulatory_feature_id,
+                    regulatoryFeatureId=c.regulatory_feature_id,
                 ),
-            ).filter(lambda c: c.consequence_terms.size() > 0),
+            ).filter(lambda c: c.consequenceTerms.size() > 0),
             lambda c: hl.min(
-                c.consequence_terms.map(
+                c.consequenceTerms.map(
                     lambda t: REGULATORY_CONSEQUENCE_TERMS_LOOKUP[t],
                 ),
             ),
         ),
+    )
+
+
+def subsetted_sorted_regulatory_feature_consequences(
+    ht: hl.Table,
+    **_: Any,
+) -> hl.Expression:
+    return sorted_regulatory_feature_consequences(ht).map(
+        lambda c: c.select('consequenceTerms'),
     )
 
 
@@ -115,11 +131,43 @@ def sorted_transcript_consequences(
     gencode_ensembl_to_refseq_id_mapping: hl.tdict(hl.tstr, hl.tstr),
     **_: Any,
 ) -> hl.Expression:
-    return hl.sorted(
-        ht.vep.transcript_consequences.map(
-            vep_110_transcript_consequences_select(
-                gencode_ensembl_to_refseq_id_mapping,
-            ),
-        ).filter(lambda c: c.consequence_terms.size() > 0),
-        transcript_consequences_sort(ht),
+    return shared_sorted_transcript_consequences(
+        ht,
+        consequences_select=vep_110_transcript_consequences_select(
+            gencode_ensembl_to_refseq_id_mapping,
+        ),
+    )
+
+
+def subsetted_sorted_transcript_consequences(
+    ht: hl.Table,
+    gencode_ensembl_to_refseq_id_mapping: hl.tdict(hl.tstr, hl.tstr),
+    **_: Any,
+) -> hl.Expression:
+    return sorted_transcript_consequences(
+        ht,
+        gencode_ensembl_to_refseq_id_mapping,
+    ).map(
+        lambda c: c.select(
+            alphamissensePathogenicity=c.alphamissense.pathogenicity,
+            canonical=c.canonical,
+            consequenceTerms=c.consequenceTerms,
+            extendedIntronicSpliceRegionVariant=c.spliceregion.extended_intronic_splice_region_variant,
+            fiveutrConsequence=c.utrannotator.fiveutrConsequence,
+            geneId=c.geneId,
+            isManeSelect=hl.is_defined(c.maneSelect),
+        ),
+    )
+
+
+def subsetted_sorted_transcript_consequences_grch37(
+    ht: hl.Table,
+    **_: Any,
+) -> hl.Expression:
+    return shared_sorted_transcript_consequences(ht).map(
+        lambda c: c.select(
+            'canonical',
+            'consequenceTerms',
+            'geneId',
+        ),
     )

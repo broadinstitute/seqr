@@ -309,19 +309,24 @@ const FAQS = [
           the
           same as the one added to the seqr project, try the following:
 
-          <List bulleted>
+          <br />
+          <i>If you can not log into seqr at all:</i>
+          <List ordered>
             <List.Item>
-              <i>If you can not log into seqr at all:</i> Log into AnVIL first &nbsp;
-              <a href="https://anvil.terra.bio" target="_blank" rel="noreferrer">here</a> and then proceed to &nbsp;
-              <a href="https://seqr.broadinstitute.org" target="_blank" rel="noreferrer">seqr</a>.
+              Log out of seqr <a href="https://seqr.broadinstitute.org/logout" target="_blank" rel="noreferrer">here</a>
             </List.Item>
             <List.Item>
-              <i>If you do not see your project:</i> Log into AnVIL first &nbsp;
-              <a href="https://anvil.terra.bio" target="_blank" rel="noreferrer">here</a>, navigate to the workspace
-              associated with the project, then select &quot;Data&quot; &gt; &quot;Files&quot;
-              &gt; &quot;Analyze in seqr&quot;.
+              Log into AnVIL <a href="https://anvil.terra.bio" target="_blank" rel="noreferrer">here</a>
+            </List.Item>
+            <List.Item>
+              Proceed to <a href="https://seqr.broadinstitute.org" target="_blank" rel="noreferrer">seqr</a>
             </List.Item>
           </List>
+
+          <i>If you do not see your project:</i> Log into AnVIL first &nbsp;
+          <a href="https://anvil.terra.bio" target="_blank" rel="noreferrer">here</a>, navigate to the workspace
+          associated with the project, then select &quot;Data&quot; &gt; &quot;Files&quot;
+          &gt; &quot;Analyze in seqr&quot;.
         </div>
       ),
     },

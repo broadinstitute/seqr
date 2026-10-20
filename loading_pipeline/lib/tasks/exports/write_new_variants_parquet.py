@@ -10,11 +10,6 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
 from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
-from loading_pipeline.lib.tasks.exports.fields import get_variants_export_fields
-from loading_pipeline.lib.tasks.exports.misc import (
-    camelcase_array_structexpression_fields,
-    subset_consequences_fields,
-)
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.write_new_variants_table import (
     WriteNewVariantsTableTask,
@@ -43,17 +38,8 @@ class WriteNewVariantsParquetTask(BaseWriteParquetTask):
                 self.run_id,
             ),
         )
-        ht = camelcase_array_structexpression_fields(
-            ht,
-            self.reference_genome,
-            self.dataset_type,
-        )
-        if self.dataset_type.should_write_new_variant_details:
-            ht = subset_consequences_fields(
-                ht,
-                self.reference_genome,
-            )
         ht = ht.key_by()
         return ht.select(
-            **get_variants_export_fields(ht, self.reference_genome, self.dataset_type),
+            'key_',
+            *self.dataset_type.variants_export_field_names(self.reference_genome),
         )

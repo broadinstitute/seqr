@@ -25,15 +25,8 @@ def DP(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
     return hl.cond(is_called, hl.int32(hl.min(mt.DP, 32000)), hl.missing(hl.tint32))
 
 
-def GQ(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
-    is_called = hl.is_defined(mt.GT)
-    return hl.if_else(is_called, hl.int32(mt.MQ), 0)
-
-
-def haplogroup(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.Struct(
-        is_defining=ht.hap_defining_variant,
-    )
+def haplogroupDefining(ht: hl.Table, **_: Any) -> hl.Expression:  # noqa: N802
+    return ht.hap_defining_variant
 
 
 def HL(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
@@ -46,11 +39,9 @@ def mito_cn(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
 
 
 def mitotip(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.Struct(
-        trna_prediction=validated_enum_member(
-            ht.mitotip_trna_prediction,
-            MITOTIP_PATHOGENICITIES,
-        ),
+    return validated_enum_member(
+        ht.mitotip_trna_prediction,
+        MITOTIP_PATHOGENICITIES,
     )
 
 

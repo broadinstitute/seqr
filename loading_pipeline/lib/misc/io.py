@@ -11,7 +11,6 @@ import hailtop.fs as hfs
 from pyspark.sql import SparkSession
 
 from loading_pipeline.lib.core import DatasetType, Env, ReferenceGenome, Sex
-from loading_pipeline.lib.misc.gcnv import parse_gcnv_genes
 from loading_pipeline.lib.misc.nested_field import parse_nested_field
 from loading_pipeline.lib.misc.validation import SeqrValidationError
 
@@ -107,44 +106,6 @@ def split_multi_hts(
     return mt
 
 
-def import_gcnv_bed_file(callset_path: str) -> hl.MatrixTable:
-    # Hail falls over itself with OOMs with use_new_shuffle here... no clue why.
-    hl._set_flags(use_new_shuffle=None, no_whole_stage_codegen='1')  # noqa: SLF001
-    ht = hl.import_table(
-        callset_path,
-        types={
-            **DatasetType.GCNV.col_fields,
-            **DatasetType.GCNV.entries_fields,
-            **DatasetType.GCNV.row_fields,
-        },
-        force=callset_path.endswith('gz'),
-    )
-    mt = ht.to_matrix_table(
-        row_key=['variant_name', 'svtype'],
-        col_key=['sample_fix'],
-        row_fields=['chr', 'sc', 'sf', 'strvctvre_score'],
-    )
-    mt = mt.rename({'start': 'sample_start', 'end': 'sample_end'})
-    mt = mt.key_cols_by(s=mt.sample_fix)
-    mt = mt.annotate_rows(
-        variant_id=hl.format('%s_%s', mt.variant_name, mt.svtype),
-        filters=hl.empty_set(hl.tstr),
-        start=hl.agg.min(mt.sample_start),
-        end=hl.agg.max(mt.sample_end),
-        num_exon=hl.agg.max(mt.genes_any_overlap_totalExons),
-        gene_ids=hl.flatten(
-            hl.agg.collect_as_set(parse_gcnv_genes(mt.genes_any_overlap_Ensemble_ID)),
-        ),
-        cg_genes=hl.flatten(
-            hl.agg.collect_as_set(parse_gcnv_genes(mt.genes_CG_Ensemble_ID)),
-        ),
-        lof_genes=hl.flatten(
-            hl.agg.collect_as_set(parse_gcnv_genes(mt.genes_LOF_Ensemble_ID)),
-        ),
-    )
-    return mt.unfilter_entries()
-
-
 @validated_hl_function(
     {
         '.*FileNotFoundException|GoogleJsonResponseException: 403 Forbidden|arguments refer to no files.*': 'Unable to access the VCF in cloud storage.',
@@ -197,9 +158,7 @@ def import_callset(
     reference_genome: ReferenceGenome,
     dataset_type: DatasetType,
 ) -> hl.MatrixTable:
-    if dataset_type == DatasetType.GCNV:
-        mt = import_gcnv_bed_file(callset_path)
-    elif 'vcf' in callset_path:
+    if 'vcf' in callset_path:
         mt = import_vcf(callset_path, reference_genome)
     elif 'mt' in callset_path:
         mt = hl.read_matrix_table(callset_path)

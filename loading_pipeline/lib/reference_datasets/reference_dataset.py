@@ -165,7 +165,7 @@ CONFIG = {
         },
     },
     ReferenceDataset.gnomad_svs: {
-        FORMATTING_ANNOTATION: sv.gnomad_svs,
+        FORMATTING_ANNOTATION: sv.populations,
         ReferenceGenome.GRCh38: {
             DATASET_TYPES: frozenset([DatasetType.SV]),
             VERSION: '1.1',
