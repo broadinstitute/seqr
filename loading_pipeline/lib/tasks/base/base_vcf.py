@@ -37,7 +37,9 @@ class BaseVCFTask(luigi.Task):
     def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
         raise NotImplementedError
 
-    def format_vcf_header(self, sample_ids: list[str], additional_rows: list[str] | None = None) -> str:
+    def format_vcf_header(
+        self, sample_ids: list[str], additional_rows: list[str] | None = None,
+    ) -> str:
         columns = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO']
         if sample_ids:
             columns = [*columns, 'FORMAT', *sample_ids]
