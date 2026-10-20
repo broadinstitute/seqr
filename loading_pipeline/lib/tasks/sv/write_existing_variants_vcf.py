@@ -25,6 +25,10 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
         'SVTYPE': ('1', 'String'),
     }
 
+    FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
+        'GT': ('1', 'String'),
+    }
+
     def vcf_path(self) -> str:
         return existing_variants_parquet_path(
             self.reference_genome,
@@ -56,12 +60,17 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
                 'QUAL': '.',
                 'FILTER': '.',
                 'INFO': info,
+                'FORMAT': 'GT',
+                'seqr_existing': '1'
             },
         ).sort_values(['CHROM', 'POS'])
 
+        max_key = df['key_'].max() if len(df) else 0
+        header = self.format_vcf_header(['seqr_existing'], [f'##maxKey={max_key}'])
+
         vcf_target = luigi.LocalTarget(is_tmp=True, format=luigi.format.Nop)
         with vcf_target.open('w') as f:
-            f.write(self.format_vcf_header(sample_ids=[]).encode())
+            f.write(header.encode())
             vcf_df.to_csv(f, sep='\t', header=False, index=False)
 
         return [vcf_target]
