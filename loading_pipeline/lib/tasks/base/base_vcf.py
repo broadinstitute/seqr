@@ -39,7 +39,11 @@ class BaseVCFTask(luigi.Task):
     def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
         raise NotImplementedError
 
-    def format_vcf_header(self, sample_ids: list[str], additional_rows: list[str]) -> str:
+    def format_vcf_header(
+        self,
+        sample_ids: list[str],
+        additional_rows: list[str],
+    ) -> str:
         header = [
             '##fileformat=VCFv4.2',
             *additional_rows,
@@ -51,18 +55,20 @@ class BaseVCFTask(luigi.Task):
                 f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
                 for field, (number, field_type) in self.FORMAT_FIELDS.items()
             ),
-            '\t'.join([
-                '#CHROM',
-                'POS',
-                'ID',
-                'REF',
-                'ALT',
-                'QUAL',
-                'FILTER',
-                'INFO',
-                'FORMAT',
-                *sample_ids,
-            ]),
+            '\t'.join(
+                [
+                    '#CHROM',
+                    'POS',
+                    'ID',
+                    'REF',
+                    'ALT',
+                    'QUAL',
+                    'FILTER',
+                    'INFO',
+                    'FORMAT',
+                    *sample_ids,
+                ],
+            ),
         ]
 
         header_content = '\n'.join(header)
