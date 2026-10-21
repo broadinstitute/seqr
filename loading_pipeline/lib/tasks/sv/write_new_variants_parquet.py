@@ -19,9 +19,6 @@ from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.sv.write_postprocessed_callset import (
     WritePostprocessedSvCallsetTask,
 )
-from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
-    WriteExistingVariantsParquetTask,
-)
 
 GENCODE_RELEASE = 42
 
@@ -61,20 +58,14 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
     def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WritePostprocessedSvCallsetTask),
-            self.clone(WriteExistingVariantsParquetTask),
         ]
 
     def create_table(self) -> hl.Table:
         callset_ht = hl.read_matrix_table(self.input()[0].path).rows()
 
         # 1) Identify new variants.
-        annotations_ht = import_parquet(
-            self.input()[1].path,
-            self.reference_genome,
-            self.dataset_type,
-        )
-        curr_max_key_ = annotations_ht.aggregate(hl.agg.max(annotations_ht.key_)) or -1
-        new_variants_ht = callset_ht.anti_join(annotations_ht)
+        new_variants_ht = callset_ht.filter(callset_ht.is_new_variant)
+        curr_max_key_ = hl.eval(callset_ht.curr_max_key)
 
         # Run liftover
         new_variants_ht = new_variants_ht.annotate(
