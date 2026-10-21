@@ -89,7 +89,8 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
                     curr_max_key = int(line.split('##maxKey=')[1].strip())
                     break
                 if not line.startswith('#'):
-                    raise Exception('Invalid existing variants VCF')
+                    msg = 'Invalid VCF header'
+                    raise RuntimeError(msg)
 
         return mt.select_globals(
             callset_path=self.callset_path,
