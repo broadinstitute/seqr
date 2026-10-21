@@ -4,7 +4,6 @@ import luigi.util
 
 from loading_pipeline.lib.misc.io import (
     import_callset,
-    import_parquet,
 )
 from loading_pipeline.lib.misc.sv import (
     deduplicate_merged_sv_concordance_calls,
