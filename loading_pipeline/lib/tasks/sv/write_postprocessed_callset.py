@@ -59,10 +59,11 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
         mt = mt.transmute_rows(**{f'info.{field}': mt.info[field] for field in mt.info})
 
         annotations_ht = import_callset(
-            self.input()[1].remote_path or self.input()[1].path,
+            self.input()[1][0].remote_path or self.input()[1][0].path,
             self.reference_genome,
             self.dataset_type,
-        )
+        ).rows()
+        annotations_ht = annotations_ht.key_by(variant_id=annotations_ht.rsid)
 
         mt = deduplicate_merged_sv_concordance_calls(
             mt,
@@ -76,7 +77,7 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
             ),
         )
 
-        curr_max_key = annotations_ht.aggregate(hl.agg.max(annotations_ht.key_)) or -1
+        curr_max_key = annotations_ht.aggregate(hl.agg.max(annotations_ht.info.KEY)) or -1
         mt = mt.annotate_rows(is_new_variant=hl.is_missing(annotations_ht[mt.row_key]))
 
         return mt.select_globals(

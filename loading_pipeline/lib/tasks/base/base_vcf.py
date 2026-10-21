@@ -22,6 +22,7 @@ class BaseVCFTask(luigi.Task):
         ]
 
     def run(self) -> None:
+        self.output()[0].makedirs()
         targets = self.prepare_vcf_inputs()
         command = self.generate_vcf_command(targets)
         run_command(command)

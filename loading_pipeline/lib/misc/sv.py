@@ -73,10 +73,10 @@ def deduplicate_merged_sv_concordance_calls(
         for new_variant in new_variants_it1:
             distance = math.fabs(
                 new_variant.end_locus.position
-                - existing_variant.end
+                - existing_variant.info.END
                 + (
                     WRONG_CHROM_PENALTY
-                    if new_variant.end_locus.contig != existing_variant.endChrom
+                    if new_variant.end_locus.contig != existing_variant.info.CHR2
                     else 0
                 ),
             )

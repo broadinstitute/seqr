@@ -60,11 +60,11 @@ def _write_existing_variants_parquet_fixture() -> None:
         {
             'variant_id': EXISTING_SV_VARIANT_IDS,
             'key_': range(727 - n, 727),
-            'chrom': ['chr1'] * n,
+            'chrom': [b'chr1'] * n,
             'end': [180928] * n,
-            'endChrom': ['chr5'] * n,
+            'endChrom': [b'chr5'] * n,
             'pos': [180928] * n,
-            'svType': ['BND'] * n,
+            'svType': [b'BND'] * n,
         },
     ).to_parquet(path)
 
@@ -80,12 +80,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         mock_load_gencode_gene_symbol_to_gene_id.return_value = hl.dict(
             {'TAS1R1': 'ENSG00000173662'},
         )
-        _write_existing_variants_parquet_fixture(
-            EXISTING_SV_VARIANT_IDS,
-            ReferenceGenome.GRCh38,
-            DatasetType.SV,
-            max_key_=726,
-        )
+        _write_existing_variants_parquet_fixture()
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_5,
             ReferenceGenome.GRCh38,

@@ -47,11 +47,11 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
             {
                 'variant_id': ['BND_chr1_6'],
                 'key_': [727],
-                'chrom': ['chr1'],
+                'chrom': [b'chr1'],
                 'end': [180928],
-                'endChrom': ['chr5'],
+                'endChrom': [b'chr5'],
                 'pos': [180928],
-                'svType': ['BND'],
+                'svType': [b'BND'],
             },
         ).to_parquet(existing_variants_path)
         worker = luigi.worker.Worker()
