@@ -18,8 +18,8 @@ from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.sv.write_combined_vcf import (
     WriteCombinedSvVcf,
 )
-from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
-    WriteExistingVariantsParquetTask,
+from loading_pipeline.lib.tasks.sv.write_existing_variants_vcf import (
+    WriteExistingVariantsVcfTask,
 )
 from loading_pipeline.lib.tasks.write_validation_errors_for_run import (
     with_persisted_validation_errors,
@@ -47,7 +47,7 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
     def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WriteCombinedSvVcf),
-            self.clone(WriteExistingVariantsParquetTask),
+            self.clone(WriteExistingVariantsVcfTask),
         ]
 
     @with_persisted_validation_errors
@@ -59,8 +59,8 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
         )
         mt = mt.transmute_rows(**{f'info.{field}': mt.info[field] for field in mt.info})
 
-        annotations_ht = import_parquet(
-            self.input()[1].path,
+        annotations_ht = import_callset(
+            self.input()[1].remote_path or self.input()[1].path,
             self.reference_genome,
             self.dataset_type,
         )
