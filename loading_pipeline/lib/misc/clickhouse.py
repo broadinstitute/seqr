@@ -921,11 +921,13 @@ def export_existing_variants_to_parquet(
         '/*.parquet',
         '',
     )
-    dt_fields = ', chrom, end, endChrom, pos, svType' if dataset_type == DatasetType.SV else ''
+    select_fields = 'key AS key_, variantId AS variant_id'
+    if dataset_type == DatasetType.SV:
+        select_fields += ', chrom, end, endChrom, pos, svType'
     logged_query(
         f"""
         INSERT INTO FUNCTION {export_table}
-        SELECT key AS key_, variantId AS variant_id {dt_fields}
+        SELECT{select_fields}
         FROM {variants_table}
         SETTINGS output_format_parquet_use_custom_encoder=1
         """,  # nosec B608
