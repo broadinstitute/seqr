@@ -63,6 +63,10 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
             self.reference_genome,
             self.dataset_type,
         ).rows()
+        annotations_ht = annotations_ht.annotate(
+            end=annotations_ht.info.END,
+            endChrom=annotations_ht.info.CHR2,
+        )
         annotations_ht = annotations_ht.key_by(variant_id=annotations_ht.rsid)
 
         mt = deduplicate_merged_sv_concordance_calls(
