@@ -927,7 +927,7 @@ def export_existing_variants_to_parquet(
     logged_query(
         f"""
         INSERT INTO FUNCTION {export_table}
-        SELECT{select_fields}
+        SELECT {select_fields}
         FROM {variants_table}
         SETTINGS output_format_parquet_use_custom_encoder=1
         """,  # nosec B608
