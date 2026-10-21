@@ -50,7 +50,11 @@ EXISTING_SV_VARIANT_IDS = [
 
 def _write_existing_variants_parquet_fixture() -> None:
     n = len(EXISTING_SV_VARIANT_IDS)
-    path = existing_variants_parquet_path(ReferenceGenome.GRCh38, DatasetType.SV, TEST_RUN_ID)
+    path = existing_variants_parquet_path(
+        ReferenceGenome.GRCh38,
+        DatasetType.SV,
+        TEST_RUN_ID,
+    )
     os.makedirs(os.path.dirname(path), exist_ok=True)
     pd.DataFrame(
         {

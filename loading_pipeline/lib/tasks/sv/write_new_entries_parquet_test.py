@@ -51,7 +51,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                 'end': [180928],
                 'endChrom': ['chr5'],
                 'pos': [180928],
-                'svType': ['BND']
+                'svType': ['BND'],
             },
         ).to_parquet(existing_variants_path)
         worker = luigi.worker.Worker()
