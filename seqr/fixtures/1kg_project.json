@@ -479,7 +479,7 @@
         "expected_inheritance": ["R"],
         "features": [{"id": "HP:0001631"}, {"id": "HP:0002011", "qualifiers":  [{"label": "Infantile onset", "type": "age_of_onset"}, {"label": "Mild", "type": "severity"}, {"label": "Nonprogressive", "type": "pace_of_progression"}]}, {"id": "HP:0001636"}],
         "absent_features": [{"id": "HP:0011675"}, {"id": "HP:0001674", "notes":  "originally indicated"}, {"id": "HP:0001508"}],
-        "nonstandard_features": "[]",
+        "nonstandard_features": [],
         "absent_nonstandard_features": null,
         "disorders": ["615593"],
         "candidate_genes": [{"gene": "EHBP1L1", "comments": "comments EHBP1L1"}, {"gene": "ACY3", "comments": "comments ACY3"}],
