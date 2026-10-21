@@ -33,6 +33,22 @@ test('deletes selected families', async () => {
     </Provider>,
   )
 
+  expect(wrapper.find('DispatchRequestButton').prop('buttonContent')).toEqual('Delete Selected')
+  expect(wrapper.find('DispatchRequestButton').prop('disabled')).toEqual(true)
+
+  wrapper.find('DataTable').prop('selectRows')({ F011652_1: true })
+  wrapper.update()
+  expect(wrapper.find('DispatchRequestButton').prop('disabled')).toEqual(false)
+  expect(wrapper.find('DispatchRequestButton').prop('confirmDialog')).toEqual(
+    'Are you sure you want to delete the following families: 1?',
+  )
+
+  wrapper.find('DataTable').prop('selectRows')({ F011652_1: true, F011652_2: true })
+  wrapper.update()
+  expect(wrapper.find('DispatchRequestButton').prop('confirmDialog')).toEqual(
+    'Are you sure you want to delete the following families: 1, 2?',
+  )
+
   wrapper.find('DispatchRequestButton').prop('onSubmit')()
   await flushAll()
 
