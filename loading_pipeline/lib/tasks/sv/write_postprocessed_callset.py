@@ -77,10 +77,17 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
             ),
         )
 
-        curr_max_key = annotations_ht.aggregate(hl.agg.max(annotations_ht.info.KEY))
         mt = mt.annotate_rows(is_new_variant=hl.is_missing(annotations_ht[mt.row_key]))
+
+        with self.input()[1].open() as f:
+            for line in f:
+                if line.startswith('##maxKey'):
+                    curr_max_key = int(line.split('##maxKey=')[1].strip())
+                    break
+                if not line.startswith('#'):
+                    raise Exception('Invalid existing variants VCF')
 
         return mt.select_globals(
             callset_path=self.callset_path,
-            curr_max_key=curr_max_key or -1,
+            curr_max_key=curr_max_key,
         )
