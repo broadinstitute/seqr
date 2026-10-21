@@ -77,10 +77,10 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
             ),
         )
 
-        curr_max_key = annotations_ht.aggregate(hl.agg.max(annotations_ht.info.KEY)) or -1
+        curr_max_key = annotations_ht.aggregate(hl.agg.max(annotations_ht.info.KEY))
         mt = mt.annotate_rows(is_new_variant=hl.is_missing(annotations_ht[mt.row_key]))
 
         return mt.select_globals(
             callset_path=self.callset_path,
-            curr_max_key=curr_max_key,
+            curr_max_key=curr_max_key or -1,
         )
