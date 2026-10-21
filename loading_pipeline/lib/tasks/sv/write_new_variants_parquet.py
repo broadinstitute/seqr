@@ -2,7 +2,6 @@ import hail as hl
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.misc.io import import_parquet
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
     valid_reference_dataset_path,
