@@ -61,7 +61,7 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
                 'FILTER': '.',
                 'INFO': info,
                 'FORMAT': 'GT',
-                'seqr_existing': '1'
+                'seqr_existing': '1',
             },
         ).sort_values(['CHROM', 'POS'])
 

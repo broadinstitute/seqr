@@ -51,7 +51,18 @@ class BaseVCFTask(luigi.Task):
                 f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
                 for field, (number, field_type) in self.FORMAT_FIELDS.items()
             ),
-            '\t'.join(['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', *sample_ids]),
+            '\t'.join([
+                '#CHROM',
+                'POS',
+                'ID',
+                'REF',
+                'ALT',
+                'QUAL',
+                'FILTER',
+                'INFO',
+                'FORMAT',
+                *sample_ids,
+            ]),
         ]
 
         header_content = '\n'.join(header)
