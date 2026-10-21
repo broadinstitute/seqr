@@ -921,7 +921,7 @@ def export_existing_variants_to_parquet(
         '/*.parquet',
         '',
     )
-    dt_fields = ', end, endChrom' if dataset_type == DatasetType.SV else ''
+    dt_fields = ', chrom, end, endChrom, pos, svType' if dataset_type == DatasetType.SV else ''
     logged_query(
         f"""
         INSERT INTO FUNCTION {export_table}
