@@ -52,8 +52,9 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         )
 
     def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
-        for target in self.input():
-            target.localize()
+        for targets in self.input():
+            for target in targets:
+                target.localize()
 
         existing_merged_target = luigi.LocalTarget(is_tmp=True)
         run_command(

@@ -2,7 +2,7 @@ import hail as hl
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.misc.io import import_callset
+from loading_pipeline.lib.misc.io import import_vcf
 from loading_pipeline.lib.misc.sv import run_command
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
@@ -80,10 +80,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
             ],
         )
 
-        ht = import_callset(
+        ht = import_vcf(
             filtered_target.path,
             self.reference_genome,
-            self.dataset_type,
         ).rows()
         ht = ht.key_by(variant_id=ht.rsid)
         new_variants_ht = ht.transmute(
