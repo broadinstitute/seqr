@@ -14,6 +14,17 @@ from loading_pipeline.lib.tasks.sv.write_existing_variants_vcf import (
     WriteExistingVariantsVcfTask,
 )
 
+TRUVARI_PARAMS = {
+    'DEL': ['--pctseq', '0.5', '--pctsize', '0.5', '--pctovl', '0.1'],
+    'DUP': ['--pctseq', '0.5', '--pctsize', '0.5', '--dup-to-ins'],
+    'INS': ['--pctseq', '0', '--pctsize', '0.1', '--pctovl', '0', '--dup-to-ins'],
+}
+TRUVARI_PARAMS['INV'] = TRUVARI_PARAMS['DEL']
+TRUVARI_REFDIST = {
+    'INS': 100,
+}
+SIZE_SPLIT_BP = 5000
+
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteDeduplicatedSvVcfTask(BaseVCFTask):
@@ -51,15 +62,35 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
                 'merge',
                 '-m',
                 'none',
-                '-Ou',
+                '-Oz',
                 '-o',
                 existing_merged_target.path,
                 self.input()[1].path,
                 self.input()[0].path,
+                '--write-index=tbi',
             ],
         )
 
-        return []
+        tuned_svtypes = '|'.join(TRUVARI_PARAMS)
+        targets = self._run_truvari_subset(existing_merged_target.path, f'INFO/SVTYPE!~"^({tuned_svtypes})$"', [])
+
+        for sv_type, flags in TRUVARI_PARAMS:
+            size_refdists = [(None, TRUVARI_REFDIST[sv_type])] if sv_type in TRUVARI_REFDIST else [
+                ('<=', 10000),
+                ('>', 20000),
+            ]
+            for op, refdist in size_refdists:
+                size_filter = f' && abs(INFO/SVLEN){op}{SIZE_SPLIT_BP}' if op else ''
+                filter_expr = f'INFO/SVTYPE="{sv_type}"{size_filter}'
+                targets += self._run_truvari_subset(existing_merged_target.path, filter_expr, [
+                    *flags,
+                    '--refdist',
+                    str(refdist),
+                    '--sizemax',
+                    '-1',
+                ])
+
+        return targets
 
     def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
         return [
@@ -72,4 +103,38 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             self.output()[0].path,
             *[target.path for target in targets],
         ]
+
+    @staticmethod
+    def _run_truvari_subset(input: str, filter_expr: str, flags: list[str]) -> list[luigi.LocalTarget]:
+        filtered_target = luigi.LocalTarget(is_tmp=True)
+        run_command(
+            [
+                'bcftools',
+                'view',
+                '-i',
+                f"'{filter_expr}'",
+                '-Oz',
+                '-o',
+                filtered_target.path,
+                input,
+                '--write-index=tbi',
+            ],
+        )
+
+        collapsed_target = luigi.LocalTarget(is_tmp=True)
+        removed_target = luigi.LocalTarget(is_tmp=True)
+        run_command(
+            [
+                'truvari',
+                'collapse',
+                '-i',
+                filtered_target.path,
+                *flags,
+                '-o',
+                collapsed_target.path,
+                '-c',
+                removed_target.path,
+            ],
+        )
+        return [collapsed_target, removed_target]
 
