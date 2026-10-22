@@ -73,13 +73,16 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
 
         tuned_svtypes = '|'.join(TRUVARI_PARAMS)
         targets = self._run_truvari_subset(
-            existing_merged_target.path, f'INFO/SVTYPE!~"^({tuned_svtypes})$"', [],
+            existing_merged_target.path,
+            f'INFO/SVTYPE!~"^({tuned_svtypes})$"',
+            [],
         )
 
         for sv_type, flags in TRUVARI_PARAMS:
             size_refdists = (
                 [(None, TRUVARI_REFDIST[sv_type])]
-                if sv_type in TRUVARI_REFDIST else [
+                if sv_type in TRUVARI_REFDIST
+                else [
                     ('<=', 10000),
                     ('>', 20000),
                 ],
@@ -115,7 +118,9 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
 
     @staticmethod
     def _run_truvari_subset(
-        input_path: str, filter_expr: str, flags: list[str],
+        input_path: str,
+        filter_expr: str,
+        flags: list[str],
     ) -> list[luigi.LocalTarget]:
         filtered_target = luigi.LocalTarget(is_tmp=True)
         run_command(
@@ -148,4 +153,3 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             ],
         )
         return [collapsed_target, removed_target]
-
