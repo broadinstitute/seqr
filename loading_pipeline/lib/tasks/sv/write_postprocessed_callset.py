@@ -83,7 +83,7 @@ class WritePostprocessedSvCallsetTask(BaseWriteTask):
 
         mt = mt.annotate_rows(is_new_variant=hl.is_missing(annotations_ht[mt.row_key]))
 
-        with self.input()[1].open() as f:
+        with self.input()[1][0].open() as f:
             for line in f:
                 if line.startswith('##maxKey'):
                     curr_max_key = int(line.split('##maxKey=')[1].strip())
