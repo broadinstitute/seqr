@@ -157,9 +157,9 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             ('No SV data loaded, skipping related searches', None),
             ('No MITO data loaded, skipping related searches', None),
             ('No SV data loaded, skipping related compound het searches', None),
-            (f'Tagged 0 new and 0 previously tagged variants in 0 families, found 0 unchanged tags:', None)
+            ('Tagged 0 new and 0 previously tagged variants in 0 families, found 0 unchanged tags:', None)
         ] + [(f'  {criteria}: 0 variants', None) for criteria in SNV_INDEL_MATCHES] + [
-            (f'Test Reprocessed Project: 0 new and 0 previously tagged variants in 0 families', None),
+            ('Test Reprocessed Project: 0 new and 0 previously tagged variants in 0 families', None),
           ])
         mock_email.assert_not_called()
         mock_slack.assert_not_called()

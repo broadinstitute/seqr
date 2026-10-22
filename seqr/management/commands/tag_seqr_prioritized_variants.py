@@ -630,7 +630,7 @@ class Command(BaseCommand):
     def _run_multi_data_type_comp_het_search(cls, updates, search_counts, samples_by_dataset_type, family_guid_map, project, genes):
         sv_dataset_type = next((dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV')), None)
         if not sv_dataset_type:
-            logger.info(f'No SV data loaded, skipping related compound het searches')
+            logger.info('No SV data loaded, skipping related compound het searches')
             return
         sample_type = sv_dataset_type.split('_')[-1]
         families = set(samples_by_dataset_type[sv_dataset_type].keys()).intersection(samples_by_dataset_type[Dataset.DATASET_TYPE_VARIANT_CALLS].keys())
