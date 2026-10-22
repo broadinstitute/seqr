@@ -49,7 +49,7 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
 
         info = 'SVTYPE=' + df['svType'] + ';END=' + df['end'].astype(str)
         has_end_chrom = df['endChrom'].notna()
-        info[has_end_chrom] += ';CHR2=' + df.loc[has_end_chrom, 'endChrom']
+        info[has_end_chrom] += ';CHR2=chr' + df.loc[has_end_chrom, 'endChrom']
         vcf_df = pd.DataFrame(
             {
                 'CHROM': 'chr' + df['chrom'],
