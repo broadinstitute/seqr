@@ -47,9 +47,9 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
             {
                 'variant_id': ['BND_chr1_6'],
                 'key_': [727],
-                'chrom': [b'chr1'],
+                'chrom': [b'1'],
                 'end': [180928],
-                'endChrom': [b'chr5'],
+                'endChrom': [b'5'],
                 'pos': [180928],
                 'svType': [b'BND'],
             },
