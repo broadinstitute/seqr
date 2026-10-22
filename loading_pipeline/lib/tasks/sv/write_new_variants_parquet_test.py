@@ -60,9 +60,9 @@ def _write_existing_variants_parquet_fixture() -> None:
         {
             'variant_id': EXISTING_SV_VARIANT_IDS,
             'key_': range(727 - n, 727),
-            'chrom': [b'chr1'] * n,
+            'chrom': [b'1'] * n,
             'end': [180928] * n,
-            'endChrom': [b'chr5'] * n,
+            'endChrom': [b'5'] * n,
             'pos': [180928] * n,
             'svType': [b'BND'] * n,
         },
