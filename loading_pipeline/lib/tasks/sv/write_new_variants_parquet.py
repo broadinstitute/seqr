@@ -72,7 +72,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
                 'bcftools',
                 'view',
                 '-i',
-                "'GT[0]=\"mis\"'",
+                '\'GT[0]="mis" && INFO/MatchId="."\'',
                 '-Ou',
                 '-o',
                 filtered_target.path,
@@ -86,7 +86,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
             self.dataset_type,
         ).rows()
         ht = ht.key_by(variant_id=ht.rsid)
-        new_variants_ht = ht.transmute(**{f'info.{field}': ht.info[field] for field in ht.info})
+        new_variants_ht = ht.transmute(
+            **{f'info.{field}': ht.info[field] for field in ht.info},
+        )
 
         # Run liftover
         new_variants_ht = new_variants_ht.annotate(

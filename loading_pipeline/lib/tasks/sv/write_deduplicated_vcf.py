@@ -72,23 +72,32 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         )
 
         tuned_svtypes = '|'.join(TRUVARI_PARAMS)
-        targets = self._run_truvari_subset(existing_merged_target.path, f'INFO/SVTYPE!~"^({tuned_svtypes})$"', [])
+        targets = self._run_truvari_subset(
+            existing_merged_target.path, f'INFO/SVTYPE!~"^({tuned_svtypes})$"', [],
+        )
 
         for sv_type, flags in TRUVARI_PARAMS:
-            size_refdists = [(None, TRUVARI_REFDIST[sv_type])] if sv_type in TRUVARI_REFDIST else [
-                ('<=', 10000),
-                ('>', 20000),
-            ]
+            size_refdists = (
+                [(None, TRUVARI_REFDIST[sv_type])]
+                if sv_type in TRUVARI_REFDIST else [
+                    ('<=', 10000),
+                    ('>', 20000),
+                ],
+            )
             for op, refdist in size_refdists:
                 size_filter = f' && abs(INFO/SVLEN){op}{SIZE_SPLIT_BP}' if op else ''
                 filter_expr = f'INFO/SVTYPE="{sv_type}"{size_filter}'
-                targets += self._run_truvari_subset(existing_merged_target.path, filter_expr, [
-                    *flags,
-                    '--refdist',
-                    str(refdist),
-                    '--sizemax',
-                    '-1',
-                ])
+                targets += self._run_truvari_subset(
+                    existing_merged_target.path,
+                    filter_expr,
+                    [
+                        *flags,
+                        '--refdist',
+                        str(refdist),
+                        '--sizemax',
+                        '-1',
+                    ],
+                )
 
         return targets
 
@@ -105,7 +114,9 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         ]
 
     @staticmethod
-    def _run_truvari_subset(input: str, filter_expr: str, flags: list[str]) -> list[luigi.LocalTarget]:
+    def _run_truvari_subset(
+        input_path: str, filter_expr: str, flags: list[str],
+    ) -> list[luigi.LocalTarget]:
         filtered_target = luigi.LocalTarget(is_tmp=True)
         run_command(
             [
@@ -116,7 +127,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
                 '-Oz',
                 '-o',
                 filtered_target.path,
-                input,
+                input_path,
                 '--write-index=tbi',
             ],
         )
