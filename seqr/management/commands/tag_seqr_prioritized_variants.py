@@ -543,6 +543,9 @@ class Command(BaseCommand):
                 sv_flags__contains=['outlier_num._calls'], affected=Individual.AFFECTED_STATUS_AFFECTED,
             )
         sample_types = list(sample_qs.values_list('active_datasets__sample_type', flat=True).distinct())
+        if not sample_types:
+            logger.info(f'No {dataset_type} data loaded, skipping related searches')
+            return
         if len(sample_types) > 1:
             raise CommandError('Variant prioritization not supported for projects with multiple sample types')
         sample_type = sample_types[0]
@@ -625,7 +628,10 @@ class Command(BaseCommand):
 
     @classmethod
     def _run_multi_data_type_comp_het_search(cls, updates, search_counts, samples_by_dataset_type, family_guid_map, project, genes):
-        sv_dataset_type = next(dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV'))
+        sv_dataset_type = next((dt for dt in samples_by_dataset_type.keys() if dt.startswith('SV')), None)
+        if not sv_dataset_type:
+            logger.info(f'No SV data loaded, skipping related compound het searches')
+            return
         sample_type = sv_dataset_type.split('_')[-1]
         families = set(samples_by_dataset_type[sv_dataset_type].keys()).intersection(samples_by_dataset_type[Dataset.DATASET_TYPE_VARIANT_CALLS].keys())
         sv_samples_by_family = {
