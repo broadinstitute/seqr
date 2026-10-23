@@ -29,7 +29,7 @@ SIZE_SPLIT_BP = 5000
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteDeduplicatedSvVcfTask(BaseVCFTask):
-    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = ['merge', '-m', 'none']
+    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = ['concat', '-a']
 
     def complete(self) -> bool:
         if not super().complete():
@@ -59,28 +59,44 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             for target in targets:
                 target.localize()
 
+        existing_header = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(['view', '-h'], existing_header, self.input()[0][:1])
+
+        metadata_header = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(['view', '-h', '-G'], metadata_header, self.input()[1][:1])
+
+        samples_header = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(['view', '-h'], samples_header, self.input()[1][:1])
+
+        header_target = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(
+            ['merge', '--print-header'],
+            header_target,
+            [metadata_header, existing_header, samples_header],
+            output_type='v',
+        )
+
         existing_merged_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
-            ['merge', '-m', 'none'],
+            ['merge', '-m', 'none', '--use-header', header_target.path],
             existing_merged_target,
             [targets[0] for targets in self.input()],
         )
 
-        tuned_svtypes = '|'.join(TRUVARI_PARAMS)
         targets = self._run_truvari_subset(
             existing_merged_target,
-            f'INFO/SVTYPE!~"^({tuned_svtypes})$"',
+            ' && '.join(f'INFO/SVTYPE!="{sv_type}"' for sv_type in TRUVARI_PARAMS),
             [],
         )
 
-        for sv_type, flags in TRUVARI_PARAMS:
+        for sv_type, flags in TRUVARI_PARAMS.items():
             size_refdists = (
                 [(None, TRUVARI_REFDIST[sv_type])]
                 if sv_type in TRUVARI_REFDIST
                 else [
                     ('<=', 10000),
                     ('>', 20000),
-                ],
+                ]
             )
             for op, refdist in size_refdists:
                 size_filter = f' && abs(INFO/SVLEN){op}{SIZE_SPLIT_BP}' if op else ''
@@ -108,7 +124,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         filtered_target = luigi.LocalTarget(is_tmp=True)
         filtered_target.path += '.vcf.gz'
         self.run_bcftools(
-            ['view', '-i', f"'{filter_expr}'"],
+            ['view', '-i', filter_expr],
             filtered_target,
             [input_target],
         )
@@ -128,4 +144,11 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
                 removed_target.path,
             ],
         )
-        return [collapsed_target, removed_target]
+
+        sorted_targets = []
+        for target in [collapsed_target, removed_target]:
+            sorted_target = luigi.LocalTarget(is_tmp=True)
+            self.run_bcftools(['sort'], sorted_target, [target])
+            sorted_targets.append(sorted_target)
+
+        return sorted_targets

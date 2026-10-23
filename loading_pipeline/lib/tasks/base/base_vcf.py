@@ -58,7 +58,7 @@ class BaseVCFTask(luigi.Task):
                 *(plugin_options or []),
             ],
         )
-        if output_type != 'u':
+        if output_type not in {'u', 'v'}:
             run_command(['tabix', '-f', '-p', 'vcf', output_target.path])
 
     def format_vcf_header(
