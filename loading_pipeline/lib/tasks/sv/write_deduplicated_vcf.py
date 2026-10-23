@@ -28,6 +28,8 @@ SIZE_SPLIT_BP = 5000
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteDeduplicatedSvVcfTask(BaseVCFTask):
+    OUTPUT_COMMAND_ARGS = ['merge', '-m', 'none']
+
     def complete(self) -> bool:
         if not super().complete():
             return False
@@ -37,8 +39,8 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
 
     def requires(self) -> list[luigi.Task]:
         return [
-            self.clone(WriteCombinedSvVcf),
             self.clone(WriteExistingVariantsVcfTask),
+            self.clone(WriteCombinedSvVcf),
         ]
 
     def vcf_path(self) -> str:
@@ -57,24 +59,15 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
                 target.localize()
 
         existing_merged_target = luigi.LocalTarget(is_tmp=True)
-        run_command(
-            [
-                'bcftools',
-                'merge',
-                '-m',
-                'none',
-                '-Oz',
-                '-o',
-                existing_merged_target.path,
-                self.input()[1][0].path,
-                self.input()[0][0].path,
-                '--write-index=tbi',
-            ],
+        self.run_bcftools(
+            ['merge', '-m', 'none'],
+            existing_merged_target,
+            [targets[0] for targets in self.input()],
         )
 
         tuned_svtypes = '|'.join(TRUVARI_PARAMS)
         targets = self._run_truvari_subset(
-            existing_merged_target.path,
+            existing_merged_target,
             f'INFO/SVTYPE!~"^({tuned_svtypes})$"',
             [],
         )
@@ -92,7 +85,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
                 size_filter = f' && abs(INFO/SVLEN){op}{SIZE_SPLIT_BP}' if op else ''
                 filter_expr = f'INFO/SVTYPE="{sv_type}"{size_filter}'
                 targets += self._run_truvari_subset(
-                    existing_merged_target.path,
+                    existing_merged_target,
                     filter_expr,
                     [
                         *flags,
@@ -105,37 +98,17 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
 
         return targets
 
-    def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
-        return [
-            'bcftools',
-            'merge',
-            '-m',
-            'none',
-            '-Oz',
-            '-o',
-            self.output()[0][0].path,
-            *[target.path for target in targets],
-        ]
-
-    @staticmethod
     def _run_truvari_subset(
-        input_path: str,
+        self,
+        input_target: luigi.LocalTarget,
         filter_expr: str,
         flags: list[str],
     ) -> list[luigi.LocalTarget]:
         filtered_target = luigi.LocalTarget(is_tmp=True)
-        run_command(
-            [
-                'bcftools',
-                'view',
-                '-i',
-                f"'{filter_expr}'",
-                '-Oz',
-                '-o',
-                filtered_target.path,
-                input_path,
-                '--write-index=tbi',
-            ],
+        self.run_bcftools(
+            ['view', '-i', f"'{filter_expr}'"],
+            filtered_target,
+            [input_target],
         )
 
         collapsed_target = luigi.LocalTarget(is_tmp=True)

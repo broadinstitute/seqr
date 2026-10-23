@@ -22,6 +22,13 @@ from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteCombinedSvVcf(BaseVCFTask):
+    OUTPUT_COMMAND_ARGS = [
+        'merge',
+        '-m',
+        'none',
+        '--missing-to-ref',
+    ]
+
     def complete(self) -> bool:
         if not super().complete():
             return False
@@ -82,19 +89,6 @@ class WriteCombinedSvVcf(BaseVCFTask):
                 target.localize()
 
         return [task.output()[0] for task in sample_file_tasks]
-
-    def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
-        return [
-            'bcftools',
-            'merge',
-            '-m',
-            'none',
-            '--missing-to-ref',
-            '-Oz',
-            '-o',
-            self.output()[0].path,
-            *[target.path for target in targets],
-        ]
 
     def _sample_ids(self) -> tuple[dict[str, str], list[str]]:
         with self.input()[0].open() as f:
