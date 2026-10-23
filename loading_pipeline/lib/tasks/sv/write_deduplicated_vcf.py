@@ -76,11 +76,25 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             output_type='v',
         )
 
+        existing_target = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(
+            ['merge', '--use-header', header_target.path],
+            existing_target,
+            [self.input()[0][0], samples_header],
+        )
+
+        callset_target = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(
+            ['merge', '--use-header', header_target.path],
+            callset_target,
+            [existing_header, self.input()[1][0]],
+        )
+
         existing_merged_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
-            ['merge', '-m', 'none', '--use-header', header_target.path],
+            ['concat', '-a'],
             existing_merged_target,
-            [targets[0] for targets in self.input()],
+            [existing_target, callset_target],
         )
 
         targets = self._run_truvari_subset(
