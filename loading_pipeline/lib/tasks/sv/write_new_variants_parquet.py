@@ -14,7 +14,9 @@ from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceD
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
-from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import BaseWriteParquetFromVcfTask
+from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
+    BaseWriteParquetFromVcfTask,
+)
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
