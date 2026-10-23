@@ -106,6 +106,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         flags: list[str],
     ) -> list[luigi.LocalTarget]:
         filtered_target = luigi.LocalTarget(is_tmp=True)
+        filtered_target.path += '.vcf.gz'
         self.run_bcftools(
             ['view', '-i', f"'{filter_expr}'"],
             filtered_target,
