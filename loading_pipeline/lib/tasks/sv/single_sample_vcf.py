@@ -94,7 +94,7 @@ class SingleSampleVCFTask(BaseVCFTask):
             ],
             reformatted_target,
             self.input()[:1],
-            compress=False,
+            output_type='u',
         )
 
         if self.is_male:
@@ -103,7 +103,7 @@ class SingleSampleVCFTask(BaseVCFTask):
                 ['+setGT'],
                 haploid_target,
                 [reformatted_target],
-                compress=False,
+                output_type='u',
                 plugin_options=[
                     '--',
                     '--target-gt',
@@ -131,6 +131,7 @@ class SingleSampleVCFTask(BaseVCFTask):
             ['reheader', '-h', targets[0].path],
             self.output()[0],
             targets[1:],
+            output_type=None,
         )
 
     def _write_header(self, vcf_target: LocalizableTarget) -> luigi.LocalTarget:

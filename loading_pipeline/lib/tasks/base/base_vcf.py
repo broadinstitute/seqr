@@ -44,21 +44,21 @@ class BaseVCFTask(luigi.Task):
         command_args: list[str],
         output_target: luigi.LocalTarget,
         input_targets: list[luigi.LocalTarget],
-        compress: bool = True,
+        output_type: str | None = 'z',
         plugin_options: list[str] | None = None,
     ) -> None:
         run_command(
             [
                 'bcftools',
                 *command_args,
-                f'-O{"z" if compress else "u"}',
+                *([f'-O{output_type}'] if output_type else []),
                 '-o',
                 output_target.path,
                 *[target.path for target in input_targets],
                 *(plugin_options or []),
             ],
         )
-        if compress:
+        if output_type == 'z':
             run_command(['tabix', '-f', '-p', 'vcf', output_target.path])
 
     def format_vcf_header(
