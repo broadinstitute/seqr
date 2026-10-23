@@ -66,8 +66,8 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
                 '-Oz',
                 '-o',
                 existing_merged_target.path,
-                self.input()[1].path,
-                self.input()[0].path,
+                self.input()[1][0].path,
+                self.input()[0][0].path,
                 '--write-index=tbi',
             ],
         )
@@ -113,7 +113,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             'none',
             '-Oz',
             '-o',
-            self.output()[0].path,
+            self.output()[0][0].path,
             *[target.path for target in targets],
         ]
 
