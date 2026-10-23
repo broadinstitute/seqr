@@ -105,15 +105,8 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         )
 
         # Add serial integer index
-        with self.input()[0][0].open() as f:
-            for line in f:
-                if line.startswith('##maxKey'):
-                    curr_max_key_ = int(line.split('##maxKey=')[1].strip())
-                    break
-                if not line.startswith('#'):
-                    msg = 'Invalid VCF header'
-                    raise RuntimeError(msg)
-
+        max_key_line = self.find_vcf_header_line(self.input()[0][0], '##maxKey')
+        curr_max_key_ = int(max_key_line.removeprefix('##maxKey=').strip())
         new_variants_ht = new_variants_ht.add_index(name='key_')
         new_variants_ht = new_variants_ht.transmute(
             key_=new_variants_ht.key_ + curr_max_key_ + 1,

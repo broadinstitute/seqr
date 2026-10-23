@@ -36,16 +36,9 @@ class WriteCombinedSvVcf(BaseVCFTask):
         if not self.input()[0].exists():
             return False
 
-        samples = None
         self.output()[0].localize()
-        with self.output()[0].open() as f:
-            for line in f:
-                if line.startswith('#CHROM'):
-                    samples = set(line.split('FORMAT', 1)[-1].strip().split())
-                    break
-                if not line.startswith('#'):
-                    break
-
+        header_line = self.find_vcf_header_line(self.output()[0], '#CHROM')
+        samples = set(header_line.split('FORMAT', 1)[-1].strip().split())
         expected_samples, _ = self._sample_ids()
         return samples == set(expected_samples)
 

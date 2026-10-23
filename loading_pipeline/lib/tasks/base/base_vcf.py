@@ -95,3 +95,13 @@ class BaseVCFTask(luigi.Task):
 
         header_content = '\n'.join(header)
         return f'{header_content}\n'
+
+    @staticmethod
+    def find_vcf_header_line(vcf_target: luigi.LocalTarget, header_prefix: str) -> str:
+        with vcf_target.open() as f:
+            for line in f:
+                if line.startswith(header_prefix):
+                    return line
+                if not line.startswith('#'):
+                    break
+        return ''
