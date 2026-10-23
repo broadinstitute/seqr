@@ -1,4 +1,5 @@
 import os
+from typing import ClassVar
 
 import luigi
 import luigi.util
@@ -28,7 +29,7 @@ SIZE_SPLIT_BP = 5000
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteDeduplicatedSvVcfTask(BaseVCFTask):
-    OUTPUT_COMMAND_ARGS = ['merge', '-m', 'none']
+    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = ['merge', '-m', 'none']
 
     def complete(self) -> bool:
         if not super().complete():

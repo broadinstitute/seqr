@@ -19,7 +19,7 @@ from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteExistingVariantsVcfTask(BaseVCFTask):
-    OUTPUT_COMMAND_ARGS = ['view']
+    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = ['view']
 
     INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
         'CHR2': ('1', 'String'),
