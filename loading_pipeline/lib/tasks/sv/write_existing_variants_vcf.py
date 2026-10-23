@@ -19,6 +19,8 @@ from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteExistingVariantsVcfTask(BaseVCFTask):
+    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = ['view']
+
     INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
         'CHR2': ('1', 'String'),
         'END': ('1', 'Integer'),
@@ -74,13 +76,3 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
             vcf_df.to_csv(f, sep='\t', header=False, index=False)
 
         return [vcf_target]
-
-    def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
-        return [
-            'bcftools',
-            'view',
-            '-Oz',
-            '-o',
-            self.output()[0].path,
-            targets[0].path,
-        ]
