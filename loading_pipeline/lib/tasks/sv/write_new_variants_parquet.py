@@ -3,7 +3,6 @@ import luigi
 import luigi.util
 
 from loading_pipeline.lib.misc.io import import_vcf
-from loading_pipeline.lib.misc.sv import run_command
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
     valid_reference_dataset_path,
@@ -15,7 +14,7 @@ from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceD
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
-from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
+from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import BaseWriteParquetFromVcfTask
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
@@ -25,7 +24,7 @@ GENCODE_RELEASE = 42
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
+class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     @property
     def annotation_dependencies(self) -> dict[str, hl.Table]:
         deps = {
@@ -62,22 +61,13 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
         ]
 
     def create_table(self) -> hl.Table:
-        for target in self.input()[0]:
-            target.localize()
-
         # Identify new variants.
         filtered_target = luigi.LocalTarget(is_tmp=True)
-        run_command(
-            [
-                'bcftools',
-                'view',
-                '-i',
-                '\'GT[0]="mis" && INFO/MatchId="."\'',
-                '-Ou',
-                '-o',
-                filtered_target.path,
-                self.input()[0][0].path,
-            ],
+        self.run_bcftools(
+            ['view', '-i', '\'GT[0]="mis" && INFO/MatchId="."\''],
+            filtered_target,
+            self.input()[0][:1],
+            output_type='u',
         )
 
         ht = import_vcf(
