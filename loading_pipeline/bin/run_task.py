@@ -3,7 +3,7 @@ import sys
 
 import luigi
 
-import loading_pipeline.lib.core  # noqa: F401
+import loading_pipeline.lib.core  # noqa: F401 # pylint: disable=unused-import
 from loading_pipeline.lib.tasks import *  # noqa: F403 # nosec F403
 
 if __name__ == '__main__':
