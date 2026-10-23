@@ -527,8 +527,7 @@ UtrAnnotatorDetail.propTypes = {
 
 const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcriptsById }) => {
   const {
-    rsid, svType, numExon, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, algorithms, bothsidesSupport,
-    endChrom, CAID,
+    rsid, svType, pos, end, svTypeDetail, svSourceDetail, cpxIntervals, endChrom, CAID,
   } = variant
   const mainTranscript = getVariantMainTranscript(variant)
   const lofDetails = getLofDetails(mainTranscript.loftee || {})
@@ -596,34 +595,6 @@ const Annotations = React.memo(({ variant, mainGeneId, showMainGene, transcripts
         <b>
           <HorizontalSpacer width={5} />
           {svSizeDisplay(end - pos)}
-        </b>
-      )}
-      {(algorithms || bothsidesSupport) && (
-        <b>
-          <HorizontalSpacer width={5} />
-          <Popup
-            trigger={<Icon name="help circle" />}
-            content={
-              <div>
-                {algorithms && `Algorithms: ${algorithms}.`}
-                {bothsidesSupport && (
-                  <div>
-                    Bothsides Support
-                  </div>
-                )}
-              </div>
-            }
-            position="top center"
-          />
-        </b>
-      )}
-      {Number.isInteger(numExon) && (
-        <b>
-          {`, ${numExon} exons`}
-          <Popup
-            trigger={<HelpIcon />}
-            content="CNV size and exon number are estimated from exome data and should be confirmed by an alternative method"
-          />
         </b>
       )}
       {lofDetails && (
