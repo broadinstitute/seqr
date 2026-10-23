@@ -48,19 +48,23 @@ EXISTING_SV_VARIANT_IDS = [
 ]
 
 
-def _write_existing_variants_parquet_fixture(
-    variant_ids: list[str],
-    reference_genome: ReferenceGenome,
-    dataset_type: DatasetType,
-    max_key_: int,
-) -> None:
-    n = len(variant_ids)
-    path = existing_variants_parquet_path(reference_genome, dataset_type, TEST_RUN_ID)
+def _write_existing_variants_parquet_fixture() -> None:
+    n = len(EXISTING_SV_VARIANT_IDS)
+    path = existing_variants_parquet_path(
+        ReferenceGenome.GRCh38,
+        DatasetType.SV,
+        TEST_RUN_ID,
+    )
     os.makedirs(os.path.dirname(path), exist_ok=True)
     pd.DataFrame(
         {
-            'variant_id': variant_ids,
-            'key_': range(max_key_ - n + 1, max_key_ + 1),
+            'variant_id': EXISTING_SV_VARIANT_IDS,
+            'key_': range(727 - n, 727),
+            'chrom': [b'1'] * n,
+            'end': [180928] * n,
+            'endChrom': [b'5'] * n,
+            'pos': [180928] * n,
+            'svType': [b'BND'] * n,
         },
     ).to_parquet(path)
 
@@ -76,12 +80,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         mock_load_gencode_gene_symbol_to_gene_id.return_value = hl.dict(
             {'TAS1R1': 'ENSG00000173662'},
         )
-        _write_existing_variants_parquet_fixture(
-            EXISTING_SV_VARIANT_IDS,
-            ReferenceGenome.GRCh38,
-            DatasetType.SV,
-            max_key_=726,
-        )
+        _write_existing_variants_parquet_fixture()
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_5,
             ReferenceGenome.GRCh38,

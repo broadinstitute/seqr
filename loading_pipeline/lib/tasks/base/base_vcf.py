@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import luigi
 import luigi.format
 
@@ -6,6 +8,9 @@ from loading_pipeline.lib.tasks.files import LocalizableTarget
 
 
 class BaseVCFTask(luigi.Task):
+    INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {}
+    FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {}
+
     def output(self) -> list[LocalizableTarget]:
         vcf_path = self.vcf_path()
         return [
@@ -17,6 +22,7 @@ class BaseVCFTask(luigi.Task):
         ]
 
     def run(self) -> None:
+        self.output()[0].makedirs()
         targets = self.prepare_vcf_inputs()
         command = self.generate_vcf_command(targets)
         run_command(command)
@@ -33,3 +39,38 @@ class BaseVCFTask(luigi.Task):
 
     def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
         raise NotImplementedError
+
+    def format_vcf_header(
+        self,
+        sample_ids: list[str],
+        additional_rows: list[str],
+    ) -> str:
+        header = [
+            '##fileformat=VCFv4.2',
+            *additional_rows,
+            *(
+                f'##INFO=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                for field, (number, field_type) in self.INFO_FIELDS.items()
+            ),
+            *(
+                f'##FORMAT=<ID={field},Number={number},Type={field_type},Description="{field}">'
+                for field, (number, field_type) in self.FORMAT_FIELDS.items()
+            ),
+            '\t'.join(
+                [
+                    '#CHROM',
+                    'POS',
+                    'ID',
+                    'REF',
+                    'ALT',
+                    'QUAL',
+                    'FILTER',
+                    'INFO',
+                    'FORMAT',
+                    *sample_ids,
+                ],
+            ),
+        ]
+
+        header_content = '\n'.join(header)
+        return f'{header_content}\n'
