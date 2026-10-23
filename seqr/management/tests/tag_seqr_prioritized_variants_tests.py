@@ -144,6 +144,26 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
             for tag in VariantTag.objects.filter(variant_tag_type__name='seqr Prioritized')
         })
 
+        # Test projects with missing dataset types
+        self.reset_logs()
+        call_command('tag_seqr_prioritized_variants', 'R0003_test')
+        matches  = {
+            criteria: (0, None if num_families is None or ('X-Linked Recessive' in criteria and 'High Splice AI' not in criteria) else 0)
+            for criteria, (_, num_families) in SNV_INDEL_MATCHES.items()
+        }
+        self.assert_json_logs(user=None, expected=self._dataset_type_logs(
+            'SNV_INDEL', 1, matches, project='Test Reprocessed Project',
+        ) + [
+            ('No SV data loaded, skipping related searches', None),
+            ('No MITO data loaded, skipping related searches', None),
+            ('No SV data loaded, skipping related compound het searches', None),
+            ('Tagged 0 new and 0 previously tagged variants in 0 families, found 0 unchanged tags:', None)
+        ] + [(f'  {criteria}: 0 variants', None) for criteria in SNV_INDEL_MATCHES] + [
+            ('Test Reprocessed Project: 0 new and 0 previously tagged variants in 0 families', None),
+          ])
+        mock_email.assert_not_called()
+        mock_slack.assert_not_called()
+
     def _assert_expected_logs(self, num_new=0, num_unchanged=0, creation_stats=None):
         creation_stats = creation_stats or {}
         self.assert_json_logs(user=None, expected=self._dataset_type_logs(
@@ -166,14 +186,14 @@ class CheckNewSamplesTest(ClickhouseSearchTestCase):
         ])
 
     @classmethod
-    def _dataset_type_logs(cls, dataset_type, num_families, matches, num_variants=0, tag_id_range=None, search_dataset_types=None):
+    def _dataset_type_logs(cls, dataset_type, num_families, matches, num_variants=0, tag_id_range=None, search_dataset_types=None, project='1kg project nåme with uniçøde'):
         create_variants_logs = [
             (f'create {num_variants} SavedVariants', {
                 'dbUpdate': {'dbEntity': 'SavedVariant', 'entityIds': mock.ANY, 'updateType': 'bulk_create'},
             }),
         ] if num_variants > 0 else []
         return  [
-            (f'Searching for prioritized {dataset_type} variants in {num_families} families in project 1kg project n\u00e5me with uni\u00e7\u00f8de', None),
+            (f'Searching for prioritized {dataset_type} variants in {num_families} families in project {project}', None),
         ] + [(log, None) for logs in [
             cls._criteria_search_logs(search_dataset_types or [dataset_type], criteria, count, num_criteria_families, num_families)
             for criteria, (count, num_criteria_families) in matches.items()
