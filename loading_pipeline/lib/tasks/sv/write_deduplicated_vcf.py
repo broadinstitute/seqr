@@ -17,6 +17,7 @@ from loading_pipeline.lib.tasks.sv.write_existing_variants_vcf import (
 
 TRUVARI_PARAMS = {
     'BND': ['--pctsize', '0', '--sizemin', '0', '--sizemax', '-1'],
+    'CPX': ['--pctsize', '0', '--sizemin', '0', '--sizemax', '-1'],
     'DEL': ['--pctseq', '0.5', '--pctsize', '0.5', '--pctovl', '0.1'],
     'DUP': ['--pctseq', '0.5', '--pctsize', '0.5', '--dup-to-ins'],
     'INS': ['--pctseq', '0', '--pctsize', '0.1', '--pctovl', '0', '--dup-to-ins'],
@@ -24,6 +25,7 @@ TRUVARI_PARAMS = {
 TRUVARI_PARAMS['INV'] = TRUVARI_PARAMS['DEL']
 TRUVARI_REFDIST = {
     'BND': 100,
+    'CPX': 100,
     'INS': 100,
 }
 SIZE_SPLIT_BP = 5000
