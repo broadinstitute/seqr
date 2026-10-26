@@ -49,8 +49,9 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
         for col in ['chrom', 'endChrom', 'svType']:
             df[col] = df[col].str.decode('utf-8')
 
-        sv_len = df['end'] - df['pos']
-        info = 'SVTYPE=' + df['svType']  + ';SVLEN=' + sv_len.astype(str) + ';END=' + df['end'].astype(str)
+        info = 'SVTYPE=' + df['svType']
+        info += ';END=' + df['end'].astype(str)
+        info += ';SVLEN=' + (df['end'] - df['pos']).astype(str)
         has_end_chrom = df['endChrom'].notna()
         info[has_end_chrom] += ';CHR2=chr' + df.loc[has_end_chrom, 'endChrom']
         vcf_df = pd.DataFrame(
