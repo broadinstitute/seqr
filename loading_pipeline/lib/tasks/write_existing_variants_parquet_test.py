@@ -78,6 +78,6 @@ class WriteExistingVariantsParquetTest(
         df = self._run_task(DatasetType.SV)
         self.assertEqual(
             list(df.columns),
-            ['key_', 'variant_id', 'end', 'endChrom'],
+            ['key_', 'variant_id', 'chrom', 'end', 'endChrom', 'pos', 'svType'],
         )
         self.assertEqual(len(df), 0)

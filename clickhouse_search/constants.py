@@ -55,10 +55,9 @@ EXTENDED_SPLICE_REGION_CONSEQUENCE = 'extended_intronic_splice_region_variant'
 MOTIF_FEATURES_KEY = 'motif_feature'
 REGULATORY_FEATURES_KEY = 'regulatory_feature'
 
-NEW_SV_FIELD = 'new_structural_variants'
 SV_CONSEQUENCES_FIELD = 'structural_consequence'
 SV_TYPE_FILTER_FIELD = 'structural'
-SV_ANNOTATION_TYPES = {SV_CONSEQUENCES_FIELD, SV_TYPE_FILTER_FIELD, NEW_SV_FIELD}
+SV_ANNOTATION_TYPES = {SV_CONSEQUENCES_FIELD, SV_TYPE_FILTER_FIELD}
 
 CLINVAR_KEY = 'clinvar'
 CLINVAR_PATH_FILTER = 'pathogenic'

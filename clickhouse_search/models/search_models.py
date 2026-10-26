@@ -240,7 +240,6 @@ class BaseVariantsGcnv(BaseVariantsSvGcnv):
     GENOTYPE_OVERRIDE_FIELDS = {
         'pos': ('start', ArrayMin),
         'end': ('end', ArrayMax),
-        'numExon': ('numExon', ArrayMax),
         'geneIds': ('geneIds', lambda value, **kwargs: ArrayDistinct(ArrayFlatten(value), **kwargs)),
     }
 
