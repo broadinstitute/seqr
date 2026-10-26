@@ -23,9 +23,12 @@ TRUVARI_PARAMS = {
 TRUVARI_PARAMS['INV'] = TRUVARI_PARAMS['DEL']
 # Truvari params for DRAGEN are tuned assuming SVLEN is not a function of END for INS/ complex events
 # Adjust params for complex events for now for GATK compatibility, and change back once input formats are updated
-TRUVARI_PARAMS.update({
-    k: ['--pctsize', '0', '--sizemin', '0', '--sizemax', '-1'] for k in ['BND', 'CPX', 'INS']
-})
+TRUVARI_PARAMS.update(
+    {
+        k: ['--pctsize', '0', '--sizemin', '0', '--sizemax', '-1']
+        for k in ['BND', 'CPX', 'INS']
+    }
+)
 TRUVARI_PARAMS['INS'] += ['--pctseq', '0', '--pctovl', '0', '--dup-to-ins']
 TRUVARI_REFDIST = {
     'BND': 100,
