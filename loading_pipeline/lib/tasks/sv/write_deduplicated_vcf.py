@@ -27,7 +27,7 @@ TRUVARI_PARAMS.update(
     {
         k: ['--pctsize', '0', '--sizemin', '0', '--sizemax', '-1']
         for k in ['BND', 'CPX', 'INS']
-    }
+    },
 )
 TRUVARI_PARAMS['INS'] += ['--pctseq', '0', '--pctovl', '0', '--dup-to-ins']
 TRUVARI_REFDIST = {
