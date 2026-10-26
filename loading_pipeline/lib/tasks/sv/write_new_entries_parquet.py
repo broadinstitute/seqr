@@ -18,11 +18,11 @@ from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
     BaseWriteParquetFromVcfTask,
 )
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
-    WriteMetadataForSvRunTask,
-)
 from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
+)
+from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
+    WriteMetadataForSvRunTask,
 )
 
 
