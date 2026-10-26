@@ -66,10 +66,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         # Identify new variants.
         filtered_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
-            ['view', '-i', '\'GT[0]="mis" && INFO/MatchId="."\''],
+            ['view', '-i', 'GT[0]="mis" && INFO/MatchId="."'],
             filtered_target,
             self.input()[0][:1],
-            output_type='u',
         )
 
         ht = import_vcf(
