@@ -4,6 +4,7 @@ import hail as hl
 import luigi
 import luigi.util
 
+from loading_pipeline.lib.annotations.shared import variant_id
 from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
@@ -44,7 +45,26 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         ]
 
     def create_table(self) -> hl.Table:
-        mt = hl.read_matrix_table(self.input()[0][0].path)
+        existing_id_target = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(
+            ['view', '-GH', '-i', 'GT[0]="alt" && INFO/MatchId!="."'],
+            existing_id_target,
+            self.input()[0][:1],
+        )
+        id_map_ht = hl.import_vcf(existing_id_target.path).rows()
+        id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId).select('rsid')
+
+        filtered_target = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(
+            ['view', '-i', 'GT[-1]="alt" && INFO/MatchId="."'], #TODO GT filter should be in dedup
+            filtered_target,
+            self.input()[0][:1],
+        )
+        mt = hl.read_matrix_table(filtered_target.path)
+        mt = mt.key_rows_by(variant_id=hl.or_else(
+            id_map_ht[mt.info.CollapseId].rsid,
+            mt.rsid,
+        ))
 
         with self.input()[1].open() as f:
             metadata_json = json.load(f)
