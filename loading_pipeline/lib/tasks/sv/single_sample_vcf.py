@@ -1,3 +1,4 @@
+import random
 from typing import ClassVar
 
 import luigi
@@ -117,8 +118,15 @@ class SingleSampleVCFTask(BaseVCFTask):
             reformatted_target = haploid_target
 
         annotated_target = luigi.LocalTarget(is_tmp=True)
+        rand_id = random.randint(1e5, 1e6-1)
         self.run_bcftools(
-            ['annotate', '-x', self.KEEP_FIELDS],
+            [
+                'annotate',
+                '-x',
+                self.KEEP_FIELDS,
+                '--set-id',
+                f'%ID-{rand_id}',
+            ],
             annotated_target,
             [reformatted_target],
         )

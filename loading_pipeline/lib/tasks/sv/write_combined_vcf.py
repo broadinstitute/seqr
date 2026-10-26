@@ -26,7 +26,7 @@ class WriteCombinedSvVcf(BaseVCFTask):
     OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = [
         'merge',
         '-m',
-        'none',
+        'id',
         '--missing-to-ref',
     ]
 
