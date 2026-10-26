@@ -56,15 +56,21 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         filtered_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
-            ['view', '-i', 'GT[-1]="alt" && INFO/MatchId="."'], #TODO GT filter should be in dedup
+            [
+                'view',
+                '-i',
+                'GT[-1]="alt" && INFO/MatchId="."', #TODO GT filter should be in dedup
+            ],
             filtered_target,
             self.input()[0][:1],
         )
         mt = hl.read_matrix_table(filtered_target.path)
-        mt = mt.key_rows_by(variant_id=hl.or_else(
-            id_map_ht[mt.info.CollapseId].rsid,
-            mt.rsid,
-        ))
+        mt = mt.key_rows_by(
+            variant_id=hl.or_else(
+                id_map_ht[mt.info.CollapseId].rsid,
+                mt.rsid,
+            ),
+        )
 
         with self.input()[1].open() as f:
             metadata_json = json.load(f)
