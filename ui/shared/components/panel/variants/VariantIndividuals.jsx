@@ -220,7 +220,6 @@ const GENOTYPE_DETAILS = [
 const SV_GENOTYPE_DETAILS = [
   { title: 'Start', field: 'start' },
   { title: 'End', field: 'end' },
-  { title: '# Exons', field: 'numExon' },
   {
     title: 'Genes',
     field: 'geneIds',
@@ -259,9 +258,7 @@ const getWarningsForGenotype = (genotype, variant, individual, isHemiX, isCompou
   const hasCnCall = isCalled(genotype.cn)
 
   const warnings = []
-  if (genotype.defragged) {
-    warnings.push('Defragged')
-  } else if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
+  if (!isHemiX && isHemiUPDVariant(genotype.numAlt, variant, individual)) {
     warnings.push('Potential UPD/ Hemizygosity')
   } else if (isCompoundHet &&
     [individual.maternalGuid, individual.paternalGuid].every(missingParentVariant(variant))) {
@@ -338,49 +335,6 @@ const getWarningsForGenotypes = (genotypes, variant, isHemiX, genotypeWarnings) 
   )
 }
 
-const PreviousCall = ({ genotype, isHemiX }) => {
-  let previousCall
-  if (genotype.newCall) {
-    previousCall = { content: 'New Call', hover: 'No overlap in previous callset', color: 'green' }
-  } else if (genotype.prevCall) {
-    previousCall = { content: 'Identical Call', hover: 'Identical call in previous callset', color: 'blue' }
-  } else if (genotype.prevOverlap) {
-    previousCall = { content: 'Overlapping Call', hover: 'Overlapping call in previous callset', color: 'teal' }
-  } else if (Number.isInteger(genotype.prevNumAlt)) {
-    const hasSameHemiXGenotype = isHemiX && (genotype.numAlt === 1 || genotype.numAlt === 2) &&
-      (genotype.prevNumAlt === 1 || genotype.prevNumAlt === 2)
-    previousCall = {
-      content: 'New Genotype',
-      color: 'olive',
-      hover: (
-        <span>
-          Previous callset:
-          <AlleleContainer>{svNumAltGenotype(genotype.prevNumAlt, isHemiX)}</AlleleContainer>
-          {/* eslint-disable-next-line react/jsx-one-expression-per-line */}
-          {hasSameHemiXGenotype && <i>Hemi alt allele change: {genotype.prevNumAlt} to {genotype.numAlt}</i>}
-        </span>
-      ),
-    }
-  }
-
-  return (
-    <div>
-      {previousCall && (
-      <Popup
-        content={previousCall.hover}
-        position="bottom"
-        trigger={<Label horizontal size="mini" content={previousCall.content} color={previousCall.color} />}
-      />
-      )}
-    </div>
-  )
-}
-
-PreviousCall.propTypes = {
-  genotype: PropTypes.object,
-  isHemiX: PropTypes.bool,
-}
-
 const GenotypeQuality = ({ genotype, variant, showSampleType }) => {
   const showSecondaryQuality = !variant.svType && genotype.numAlt >= 0
   const secondaryQuality = genotype.ab || genotype.hl
@@ -448,10 +402,12 @@ const Genotype = React.memo(({ variant, individual, isCompoundHet, genesById }) 
           getWarningsForGenotypes(genotypes, variant, isHemiX, genotypeWarnings)}
       />
       {genotypes.map(genotype => (
-        <div key={genotype.sampleType || genotype.sampleId}>
-          <PreviousCall genotype={genotype} isHemiX={isHemiX} />
-          <GenotypeQuality variant={variant} genotype={genotype} showSampleType={genotypes.length > 1} />
-        </div>
+        <GenotypeQuality
+          key={genotype.sampleType || genotype.sampleId}
+          variant={variant}
+          genotype={genotype}
+          showSampleType={genotypes.length > 1}
+        />
       ))}
     </span>
   )

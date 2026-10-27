@@ -14,7 +14,7 @@ from clickhouse_search.backend.functions import Array, ArrayConcat, ArrayDistinc
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, DiscoveryVariantDict
 from clickhouse_search.constants import INHERITANCE_FILTERS, ANY_AFFECTED, AFFECTED, UNAFFECTED, \
     X_LINKED_RECESSIVE, REF_REF, REF_ALT, ALT_ALT, HAS_ALT, HAS_REF, SPLICE_AI_FIELD, SCREEN_KEY, UTR_ANNOTATOR_KEY, \
-    EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, NEW_SV_FIELD, \
+    EXTENDED_SPLICE_KEY, MOTIF_FEATURES_KEY, REGULATORY_FEATURES_KEY, CLINVAR_KEY, HGMD_KEY, \
     EXTENDED_SPLICE_REGION_CONSEQUENCE, CLINVAR_PATH_RANGES, CLINVAR_PATH_SIGNIFICANCES, CLINVAR_LIKELY_PATH_FILTER, \
     CLINVAR_CONFLICTING_P_LP, CLINVAR_CONFLICTING_NO_P, CLINVAR_CONFLICTING, PATH_FREQ_OVERRIDE_CUTOFF, \
     HGMD_CLASS_FILTERS, SV_TYPE_FILTER_FIELD, SV_CONSEQUENCES_FIELD, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, \
@@ -344,14 +344,15 @@ class BaseVariantsQuerySet(SearchQuerySet):
 
         return self.annotate(**annotations)
 
-    def _get_join_query_values(self, query, alias, conditional_selects):
+    @staticmethod
+    def _get_join_query_values(query, alias, conditional_selects):
         query_select = query.annotation_values
         for select_func_name in (conditional_selects or []):
             query_select.update(getattr(query, select_func_name)(query, prefix=f'{alias}_'))
         annotation_fields = query.annotation_fields
         return query.values(
-            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select and field not in self.skip_annotations},
-            **{f'{alias}_{field}': value for field, value in query_select.items() if field not in self.skip_annotations},
+            **{f'{alias}_{field}': F(field) for field in annotation_fields if field not in query_select and field not in query.skip_annotations},
+            **{f'{alias}_{field}': value for field, value in query_select.items() if field not in query.skip_annotations},
         )
 
     def search(self, **kwargs):
@@ -759,6 +760,10 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
         annotations['discoveryFamilies'] = DiscoveryVariantDict.dict_get_expression('key', dataset_type=f'SV_{self.entry_model.SAMPLE_TYPE}')
         return annotations
 
+    @property
+    def skip_annotations(self):
+        return {'algorithms', 'bothsidesSupport', 'numExon'}
+
     @staticmethod
     def _genotype_override_expression(index, col, cn_index):
         expressions = [f'x.{index}', f'sample_{col}']
@@ -824,7 +829,7 @@ class SvVariantsQuerySet(BaseVariantsQuerySet):
                 if sv_type.startswith(self.model.SV_TYPE_FILTER_PREFIX)
             ]))
 
-        if not (filter_qs or transcript_filters) and (pathogenicity or any(key for key in annotations.keys() if key != NEW_SV_FIELD)):
+        if not (filter_qs or transcript_filters) and (pathogenicity or annotations):
             #  Annotation filters restrict search to other dataset types
             raise InvalidDatasetTypeException
 
@@ -1695,17 +1700,16 @@ class SvEntriesManager(BaseEntriesManager):
     def sample_type_expression(self):
         return f"'{self.model.SAMPLE_TYPE}'"
 
+    @property
+    def call_fields(self):
+        return {
+            k: v for k, v in super().call_fields.items()
+            if k not in {'newCall', 'prevCall', 'prevNumAlt', 'prevOverlap', 'defragged', 'numExon'}
+        }
+
     @classmethod
     def _clinvar_path_q(cls, pathogenicity):
         return None
-
-    def _prefilter_entries(self, entries, annotations=None, **kwargs):
-        entries = super()._prefilter_entries(entries, **kwargs)
-
-        if (annotations or {}).get(NEW_SV_FIELD):
-            entries = entries.filter(calls__array_exists={'newCall': (None, '{field}')})
-
-        return entries
 
     def _annotate_calls(self, entries, *args, **kwargs):
         genotype_override_annotations = {

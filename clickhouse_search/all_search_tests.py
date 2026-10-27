@@ -32,7 +32,7 @@ from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4,
     FAMILY_3_VARIANT, PROJECT_2_VARIANT, PROJECT_2_VARIANT1, MULTI_PROJECT_VARIANT1, MULTI_PROJECT_VARIANT2, GENE_COUNTS, \
     MULTI_PROJECT_BOTH_SAMPLE_TYPE_VARIANTS, VARIANT1_BOTH_SAMPLE_TYPES, VARIANT2_BOTH_SAMPLE_TYPES, \
     VARIANT3_BOTH_SAMPLE_TYPES, VARIANT4_BOTH_SAMPLE_TYPES, GRCH37_VARIANT, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3, \
-    SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, NEW_SV_FILTER, GCNV_VARIANT1, GCNV_VARIANT2, \
+    SV_VARIANT1, SV_VARIANT2, SV_VARIANT3, SV_VARIANT4, SV_GENE_COUNTS, GCNV_VARIANT1, GCNV_VARIANT2, \
     GCNV_VARIANT3, GCNV_VARIANT4, GCNV_MULTI_FAMILY_VARIANT1, GCNV_MULTI_FAMILY_VARIANT2, GCNV_GENE_COUNTS, \
     MULTI_DATA_TYPE_COMP_HET_VARIANT2, ALL_SNV_INDEL_PASS_FILTERS, MULTI_PROJECT_GCNV_VARIANT3, DISCOVERY_VARIANT, \
     MITO_GENE_COUNTS, PROJECT_4_COMP_HET_VARIANT, FAMILY_1_VARIANT, EXPORT_DATA, SPLIT_FAMILY_EXPORT_DATA, \
@@ -514,14 +514,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             project_families=SV_PROJECT_FAMILIES,
         )
 
-        self._assert_expected_search(
-            [SV_VARIANT2], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER, project_families=SV_PROJECT_FAMILIES,
-        )
-
-        self._assert_expected_search(
-            [GCNV_VARIANT3], inheritance_mode=inheritance_mode, annotations=NEW_SV_FILTER,
-        )
-
         inheritance_mode = 'de_novo'
         self._assert_expected_search(
             [VARIANT1, FAMILY_3_VARIANT, VARIANT4, GCNV_VARIANT1, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
@@ -749,22 +741,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT3], quality_filter=gcnv_quality_filter,
         )
 
-        self._assert_expected_search(
-            [], annotations=NEW_SV_FILTER, quality_filter=gcnv_quality_filter, omit_data_type='SNV_INDEL',
-        )
-
         sv_quality_filter = {'min_gq_sv': 40}
         self._assert_expected_search(
-            [SV_VARIANT3, SV_VARIANT4], quality_filter=sv_quality_filter, annotations=None, project_families=SV_PROJECT_FAMILIES,
-        )
-
-        self._assert_expected_search(
-            [], annotations=NEW_SV_FILTER, quality_filter=sv_quality_filter, project_families=SV_PROJECT_FAMILIES,
+            [SV_VARIANT3, SV_VARIANT4], quality_filter=sv_quality_filter, project_families=SV_PROJECT_FAMILIES,
         )
 
         self._assert_expected_search(
             [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, MITO_VARIANT1, MITO_VARIANT2], quality_filter={'min_gq': 40, 'min_qs': 30, 'vcf_filter': 'pass'},
-            annotations=None,
         )
 
         self._assert_expected_search(
