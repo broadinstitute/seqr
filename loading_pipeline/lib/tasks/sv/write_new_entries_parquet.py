@@ -4,7 +4,6 @@ import hail as hl
 import luigi
 import luigi.util
 
-from loading_pipeline.lib.annotations.shared import variant_id
 from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
@@ -59,7 +58,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             [
                 'view',
                 '-i',
-                'GT[-1]="alt" && INFO/MatchId="."', #TODO GT filter should be in dedup
+                'GT[-1]="alt" && INFO/MatchId="."',  #TODO GT filter should be in dedup
             ],
             filtered_target,
             self.input()[0][:1],
