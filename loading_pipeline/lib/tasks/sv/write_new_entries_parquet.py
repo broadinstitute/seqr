@@ -52,7 +52,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             self.input()[0][:1],
         )
         id_map_ht = hl.import_vcf(existing_id_target.path, force_bgz=True).rows()
-        id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId).select('rsid')
+        id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId[0]).select('rsid')
 
         filtered_target = luigi.LocalTarget(is_tmp=True)
         filtered_target.path += '.vcf.gz'

@@ -160,7 +160,6 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         export_json[0]['sortedGeneConsequences'] = [
             export_json[0]['sortedGeneConsequences'][0],
         ]
-        self.maxDiff = None
         self.assertEqual(
             export_json,
             [
@@ -171,7 +170,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                     'pos': 6558902,
                     'end': 6559723,
                     'rg37LocusEnd': {'contig': '1', 'position': 6619783},
-                    'variantId': 'CPX_chr1_22_1',
+                    'variantId': 'CPX_chr1_22-1',
                     'liftedOverChrom': '1',
                     'liftedOverPos': 6618962,
                     'algorithms': 'manta',
