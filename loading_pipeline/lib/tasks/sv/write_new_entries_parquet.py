@@ -8,6 +8,7 @@ from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
 )
+from loading_pipeline.lib.misc.io import checkpoint
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
 )
@@ -97,4 +98,6 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         ht = ht.explode(ht.family_entries)
         ht = ht.filter(hl.is_defined(ht.family_entries))
         ht = ht.select_globals()
-        return ht.transmute(**ht.family_entries)
+        ht = ht.transmute(**ht.family_entries)
+        ht, _ = checkpoint(ht)
+        return ht
