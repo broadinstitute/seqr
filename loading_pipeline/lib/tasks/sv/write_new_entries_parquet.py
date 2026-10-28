@@ -54,6 +54,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId).select('rsid')
 
         filtered_target = luigi.LocalTarget(is_tmp=True)
+        filtered_target.path += '.vcf.gz'
         self.run_bcftools(
             [
                 'view',
@@ -63,7 +64,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             filtered_target,
             self.input()[0][:1],
         )
-        mt = hl.read_matrix_table(filtered_target.path)
+        mt = hl.import_vcf(filtered_target.path, force_bgz=True)
         mt = mt.key_rows_by(
             variant_id=hl.or_else(
                 id_map_ht[mt.info.CollapseId].rsid,

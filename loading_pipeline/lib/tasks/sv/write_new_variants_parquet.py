@@ -65,6 +65,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     def create_table(self) -> hl.Table:
         # Identify new variants.
         filtered_target = luigi.LocalTarget(is_tmp=True)
+        filtered_target.path += '.vcf.gz'
         self.run_bcftools(
             ['view', '-i', 'GT[0]="mis" && INFO/MatchId="."'],
             filtered_target,
