@@ -60,7 +60,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             [
                 'view',
                 '-i',
-                'GT[-1]="alt" && INFO/MatchId="."',  # TODO GT filter should be in dedup
+                'GT[1-]="alt" && INFO/MatchId="."',  # TODO GT filter should be in dedup
             ],
             filtered_target,
             self.input()[0][:1],

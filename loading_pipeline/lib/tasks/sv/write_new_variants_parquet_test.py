@@ -123,7 +123,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         mock_load_gencode_gene_symbol_to_gene_id.return_value = hl.dict(
             {'TAS1R1': 'ENSG00000173662'},
         )
-        mock_random.side_effect = range(1, 10)
+        mock_random.randint.side_effect = range(1, 10)
         _write_existing_variants_parquet_fixture()
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_5,
