@@ -110,15 +110,20 @@ def _write_existing_variants_parquet_fixture() -> None:
 
 class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     @mock.patch(
+        'loading_pipeline.lib.tasks.sv.single_sample_vcf.random',
+    )
+    @mock.patch(
         'loading_pipeline.lib.tasks.sv.write_new_variants_parquet.load_gencode_gene_symbol_to_gene_id',
     )
     def test_sv_write_new_variants_parquet_test(
         self,
         mock_load_gencode_gene_symbol_to_gene_id: Mock,
+        mock_random: Mock,
     ) -> None:
         mock_load_gencode_gene_symbol_to_gene_id.return_value = hl.dict(
             {'TAS1R1': 'ENSG00000173662'},
         )
+        mock_random.side_effect = range(1, 10)
         _write_existing_variants_parquet_fixture()
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_5,
@@ -166,7 +171,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                     'pos': 6558902,
                     'end': 6559723,
                     'rg37LocusEnd': {'contig': '1', 'position': 6619783},
-                    'variantId': 'CPX_chr1_22',
+                    'variantId': 'CPX_chr1_22_1',
                     'liftedOverChrom': '1',
                     'liftedOverPos': 6618962,
                     'algorithms': 'manta',

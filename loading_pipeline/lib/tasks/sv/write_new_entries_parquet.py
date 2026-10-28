@@ -47,7 +47,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         existing_id_target = luigi.LocalTarget(is_tmp=True)
         existing_id_target.path += '.vcf.gz'
         self.run_bcftools(
-            ['view', '-GH', '-i', 'GT[0]="alt" && INFO/MatchId!="."'],
+            ['view', '-G', '-i', 'GT[0]="alt" && INFO/MatchId!="."'],
             existing_id_target,
             self.input()[0][:1],
         )
