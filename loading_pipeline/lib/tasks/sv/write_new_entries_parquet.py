@@ -87,7 +87,9 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         mt = mt.filter_rows(hl.is_missing(mt.info.MatchId[0]))
         mt = mt.annotate_rows(
             filters=hl.or_else(
-                mt.filters.union(grouped_ht[mt.info.CollapseId, mt.info.SVTYPE].filters),
+                mt.filters.union(
+                    grouped_ht[mt.info.CollapseId, mt.info.SVTYPE].filters,
+                ),
                 mt.filters,
             ),
         )
