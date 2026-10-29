@@ -52,7 +52,10 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             self.input()[0][:1],
         )
         id_map_ht = import_vcf(existing_id_target.path, self.reference_genome).rows()
-        id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId[0]).select('rsid')
+        id_map_ht = id_map_ht.key_by(
+            match_id=id_map_ht.info.MatchId[0],
+            sv_type=id_map_ht.info.SVTYPE,
+        ).select('rsid')
 
         matched_target = luigi.LocalTarget(is_tmp=True)
         matched_target.path += '.vcf.gz'
@@ -67,21 +70,24 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.call(0, 0)))
         mt = mt.key_rows_by(
             variant_id=hl.coalesce(
-                id_map_ht[mt.info.CollapseId].rsid,
-                id_map_ht[mt.info.MatchId[0]].rsid,
+                id_map_ht[mt.info.CollapseId, mt.info.SVTYPE].rsid,
+                id_map_ht[mt.info.MatchId[0], mt.info.SVTYPE].rsid,
                 mt.rsid,
             ),
         )
 
         grouped_ht = mt.filter_rows(hl.is_defined(mt.info.MatchId[0])).rows()
-        grouped_ht = grouped_ht.group_by(match_id=grouped_ht.info.MatchId[0]).aggregate(
+        grouped_ht = grouped_ht.group_by(
+            match_id=grouped_ht.info.MatchId[0],
+            sv_type=grouped_ht.info.SVTYPE,
+        ).aggregate(
             filters=hl.flatten(hl.set(hl.agg.collect(grouped_ht.filters))),
         )
 
         mt = mt.filter_rows(hl.is_missing(mt.info.MatchId[0]))
         mt = mt.annotate_rows(
             filters=hl.or_else(
-                mt.filters.union(grouped_ht[mt.info.CollapseId].filters),
+                mt.filters.union(grouped_ht[mt.info.CollapseId, mt.info.SVTYPE].filters),
                 mt.filters,
             ),
         )
