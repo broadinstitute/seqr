@@ -8,7 +8,7 @@ from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
     deduplicate_by_most_non_ref_calls,
 )
-from loading_pipeline.lib.misc.io import checkpoint
+from loading_pipeline.lib.misc.io import import_vcf
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
 )
@@ -52,7 +52,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             existing_id_target,
             self.input()[0][:1],
         )
-        id_map_ht = hl.import_vcf(existing_id_target.path, force_bgz=True).rows()
+        id_map_ht = import_vcf(existing_id_target.path, self.reference_genome).rows()
         id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId[0]).select('rsid')
 
         filtered_target = luigi.LocalTarget(is_tmp=True)
@@ -66,7 +66,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             filtered_target,
             self.input()[0][:1],
         )
-        mt = hl.import_vcf(filtered_target.path, force_bgz=True)
+        mt = import_vcf(filtered_target.path, self.reference_genome)
         mt = mt.key_rows_by(
             variant_id=hl.or_else(
                 id_map_ht[mt.info.CollapseId].rsid,
@@ -98,6 +98,4 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         ht = ht.explode(ht.family_entries)
         ht = ht.filter(hl.is_defined(ht.family_entries))
         ht = ht.select_globals()
-        ht = ht.transmute(**ht.family_entries)
-        ht, _ = checkpoint(ht)
-        return ht
+        return ht.transmute(**ht.family_entries)
