@@ -64,7 +64,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         mt = import_vcf(matched_target.path, self.reference_genome)
         mt = mt.filter_cols(mt.s != 'seqr_existing')
-        mt = mt.annotate_cols(GT=hl.or_else(mt.GT, hl.call(0, 0)))
+        mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.call(0, 0)))
         mt = mt.key_rows_by(
             variant_id=hl.coalesce(
                 id_map_ht[mt.info.CollapseId].rsid,
