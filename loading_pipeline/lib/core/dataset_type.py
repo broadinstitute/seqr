@@ -43,13 +43,11 @@ class DatasetType(StrEnum):
             lambda s: f'{s.locus.contig if reference_genome == ReferenceGenome.GRCh37 else s.locus.contig.replace("chr", "")}-{s.locus.position}-{"-".join(s.alleles)}'
         )
 
+    @staticmethod
     def entries_table_key_expression(
-        self,
         ht: hl.Table,
         sample_type: SampleType,
     ) -> dict[str, hl.Expression]:
-        if self == DatasetType.SV:
-            return {'sign': 1, 'variantId': ht.variant_id}
         return {
             'sample_type': sample_type.value,
             'sign': 1,
