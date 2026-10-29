@@ -48,7 +48,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             output_type='v',
         )
         id_map_df = self.import_vcf(existing_id_target)
-        id_map = {} if id_map_df.empty else id_map_df.set_index(['MatchId', 'SVTYPE'])['ID']
+        id_map = {} if id_map_df.empty else id_map_df.set_index(['MatchId', 'SVTYPE'])['ID'].to_dict()
 
         matched_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
@@ -72,8 +72,10 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             for family_guid in family_guids
         }
 
-        df = self._parsed_sample_df(df)
+        df = self._parsed_sample_df(df, list(sample_id_to_family_guid.keys()))
         df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
+
+        id_map = df[df['CollapseId'].notna()].set_index(['CollapseId', 'SVTYPE'])['ID'].to_dict() | id_map
         df['variantId'] = (
             df[['CollapseId', 'SVTYPE']].apply(tuple, axis=1).map(id_map)
             .fillna(df[['MatchId', 'SVTYPE']].apply(tuple, axis=1).map(id_map))
@@ -93,12 +95,11 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         return df
 
     @staticmethod
-    def _parsed_sample_df(df: pd.DataFrame) -> pd.DataFrame:
-        sample_cols = df.columns[df.columns.get_loc('seqr_existing') + 1:]
+    def _parsed_sample_df(df: pd.DataFrame, sample_ids: list[str]) -> pd.DataFrame:
         df['samples'] = df.apply(
             lambda row: [
                 {'sampleId': s, **dict(zip(row['FORMAT'].split(':'), row[s].split(':')))}
-                for s in sample_cols
+                for s in sample_ids
             ],
             axis=1,
         )
@@ -109,10 +110,14 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         )
         df['sample'] = df.apply(
             lambda row: next(
-                s for s in row['samples']
-                if s['sampleId'] not in matched_samples.get(row['CollapseId'], set())
+                (
+                    s for s in row['samples']
+                    if s['sampleId'] not in matched_samples.get(row['CollapseId'], set())
+                ),
+                None,
             ),
             axis=1,
         )
+        df = df[df['sample'].notna()]
 
-        return df.drop(columns=[*sample_cols, 'seqr_existing', 'samples'])
+        return df.drop(columns=[*sample_ids, 'seqr_existing', 'samples'])
