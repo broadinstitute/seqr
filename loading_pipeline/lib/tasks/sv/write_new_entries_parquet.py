@@ -6,7 +6,6 @@ import luigi.util
 
 from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
-    deduplicate_by_most_non_ref_calls,
 )
 from loading_pipeline.lib.misc.io import import_vcf
 from loading_pipeline.lib.paths import (
@@ -55,6 +54,18 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         id_map_ht = import_vcf(existing_id_target.path, self.reference_genome).rows()
         id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId[0]).select('rsid')
 
+        matched_target = luigi.LocalTarget(is_tmp=True)
+        matched_target.path += '.vcf.gz'
+        self.run_bcftools(
+            ['view', '-i', 'GT[1-]="alt" && INFO/MatchId!="."'],
+            matched_target,
+            self.input()[0][:1],
+        )
+        filter_map_ht = import_vcf(existing_id_target.path, self.reference_genome).rows()
+        filter_map = filter_map_ht.group_by(filter_map_ht.info.MatchId[0]).aggregate(
+            filters=hl.set(hl.flatten(hl.agg.collect(filter_map_ht.filters))),
+        )
+
         collapsed_target = luigi.LocalTarget(is_tmp=True)
         collapsed_target.path += '.vcf.gz'
         self.run_bcftools(
@@ -62,8 +73,13 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             collapsed_target,
             self.input()[0][:1],
         )
+
         mt = import_vcf(collapsed_target.path, self.reference_genome)
         mt = mt.filter_cols(mt.s != 'seqr_existing')
+        mt = mt.annotate_cols(GT=hl.or_else(mt.GT, [0,0]))
+        mt.annotate_rows(
+            filters=mt.filters.union(filter_map[mt.info.CollapseId].filters),
+        )
         mt = mt.key_rows_by(
             variant_id=hl.or_else(
                 id_map_ht[mt.info.CollapseId].rsid,
@@ -87,7 +103,6 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             },
             self.sample_type,
         )
-        ht = deduplicate_by_most_non_ref_calls(ht)
 
         # the family entries ht will contain rows
         # where at least one family is defined... after explosion,

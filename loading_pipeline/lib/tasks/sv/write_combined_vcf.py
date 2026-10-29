@@ -23,12 +23,7 @@ from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteCombinedSvVcf(BaseVCFTask):
-    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = [
-        'merge',
-        '-m',
-        'id',
-        '--missing-to-ref',
-    ]
+    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = ['merge', '-m', 'id']
 
     def complete(self) -> bool:
         if not super().complete():
