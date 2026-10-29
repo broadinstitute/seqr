@@ -45,18 +45,17 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
     def create_data_frame(self) -> pd.DataFrame:
         existing_id_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
-            ['view', '-GH', '-i', 'GT[0]="alt" && INFO/MatchId!="."'],
+            ['view', '-G', '-i', 'GT[0]="alt" && INFO/MatchId!="."'],
             existing_id_target,
             self.input()[0][:1],
             output_type='v',
         )
         id_map_df = self.import_vcf(existing_id_target)
-        id_map_df['match_id'] = id_map_df['INFO'].str['MatchId']
-        id_map = id_map_df.set_index('match_id')['ID']
+        id_map = id_map_df.set_index(['MatchId', 'SVTYPE'])['ID']
 
         matched_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
-            ['view', '-H', '-i', 'GT[1-]="alt"'],
+            ['view','-i', 'GT[1-]="alt"'],
             matched_target,
             self.input()[0][:1],
             output_type='v',
@@ -78,13 +77,15 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         df = self._parsed_sample_df(df)
         df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
+
+
         df['variantId'] = (
-            df['INFO'].str['CollapseId'].map(id_map)
-            .fillna(df['INFO'].str['MatchId'].map(id_map))
+            df[['CollapseId', 'SVTYPE']].apply(tuple, axis=1).map(id_map)
+            .fillna(df[['MatchId', 'SVTYPE']].apply(tuple, axis=1).map(id_map))
             .fillna(df['ID'])
         )
 
-        df = df.groupby(['variantId', 'family_guid']).agg(
+        df = df.groupby(['variantId', 'family_guid'], as_index=False).agg(
             filters=('FILTER', lambda values: set().union(*values.str.split(';'))),
             calls=('sample', list),
         )
@@ -116,13 +117,13 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         )
         df['samples'] = df['samples'].map(lambda samples: [s for s in samples if '1' in s['GT']])
 
-        matched_samples = df.groupby(df['INFO'].str['MatchId'])['samples'].agg(
+        matched_samples = df.groupby(df['MatchId'])['samples'].agg(
             lambda rows: {s['sampleId'] for samples in rows for s in samples},
         )
         df['sample'] = df.apply(
             lambda row: next(
                 s for s in row['samples']
-                if s['sampleId'] not in matched_samples.get(row['INFO'].get('CollapseId'), set())
+                if s['sampleId'] not in matched_samples.get(row['CollapseId'], set())
             ),
             axis=1,
         )

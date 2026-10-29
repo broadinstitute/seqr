@@ -25,13 +25,18 @@ class BaseWriteParquetFromVcfTask(BaseVCFTask):
     @staticmethod
     def import_vcf(input_target: luigi.Target) -> pd.DataFrame:
         with input_target.open() as f:
-            df = pd.read_csv(f, sep='\t')
+            for line in f:
+                if line.startswith('#CHROM'):
+                    columns = line.lstrip('#').rstrip('\n').split('\t')
+                    break
+            df = pd.read_csv(f, sep='\t', names=columns)
 
-        df['INFO'] = df['INFO'].map(
-            lambda entry: dict(
-                field.split('=', 1) if '=' in field else (field, True)
-                for field in entry.split(';')
-            ),
+        info = pd.DataFrame(
+            [
+                dict(field.split('=', 1) if '=' in field else (field, True) for field in entry.split(';'))
+                for entry in df.pop('INFO')
+            ],
+            index=df.index,
         )
-        return df
+        return df.join(info)
 
