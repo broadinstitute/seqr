@@ -44,6 +44,15 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         ]
 
     def create_data_frame(self) -> pd.DataFrame:
+        matched_target = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(
+            ['view','-i', 'GT[1-]="alt"'],
+            matched_target,
+            self.input()[0][:1],
+            output_type='v',
+        )
+        df = self.import_vcf(matched_target)
+
         existing_id_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
             ['view', '-G', '-i', 'GT[0]="alt" && INFO/MatchId!="."'],
@@ -53,15 +62,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         )
         id_map_df = self.import_vcf(existing_id_target)
         id_map = {} if id_map_df.empty else id_map_df.set_index(['MatchId', 'SVTYPE'])['ID'].to_dict()
-
-        matched_target = luigi.LocalTarget(is_tmp=True)
-        self.run_bcftools(
-            ['view','-i', 'GT[1-]="alt"'],
-            matched_target,
-            self.input()[0][:1],
-            output_type='v',
-        )
-        df = self.import_vcf(matched_target)
+        id_map = df[df['CollapseId'].notna()].set_index(['CollapseId', 'SVTYPE'])['ID'].to_dict() | id_map
 
         with self.input()[1].open() as f:
             metadata_json = json.load(f)
@@ -78,8 +79,6 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         df = self._parsed_sample_df(df, list(sample_id_to_family_guid.keys()))
         df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
-
-        id_map = df[df['CollapseId'].notna()].set_index(['CollapseId', 'SVTYPE'])['ID'].to_dict() | id_map
         df['variantId'] = (
             df[['CollapseId', 'SVTYPE']].apply(tuple, axis=1).map(id_map)
             .fillna(df[['MatchId', 'SVTYPE']].apply(tuple, axis=1).map(id_map))
@@ -87,7 +86,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         )
 
         df = df.groupby(['variantId', 'family_guid'], as_index=False).agg(
-            filters=('FILTER', lambda values: set().union(*values.str.split(';'))),
+            filters=('FILTER', lambda values: sorted(set().union(*values.str.split(';')) - {'PASS'})),
             calls=('sample', list),
         )
         df['project_guid'] = df['family_guid'].map(family_guid_to_project_guid)
