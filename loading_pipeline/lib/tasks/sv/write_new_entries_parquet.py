@@ -61,7 +61,10 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             matched_target,
             self.input()[0][:1],
         )
-        filter_map_ht = import_vcf(existing_id_target.path, self.reference_genome).rows()
+        filter_map_ht = import_vcf(
+            existing_id_target.path,
+            self.reference_genome,
+        ).rows()
         filter_map = filter_map_ht.group_by(filter_map_ht.info.MatchId[0]).aggregate(
             filters=hl.set(hl.flatten(hl.agg.collect(filter_map_ht.filters))),
         )
@@ -76,7 +79,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         mt = import_vcf(collapsed_target.path, self.reference_genome)
         mt = mt.filter_cols(mt.s != 'seqr_existing')
-        mt = mt.annotate_cols(GT=hl.or_else(mt.GT, [0,0]))
+        mt = mt.annotate_cols(GT=hl.or_else(mt.GT, [0, 0]))
         mt.annotate_rows(
             filters=mt.filters.union(filter_map[mt.info.CollapseId].filters),
         )
