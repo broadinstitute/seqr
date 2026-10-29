@@ -62,6 +62,7 @@ class SingleSampleVCFTask(BaseVCFTask):
         [
             *(f'^INFO/{field}' for field in INFO_FIELDS),
             *(f'^FORMAT/{field}' for field in FORMAT_FIELDS),
+            'FILTER/PASS,FILTER/BOTHSIDES_SUPPORT',
         ],
     )
 

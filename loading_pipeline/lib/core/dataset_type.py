@@ -111,7 +111,6 @@ class DatasetType(StrEnum):
         return {
             DatasetType.SNV_INDEL: hl.empty_set(hl.tstr),
             DatasetType.MITO: hl.set(['PASS']),
-            DatasetType.SV: hl.set(['PASS', 'BOTHSIDES_SUPPORT']),
         }[self]
 
     @property
