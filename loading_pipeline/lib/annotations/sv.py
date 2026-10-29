@@ -101,42 +101,6 @@ def sv_source_detail(ht: hl.Table, **_: Any) -> hl.Expression:
     )
 
 
-def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
-    return mt.RD_CN
-
-
-def _prev_num_alt(mt: hl.MatrixTable) -> hl.Expression:
-    return hl.or_missing(
-        hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains('EMPTY'),
-        PREVIOUS_GENOTYPE_N_ALT_ALLELES[hl.set(mt.CONC_ST)],
-    )
-
-
-def new_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    prev_num_alt = _prev_num_alt(mt)
-    novel_genotype = hl.if_else(
-        hl.is_defined(prev_num_alt),
-        (mt.GT.n_alt_alleles() != prev_num_alt) & (prev_num_alt == 0),
-        True,
-    )
-    return hl.or_missing(hl.is_defined(mt.GT), novel_genotype)
-
-
-def prev_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    prev_num_alt = _prev_num_alt(mt)
-    concordant_genotype = hl.is_defined(prev_num_alt) & (
-        mt.GT.n_alt_alleles() == prev_num_alt
-    )
-    return hl.or_missing(hl.is_defined(mt.GT), concordant_genotype)
-
-
-def prev_num_alt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    num_alt = hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1)
-    prev_num_alt = _prev_num_alt(mt)
-    discordant_genotype = (num_alt != prev_num_alt) & (prev_num_alt > 0)
-    return hl.or_missing(discordant_genotype, prev_num_alt)
-
-
 def cpx_intervals(
     ht: hl.Table,
     **_: Any,

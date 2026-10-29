@@ -90,15 +90,15 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         )
         df['project_guid'] = df['family_guid'].map(family_guid_to_project_guid)
 
+        # cn: RD_CN
+        # gq: hl.if_else(is_called, mt.GQ, 0)
+        # gt: mt.GT.n_alt_alleles()
+
         # mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.call(0, 0)))
         #
         # ht = compute_callset_family_entries_ht(
         #     self.dataset_type,
         #     mt,
-        #     {
-        #         name: fn(mt, **self.param_kwargs)
-        #         for name, fn in self.dataset_type.genotype_entry_annotation_fns.items()
-        #     },
         #     self.sample_type,
         # )
 

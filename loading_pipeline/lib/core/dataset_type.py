@@ -292,14 +292,6 @@ class DatasetType(StrEnum):
                 'mitoCn': mito.mito_cn,
                 'contamination': mito.contamination,
             },
-            DatasetType.SV: {
-                'gt': shared.gt,
-                'cn': sv.CN,
-                'gq': shared.GQ,
-                'newCall': sv.new_call,
-                'prevCall': sv.prev_call,
-                'prevNumAlt': sv.prev_num_alt,
-            },
         }[self]
 
     @property
