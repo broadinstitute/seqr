@@ -1,8 +1,8 @@
 import json
 
-import hail as hl
 import luigi
 import luigi.util
+import pandas as pd
 
 from loading_pipeline.lib.misc.family_entries import (
     compute_callset_family_entries_ht,
@@ -43,7 +43,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             self.clone(WriteMetadataForSvRunTask),
         ]
 
-    def create_table(self) -> hl.Table:
+    def create_data_frame(self) -> pd.DataFrame:
         existing_id_target = luigi.LocalTarget(is_tmp=True)
         existing_id_target.path += '.vcf.gz'
         self.run_bcftools(

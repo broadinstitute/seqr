@@ -1,4 +1,5 @@
 import luigi
+import pandas as pd
 
 from loading_pipeline.lib.tasks.base.base_vcf import BaseVCFTask
 from loading_pipeline.lib.tasks.files import GCSorLocalFolderTarget
@@ -14,7 +15,9 @@ class BaseWriteParquetFromVcfTask(BaseVCFTask):
 
         df = self.create_data_frame()
 
-        parquet = self.output()
-        parquet.format = luigi.format.Nop
-        with parquet.open('w') as f:
+        self.output().format = luigi.format.Nop
+        with self.output().open('w') as f:
             df.to_parquet(f)
+
+    def create_data_frame(self) -> pd.DataFrame:
+        raise NotImplementedError
