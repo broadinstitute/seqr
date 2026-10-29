@@ -1,4 +1,5 @@
 import json
+import os
 
 import luigi
 import luigi.util
@@ -26,11 +27,14 @@ from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
 class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
     def output(self) -> luigi.Target:
         return GCSorLocalTarget(
-            new_entries_parquet_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.run_id,
-            ),
+            os.path.join(
+                new_entries_parquet_path(
+                    self.reference_genome,
+                    self.dataset_type,
+                    self.run_id,
+                ),
+                'part-0.parquet',
+            )
         )
 
     def requires(self) -> list[luigi.Task]:

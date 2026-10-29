@@ -2,21 +2,18 @@ import luigi
 import pandas as pd
 
 from loading_pipeline.lib.tasks.base.base_vcf import BaseVCFTask
-from loading_pipeline.lib.tasks.files import GCSorLocalFolderTarget
 
 
 class BaseWriteParquetFromVcfTask(BaseVCFTask):
-    def complete(self) -> luigi.Target:
-        return GCSorLocalFolderTarget(self.output().path).exists()
-
     def run(self) -> None:
         for target in self.input()[0]:
             target.localize()
 
         df = self.create_data_frame()
 
-        self.output().format = luigi.format.Nop
-        with self.output().open('w') as f:
+        output = self.output()
+        output.format = luigi.format.Nop
+        with output.open('w') as f:
             df.to_parquet(f)
 
     def create_data_frame(self) -> pd.DataFrame:
