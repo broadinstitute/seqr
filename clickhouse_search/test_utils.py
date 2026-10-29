@@ -914,12 +914,12 @@ GCNV_VARIANT3 = {
     'genotypes': {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
-            'numAlt': 2, 'cn': 4, 'qs': 13, 'start': None, 'end': None,
+            'numAlt': 2, 'cn': 4, 'qs': 130, 'start': None, 'end': None,
             'geneIds': None, 'filters': [],
         },
         'I000005_hg00732': {
             'sampleId': 'HG00732', 'sampleType': 'WES', 'individualGuid': 'I000005_hg00732', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 7, 'start': None, 'end': None,
+            'numAlt': 1, 'cn': 3, 'qs': 70, 'start': None, 'end': None,
             'geneIds': None, 'filters': [],
         },
         'I000006_hg00733': {
@@ -951,7 +951,7 @@ GCNV_VARIANT4 = {
     'genotypes': {
         'I000004_hg00731': {
             'sampleId': 'HG00731', 'sampleType': 'WES', 'individualGuid': 'I000004_hg00731', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 28, 'start': None, 'end': None,
+            'numAlt': 1, 'cn': 3, 'qs': 280, 'start': None, 'end': None,
             'geneIds': None, 'filters': [],
         },
         'I000005_hg00732': {
@@ -961,7 +961,7 @@ GCNV_VARIANT4 = {
         },
         'I000006_hg00733': {
             'sampleId': 'HG00733', 'sampleType': 'WES', 'individualGuid': 'I000006_hg00733', 'familyGuid': 'F000002_2',
-            'numAlt': 1, 'cn': 3, 'qs': 29, 'start': None, 'end': 38734440,
+            'numAlt': 1, 'cn': 3, 'qs': 290, 'start': None, 'end': 38734440,
             'geneIds': None, 'filters': [],
         }
     },
