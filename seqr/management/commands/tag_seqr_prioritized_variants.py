@@ -106,6 +106,7 @@ QUALITY_FILTER = {
 }
 SV_QUALITY_FILTER = {
     'min_gq_sv': 90,
+    'min_qs': 50,
 }
 PASS_QUALITY_FILTER = {
     **QUALITY_FILTER,
@@ -115,6 +116,7 @@ PASS_QUALITY_FILTER = {
 PERMISSIVE_PASS_QUALITY_FILTER = {
     **PASS_QUALITY_FILTER,
     'min_gq_sv': 50,
+    'min_qs': 50,
 }
 
 CONFIRMED_HIGH_SPLICE_AI_SEARCH = {
