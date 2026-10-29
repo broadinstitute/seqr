@@ -21,3 +21,17 @@ class BaseWriteParquetFromVcfTask(BaseVCFTask):
 
     def create_data_frame(self) -> pd.DataFrame:
         raise NotImplementedError
+
+    @staticmethod
+    def import_vcf(input_target: luigi.Target) -> pd.DataFrame:
+        with input_target.open() as f:
+            df = pd.read_csv(f, sep='\t')
+
+        df['INFO'] = df['INFO'].map(
+            lambda entry: dict(
+                field.split('=', 1) if '=' in field else (field, True)
+                for field in entry.split(';')
+            ),
+        )
+        return df
+

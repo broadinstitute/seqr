@@ -45,12 +45,14 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
     def create_data_frame(self) -> pd.DataFrame:
         existing_id_target = luigi.LocalTarget(is_tmp=True)
-        existing_id_target.path += '.vcf.gz'
         self.run_bcftools(
-            ['view', '-G', '-i', 'GT[0]="alt" && INFO/MatchId!="."'],
+            ['view', '-GH', '-i', 'GT[0]="alt" && INFO/MatchId!="."'],
             existing_id_target,
             self.input()[0][:1],
+            output_type='v',
         )
+        id_map_df = self.import_vcf(existing_id_target)
+
         id_map_ht = import_vcf(existing_id_target.path, self.reference_genome).rows()
         id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId[0]).select('rsid')
 
