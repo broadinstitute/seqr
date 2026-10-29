@@ -74,7 +74,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         )
 
         grouped_ht = mt.filter_rows(hl.is_defined(mt.info.MatchId[0])).rows()
-        grouped_ht = grouped_ht.group_by(match_id=mt.info.MatchId[0]).aggregate(
+        grouped_ht = grouped_ht.group_by(match_id=grouped_ht.info.MatchId[0]).aggregate(
             filters=hl.flatten(hl.set(hl.agg.collect(grouped_ht.filters))),
         )
 
