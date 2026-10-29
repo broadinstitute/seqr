@@ -156,8 +156,16 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             ],
         )
 
+        # Discard no-collapse existing variant calls
+        collapsed_filtered_target = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(
+            ['view', '-i', 'GT[1-]="alt"'],
+            collapsed_filtered_target,
+           [collapsed_target],
+        )
+
         sorted_targets = []
-        for target in [collapsed_target, removed_target]:
+        for target in [collapsed_filtered_target, removed_target]:
             sorted_target = luigi.LocalTarget(is_tmp=True)
             self.run_bcftools(['sort'], sorted_target, [target])
             sorted_targets.append(sorted_target)

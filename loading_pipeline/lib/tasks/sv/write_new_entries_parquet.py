@@ -58,11 +58,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         filtered_target = luigi.LocalTarget(is_tmp=True)
         filtered_target.path += '.vcf.gz'
         self.run_bcftools(
-            [
-                'view',
-                '-i',
-                'GT[1-]="alt" && INFO/MatchId="."',  # TODO GT filter should be in dedup
-            ],
+            ['view', '-i', 'INFO/MatchId="."'],
             filtered_target,
             self.input()[0][:1],
         )
