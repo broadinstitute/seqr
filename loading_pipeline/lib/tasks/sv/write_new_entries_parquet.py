@@ -74,14 +74,14 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         )
 
         grouped_ht = mt.filter_rows(hl.is_defined(mt.info.MatchId[0])).rows()
-        grouped_ht = grouped_ht.group_by('variant_id').aggregate(
+        grouped_ht = grouped_ht.group_by(match_id=mt.info.MatchId[0]).aggregate(
             filters=hl.flatten(hl.set(hl.agg.collect(grouped_ht.filters))),
         )
 
         mt = mt.filter_rows(hl.is_missing(mt.info.MatchId[0]))
         mt = mt.annotate_rows(
             filters=hl.or_else(
-                mt.filters.union(grouped_ht[mt.variant_id].filters),
+                mt.filters.union(grouped_ht[mt.info.CollapseId].filters),
                 mt.filters,
             ),
         )
@@ -101,7 +101,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
                 for name, fn in self.dataset_type.genotype_entry_annotation_fns.items()
             },
             self.sample_type,
-        )
+        ).select('filters', 'family_entries')
 
         # the family entries ht will contain rows
         # where at least one family is defined... after explosion,
