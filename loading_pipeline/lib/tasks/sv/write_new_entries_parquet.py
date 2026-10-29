@@ -4,9 +4,6 @@ import luigi
 import luigi.util
 import pandas as pd
 
-from loading_pipeline.lib.misc.family_entries import (
-    compute_callset_family_entries_ht,
-)
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
 )
@@ -51,7 +48,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             output_type='v',
         )
         id_map_df = self.import_vcf(existing_id_target)
-        id_map = id_map_df.set_index(['MatchId', 'SVTYPE'])['ID']
+        id_map = {} if id_map_df.empty else id_map_df.set_index(['MatchId', 'SVTYPE'])['ID']
 
         matched_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
@@ -77,8 +74,6 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         df = self._parsed_sample_df(df)
         df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
-
-
         df['variantId'] = (
             df[['CollapseId', 'SVTYPE']].apply(tuple, axis=1).map(id_map)
             .fillna(df[['MatchId', 'SVTYPE']].apply(tuple, axis=1).map(id_map))

@@ -25,11 +25,8 @@ class BaseWriteParquetFromVcfTask(BaseVCFTask):
     @staticmethod
     def import_vcf(input_target: luigi.Target) -> pd.DataFrame:
         with input_target.open() as f:
-            for line in f:
-                if line.startswith('#CHROM'):
-                    columns = line.lstrip('#').rstrip('\n').split('\t')
-                    break
-            df = pd.read_csv(f, sep='\t', names=columns)
+            num_header_rows = next(i for i, line in enumerate(f) if not line.startswith('##'))
+        df = pd.read_csv(input_target.path, sep='\t', skiprows=num_header_rows)
 
         info = pd.DataFrame(
             [
