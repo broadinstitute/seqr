@@ -65,23 +65,24 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         mt = import_vcf(matched_target.path, self.reference_genome)
         mt = mt.filter_cols(mt.s != 'seqr_existing')
         mt = mt.annotate_cols(GT=hl.or_else(mt.GT, [0, 0]))
+        mt = mt.key_rows_by(
+            variant_id=hl.coalesce(
+                id_map_ht[mt.info.CollapseId].rsid,
+                id_map_ht[mt.info.MergeId].rsid,
+                mt.rsid,
+            ),
+        )
 
-        grouped_ht = mt.annotate_rows(
-            merge_id=hl.or_else(mt.info.MergeId, mt.info.CollapseId),
-        ).rows()
-        grouped_ht = grouped_ht.filter(hl.is_defined(grouped_ht.merge_id))
-        grouped_ht = grouped_ht.group_by('merge_id').aggregate(
+        grouped_ht = mt.filter_rows(hl.is_defined(mt.info.MergeId)).rows()
+        grouped_ht = grouped_ht.group_by('variant_id').aggregate(
             filters=hl.set(hl.flatten(hl.agg.collect(grouped_ht.filters))),
         )
 
         mt = mt.filter_rows(hl.is_missing(mt.info.MergeId))
         mt = mt.annotate_rows(
-            filters=mt.filters.union(grouped_ht[mt.info.CollapseId].filters),
-        )
-        mt = mt.key_rows_by(
-            variant_id=hl.or_else(
-                id_map_ht[mt.info.CollapseId].rsid,
-                mt.rsid,
+            filters=hl.or_else(
+                mt.filters.union(grouped_ht[mt.info.CollapseId].filters),
+                mt.filters,
             ),
         )
 
