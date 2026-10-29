@@ -70,59 +70,46 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             for family_guid, sample_ids in metadata_json['family_samples'].items()
             for s in sample_ids
         }
+        family_guid_to_project_guid = {
+            family_guid: project_guid
+            for project_guid, family_guids in metadata_json['project_families'].items()
+            for family_guid in family_guids
+        }
 
         df = self._parsed_sample_df(df)
-        df['family_guid'] = df['sample'].str['sample_id'].map(sample_id_to_family_guid)
-        df['variant_id'] = (
+        df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
+        df['variantId'] = (
             df['INFO'].str['CollapseId'].map(id_map)
             .fillna(df['INFO'].str['MatchId'].map(id_map))
             .fillna(df['ID'])
         )
 
-        mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.call(0, 0)))
-
-        grouped_ht = mt.filter_rows(hl.is_defined(mt.info.MergeId)).rows()
-        grouped_ht = grouped_ht.group_by('variant_id').aggregate(
-            filters=hl.set(hl.flatten(hl.agg.collect(grouped_ht.filters))),
+        df = df.groupby(['variantId', 'family_guid']).agg(
+            filters=('FILTER', lambda values: set().union(*values.str.split(';'))),
+            calls=('sample', list),
         )
+        df['project_guid'] = df['family_guid'].map(family_guid_to_project_guid)
 
-        mt = mt.filter_rows(hl.is_missing(mt.info.MergeId))
-        mt = mt.annotate_rows(
-            filters=hl.or_else(
-                mt.filters.union(grouped_ht[mt.info.CollapseId].filters),
-                mt.filters,
-            ),
-        )
+        # mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.call(0, 0)))
+        #
+        # ht = compute_callset_family_entries_ht(
+        #     self.dataset_type,
+        #     mt,
+        #     {
+        #         name: fn(mt, **self.param_kwargs)
+        #         for name, fn in self.dataset_type.genotype_entry_annotation_fns.items()
+        #     },
+        #     self.sample_type,
+        # )
 
-        mt = mt.annotate_globals(
-            family_samples=metadata_json['family_samples'],
-            project_families=metadata_json['project_families'],
-        )
-
-        ht = compute_callset_family_entries_ht(
-            self.dataset_type,
-            mt,
-            {
-                name: fn(mt, **self.param_kwargs)
-                for name, fn in self.dataset_type.genotype_entry_annotation_fns.items()
-            },
-            self.sample_type,
-        )
-
-        # the family entries ht will contain rows
-        # where at least one family is defined... after explosion,
-        # rows where a family is not defined should be removed.
-        ht = ht.explode(ht.family_entries)
-        ht = ht.filter(hl.is_defined(ht.family_entries))
-        ht = ht.select_globals()
-        return ht.transmute(**ht.family_entries)
+        return df
 
     @staticmethod
     def _parsed_sample_df(df: pd.DataFrame) -> pd.DataFrame:
         sample_cols = df.columns[df.columns.get_loc('seqr_existing') + 1:]
         df['samples'] = df.apply(
             lambda row: [
-                {'sample_id': s, **dict(zip(row['FORMAT'].split(':'), row[s].split(':')))}
+                {'sampleId': s, **dict(zip(row['FORMAT'].split(':'), row[s].split(':')))}
                 for s in sample_cols
             ],
             axis=1,
@@ -130,12 +117,12 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         df['samples'] = df['samples'].map(lambda samples: [s for s in samples if '1' in s['GT']])
 
         matched_samples = df.groupby(df['INFO'].str['MatchId'])['samples'].agg(
-            lambda rows: {s['sample_id'] for samples in rows for s in samples},
+            lambda rows: {s['sampleId'] for samples in rows for s in samples},
         )
         df['sample'] = df.apply(
             lambda row: next(
                 s for s in row['samples']
-                if s['sample_id'] not in matched_samples.get(row['INFO'].get('CollapseId'), set())
+                if s['sampleId'] not in matched_samples.get(row['INFO'].get('CollapseId'), set())
             ),
             axis=1,
         )
