@@ -68,17 +68,17 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         mt = mt.key_rows_by(
             variant_id=hl.coalesce(
                 id_map_ht[mt.info.CollapseId].rsid,
-                id_map_ht[mt.info.MatchId].rsid,
+                id_map_ht[mt.info.MatchId[0]].rsid,
                 mt.rsid,
             ),
         )
 
-        grouped_ht = mt.filter_rows(hl.is_defined(mt.info.MatchId)).rows()
+        grouped_ht = mt.filter_rows(hl.is_defined(mt.info.MatchId[0])).rows()
         grouped_ht = grouped_ht.group_by('variant_id').aggregate(
             filters=hl.set(hl.flatten(hl.agg.collect(grouped_ht.filters))),
         )
 
-        mt = mt.filter_rows(hl.is_missing(mt.info.MatchId))
+        mt = mt.filter_rows(hl.is_missing(mt.info.MatchId[0]))
         mt = mt.annotate_rows(
             filters=hl.or_else(
                 mt.filters.union(grouped_ht[mt.info.CollapseId].filters),
