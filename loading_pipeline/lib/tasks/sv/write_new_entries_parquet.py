@@ -52,28 +52,27 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             output_type='v',
         )
         id_map_df = self.import_vcf(existing_id_target)
-
-        id_map_ht = import_vcf(existing_id_target.path, self.reference_genome).rows()
-        id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId[0]).select('rsid')
+        id_map_df['match_id'] = id_map_df['INFO'].str['MatchId']
+        id_map = id_map_df.set_index('match_id')['ID']
 
         matched_target = luigi.LocalTarget(is_tmp=True)
-        matched_target.path += '.vcf.gz'
         self.run_bcftools(
-            ['view', '-i', 'GT[1-]="alt"'],
+            ['view', '-H', '-i', 'GT[1-]="alt"'],
             matched_target,
             self.input()[0][:1],
+            output_type='v',
+        )
+
+        df = self.import_vcf(matched_target)
+        df['variant_id'] = (
+            df['INFO'].str['CollapseId'].map(id_map)
+            .fillna(df['INFO'].str['MergeId'].map(id_map))
+            .fillna(df['ID'])
         )
 
         mt = import_vcf(matched_target.path, self.reference_genome)
         mt = mt.filter_cols(mt.s != 'seqr_existing')
         mt = mt.annotate_entries(GT=hl.or_else(mt.GT, hl.call(0, 0)))
-        mt = mt.key_rows_by(
-            variant_id=hl.coalesce(
-                id_map_ht[mt.info.CollapseId].rsid,
-                id_map_ht[mt.info.MergeId].rsid,
-                mt.rsid,
-            ),
-        )
 
         grouped_ht = mt.filter_rows(hl.is_defined(mt.info.MergeId)).rows()
         grouped_ht = grouped_ht.group_by('variant_id').aggregate(
