@@ -161,7 +161,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         self.run_bcftools(
             ['view', '-i', 'GT[1-]="alt"'],
             collapsed_filtered_target,
-           [collapsed_target],
+            [collapsed_target],
         )
 
         sorted_targets = []

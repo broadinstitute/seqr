@@ -55,14 +55,14 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         id_map_ht = import_vcf(existing_id_target.path, self.reference_genome).rows()
         id_map_ht = id_map_ht.key_by(match_id=id_map_ht.info.MatchId[0]).select('rsid')
 
-        filtered_target = luigi.LocalTarget(is_tmp=True)
-        filtered_target.path += '.vcf.gz'
+        collapsed_target = luigi.LocalTarget(is_tmp=True)
+        collapsed_target.path += '.vcf.gz'
         self.run_bcftools(
             ['view', '-i', 'INFO/MatchId="."'],
-            filtered_target,
+            collapsed_target,
             self.input()[0][:1],
         )
-        mt = import_vcf(filtered_target.path, self.reference_genome)
+        mt = import_vcf(collapsed_target.path, self.reference_genome)
         mt = mt.filter_cols(mt.s != 'seqr_existing')
         mt = mt.key_rows_by(
             variant_id=hl.or_else(
