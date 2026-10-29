@@ -62,8 +62,17 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             self.input()[0][:1],
             output_type='v',
         )
-
         df = self.import_vcf(matched_target)
+
+        with self.input()[1].open() as f:
+            metadata_json = json.load(f)
+
+        sample_id_to_family_guid = {
+            s: family_guid
+            for family_guid, sample_ids in metadata_json['family_samples'].items()
+            for s in sample_ids
+        }
+
         df['variant_id'] = (
             df['INFO'].str['CollapseId'].map(id_map)
             .fillna(df['INFO'].str['MergeId'].map(id_map))
@@ -87,8 +96,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             ),
         )
 
-        with self.input()[1].open() as f:
-            metadata_json = json.load(f)
+
         mt = mt.annotate_globals(
             family_samples=metadata_json['family_samples'],
             project_families=metadata_json['project_families'],
