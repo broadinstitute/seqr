@@ -57,31 +57,26 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         matched_target = luigi.LocalTarget(is_tmp=True)
         matched_target.path += '.vcf.gz'
         self.run_bcftools(
-            ['view', '-i', 'GT[1-]="alt" && INFO/MatchId!="."'],
+            ['view', '-i', 'GT[1-]="alt"'],
             matched_target,
             self.input()[0][:1],
         )
-        filter_map_ht = import_vcf(
-            existing_id_target.path,
-            self.reference_genome,
-        ).rows()
-        filter_map = filter_map_ht.group_by(filter_map_ht.info.MatchId[0]).aggregate(
-            filters=hl.set(hl.flatten(hl.agg.collect(filter_map_ht.filters))),
-        )
 
-        collapsed_target = luigi.LocalTarget(is_tmp=True)
-        collapsed_target.path += '.vcf.gz'
-        self.run_bcftools(
-            ['view', '-i', 'INFO/MatchId="."'],
-            collapsed_target,
-            self.input()[0][:1],
-        )
-
-        mt = import_vcf(collapsed_target.path, self.reference_genome)
+        mt = import_vcf(matched_target.path, self.reference_genome)
         mt = mt.filter_cols(mt.s != 'seqr_existing')
         mt = mt.annotate_cols(GT=hl.or_else(mt.GT, [0, 0]))
-        mt.annotate_rows(
-            filters=mt.filters.union(filter_map[mt.info.CollapseId].filters),
+
+        grouped_ht = mt.annotate_rows(
+            merge_id=hl.or_else(mt.info.MergeId, mt.info.CollapseId),
+        ).rows()
+        grouped_ht = grouped_ht.filter(hl.is_defined(grouped_ht.merge_id))
+        grouped_ht = grouped_ht.group_by('merge_id').aggregate(
+            filters=hl.set(hl.flatten(hl.agg.collect(grouped_ht.filters))),
+        )
+
+        mt = mt.filter_rows(hl.is_missing(mt.info.MergeId))
+        mt = mt.annotate_rows(
+            filters=mt.filters.union(grouped_ht[mt.info.CollapseId].filters),
         )
         mt = mt.key_rows_by(
             variant_id=hl.or_else(
