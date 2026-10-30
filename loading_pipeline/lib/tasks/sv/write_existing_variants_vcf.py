@@ -24,6 +24,7 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
     INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
         'CHR2': ('1', 'String'),
         'END': ('1', 'Integer'),
+        'SVLEN': ('1', 'Integer'),
         'SVTYPE': ('1', 'String'),
     }
 
