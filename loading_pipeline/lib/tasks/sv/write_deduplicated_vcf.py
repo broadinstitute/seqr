@@ -47,7 +47,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             return False
 
         # Ensure input VCF has the correct samples for the current run
-        return self.requires()[0].complete()
+        return self.requires()[1].complete()
 
     def requires(self) -> list[luigi.Task]:
         return [
