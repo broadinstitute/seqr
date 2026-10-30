@@ -60,26 +60,70 @@ def _write_existing_variants_parquet_fixture() -> None:
         {
             'variant_id': EXISTING_SV_VARIANT_IDS,
             'key_': range(727 - n, 727),
-            'chrom': [b'1'] * n,
-            'end': [180928] * n,
-            'endChrom': [b'5'] * n,
-            'pos': [180928] * n,
-            'svType': [b'BND'] * n,
+            'chrom': [b'1'] * (n - 2) + [b'X'] * 2,
+            'end': [
+                20404,
+                263666,
+                428500,
+                789481,
+                4228448,
+                16089601,
+                17465723,
+                21480419,
+                48963135,
+                181074952,
+                2781000,
+                2781900,
+            ],
+            'endChrom': [b'5'] + [None] * (n - 1),
+            'pos': [
+                180928,
+                257666,
+                413968,
+                789481,
+                4228405,
+                16088760,
+                17465707,
+                21427498,
+                48963084,
+                180540234,
+                3,
+                2781700,
+            ],
+            'svType': [
+                b'BND',
+                b'DUP',
+                b'DEL',
+                b'BND',
+                b'INS',
+                b'CPX',
+                b'INS',
+                b'CPX',
+                b'INS',
+                b'CPX',
+                b'CPX',
+                b'CPX',
+            ],
         },
     ).to_parquet(path)
 
 
 class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     @mock.patch(
+        'loading_pipeline.lib.tasks.sv.single_sample_vcf.random',
+    )
+    @mock.patch(
         'loading_pipeline.lib.tasks.sv.write_new_variants_parquet.load_gencode_gene_symbol_to_gene_id',
     )
     def test_sv_write_new_variants_parquet_test(
         self,
         mock_load_gencode_gene_symbol_to_gene_id: Mock,
+        mock_random: Mock,
     ) -> None:
         mock_load_gencode_gene_symbol_to_gene_id.return_value = hl.dict(
             {'TAS1R1': 'ENSG00000173662'},
         )
+        mock_random.randint.side_effect = range(1, 10)
         _write_existing_variants_parquet_fixture()
         copy_project_pedigree_to_mocked_dir(
             TEST_PEDIGREE_5,
@@ -126,7 +170,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                     'pos': 6558902,
                     'end': 6559723,
                     'rg37LocusEnd': {'contig': '1', 'position': 6619783},
-                    'variantId': 'CPX_chr1_22',
+                    'variantId': 'CPX_chr1_22-1',
                     'liftedOverChrom': '1',
                     'liftedOverPos': 6618962,
                     'algorithms': 'manta',

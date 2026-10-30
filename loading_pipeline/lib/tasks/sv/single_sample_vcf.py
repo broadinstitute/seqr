@@ -1,10 +1,10 @@
+import random
 from typing import ClassVar
 
 import luigi
 import luigi.format
 
 from loading_pipeline.lib.core import ReferenceGenome
-from loading_pipeline.lib.misc.sv import run_command
 from loading_pipeline.lib.tasks.base.base_vcf import (
     BaseVCFTask,
 )
@@ -87,29 +87,25 @@ class SingleSampleVCFTask(BaseVCFTask):
             target.localize()
 
         reformatted_target = luigi.LocalTarget(is_tmp=True)
-        run_command(
+        self.run_bcftools(
             [
-                'bcftools',
                 'view',
                 '--regions',
                 ','.join(CONTIGS),
-                '-Ou',
-                '-o',
-                reformatted_target.path,
-                self.input()[0].path,
             ],
+            reformatted_target,
+            self.input()[:1],
+            output_type='u',
         )
 
         if self.is_male:
             haploid_target = luigi.LocalTarget(is_tmp=True)
-            run_command(
-                [
-                    'bcftools',
-                    '+setGT',
-                    '-Ou',
-                    '-o',
-                    haploid_target.path,
-                    reformatted_target.path,
+            self.run_bcftools(
+                ['+setGT'],
+                haploid_target,
+                [reformatted_target],
+                output_type='u',
+                plugin_options=[
                     '--',
                     '--target-gt',
                     'q',
@@ -122,32 +118,29 @@ class SingleSampleVCFTask(BaseVCFTask):
             reformatted_target = haploid_target
 
         annotated_target = luigi.LocalTarget(is_tmp=True)
-        run_command(
+        rand_id = random.randint(100_000, 999_999)  # noqa: S311 # nosec
+        self.run_bcftools(
             [
-                'bcftools',
                 'annotate',
                 '-x',
                 self.KEEP_FIELDS,
-                '-Oz',
-                '-o',
-                annotated_target.path,
-                reformatted_target.path,
+                '--set-id',
+                f'%ID-{rand_id}',
             ],
+            annotated_target,
+            [reformatted_target],
         )
 
         header_target = self._write_header(self.input()[0])
         return [header_target, annotated_target]
 
-    def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
-        return [
-            'bcftools',
-            'reheader',
-            '-h',
-            targets[0].path,
-            '-o',
-            self.output()[0].path,
-            targets[1].path,
-        ]
+    def generate_vcf(self, targets: list[luigi.LocalTarget]) -> None:
+        self.run_bcftools(
+            ['reheader', '-h', targets[0].path],
+            self.output()[0],
+            targets[1:],
+            output_type=None,
+        )
 
     def _write_header(self, vcf_target: LocalizableTarget) -> luigi.LocalTarget:
         header_rows = []

@@ -19,9 +19,12 @@ from loading_pipeline.lib.tasks.write_existing_variants_parquet import (
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteExistingVariantsVcfTask(BaseVCFTask):
+    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = ['view']
+
     INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
         'CHR2': ('1', 'String'),
         'END': ('1', 'Integer'),
+        'SVLEN': ('1', 'Integer'),
         'SVTYPE': ('1', 'String'),
     }
 
@@ -47,7 +50,9 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
         for col in ['chrom', 'endChrom', 'svType']:
             df[col] = df[col].str.decode('utf-8')
 
-        info = 'SVTYPE=' + df['svType'] + ';END=' + df['end'].astype(str)
+        info = 'SVTYPE=' + df['svType']
+        info += ';END=' + df['end'].astype(str)
+        info += ';SVLEN=' + (df['end'] - df['pos']).astype(str)
         has_end_chrom = df['endChrom'].notna()
         info[has_end_chrom] += ';CHR2=chr' + df.loc[has_end_chrom, 'endChrom']
         vcf_df = pd.DataFrame(
@@ -61,7 +66,7 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
                 'FILTER': '.',
                 'INFO': info,
                 'FORMAT': 'GT',
-                'seqr_existing': '1',
+                'seqr_existing': '1/1',
             },
         ).sort_values(['CHROM', 'POS'])
 
@@ -74,13 +79,3 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
             vcf_df.to_csv(f, sep='\t', header=False, index=False)
 
         return [vcf_target]
-
-    def generate_vcf_command(self, targets: list[luigi.LocalTarget]) -> list[str]:
-        return [
-            'bcftools',
-            'view',
-            '-Oz',
-            '-o',
-            self.output()[0].path,
-            targets[0].path,
-        ]

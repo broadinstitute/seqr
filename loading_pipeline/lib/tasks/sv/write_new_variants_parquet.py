@@ -2,6 +2,7 @@ import hail as hl
 import luigi
 import luigi.util
 
+from loading_pipeline.lib.misc.io import import_vcf
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
     valid_reference_dataset_path,
@@ -13,17 +14,19 @@ from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceD
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
-from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
+from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
+    BaseWriteParquetFromVcfTask,
+)
 from loading_pipeline.lib.tasks.files import GCSorLocalTarget
-from loading_pipeline.lib.tasks.sv.write_postprocessed_callset import (
-    WritePostprocessedSvCallsetTask,
+from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
+    WriteDeduplicatedSvVcfTask,
 )
 
 GENCODE_RELEASE = 42
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
+class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     @property
     def annotation_dependencies(self) -> dict[str, hl.Table]:
         deps = {
@@ -56,15 +59,27 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
 
     def requires(self) -> list[luigi.Task]:
         return [
-            self.clone(WritePostprocessedSvCallsetTask),
+            self.clone(WriteDeduplicatedSvVcfTask),
         ]
 
     def create_table(self) -> hl.Table:
-        callset_ht = hl.read_matrix_table(self.input()[0].path).rows()
+        # Identify new variants.
+        filtered_target = luigi.LocalTarget(is_tmp=True)
+        filtered_target.path += '.vcf.gz'
+        self.run_bcftools(
+            ['view', '-i', 'GT[0]="mis" && INFO/MatchId="."'],
+            filtered_target,
+            self.input()[0][:1],
+        )
 
-        # 1) Identify new variants.
-        new_variants_ht = callset_ht.filter(callset_ht.is_new_variant)
-        curr_max_key_ = hl.eval(callset_ht.curr_max_key)
+        ht = import_vcf(
+            filtered_target.path,
+            self.reference_genome,
+        ).rows()
+        ht = ht.key_by(variant_id=ht.rsid)
+        new_variants_ht = ht.transmute(
+            **{f'info.{field}': ht.info[field] for field in ht.info},
+        )
 
         # Run liftover
         new_variants_ht = new_variants_ht.annotate(
@@ -92,6 +107,8 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask):
         )
 
         # Add serial integer index
+        max_key_line = self.find_vcf_header_line(self.input()[0][0], '##maxKey')
+        curr_max_key_ = int(max_key_line.removeprefix('##maxKey=').strip())
         new_variants_ht = new_variants_ht.add_index(name='key_')
         new_variants_ht = new_variants_ht.transmute(
             key_=new_variants_ht.key_ + curr_max_key_ + 1,
