@@ -91,6 +91,18 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         )
         df['project_guid'] = df['family_guid'].map(family_guid_to_project_guid)
         df['sign'] = 1
+        # Add ref calls for missing family members
+        df['calls'] = df.apply(
+            lambda row: sorted(
+                row['calls'] + [
+                    {**dict.fromkeys(row['calls'][0]), 'sampleId': s, 'gt': 0}
+                    for s in metadata_json['family_samples'][row['family_guid']]
+                    if s not in {c['sampleId'] for c in row['calls']}
+                ],
+                key=lambda c: c['sampleId'],
+            ),
+            axis=1,
+        )
 
         return df
 
