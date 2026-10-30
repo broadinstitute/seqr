@@ -92,21 +92,18 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         df['project_guid'] = df['family_guid'].map(family_guid_to_project_guid)
         df['sign'] = 1
 
-        # cn: RD_CN
-        # gq: hl.if_else(is_called, mt.GQ, 0)
-        # gt: mt.GT.n_alt_alleles()
         return df
 
-    @staticmethod
-    def _parsed_sample_df(df: pd.DataFrame, sample_ids: list[str]) -> pd.DataFrame:
+    @classmethod
+    def _parsed_sample_df(cls, df: pd.DataFrame, sample_ids: list[str]) -> pd.DataFrame:
         df['samples'] = df.apply(
             lambda row: [
-                {'sampleId': s, **dict(zip(row['FORMAT'].split(':'), row[s].split(':')))}
+                {'sampleId': s, **dict(zip(row['FORMAT'].lower().split(':'), row[s].split(':')))}
                 for s in sample_ids
             ],
             axis=1,
         )
-        df['samples'] = df['samples'].map(lambda samples: [s for s in samples if '1' in s['GT']])
+        df['samples'] = df['samples'].map(lambda samples: [s for s in samples if '1' in s['gt']])
 
         matched_samples = df.groupby(df['MatchId'])['samples'].agg(
             lambda rows: {s['sampleId'] for samples in rows for s in samples},
@@ -114,7 +111,8 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         df['sample'] = df.apply(
             lambda row: next(
                 (
-                    s for s in row['samples']
+                    dict([cls._format_sample_field(*i) for i in s.items()])
+                    for s in row['samples']
                     if s['sampleId'] not in matched_samples.get(row['CollapseId'], set())
                 ),
                 None,
@@ -124,3 +122,16 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         df = df[df['sample'].notna()]
 
         return df.drop(columns=[*sample_ids, 'seqr_existing', 'samples'])
+
+    @staticmethod
+    def _format_sample_field(field, value):
+        if field == 'sampleId':
+            return field, value
+        if field == 'rd_cn':
+            field = 'cn'
+        if value is None:
+            return field, None
+        if field == 'gt':
+            return field, sum(map(int, value.split('/')))
+        return field, int(value)
+
