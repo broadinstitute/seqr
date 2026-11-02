@@ -34,7 +34,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
                     self.run_id,
                 ),
                 'part-0.parquet',
-            )
+            ),
         )
 
     def requires(self) -> list[luigi.Task]:
@@ -127,14 +127,14 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             lambda row: [
                 {
                     'sampleId': s,
-                    **dict(zip(row['FORMAT'].lower().split(':'), row[s].split(':'))),
+                    **dict(zip(row['FORMAT'].lower().split(':'), row[s].split(':'), strict=True)),
                 }
                 for s in sample_ids
             ],
             axis=1,
         )
         df['samples'] = df['samples'].map(
-            lambda samples: [s for s in samples if '1' in s['gt']]
+            lambda samples: [s for s in samples if '1' in s['gt']],
         )
 
         matched_samples = df.groupby(df['MatchId'])['samples'].agg(
