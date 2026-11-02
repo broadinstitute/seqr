@@ -130,7 +130,7 @@ export const VARIANT = {
     gnomad_exomes: { af: 0.00006505916317651364 },
     topmed: {},
   },
-  predictions: { cadd: '27.2' },
+  predictions: { cadd: '27.2', avi: '26.4' },
   transcripts: {
     ENSG00000228198: [
       {

@@ -11,6 +11,7 @@ from loading_pipeline.lib.core import DatasetType, ReferenceGenome
 from loading_pipeline.lib.core.environment import Env
 from loading_pipeline.lib.misc.clickhouse import (
     STAGING_CLICKHOUSE_DATABASE,
+    WAIT_VIEW_TIMEOUT_S,
     ClickhouseReferenceDataset,
     ClickHouseTable,
     TableNameBuilder,
@@ -401,6 +402,36 @@ class ClickhouseTest(MockedDatarootTestCase, ClickhouseSchemaTestCase):
                 ),
                 "gcs(pipeline_data_access, url='https://storage.googleapis.com/mock_bucket/v3.1/GRCh38/SNV_INDEL/runs/manual__2025-05-07T17-20-59.702114+00-00/new_entries.parquet/*.parquet')",
             )
+
+    def test_alphagenome_reference_dataset_scope(self):
+        self.assertIn(
+            ClickhouseReferenceDataset.ALPHAGENOME,
+            ClickhouseReferenceDataset.for_reference_genome_dataset_type(
+                ReferenceGenome.GRCh38,
+                DatasetType.SNV_INDEL,
+            ),
+        )
+        self.assertNotIn(
+            ClickhouseReferenceDataset.ALPHAGENOME,
+            ClickhouseReferenceDataset.for_reference_genome_dataset_type(
+                ReferenceGenome.GRCh37,
+                DatasetType.SNV_INDEL,
+            ),
+        )
+        self.assertNotIn(
+            ClickhouseReferenceDataset.ALPHAGENOME,
+            ClickhouseReferenceDataset.for_reference_genome_dataset_type(
+                ReferenceGenome.GRCh38,
+                DatasetType.MITO,
+            ),
+        )
+        self.assertTrue(ClickhouseReferenceDataset.ALPHAGENOME.has_seqr_variants)
+
+    def test_alphagenome_all_variants_mv_timeout(self):
+        self.assertEqual(
+            ClickhouseReferenceDataset.ALPHAGENOME.all_variants_mv_timeout,
+            WAIT_VIEW_TIMEOUT_S * 10,
+        )
 
     def test_direct_insert_all_keys(self):
         cursor = connections['clickhouse_write'].cursor()

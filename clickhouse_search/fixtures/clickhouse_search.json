@@ -353,6 +353,12 @@
       "score": 0.11
     }
 }, {
+    "model": "clickhouse_search.alphagenomeallvariants",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "score": 18.6
+    }
+}, {
     "model": "clickhouse_search.gnomadnoncodingconstraintallvariantssnvindel",
     "pk": 1,
     "fields": {

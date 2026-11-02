@@ -1,8 +1,13 @@
 import unittest
 from pathlib import Path
 
-from loading_pipeline.api.model import DeleteFamiliesRequest, LoadingPipelineRequest
+from loading_pipeline.api.model import (
+    DeleteFamiliesRequest,
+    LoadingPipelineRequest,
+    RefreshClickhouseReferenceDataRequest,
+)
 from loading_pipeline.lib.core import DatasetType, ReferenceGenome, SampleType
+from loading_pipeline.lib.misc.clickhouse import ClickhouseReferenceDataset
 
 CALLSET_PATH = str(
     Path('loading_pipeline/var/test/callsets/1kg_30variants.vcf').resolve(),
@@ -85,3 +90,18 @@ class ModelTest(unittest.TestCase):
         dfr = DeleteFamiliesRequest.model_validate(raw_request)
         self.assertEqual(dfr.project_guid, 'project_a')
         self.assertEqual(dfr.request_type, 'DeleteFamiliesRequest')
+
+    def test_refresh_clickhouse_reference_data_request(self) -> None:
+        raw_request = {'reference_dataset': 'alphagenome'}
+        rcrdr = RefreshClickhouseReferenceDataRequest.model_validate(raw_request)
+        self.assertEqual(
+            rcrdr.reference_dataset,
+            ClickhouseReferenceDataset.ALPHAGENOME,
+        )
+        self.assertEqual(
+            rcrdr.request_type,
+            'RefreshClickhouseReferenceDataRequest',
+        )
+        raw_request['reference_dataset'] = 'not_a_dataset'
+        with self.assertRaises(ValueError):
+            RefreshClickhouseReferenceDataRequest.model_validate(raw_request)
