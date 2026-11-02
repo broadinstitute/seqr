@@ -213,8 +213,6 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     acceptedChroms = ['chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8','chr9','chr10','chr11','chr12','chr13',
                      'chr14','chr15','chr16','chr17','chr18','chr19','chr20','chr21','chr22','chrX','chrY']
     df = df[df['chrom'].isin(acceptedChroms)].copy()
-    validChrom = df.copy()
-    validChrom['validChrom'] = True
 
     df = df[pd.to_numeric(df['start'], errors='coerce').notnull()].copy()
     df = df[pd.to_numeric(df['end'], errors='coerce').notnull()].copy()
@@ -224,16 +222,11 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     df = df[df['end'] == df['end'] // 1]
     df['start'] = df['start'].astype(int)
     df['end'] = df['end'].astype(int)
-    validStartEnd = df.copy()
 
     df['length'] = df['end'].astype(int) - df['start'].astype(int)
     df = df[df['length'] > 49].copy()
-    validLength = df.copy()
-    validLength['validLength'] = True
 
     df = df[((df['svtype'] == 'DEL') | (df['svtype'] == 'DUP'))].copy()
-    validSVType = df.copy()
-    validSVType['validSVType'] = True
     df['DEL'] = df['svtype'] == 'DEL'
 
     exons = read_bed(data_dir, 'exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed')
@@ -270,20 +263,12 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     for valid in has_end_and_svtype:
         if valid:
             if count in an.index:
-                scores.append(str(round(an.loc[count,'path'],3)))
+                scores.append(round(an.loc[count,'path'],3))
             elif count in validExon.index:
-                scores.append('1.0')
-            elif count in validSVType.index:
-                scores.append('not_exonic')
-            elif count in validLength.index:
-                scores.append('not_dup_or_del')
-            elif count in validStartEnd.index:
-                scores.append('less_than_50bp')
-            elif count in validChrom.index:
-                scores.append('invalid_start_or_end')
+                scores.append(1.0)
             else:
-                scores.append('not_valid_chrom')
+                scores.append(None)
             count += 1
         else:
-            scores.append('missing_END_or_SVTYPE')
+            scores.append(None)
     return svs.assign(StrVCTVRE=scores)
