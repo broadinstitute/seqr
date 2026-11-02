@@ -38,4 +38,3 @@ class BaseWriteParquetFromVcfTask(BaseVCFTask):
             index=df.index,
         )
         return df.join(info)
-

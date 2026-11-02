@@ -46,7 +46,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
     def create_data_frame(self) -> pd.DataFrame:
         matched_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
-            ['view','-i', 'GT[1-]="alt"'],
+            ['view', '-i', 'GT[1-]="alt"'],
             matched_target,
             self.input()[0][:1],
             output_type='v',
@@ -61,8 +61,17 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             output_type='v',
         )
         id_map_df = self.import_vcf(existing_id_target)
-        id_map = {} if id_map_df.empty else id_map_df.set_index(['MatchId', 'SVTYPE'])['ID'].to_dict()
-        id_map = df[df['CollapseId'].notna()].set_index(['CollapseId', 'SVTYPE'])['ID'].to_dict() | id_map
+        id_map = (
+            {}
+            if id_map_df.empty
+            else id_map_df.set_index(['MatchId', 'SVTYPE'])['ID'].to_dict()
+        )
+        id_map = (
+            df[df['CollapseId'].notna()]
+            .set_index(['CollapseId', 'SVTYPE'])['ID']
+            .to_dict()
+            | id_map
+        )
 
         with self.input()[1].open() as f:
             metadata_json = json.load(f)
