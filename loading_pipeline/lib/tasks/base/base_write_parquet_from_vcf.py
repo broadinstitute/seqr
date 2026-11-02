@@ -22,12 +22,17 @@ class BaseWriteParquetFromVcfTask(BaseVCFTask):
     @staticmethod
     def import_vcf(input_target: luigi.Target) -> pd.DataFrame:
         with input_target.open() as f:
-            num_header_rows = next(i for i, line in enumerate(f) if not line.startswith('##'))
+            num_header_rows = next(
+                i for i, line in enumerate(f) if not line.startswith('##')
+            )
         df = pd.read_csv(input_target.path, sep='\t', skiprows=num_header_rows)
 
         info = pd.DataFrame(
             [
-                dict(field.split('=', 1) if '=' in field else (field, True) for field in entry.split(';'))
+                dict(
+                    field.split('=', 1) if '=' in field else (field, True)
+                    for field in entry.split(';')
+                )
                 for entry in df.pop('INFO')
             ],
             index=df.index,

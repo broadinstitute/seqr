@@ -80,13 +80,18 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         df = self._parsed_sample_df(df, list(sample_id_to_family_guid.keys()))
         df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
         df['variantId'] = (
-            df[['CollapseId', 'SVTYPE']].apply(tuple, axis=1).map(id_map)
+            df[['CollapseId', 'SVTYPE']]
+            .apply(tuple, axis=1)
+            .map(id_map)
             .fillna(df[['MatchId', 'SVTYPE']].apply(tuple, axis=1).map(id_map))
             .fillna(df['ID'])
         )
 
         df = df.groupby(['variantId', 'family_guid'], as_index=False).agg(
-            filters=('FILTER', lambda values: sorted(set().union(*values.str.split(';')) - {'PASS'})),
+            filters=(
+                'FILTER',
+                lambda values: sorted(set().union(*values.str.split(';')) - {'PASS'}),
+            ),
             calls=('sample', list),
         )
         df['project_guid'] = df['family_guid'].map(family_guid_to_project_guid)
@@ -94,7 +99,8 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         # Add ref calls for missing family members
         df['calls'] = df.apply(
             lambda row: sorted(
-                row['calls'] + [
+                row['calls']
+                + [
                     {**dict.fromkeys(row['calls'][0]), 'sampleId': s, 'gt': 0}
                     for s in metadata_json['family_samples'][row['family_guid']]
                     if s not in {c['sampleId'] for c in row['calls']}
@@ -110,12 +116,17 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
     def _parsed_sample_df(cls, df: pd.DataFrame, sample_ids: list[str]) -> pd.DataFrame:
         df['samples'] = df.apply(
             lambda row: [
-                {'sampleId': s, **dict(zip(row['FORMAT'].lower().split(':'), row[s].split(':')))}
+                {
+                    'sampleId': s,
+                    **dict(zip(row['FORMAT'].lower().split(':'), row[s].split(':'))),
+                }
                 for s in sample_ids
             ],
             axis=1,
         )
-        df['samples'] = df['samples'].map(lambda samples: [s for s in samples if '1' in s['gt']])
+        df['samples'] = df['samples'].map(
+            lambda samples: [s for s in samples if '1' in s['gt']]
+        )
 
         matched_samples = df.groupby(df['MatchId'])['samples'].agg(
             lambda rows: {s['sampleId'] for samples in rows for s in samples},
@@ -125,7 +136,8 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
                 (
                     dict([cls._format_sample_field(*i) for i in s.items()])
                     for s in row['samples']
-                    if s['sampleId'] not in matched_samples.get(row['CollapseId'], set())
+                    if s['sampleId']
+                    not in matched_samples.get(row['CollapseId'], set())
                 ),
                 None,
             ),
@@ -146,4 +158,3 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         if field == 'gt':
             return field, sum(map(int, value.split('/')))
         return field, int(value)
-
