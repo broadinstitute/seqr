@@ -127,7 +127,13 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             lambda row: [
                 {
                     'sampleId': s,
-                    **dict(zip(row['FORMAT'].lower().split(':'), row[s].split(':'), strict=True)),
+                    **dict(
+                        zip(
+                            row['FORMAT'].lower().split(':'),
+                            row[s].split(':'),
+                            strict=True,
+                        ),
+                    ),
                 }
                 for s in sample_ids
             ],
