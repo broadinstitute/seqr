@@ -32,25 +32,6 @@ CONSEQ_PREDICTED_GENE_COLS = {
     'info.PREDICTED_UTR': hl.tarray(hl.tstr),
 }
 
-PREVIOUS_GENOTYPE_N_ALT_ALLELES = hl.dict(
-    {
-        # Map of concordance string -> previous n_alt_alleles()
-        # Concordant
-        frozenset(['TN']): 0,  # 0/0 -> 0/0
-        frozenset(['TP']): 2,  # 1/1 -> 1/1
-        frozenset(['TN', 'TP']): 1,  # 0/1 -> 0/1
-        # Novel
-        frozenset(['FP']): 0,  # 0/0 -> 1/1
-        frozenset(['TN', 'FP']): 0,  # 0/0 -> 0/1
-        # Absent
-        frozenset(['FN']): 2,  # 1/1 -> 0/0
-        frozenset(['TN', 'FN']): 1,  # 0/1 -> 0/0
-        # Discordant
-        frozenset(['FP', 'TP']): 1,  # 0/1 -> 1/1
-        frozenset(['FN', 'TP']): 2,  # 1/1 -> 0/1
-    },
-)
-
 
 def _get_cpx_interval(
     x: hl.StringExpression,
