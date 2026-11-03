@@ -85,6 +85,13 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         # Select down to the formatting annotations fields and
         # any reference dataset collection annotations.
+        df = df.rename(columns={
+            'ALGORITHMS': 'algorithms',
+            'BOTHSIDES_SUPPORT': 'bothsidesSupport',
+            'POS': 'pos',
+        })
+
+
         new_variants_ht = new_variants_ht.select(
             **{
                 name: fn(

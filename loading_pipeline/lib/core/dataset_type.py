@@ -181,12 +181,9 @@ class DatasetType(StrEnum):
                 'liftedOverPos': shared.lifted_over_pos,
             },
             DatasetType.SV: {
-                'algorithms': sv.algorithms,
-                'bothsidesSupport': sv.bothsides_support,
                 'chrom': sv.chrom,
                 'cpxIntervals': sv.cpx_intervals,
                 'end': sv.end,
-                'pos': sv.pos,
                 'populations': sv.populations,
                 'predictions': sv.predictions,
                 'sortedGeneConsequences': sv.sorted_gene_consequences,
@@ -196,9 +193,6 @@ class DatasetType(StrEnum):
                 'xpos': shared.xpos,
                 'endChrom': sv.end_chrom,
                 'svSourceDetail': sv.sv_source_detail,
-                'liftedOverChrom': shared.lifted_over_chrom,
-                'liftedOverPos': shared.lifted_over_pos,
-                'rg37LocusEnd': shared.lifted_over_locus_end,
             },
         }
         if reference_genome == ReferenceGenome.GRCh37:

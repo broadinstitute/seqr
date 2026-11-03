@@ -51,16 +51,8 @@ def _sv_types(ht: hl.Table) -> hl.ArrayExpression:
     return ht.alleles[1].replace('[<>]', '').split(':', 2)
 
 
-def algorithms(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.str(',').join(ht['info.ALGORITHMS'])
-
-
 def variant_id(ht: hl.Table, **_: Any) -> hl.Expression:
     return ht.variant_id
-
-
-def bothsides_support(ht: hl.Table, **_: Any) -> hl.Expression:
-    return ht['info.BOTHSIDES_SUPPORT']
 
 
 def chrom(ht: hl.Table, **_: Any) -> hl.Expression:
@@ -128,10 +120,6 @@ def populations(
             ),
         ),
     )
-
-
-def pos(ht: hl.Table, **_: Any) -> hl.Expression:
-    return ht.locus.position
 
 
 def sorted_gene_consequences(
