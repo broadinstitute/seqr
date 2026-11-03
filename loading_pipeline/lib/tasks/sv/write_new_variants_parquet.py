@@ -1,8 +1,8 @@
-import hail as hl
 import luigi
 import luigi.util
+import pandas as pd
+from pyliftover import LiftOver
 
-from loading_pipeline.lib.misc.io import import_vcf
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
     valid_reference_dataset_path,
@@ -14,7 +14,6 @@ from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceD
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
-from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
     BaseWriteParquetFromVcfTask,
 )
@@ -27,7 +26,7 @@ GENCODE_RELEASE = 42
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteNewSvVariantsParquetTask(BaseWriteParquetTask, BaseWriteParquetFromVcfTask):
+class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     @property
     def annotation_dependencies(self) -> dict[str, hl.Table]:
         deps = {
@@ -63,39 +62,26 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask, BaseWriteParquetFromVc
             self.clone(WriteDeduplicatedSvVcfTask),
         ]
 
-    def run(self) -> None:
-        for target in self.input()[0]:
-            target.localize()
-        super().run()
-
-    def create_table(self) -> hl.Table:
+    def create_data_frame(self) -> pd.DataFrame:
         # Identify new variants.
         filtered_target = luigi.LocalTarget(is_tmp=True)
-        filtered_target.path += '.vcf.gz'
         self.run_bcftools(
-            ['view', '-i', 'GT[0]="mis" && INFO/MatchId="."'],
+            ['view', '-G', '-i', 'GT[0]="mis" && INFO/MatchId="."'],
             filtered_target,
             self.input()[0][:1],
+            output_type='v',
         )
-
-        ht = import_vcf(
-            filtered_target.path,
-            self.reference_genome,
-        ).rows()
-        ht = ht.key_by(variant_id=ht.rsid)
-        new_variants_ht = ht.transmute(
-            **{f'info.{field}': ht.info[field] for field in ht.info},
-        )
+        df = self.import_vcf(filtered_target)
 
         # Run liftover
-        new_variants_ht = new_variants_ht.annotate(
-            **{
-                name: fn(new_variants_ht)
-                for name, fn in self.dataset_type.liftover_annotation_fns(
-                    self.reference_genome,
-                ).items()
-            },
-        )
+        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
+        df[['liftedOverChrom', 'liftedOverPos']] = [self._liftover(lo, c, p) for c, p in zip(df['CHROM'], df['POS'])]
+        end_chrom = df['CHR2'].where(df['END2'].notna()).fillna(df['CHROM'])
+        end_pos = df['END2'].fillna(df['END']).astype(int)
+        df['rg37LocusEnd'] = [
+            {'contig': chrom, 'position': pos} if chrom else None
+            for chrom, pos in (self._liftover(lo, c, p) for c, p in zip(end_chrom, end_pos))
+        ]
 
         # Select down to the formatting annotations fields and
         # any reference dataset collection annotations.
@@ -124,3 +110,8 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetTask, BaseWriteParquetFromVc
             'key_',
             *self.dataset_type.variants_export_field_names(self.reference_genome),
         )
+
+    @staticmethod
+    def _liftover(lo, chrom, pos):
+        result = lo.convert_coordinate(chrom, pos)
+        return (result[0][0], result[0][1] + 1) if result else (None, None)

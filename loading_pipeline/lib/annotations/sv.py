@@ -3,7 +3,6 @@ from typing import Any
 
 import hail as hl
 
-from loading_pipeline.lib.annotations import liftover
 from loading_pipeline.lib.annotations.enums import (
     SV_CONSEQUENCE_RANKS,
     SV_TYPE_DETAILS,
@@ -127,25 +126,6 @@ def populations(
                 hom=gnomad_sv.N_HOM,
                 id=gnomad_sv_id,
             ),
-        ),
-    )
-
-
-def rg37_locus_end(
-    ht: hl.Table,
-    **_: Any,
-) -> hl.Expression | None:
-    liftover.add_rg38_liftover()
-    end = end_locus(ht)
-    return hl.or_missing(
-        hl.is_defined(end),
-        hl.liftover(
-            hl.locus(
-                end.contig,
-                end.position,
-                reference_genome=ReferenceGenome.GRCh38.value,
-            ),
-            ReferenceGenome.GRCh37.value,
         ),
     )
 

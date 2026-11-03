@@ -267,10 +267,6 @@ class DatasetType(StrEnum):
         return {
             DatasetType.SNV_INDEL: {'lifted_over_locus': shared.rg37_locus},
             DatasetType.MITO: {'lifted_over_locus': shared.rg37_locus},
-            DatasetType.SV: {
-                'lifted_over_locus': shared.rg37_locus,
-                'lifted_over_locus_end': sv.rg37_locus_end,
-            },
         }[self]
 
     @property
