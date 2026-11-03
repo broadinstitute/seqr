@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -3435,6 +3435,15 @@ crypto = [
 ]
 
 [[package]]
+name = "pyliftover"
+version = "0.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/00/e8/f09804e990d66d235f4c90cb343bdc540ec17b67c925e72c67432a4d6130/pyliftover-0.4.1.tar.gz", hash = "sha256:33ad187e35d1b6662ba446432f4dd1a808ac2914ce1645eef37598fa5a3860cd", size = 11911, upload-time = "2024-02-08T21:32:16.566Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b1/61/e3afcf369fe45223cfebfbb8cde46d521e2786889c1b3eed01ee08adb626/pyliftover-0.4.1-py3-none-any.whl", hash = "sha256:49ef8938010d2e934abb483d3ef8073897ed6b88bcd978c486c8f7631c24dbc1", size = 12394, upload-time = "2024-02-08T21:32:15.157Z" },
+]
+
+[[package]]
 name = "pyparsing"
 version = "3.2.5"
 source = { registry = "https://pypi.org/simple" }
@@ -4095,6 +4104,7 @@ dependencies = [
     { name = "pip" },
     { name = "pyarrow" },
     { name = "pydantic" },
+    { name = "pyliftover" },
     { name = "qtconsole" },
     { name = "slacker" },
     { name = "truvari" },
@@ -4134,6 +4144,7 @@ requires-dist = [
     { name = "pip", specifier = "==26.2" },
     { name = "pyarrow", specifier = "==23.0.1" },
     { name = "pydantic", specifier = "==2.8.2" },
+    { name = "pyliftover", specifier = "==0.4.1" },
     { name = "qtconsole", specifier = "==5.6.1" },
     { name = "slacker", specifier = "==0.14.0" },
     { name = "truvari", specifier = "==5.4.0" },
