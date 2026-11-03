@@ -5,14 +5,12 @@ import hail as hl
 
 from loading_pipeline.lib.annotations.enums import (
     SV_CONSEQUENCE_RANKS,
-    SV_TYPE_DETAILS,
     SV_TYPES,
     validated_enum_member,
 )
 from loading_pipeline.lib.annotations.expression_helpers import (
     reference_independent_contig,
 )
-from loading_pipeline.lib.core.definitions import ReferenceGenome
 
 CONSEQ_PREDICTED_PREFIX = 'info.PREDICTED_'
 CONSEQ_PREDICTED_GENE_COLS = {
@@ -47,32 +45,6 @@ def _get_cpx_interval(
     )
 
 
-def _sv_types(ht: hl.Table) -> hl.ArrayExpression:
-    return ht.alleles[1].replace('[<>]', '').split(':', 2)
-
-
-def variant_id(ht: hl.Table, **_: Any) -> hl.Expression:
-    return ht.variant_id
-
-
-def chrom(ht: hl.Table, **_: Any) -> hl.Expression:
-    return reference_independent_contig(ht.locus.contig)
-
-
-def end_chrom(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.or_missing(
-        ((sv_type(ht) != 'INS') & (ht.locus.contig != end_locus(ht).contig)),
-        reference_independent_contig(end_locus(ht).contig),
-    )
-
-
-def sv_source_detail(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.or_missing(
-        ((sv_type(ht) == 'INS') & (ht.locus.contig != end_locus(ht).contig)),
-        hl.Struct(chrom=reference_independent_contig(end_locus(ht).contig)),
-    )
-
-
 def cpx_intervals(
     ht: hl.Table,
     **_: Any,
@@ -81,25 +53,6 @@ def cpx_intervals(
         hl.is_defined(ht['info.CPX_INTERVALS']),
         ht['info.CPX_INTERVALS'].map(_get_cpx_interval),
     )
-
-
-def end_locus(ht: hl.Table, **_: Any) -> hl.StructExpression:
-    rg38_lengths = hl.literal(hl.get_reference(ReferenceGenome.GRCh38.value).lengths)
-    return hl.if_else(
-        (
-            hl.is_defined(ht['info.END2'])
-            & (rg38_lengths[ht['info.CHR2']] >= ht['info.END2'])
-        ),
-        hl.locus(ht['info.CHR2'], ht['info.END2'], ReferenceGenome.GRCh38.value),
-        hl.or_missing(
-            (rg38_lengths[ht.locus.contig] >= ht['info.END']),
-            hl.locus(ht.locus.contig, ht['info.END'], ReferenceGenome.GRCh38.value),
-        ),
-    )
-
-
-def end(ht: hl.Table, **_: Any) -> hl.Expression:
-    return end_locus(ht).position
 
 
 def populations(
@@ -145,19 +98,3 @@ def sorted_gene_consequences(
 
 def predictions(ht: hl.Table, **_: Any) -> hl.Expression:
     return hl.struct(strvctvre=hl.parse_float32(ht['info.StrVCTVRE']))
-
-
-def sv_type(ht: hl.Table, **_: Any) -> hl.Expression:
-    return validated_enum_member(_sv_types(ht)[0], SV_TYPES)
-
-
-def sv_type_detail(ht: hl.Table, **_: Any) -> hl.Expression:
-    sv_types = _sv_types(ht)
-    return hl.if_else(
-        sv_types[0] == 'CPX',
-        validated_enum_member(ht['info.CPX_TYPE'], SV_TYPE_DETAILS),
-        hl.or_missing(
-            (sv_types[0] == 'INS') & (hl.len(sv_types) > 1),
-            validated_enum_member(sv_types[1], SV_TYPE_DETAILS),
-        ),
-    )

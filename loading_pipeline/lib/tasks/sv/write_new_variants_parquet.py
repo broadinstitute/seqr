@@ -3,6 +3,11 @@ import luigi.util
 import pandas as pd
 from pyliftover import LiftOver
 
+from loading_pipeline.lib.annotations.enums import (
+    SV_CONSEQUENCE_RANKS,
+    SV_TYPE_DETAILS,
+    SV_TYPES,
+)
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
     valid_reference_dataset_path,
@@ -75,20 +80,40 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         # Run liftover
         lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
-        df[['liftedOverChrom', 'liftedOverPos']] = [self._liftover(lo, c, p) for c, p in zip(df['CHROM'], df['POS'])]
-        end_chrom = df['CHR2'].where(df['END2'].notna()).fillna(df['CHROM'])
-        end_pos = df['END2'].fillna(df['END']).astype(int)
+        df[['liftedOverChrom', 'liftedOverPos']] = [self._liftover(lo, c, p) for c, p in zip(df['#CHROM'], df['POS'])]
+        df['endChrom'] = df.pop('CHR2').where(df['END2'].notna())
+        df['end'] = df.pop('END2').fillna(df.pop('END')).astype(int)
         df['rg37LocusEnd'] = [
             {'contig': chrom, 'position': pos} if chrom else None
-            for chrom, pos in (self._liftover(lo, c, p) for c, p in zip(end_chrom, end_pos))
+            for chrom, pos in (
+                self._liftover(lo, c, p)
+                for c, p in zip(df['endChrom'].fillna(df['#CHROM']), df['end'])
+            )
         ]
 
         # Select down to the formatting annotations fields and
         # any reference dataset collection annotations.
+        invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
+        if not invalid_sv_types.empty:
+            raise ValueError(f'Unexpected enum value: {invalid_sv_types.iloc[0]}')
+
+        df.loc[df['SVTYPE'] == 'CPX', 'svTypeDetail'] = df.pop('CPX_TYPE')
+        df.loc[df['SVTYPE'] == 'INS', 'svTypeDetail'] = df.pop('ALT').str.extract(r'^<[^:]+:(.+)>$')[0]
+        invalid_details = df['svTypeDetail'].dropna()[~df['svTypeDetail'].dropna().isin(SV_TYPE_DETAILS)]
+        if not invalid_details.empty:
+            raise ValueError(f'Unexpected enum value: {invalid_details.iloc[0]}')
+
+        df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
+        df['endChrom'] = df['endChrom'].str.removeprefix('chr')
+        df.loc[df['SVTYPE'] == 'INS', 'svSourceDetail'] = df['endChrom'].map(lambda chrom: {'chrom': chrom})
+        df['endChrom'] = df['endChrom'].mask(df['SVTYPE'] == 'INS')
+
         df = df.rename(columns={
             'ALGORITHMS': 'algorithms',
             'BOTHSIDES_SUPPORT': 'bothsidesSupport',
             'POS': 'pos',
+            'ID': 'variantId',
+            'SVTYPE': 'svType',
         })
 
 
