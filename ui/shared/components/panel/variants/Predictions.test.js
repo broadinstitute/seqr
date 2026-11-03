@@ -62,7 +62,7 @@ test('AlphaGenome AVI renders the numeric score the API sends', () => {
   expect(mountPredictions({ avi: 18.6 }).text()).toContain('AlphaGenome AVI18.6')
 })
 
-const GRCH38_SNV = { genomeVersion: '38', chrom: '1', pos: 38724419, ref: 'T', alt: 'G' }
+const GRCH38_SNV = { genomeVersion: '38', chrom: '1', pos: 38724419, ref: 'T', alt: 'G' } // NOPMD
 
 test('AlphaGenome AVI value links to the AlphaGenome Atlas variant page for GRCh38 SNVs', () => {
   const aviLink = findAviPrediction(mountPredictions({ avi: 18.6 }, GRCH38_SNV)).find('a')
