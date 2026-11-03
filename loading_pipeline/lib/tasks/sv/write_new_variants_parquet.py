@@ -100,16 +100,10 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         # Add serial integer index
         max_key_line = self.find_vcf_header_line(self.input()[0][0], '##maxKey')
-        curr_max_key_ = int(max_key_line.removeprefix('##maxKey=').strip())
-        new_variants_ht = new_variants_ht.add_index(name='key_')
-        new_variants_ht = new_variants_ht.transmute(
-            key_=new_variants_ht.key_ + curr_max_key_ + 1,
-        )
-        new_variants_ht = new_variants_ht.key_by()
-        return new_variants_ht.select(
-            'key_',
-            *self.dataset_type.variants_export_field_names(self.reference_genome),
-        )
+        curr_max_key = int(max_key_line.removeprefix('##maxKey=').strip())
+        df['key'] = range(curr_max_key + 1, curr_max_key + 1 + len(df))
+
+        return df
 
     @staticmethod
     def _liftover(lo, chrom, pos):
