@@ -162,6 +162,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             ['view', '-i', 'GT[1-]="alt"'],
             collapsed_filtered_target,
             [collapsed_target],
+            output_type='u',
         )
 
         sorted_targets = []
