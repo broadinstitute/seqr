@@ -1,4 +1,5 @@
 import os
+import random
 from typing import ClassVar
 
 import luigi
@@ -97,7 +98,6 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         targets = self._run_truvari_subset(
             existing_merged_target,
             ' && '.join(f'INFO/SVTYPE!="{sv_type}"' for sv_type in TRUVARI_PARAMS),
-            'default',
             [],
         )
 
@@ -116,7 +116,6 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
                 targets += self._run_truvari_subset(
                     existing_merged_target,
                     filter_expr,
-                    f'{sv_type}_{refdist}',
                     [
                         *flags,
                         '--refdist',
@@ -132,7 +131,6 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         self,
         input_target: luigi.LocalTarget,
         filter_expr: str,
-        filter_name: str,
         flags: list[str],
     ) -> list[luigi.LocalTarget]:
         filtered_target = luigi.LocalTarget(is_tmp=True)
@@ -143,18 +141,14 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             output_type='u',
         )
 
+        rand_id = random.randint(10_000, 99_999)  # noqa: S311 # nosec
         filtered_annotated_target = luigi.LocalTarget(is_tmp=True)
         filtered_annotated_target.path += '.vcf.gz'
         self.run_bcftools(
-            [
-                'annotate',
-                '-I',
-                f'TRUVARI_FILTER="{filter_name}"',
-                '-h',
-                '##INFO=<ID=TRUVARI_FILTER,Number=1,Type=String>',
-            ],
+            ['+fill-tags'],
             filtered_annotated_target,
             [filtered_target],
+            plugin_options=['--', '-t', f'TRUVARI_FILTER={rand_id}'],
         )
 
         collapsed_target = luigi.LocalTarget(is_tmp=True)
