@@ -64,11 +64,11 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         id_map = (
             {}
             if id_map_df.empty
-            else id_map_df.set_index(['MatchId', 'SVTYPE'])['ID'].to_dict()
+            else id_map_df.set_index(['MatchId', 'TRUVARI_FILTER'])['ID'].to_dict()
         )
         id_map = (
             df[df['CollapseId'].notna()]
-            .set_index(['CollapseId', 'SVTYPE'])['ID']
+            .set_index(['CollapseId', 'TRUVARI_FILTER'])['ID']
             .to_dict()
             | id_map
         )
@@ -89,10 +89,10 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         df = self._parsed_sample_df(df, list(sample_id_to_family_guid.keys()))
         df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
         df['variantId'] = (
-            df[['CollapseId', 'SVTYPE']]
+            df[['CollapseId', 'TRUVARI_FILTER']]
             .apply(tuple, axis=1)
             .map(id_map)
-            .fillna(df[['MatchId', 'SVTYPE']].apply(tuple, axis=1).map(id_map))
+            .fillna(df[['MatchId', 'TRUVARI_FILTER']].apply(tuple, axis=1).map(id_map))
             .fillna(df['ID'])
         )
 

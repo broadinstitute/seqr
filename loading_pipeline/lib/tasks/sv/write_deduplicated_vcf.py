@@ -133,11 +133,19 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         flags: list[str],
     ) -> list[luigi.LocalTarget]:
         filtered_target = luigi.LocalTarget(is_tmp=True)
-        filtered_target.path += '.vcf.gz'
         self.run_bcftools(
             ['view', '-i', filter_expr],
             filtered_target,
             [input_target],
+            output_type='u',
+        )
+
+        filtered_annotated_target = luigi.LocalTarget(is_tmp=True)
+        filtered_annotated_target.path += '.vcf.gz'
+        self.run_bcftools(
+            ['annotate', '-I', f'TRUVARI_FILTER="{filter_expr}"'],
+            filtered_annotated_target,
+            [filtered_target],
         )
 
         collapsed_target = luigi.LocalTarget(is_tmp=True)
@@ -147,7 +155,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
                 'truvari',
                 'collapse',
                 '-i',
-                filtered_target.path,
+                filtered_annotated_target.path,
                 *flags,
                 '-o',
                 collapsed_target.path,
@@ -162,6 +170,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             ['view', '-i', 'GT[1-]="alt"'],
             collapsed_filtered_target,
             [collapsed_target],
+            output_type='u',
         )
 
         sorted_targets = []
