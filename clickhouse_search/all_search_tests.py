@@ -1658,10 +1658,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(annotations[0]['predictions']['avi'], Decimal('18.6'))
 
     def test_alphagenome_source_variant_ids_are_normalized(self):
-        source_ids = ['1-38724419-T-G', 'chr1-38724419-T-G', 'MT-4429-G-A', 'chrMT-4429-G-A', 'chrM-4429-G-A']
+        source_rows = [('1', 38724419, 'T', 'G'), ('chr1', 38724419, 'T', 'G'), ('MT', 4429, 'G', 'A'), ('chrMT', 4429, 'G', 'A'), ('chrM', 4429, 'G', 'A')]
         variant_id_select = AlphagenomeAllMv._meta.column_selects['variantId']
         with connections['clickhouse'].cursor() as cursor:
-            cursor.execute(f'SELECT {variant_id_select} FROM (SELECT arrayJoin({source_ids}) AS variant_id)')
+            cursor.execute(
+                f'SELECT {variant_id_select} FROM (SELECT r.1 AS chrom, r.2 AS pos, r.3 AS ref, r.4 AS alt FROM (SELECT arrayJoin({source_rows}) AS r))'
+            )
             variant_ids = [row[0] for row in cursor.fetchall()]
         self.assertListEqual(variant_ids, ['1-38724419-T-G', '1-38724419-T-G', 'M-4429-G-A', 'M-4429-G-A', 'M-4429-G-A'])
 

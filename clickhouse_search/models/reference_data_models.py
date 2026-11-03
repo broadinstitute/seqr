@@ -1828,10 +1828,10 @@ class AlphagenomeAllMv(RefreshableMaterializedView):
     class Meta(RefreshableMaterializedViewMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/alphagenome/all_variants_mv'
         to_table = 'AlphagenomeAllVariants'
-        # Converted from DeepMind's AVI file alphagenome_variant_impact_score_snvs.tsv.gz: variant_id is chrom-pos-ref-alt, score is PHRED
+        # Converted from DeepMind's AVI file alphagenome_variant_impact_score_snvs.tsv.gz: chrom, pos, ref, alt, and PHRED as score
         source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/alphagenome/alphagenome.parquet/*.parquet'
         column_selects = {
-            'variantId': "assumeNotNull(replaceOne(replaceOne(variant_id, 'chr', ''), 'MT', 'M'))",
+            'variantId': "assumeNotNull(concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt))",
         }
         create_empty = True
 

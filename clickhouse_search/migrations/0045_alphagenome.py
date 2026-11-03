@@ -57,7 +57,7 @@ class Migration(migrations.Migration):
                 'to_table': 'AlphagenomeAllVariants',
                 'source_sql': '',
                 'source_url': 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/alphagenome/alphagenome.parquet/*.parquet',
-                'column_selects': {'variantId': "assumeNotNull(replaceOne(replaceOne(variant_id, 'chr', ''), 'MT', 'M'))"},
+                'column_selects': {'variantId': "assumeNotNull(concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt))"},
                 'refreshable': True,
                 'create_empty': True,
             },
