@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   unit_tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python-version: ['3.11']
@@ -57,11 +57,12 @@ jobs:
           docker exec clickhouse clickhouse-client --query "CREATE SETTINGS PROFILE clickhouse_settings SETTINGS flatten_nested=0, join_use_nulls=1, stop_refreshable_materialized_views_on_startup=1, allow_materialized_view_with_bad_select=1, enable_join_runtime_filters=0 TO default"
       - name: Install bcftools and tabix
         run: sudo apt-get update && sudo apt-get install -y bcftools tabix
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '11'
+      - name: Install Java 11 from the same package as the prod image
+        run: |
+          sudo apt-get install -y --no-install-recommends openjdk-11-jre-headless
+          echo "JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64" >> "$GITHUB_ENV"
+          echo "/usr/lib/jvm/java-11-openjdk-amd64/bin" >> "$GITHUB_PATH"
+          /usr/lib/jvm/java-11-openjdk-amd64/bin/java -version
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
