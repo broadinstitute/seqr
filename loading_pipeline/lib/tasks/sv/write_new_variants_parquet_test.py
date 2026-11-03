@@ -160,6 +160,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         export_json[0]['sortedGeneConsequences'] = [
             export_json[0]['sortedGeneConsequences'][0],
         ]
+        self.maxDiff = None
         self.assertEqual(
             export_json,
             [
