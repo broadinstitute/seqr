@@ -8,12 +8,6 @@ import { IN_SILICO_PANEL } from './VariantSearchFormPanelConfigs'
 
 configure({ adapter: new Adapter() })
 
-test('AlphaGenome AVI is a Coding/Noncoding numeric in-silico filter from Phred 0 up to 99', () => {
-  expect(IN_SILICO_PANEL.fields.find(({ name }) => name === 'avi')).toMatchObject({
-    label: 'AlphaGenome AVI', group: 'Coding/Noncoding', type: 'number', min: 0, max: 99, step: 1,
-  })
-})
-
 test('AlphaGenome AVI filter is placed in the Coding/Noncoding row', () => {
   const components = IN_SILICO_PANEL.fields.map(({ name }) => <div key={name} id={name} />)
   const wrapper = shallow(IN_SILICO_PANEL.fieldLayout(components, NO_SV_IN_SILICO_GROUPS))

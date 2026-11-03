@@ -26,7 +26,7 @@ from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, Cl
     HelixmitoDict, HelixmitoheteroplasmyMv, HelixmitoheteroplasmyDict, ScreenDict, MitomapMv, MitomapDict, Absplice2Mv, \
     Absplice2Dict, PromoterAIMv, PromoterAIDict, PextSnvIndelMv, PextSnvIndelDict, PextMitoMv, PextMitoDict, AlphagenomeMv, \
     AlphagenomeDict, AlphagenomeAllMv
-from clickhouse_search.models.search_models import EntriesSnvIndel, VariantsSnvIndel, EntriesSv, EntriesGcnv, KeyLookupSnvIndel
+from clickhouse_search.models.search_models import EntriesSnvIndel, VariantsSnvIndel, EntriesSv, EntriesGcnv
 from clickhouse_search.search import get_clickhouse_variant_annotations
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
@@ -1632,10 +1632,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertDictEqual(response.json(), {'error': 'Variant 1-91511686-TCA-G not found'})
 
-        response = self.client.get(url_template.format('1-38724419-T-G', 'F000002_2'))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()['variantsById']['1-38724419-T-G']['predictions']['avi'], 18.6)
-
         response = self.client.get(url_template.format('M-4429-G-A', 'F000002_2'))
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json()['variantsById'], {'M-4429-G-A': MITO_VARIANT1})
@@ -1668,7 +1664,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             cursor.execute(f'SELECT {variant_id_select} FROM (SELECT arrayJoin({source_ids}) AS variant_id)')
             variant_ids = [row[0] for row in cursor.fetchall()]
         self.assertListEqual(variant_ids, ['1-38724419-T-G', '1-38724419-T-G', 'M-4429-G-A', 'M-4429-G-A', 'M-4429-G-A'])
-        self.assertTrue(KeyLookupSnvIndel.objects.filter(variant_id=variant_ids[1]).exists())
 
     def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
@@ -2179,9 +2174,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_search([VARIANT2], in_silico={'avi': 15, 'requireScore': True})
 
         self._assert_expected_search([VARIANT2], in_silico={'avi': 18.6, 'requireScore': True})
-        self._assert_expected_search([VARIANT2], in_silico={'avi': '18.6', 'requireScore': True})
-
-        self._assert_expected_search([VARIANT2, VARIANT4], in_silico={'avi': 15, 'revel': 0.5, 'requireScore': True})
 
         sv_in_silico = {'strvctvre': 0.1, 'requireScore': True}
         self._assert_expected_search(

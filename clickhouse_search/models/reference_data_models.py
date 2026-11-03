@@ -1822,20 +1822,13 @@ class AlphagenomeSeqrVariants(models.ClickhouseModel):
         )
 
 class AlphagenomeAllMv(RefreshableMaterializedView):
-    # python calls it variant_id, db calls it variantId so this line links those
     variant_id = models.StringField(db_column='variantId', primary_key=True)
     score = models.StringField(null=True, blank=True)
 
     class Meta(RefreshableMaterializedViewMeta):
-        """
-        What the file looks like as of 11/2/2026:
-        ```csv
-        #CHROM  POS     REF     ALT     raw_score       PHRED
-        chr1    10001   T       A       -0.03868        1.06466
-        ```
-        """
         db_table = 'GRCh38/SNV_INDEL/reference_data/alphagenome/all_variants_mv'
         to_table = 'AlphagenomeAllVariants'
+        # Converted from DeepMind's AVI file alphagenome_variant_impact_score_snvs.tsv.gz: variant_id is chrom-pos-ref-alt, score is PHRED
         source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/alphagenome/alphagenome.parquet/*.parquet'
         column_selects = {
             'variantId': "assumeNotNull(replaceOne(replaceOne(variant_id, 'chr', ''), 'MT', 'M'))",
