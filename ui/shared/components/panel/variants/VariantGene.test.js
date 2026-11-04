@@ -8,7 +8,20 @@ import { STATE1, GENE, VARIANT, MISSENSE_CONSTRAINED_GENE, LOF_CONSTRAINED_GENE 
 
 configure({ adapter: new Adapter() })
 
+const GENE_CONSTRAINT_LINK = 'a[href="https://gnomad.broadinstitute.org/help/constraint"]'
+
 const renderedText = gene => mount(<GeneDetails gene={gene} compact />).text().replace(/\s+/g, ' ')
+
+const withConstraints = (gene, constraints) => ({ ...gene, constraints: { ...gene.constraints, ...constraints } })
+
+const expectGeneConstraintLink = (gene) => {
+  const wrapper = mount(<GeneDetails gene={gene} compact />)
+  expect(wrapper.text()).toMatch(/\.\sSee\sGene Constraint\sfor more information\./)
+  const link = wrapper.find(GENE_CONSTRAINT_LINK)
+  expect(link.text()).toBe('Gene Constraint')
+  expect(link.prop('target')).toBe('_blank')
+  expect(link.prop('rel')).toBe('noreferrer')
+}
 
 test('shallow-render without crashing', () => {
   const store = configureStore()(STATE1)
@@ -16,22 +29,30 @@ test('shallow-render without crashing', () => {
   shallow(<VariantGenes store={store} gene={GENE} variant={VARIANT} />)
 })
 
-test('missense constraint details name gnomAD v4.1.2', () => {
+test('missense constraint details show the gene rank, z-score and constraint help', () => {
   const text = renderedText(MISSENSE_CONSTRAINED_GENE)
 
-  expect(text).toContain('This gene ranks 1348 most constrained out of 20076 genes under study in terms of missense constraint (z-score: 4.137)')
-  expect(text).toContain('Missense constraint is a measure of the degree to which the number of missense variants found in this gene in gnomAD v4.1.2 is higher or lower than expected')
+  expect(text).toContain(
+    'This gene ranks 1348 among 20076 genes evaluated for missense constraint (Z-score: 4.137). Missense constraint measures the depletion of missense variants observed in a gene relative to the number expected under a statistical model that accounts for local sequence context and other mutational factors [Samocha et al., 2014]. A higher positive Z-score indicates stronger constraint, meaning fewer missense variants are observed than expected. This metric can be particularly useful for prioritizing genes associated with dominant disorders, especially when a large proportion of the protein is functionally constrained. See Gene Constraint for more information.',
+  )
   expect(text).not.toContain('ExAC')
-  expect(text).not.toContain('Samocha')
+  expect(text).not.toContain('gnomAD v4.1.2')
+  expectGeneConstraintLink(MISSENSE_CONSTRAINED_GENE)
+  expect(renderedText(withConstraints(MISSENSE_CONSTRAINED_GENE, { totalGenes: 19000 }))).toContain(
+    'This gene ranks 1348 among 19000 genes evaluated for missense constraint',
+  )
 })
 
 test('LoF constraint details show for a louef under the gnomAD v4 cutoff of 0.45', () => {
   expect(renderedText(LOF_CONSTRAINED_GENE)).toContain(
-    'This gene ranks as 2224 most intolerant of LoF mutations out of 20076 genes under study in gnomAD v4.1.2 (louef: 0.3995, pLi: 0.9995) Karczewski (2020)',
+    'This gene ranks as 2224 most intolerant of LoF mutations by louef and 2444 by pLi out of 20076 genes under study in gnomAD v4.1.2 (louef: 0.3995, pLi: 0.9995) Karczewski (2020). See Gene Constraint for more information.',
+  )
+  expectGeneConstraintLink(LOF_CONSTRAINED_GENE)
+  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { pli: 0 }))).toContain(
+    'This gene ranks as 2224 most intolerant of LoF mutations by louef out of 20076 genes under study in gnomAD v4.1.2 (louef: 0.3995) Karczewski (2020). See Gene Constraint for more information.',
   )
 
-  const withLouef = louef => ({ ...LOF_CONSTRAINED_GENE, constraints: { ...LOF_CONSTRAINED_GENE.constraints, louef } })
-  expect(renderedText(withLouef(0.449))).toContain('intolerant of LoF mutations')
-  expect(renderedText(withLouef(0.45))).not.toContain('intolerant of LoF mutations')
+  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.449 }))).toContain('intolerant of LoF mutations')
+  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.45 }))).not.toContain('intolerant of LoF mutations')
   expect(renderedText(MISSENSE_CONSTRAINED_GENE)).not.toContain('intolerant of LoF mutations')
 })
