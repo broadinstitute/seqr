@@ -5,11 +5,7 @@ import hail as hl
 
 from loading_pipeline.lib.annotations.enums import (
     SV_CONSEQUENCE_RANKS,
-    SV_TYPES,
     validated_enum_member,
-)
-from loading_pipeline.lib.annotations.expression_helpers import (
-    reference_independent_contig,
 )
 
 CONSEQ_PREDICTED_PREFIX = 'info.PREDICTED_'
@@ -28,31 +24,6 @@ CONSEQ_PREDICTED_GENE_COLS = {
     'info.PREDICTED_TSS_DUP': hl.tarray(hl.tstr),
     'info.PREDICTED_UTR': hl.tarray(hl.tstr),
 }
-
-
-def _get_cpx_interval(
-    x: hl.StringExpression,
-) -> hl.StructExpression:
-    # an example format of CPX_INTERVALS is "DUP_chr1:1499897-1499974"
-    type_contig = x.split('_')
-    contig_pos = type_contig[1].split(':')
-    pos = contig_pos[1].split('-')
-    return hl.struct(
-        chrom=reference_independent_contig(contig_pos[0]),
-        start=hl.int32(pos[0]),
-        end=hl.int32(pos[1]),
-        type=validated_enum_member(type_contig[0], SV_TYPES),
-    )
-
-
-def cpx_intervals(
-    ht: hl.Table,
-    **_: Any,
-) -> hl.Expression:
-    return hl.or_missing(
-        hl.is_defined(ht['info.CPX_INTERVALS']),
-        ht['info.CPX_INTERVALS'].map(_get_cpx_interval),
-    )
 
 
 def populations(
@@ -94,7 +65,3 @@ def sorted_gene_consequences(
         for gene_col in CONSEQ_PREDICTED_GENE_COLS
     ]
     return hl.filter(hl.is_defined, mapped_genes).flatmap(lambda x: x)
-
-
-def predictions(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.struct(strvctvre=hl.parse_float32(ht['info.StrVCTVRE']))

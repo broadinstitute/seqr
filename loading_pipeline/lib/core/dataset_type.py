@@ -181,11 +181,8 @@ class DatasetType(StrEnum):
                 'liftedOverPos': shared.lifted_over_pos,
             },
             DatasetType.SV: {
-                'cpxIntervals': sv.cpx_intervals,
                 'populations': sv.populations,
-                'predictions': sv.predictions,
                 'sortedGeneConsequences': sv.sorted_gene_consequences,
-                'xpos': shared.xpos,
             },
         }
         if reference_genome == ReferenceGenome.GRCh37:
