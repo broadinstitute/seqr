@@ -236,6 +236,15 @@ export const LOF_CONSTRAINED_GENE = {
   geneSymbol: "PCGF2",
 }
 
+export const PLI_CONSTRAINED_GENE = {
+  constraints: { misZ: 2.1046, misZRank: 3105, louef: 0.52341, louefRank: 4187, pli: 0.96213, pliRank: 3016, totalGenes: 20076 },
+  cnSensitivity: {},
+  sHet: {},
+  omimPhenotypes: [],
+  geneId: "ENSG00000105976",
+  geneSymbol: "MET",
+}
+
 export const LOCUS_LIST_GUID = "LL00132_2017_monogenic_ibd_gen"
 export const LOCUS_LIST = {
   canEdit: false,
