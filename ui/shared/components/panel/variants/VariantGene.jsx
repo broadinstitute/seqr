@@ -9,6 +9,7 @@ import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/sele
 import DataTable from 'shared/components/table/DataTable'
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
+  GENE_CONSTRAINT_VERSION,
   MISSENSE_THRESHHOLD,
   LOF_THRESHHOLD,
   PANEL_APP_CONFIDENCE_LEVEL_COLORS,
@@ -377,10 +378,11 @@ const GENE_DETAIL_SECTIONS = [
     detailsDisplay: gene => (
       `This gene ranks ${gene.constraints.misZRank} most constrained out of
       ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
-      ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
-      of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
-      statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
-      via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`),
+      ${gene.constraints.misZ.toPrecision(4)}). Missense constraint is a measure of the degree to which the number
+      of missense variants found in this gene in ${GENE_CONSTRAINT_VERSION} is higher or lower than expected
+      according to the statistical model described in [gnomAD constraint help]. In general this metric is most
+      useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily
+      functionally constrained.`),
   },
   {
     color: 'red',
@@ -397,7 +399,9 @@ const GENE_DETAIL_SECTIONS = [
             {gene.constraints.louefRank}
             &nbsp;most intolerant of LoF mutations out of &nbsp;
             {gene.constraints.totalGenes}
-            &nbsp;genes under study (louef: &nbsp;
+            &nbsp;genes under study in &nbsp;
+            {GENE_CONSTRAINT_VERSION}
+            &nbsp;(louef: &nbsp;
             {gene.constraints.louef.toPrecision(4)}
             {gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}
             )

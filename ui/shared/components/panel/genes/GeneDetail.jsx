@@ -8,15 +8,13 @@ import { Grid, Popup, Loader, Label } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
-import { getDecipherGeneLink } from 'shared/utils/constants'
+import { getDecipherGeneLink, GENE_CONSTRAINT_VERSION } from 'shared/utils/constants'
 import { SectionHeader, ColoredLabel } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import { HorizontalSpacer } from '../../Spacers'
 
 const Gtex = React.lazy(() => import('../../graph/Gtex'))
-
-const EXAC_README_URL = 'ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt'
 
 const GRAY_STYLE = { color: 'gray' }
 
@@ -187,16 +185,15 @@ const STAT_DETAILS = [
     rankDescription: 'constrained',
     note: (
       <span>
-        Missense contraint is a measure of the degree to which the number of missense variants found
-        in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
-        described in [
-        <a href="http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html" target="_blank" rel="noreferrer">
-          K. Samocha 2014
+        Missense constraint is a measure of the degree to which the number of missense variants found
+        in this gene in &nbsp;
+        {GENE_CONSTRAINT_VERSION}
+        &nbsp; is higher or lower than expected according to the statistical model described in [
+        <a href="https://gnomad.broadinstitute.org/help/constraint" target="_blank" rel="noreferrer">
+          gnomAD constraint help
         </a>
         ]. In general this metric is most useful for genes that act via a dominant mechanism, and where
-        a large proportion of the protein is heavily functionally constrained. For more details see
-        this &nbsp;
-        <a href={EXAC_README_URL} target="_blank" rel="noreferrer">README</a>
+        a large proportion of the protein is heavily functionally constrained.
       </span>
     ),
   },
@@ -208,8 +205,8 @@ const STAT_DETAILS = [
       { field: 'pli', rankField: 'pliRank', label: 'pLI-score' },
     ],
     rankDescription: 'intolerant of LoF mutations',
-    note: 'These metrics are based on the amount of expected variation observed in the gnomAD data and is a measure ' +
-    'of how likely the gene is to be intolerant of loss-of-function mutations.',
+    note: `These metrics are based on the amount of expected variation observed in the ${GENE_CONSTRAINT_VERSION} data ` +
+    'and is a measure of how likely the gene is to be intolerant of loss-of-function mutations.',
   },
   {
     title: 'Shet',

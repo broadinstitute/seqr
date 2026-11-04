@@ -1470,7 +1470,7 @@
     "model": "reference_data.dataversions",
     "pk": "GeneConstraint",
     "fields": {
-        "version": "gnomad.v2.1.1.lof_metrics.by_gene"
+        "version": "gnomad.v4.1.2.constraint_metrics"
     }
 },
 {

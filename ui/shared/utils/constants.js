@@ -1312,8 +1312,9 @@ const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
   return clinvarSeverity + hgmdSeverity
 }
 
+export const GENE_CONSTRAINT_VERSION = 'gnomAD v4.1.2'
 export const MISSENSE_THRESHHOLD = 3
-export const LOF_THRESHHOLD = 0.35
+export const LOF_THRESHHOLD = 0.45
 
 const PRIORITIZED_GENE_MAX_RANK = 1000
 
