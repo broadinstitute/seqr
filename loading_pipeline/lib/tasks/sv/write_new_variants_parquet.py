@@ -4,7 +4,6 @@ import pandas as pd
 from pyliftover import LiftOver
 
 from loading_pipeline.lib.annotations.enums import (
-    SV_CONSEQUENCE_RANKS,
     SV_TYPE_DETAILS,
     SV_TYPES,
 )
@@ -34,11 +33,7 @@ GENCODE_RELEASE = 42
 class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     @property
     def annotation_dependencies(self) -> dict[str, hl.Table]:
-        deps = {
-            'gencode_gene_symbol_to_gene_id_mapping': hl.literal(
-                load_gencode_gene_symbol_to_gene_id(GENCODE_RELEASE),
-            ),
-        }
+        deps = {}
         for reference_dataset in ReferenceDataset:
             if (
                 reference_dataset.formatting_annotation
@@ -91,8 +86,23 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             )
         ]
 
-        # Select down to the formatting annotations fields and
-        # any reference dataset collection annotations.
+        # Annotate gene consequences
+        gene_symbol_to_gene_id = load_gencode_gene_symbol_to_gene_id(GENCODE_RELEASE)
+        predicted_csq_cols = [col for col in df.columns if col.startswith('PREDICTED_')]
+        df['sortedGeneConsequences'] = df[predicted_csq_cols].apply(
+            lambda row: [
+                {
+                    'geneId': gene_symbol_to_gene_id.get(gene),
+                    'majorConsequence': col.removeprefix('PREDICTED_'),
+                }
+                for col, genes in row.dropna().items()
+                for gene in genes.split(',')
+            ],
+            axis=1,
+        )
+        df = df.drop(columns=predicted_csq_cols)
+
+        # Select formatted annotations
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
         if not invalid_sv_types.empty:
             raise ValueError(f'Unexpected enum value: {invalid_sv_types.iloc[0]}')

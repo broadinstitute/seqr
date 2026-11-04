@@ -182,7 +182,6 @@ class DatasetType(StrEnum):
             },
             DatasetType.SV: {
                 'populations': sv.populations,
-                'sortedGeneConsequences': sv.sorted_gene_consequences,
             },
         }
         if reference_genome == ReferenceGenome.GRCh37:
