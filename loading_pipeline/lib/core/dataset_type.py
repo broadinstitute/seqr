@@ -199,9 +199,6 @@ class DatasetType(StrEnum):
             DatasetType.MITO: {
                 **GRCh37_fns[DatasetType.MITO],
             },
-            DatasetType.SV: {
-                **GRCh37_fns[DatasetType.SV],
-            },
         }[self]
 
     def variants_export_field_names(
