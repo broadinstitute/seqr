@@ -141,7 +141,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             output_type='u',
         )
 
-        rand_id = random.randint(10_000, 99_999)  # noqa: S311 # nosec
+        rand_id = random.randint(10_000_000, 99_999_999)  # noqa: S311 # nosec
         filtered_annotated_target = luigi.LocalTarget(is_tmp=True)
         filtered_annotated_target.path += '.vcf.gz'
         self.run_bcftools(
