@@ -43,10 +43,15 @@ const LargeRow = styled(Grid.Row)`
 
 const scrollToTop = () => window.scrollTo(0, 0)
 
-const DisplayVariants = React.memo(({ displayVariants, ...props }) => (
+const DisplayVariants = React.memo(({ displayVariants, compoundHetToggle, searchHash }) => (
   <Grid.Row>
     <Grid.Column width={16}>
-      <Variants variants={displayVariants} {...props} linkToSavedVariants />
+      <Variants
+        variants={displayVariants}
+        compoundHetToggle={compoundHetToggle}
+        searchHash={searchHash}
+        linkToSavedVariants
+      />
     </Grid.Column>
   </Grid.Row>
 ))
@@ -54,6 +59,7 @@ const DisplayVariants = React.memo(({ displayVariants, ...props }) => (
 DisplayVariants.propTypes = {
   displayVariants: PropTypes.arrayOf(PropTypes.object),
   compoundHetToggle: PropTypes.func,
+  searchHash: PropTypes.string,
 }
 
 const compHetToggleLabel = helpLabel('Unpair', 'Display individual variants instead of pairs for compound heterozygous mutations')
