@@ -69,7 +69,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AlphagenomeDict',
             fields=[
-                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='avi', serialize=False, to='clickhouse_search.entriessnvindel')),
+                ('key', clickhouse_search.backend.fields.DictKeyForeignKey(db_column='key', on_delete=django.db.models.deletion.CASCADE, primary_key=True, related_name='alphagenome', serialize=False, to='clickhouse_search.entriessnvindel')),
                 ('score', clickhouse_backend.models.DecimalField(decimal_places=5, max_digits=9)),
             ],
             options={

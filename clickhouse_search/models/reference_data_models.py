@@ -1828,7 +1828,7 @@ class AlphagenomeAllMv(RefreshableMaterializedView):
     class Meta(RefreshableMaterializedViewMeta):
         db_table = 'GRCh38/SNV_INDEL/reference_data/alphagenome/all_variants_mv'
         to_table = 'AlphagenomeAllVariants'
-        # Converted from DeepMind's AVI file alphagenome_variant_impact_score_snvs.tsv.gz: chrom, pos, ref, alt, and PHRED as score
+        # Converted from DeepMind's alphagenome_variant_impact_score_snvs.tsv.gz: chrom, pos, ref, alt, and PHRED as score
         source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/alphagenome/alphagenome.parquet/*.parquet'
         column_selects = {
             'variantId': "assumeNotNull(concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt))",
@@ -1845,7 +1845,7 @@ class AlphagenomeMv(RefreshableMaterializedView):
         source_table = 'AlphagenomeAllVariants'
 
 class AlphagenomeDict(Dictionary):
-    key = DictKeyForeignKey('EntriesSnvIndel', related_name='avi')
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='alphagenome')
     score = models.DecimalField(max_digits=9, decimal_places=5)
 
     class Meta(ReferenceDataDictMeta):

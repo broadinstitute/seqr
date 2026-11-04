@@ -1522,13 +1522,25 @@ export const ALPHAMISSENSE_THRESHHOLDS = [0.071, 0.17, 0.792, 0.906, 0.99]
 const CLINGEN_CITATION = { name: '2022 ClinGen recommendations', pmid: '36413997' }
 const PRED_COLOR_MAP = ['green', 'olive', 'grey', 'yellow', 'red', '#8b0000']
 const REVERSE_PRED_COLOR_MAP = [...PRED_COLOR_MAP].reverse()
-const getPredColors = ({ colors, reverseThresholds }) => (
-  colors || (reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP)
-)
 
 export const ORDERED_PREDICTOR_FIELDS = [
   { field: 'cadd', group: CODING_IN_SILICO_GROUP, thresholds: [0.151, 22.8, 25.3, 28.1, undefined], min: 1, max: 99, fieldTitle: 'CADD', citation: CLINGEN_CITATION },
   { field: 'revel', group: MISSENSE_IN_SILICO_GROUP, thresholds: [0.0161, 0.291, 0.644, 0.773, 0.932], fieldTitle: 'REVEL', citation: CLINGEN_CITATION },
+  {
+    field: 'alphagenome',
+    group: CODING_IN_SILICO_GROUP,
+    thresholds: [undefined, 18, 23, 27, undefined],
+    max: 99,
+    fieldTitle: 'AlphaGenome',
+    getHref: ({ chrom, pos, ref, alt }) => (
+      `https://deepmind.google.com/science/alphagenome/atlas?q=chr${chrom}:${pos}:${ref}%3E${alt}&m=variant`
+    ),
+    citation: {
+      name: 'Avsec Ž, Latysheva N, Cheng J, et al. Advancing regulatory variant effect prediction with AlphaGenome. Nature. 2026;649(8099):1206-1218',
+      linkText: 'doi:10.1038/s41586-025-10014-0',
+      href: 'https://doi.org/10.1038/s41586-025-10014-0',
+    },
+  },
   { field: 'alphamissense', fieldTitle: 'AlphaMissense', group: MISSENSE_IN_SILICO_GROUP, thresholds: ALPHAMISSENSE_THRESHHOLDS, citation: { name: '2025 ClinGen SVI recommendations', pmid: '40084623' } },
   { field: 'mpc', group: MISSENSE_IN_SILICO_GROUP, thresholds: [undefined, undefined, 1.36, 1.828, undefined], max: 5, fieldTitle: 'MPC' },
   {
@@ -1545,23 +1557,6 @@ export const ORDERED_PREDICTOR_FIELDS = [
   },
   { field: 'absplice', thresholds: [0.05, 0.05, 0.1, 0.2, undefined], fieldTitle: 'AbSplice', citation: { name: '"Aberrant splicing prediction across human tissues"', pmid: '37142848' } },
   { field: 'promoter_ai', thresholds: [undefined, undefined, 0.2, 0.5, undefined], absValue: true, fieldTitle: 'PromoterAI', citation: { name: '"Predicting expression-altering promoter mutations with deep learning"', pmid: '40440429' } },
-  {
-    field: 'avi',
-    group: CODING_IN_SILICO_GROUP,
-    thresholds: [18, 23, 27, undefined],
-    colors: ['green', 'yellow', 'orange', 'red'],
-    max: 99,
-    fieldTitle: 'AlphaGenome AVI',
-    getHref: ({ chrom, pos, ref, alt }) => (
-      `https://deepmind.google.com/science/alphagenome/atlas?q=chr${chrom}:${pos}:${ref}%3E${alt}&m=variant`
-    ),
-    note: 'AVI scores are only available for GRCh38 SNVs. Indels have no AVI score.',
-    citation: {
-      name: 'Avsec Ž, Latysheva N, Cheng J, et al. Advancing regulatory variant effect prediction with AlphaGenome. Nature. 2026;649(8099):1206-1218',
-      linkText: 'doi:10.1038/s41586-025-10014-0',
-      href: 'https://doi.org/10.1038/s41586-025-10014-0',
-    },
-  },
   {
     field: 'pext',
     thresholds: [0, 0.2, undefined],
@@ -1599,9 +1594,9 @@ export const ORDERED_PREDICTOR_FIELDS = [
 
 export const coloredIcon = color => React.createElement(color.startsWith('#') ? ColoredIcon : Icon, { name: 'circle', size: 'small', color })
 const thresholdPredictionFieldValue = (floatValue, props) => {
-  const { thresholds, absValue, thresholdMap = {}, colorOverride = {} } = props
+  const { thresholds, reverseThresholds, absValue, thresholdMap = {}, colorOverride = {} } = props
   const threshholdValue = absValue ? Math.abs(floatValue) : floatValue
-  const color = colorOverride[threshholdValue] || getPredColors(props).find(
+  const color = colorOverride[threshholdValue] || (reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).find(
     (clr, i) => (thresholds[i - 1] || thresholds[i]) &&
       (thresholds[i - 1] === undefined || threshholdValue >= thresholds[i - 1]) &&
       (thresholds[i] === undefined || threshholdValue < thresholds[i]),
@@ -1625,9 +1620,9 @@ export const predictionFieldValue = (
 
   return indicatorMap && indicatorMap[value]
 }
-export const predictorColorRanges = (thresholds, { citation, note, thresholdMap, absValue, ...props }) => (
+export const predictorColorRanges = (thresholds, { citation, reverseThresholds, thresholdMap, absValue }) => (
   <div>
-    {getPredColors(props).map((c, i) => {
+    {(reverseThresholds ? REVERSE_PRED_COLOR_MAP : PRED_COLOR_MAP).map((c, i) => {
       const prevUndefined = thresholds[i - 1] === undefined
       let range
       if (thresholds[i] === undefined) {
@@ -1658,7 +1653,6 @@ export const predictorColorRanges = (thresholds, { citation, note, thresholdMap,
         </div>
       )
     })}
-    {note && <div><small>{note}</small></div>}
     {citation && (
       <small>
         {`Based on ${citation.name} (${citation.pmid ? 'PMID: ' : ''}`}

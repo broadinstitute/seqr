@@ -1,7 +1,6 @@
 import re
 from collections import defaultdict
 from datetime import timedelta
-from decimal import Decimal
 from django.core.management import call_command
 from django.db import connections
 from django.urls.base import reverse
@@ -25,9 +24,8 @@ from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, Cl
     TopmedGRCh37Dict, GnomadmitoMv, GnomadmitoDict, GnomadmitoheteroplasmyMv, GnomadmitoheteroplasmyDict, HelixmitoMv, \
     HelixmitoDict, HelixmitoheteroplasmyMv, HelixmitoheteroplasmyDict, ScreenDict, MitomapMv, MitomapDict, Absplice2Mv, \
     Absplice2Dict, PromoterAIMv, PromoterAIDict, PextSnvIndelMv, PextSnvIndelDict, PextMitoMv, PextMitoDict, AlphagenomeMv, \
-    AlphagenomeDict, AlphagenomeAllMv
+    AlphagenomeDict
 from clickhouse_search.models.search_models import EntriesSnvIndel, VariantsSnvIndel, EntriesSv, EntriesGcnv
-from clickhouse_search.search import get_clickhouse_variant_annotations
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
@@ -1653,20 +1651,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self.assertTrue(all(call.args[0].startswith('project_analysis_groups__') for call in self.mock_redis.get.mock_calls))
         self.assertTrue(all(call.args[0].startswith('project_analysis_groups__') for call in self.mock_redis.set.mock_calls))
 
-    def test_variant_annotations_include_avi(self):
-        annotations = list(get_clickhouse_variant_annotations('38', Dataset.DATASET_TYPE_VARIANT_CALLS, [2]))
-        self.assertEqual(annotations[0]['predictions']['avi'], Decimal('18.6'))
-
-    def test_alphagenome_source_variant_ids_are_normalized(self):
-        source_rows = [('1', 38724419, 'T', 'G'), ('chr1', 38724419, 'T', 'G'), ('MT', 4429, 'G', 'A'), ('chrMT', 4429, 'G', 'A'), ('chrM', 4429, 'G', 'A')]
-        variant_id_select = AlphagenomeAllMv._meta.column_selects['variantId']
-        with connections['clickhouse'].cursor() as cursor:
-            cursor.execute(
-                f'SELECT {variant_id_select} FROM (SELECT r.1 AS chrom, r.2 AS pos, r.3 AS ref, r.4 AS alt FROM (SELECT arrayJoin({source_rows}) AS r))'
-            )
-            variant_ids = [row[0] for row in cursor.fetchall()]
-        self.assertListEqual(variant_ids, ['1-38724419-T-G', '1-38724419-T-G', 'M-4429-G-A', 'M-4429-G-A', 'M-4429-G-A'])
-
     def test_frequency_filter(self):
         sv_callset_filter = {'sv_callset': {'af': 0.05}}
         self._assert_expected_search(
@@ -2146,7 +2130,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_in_silico_filter(self):
-        main_in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
+        main_in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5, 'alphagenome': 20}
         self._assert_expected_search(
            [VARIANT1, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=main_in_silico,
             check_login=self.check_collaborator_login,
@@ -2166,16 +2150,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [VARIANT1, VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
             in_silico={'alphamissense': 0.5},
         )
-        self._assert_expected_search([VARIANT2], in_silico={'alphamissense': 0.5, 'requireScore': True})
-
-        self._assert_expected_search(
-            [VARIANT1, MULTI_FAMILY_VARIANT, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3],
-            in_silico={'avi': 20},
-        )
-        self._assert_expected_search([], in_silico={'avi': 20, 'requireScore': True})
-        self._assert_expected_search([VARIANT2], in_silico={'avi': 15, 'requireScore': True})
-
-        self._assert_expected_search([VARIANT2], in_silico={'avi': 18.6, 'requireScore': True})
+        self._assert_expected_search([VARIANT2], in_silico={'alphamissense': 0.5, 'alphagenome': 15, 'requireScore': True})
 
         sv_in_silico = {'strvctvre': 0.1, 'requireScore': True}
         self._assert_expected_search(
@@ -2192,9 +2167,6 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._set_grch37_search()
         self._assert_expected_search([GRCH37_VARIANT], in_silico=main_in_silico, is_37=True)
-
-        self._assert_expected_search([GRCH37_VARIANT], in_silico={'avi': 20}, is_37=True)
-        self._assert_expected_search([], in_silico={'avi': 20, 'requireScore': True}, is_37=True)
 
     def test_sort(self):
         self._assert_expected_search(

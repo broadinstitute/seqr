@@ -181,7 +181,6 @@ class TableNameBuilder:
 
 class ClickhouseReferenceDataset(StrEnum):
     ABSPLICE2 = 'absplice2'
-    ALPHAGENOME = 'alphagenome'
     CLINVAR = 'clinvar'
     DBNSFP = 'dbnsfp'
     EIGEN = 'eigen'
@@ -206,7 +205,6 @@ class ClickhouseReferenceDataset(StrEnum):
     @property
     def all_variants_mv_timeout(self):
         return {
-            ClickhouseReferenceDataset.ALPHAGENOME: WAIT_VIEW_TIMEOUT_S * 10,
             ClickhouseReferenceDataset.DBNSFP: WAIT_VIEW_TIMEOUT_S * 3,
             ClickhouseReferenceDataset.SPLICE_AI: WAIT_VIEW_TIMEOUT_S * 10,
         }.get(self, WAIT_VIEW_TIMEOUT_S)
@@ -256,7 +254,6 @@ class ClickhouseReferenceDataset(StrEnum):
             ],
             (ReferenceGenome.GRCh38, DatasetType.SNV_INDEL): [
                 ClickhouseReferenceDataset.ABSPLICE2,
-                ClickhouseReferenceDataset.ALPHAGENOME,
                 ClickhouseReferenceDataset.CLINVAR,
                 ClickhouseReferenceDataset.DBNSFP,
                 ClickhouseReferenceDataset.EIGEN,
