@@ -13,7 +13,7 @@ dependencies = [
     "ipykernel==6.29.2",  # matches pinned version in hail init_notebook.py
     "jupyter-console==6.6.3", # matches pinned version in hail init_notebook.py
     "qtconsole==5.6.1", # matches pinned version in hail init_notebook.py
-    "pyarrow==22.0.0",
+    "pyarrow==23.0.1",
 
     # Git/URL installs (PEP 508 direct references)
     "gnomad-qc @ git+https://github.com/broadinstitute/gnomad_qc.git@v4.1",
