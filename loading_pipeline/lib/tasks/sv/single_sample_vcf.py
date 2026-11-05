@@ -55,7 +55,6 @@ class SingleSampleVCFTask(BaseVCFTask):
         'GT': ('1', 'String'),
         'GQ': ('1', 'Integer'),
         'RD_CN': ('1', 'Integer'),
-        'CONC_ST': ('.', 'String'),
     }
 
     KEEP_FIELDS: ClassVar[str] = ','.join(

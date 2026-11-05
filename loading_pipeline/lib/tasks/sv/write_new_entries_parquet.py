@@ -143,7 +143,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             lambda samples: [s for s in samples if '1' in s['gt']],
         )
 
-        matched_samples = df.groupby(df['MatchId'])['samples'].agg(
+        matched_samples = df.groupby(['MatchId', 'TRUVARI_FILTER'])['samples'].agg(
             lambda rows: {s['sampleId'] for samples in rows for s in samples},
         )
         df['sample'] = df.apply(
@@ -152,7 +152,10 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
                     dict([cls._format_sample_field(*i) for i in s.items()])
                     for s in row['samples']
                     if s['sampleId']
-                    not in matched_samples.get(row['CollapseId'], set())
+                    not in matched_samples.get(
+                        (row['CollapseId'], row['TRUVARI_FILTER']),
+                        set(),
+                    )
                 ),
                 None,
             ),
