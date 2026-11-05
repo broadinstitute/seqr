@@ -12,7 +12,6 @@ import {
   GENE_CONSTRAINT_VERSION,
   MISSENSE_THRESHHOLD,
   LOF_THRESHHOLD,
-  PLI_THRESHHOLD,
   PANEL_APP_CONFIDENCE_LEVEL_COLORS,
   PANEL_APP_CONFIDENCE_DESCRIPTION,
   getDecipherGeneLink,
@@ -375,8 +374,6 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
 
 const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
 
-const isLofConstrained = gene => gene.constraints.louef < LOF_THRESHHOLD || gene.constraints.pli > PLI_THRESHHOLD
-
 const GENE_DETAIL_SECTIONS = [
   {
     color: 'red',
@@ -399,12 +396,12 @@ const GENE_DETAIL_SECTIONS = [
     color: 'red',
     description: 'Loss of Function Constraint',
     label: 'LOF CONSTR',
-    showDetails: gene => isLofConstrained(gene) ||
+    showDetails: gene => (gene.constraints.louef < LOF_THRESHHOLD) ||
       (gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD) ||
       (gene.sHet.postMean && gene.sHet.postMean > SHET_THRESHOLD),
     detailsDisplay: gene => (
       <List bulleted>
-        {isLofConstrained(gene) && (
+        {gene.constraints.louef < LOF_THRESHHOLD && (
           <List.Item>
             This gene ranks as &nbsp;
             {gene.constraints.louefRank}

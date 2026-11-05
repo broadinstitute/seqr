@@ -4,9 +4,7 @@ import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
 import VariantGenes, { GeneDetails } from './VariantGene'
 
-import {
-  STATE1, GENE, VARIANT, MISSENSE_CONSTRAINED_GENE, LOF_CONSTRAINED_GENE, PLI_CONSTRAINED_GENE,
-} from '../fixtures'
+import { STATE1, GENE, VARIANT, MISSENSE_CONSTRAINED_GENE, LOF_CONSTRAINED_GENE } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
@@ -54,22 +52,7 @@ test('LoF constraint details show for a louef under the gnomAD v4 cutoff of 0.45
     'This gene ranks as 2224 most intolerant of LoF mutations by louef out of 20076 genes under study in gnomAD v4.1.2 (louef: 0.3995) Karczewski (2020). See Gene Constraint for more information.',
   )
 
-  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.449, pli: 0.9 }))).toContain('intolerant of LoF mutations')
-  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.45, pli: 0.9 }))).not.toContain('intolerant of LoF mutations')
+  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.449 }))).toContain('intolerant of LoF mutations')
+  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.45 }))).not.toContain('intolerant of LoF mutations')
   expect(renderedText(MISSENSE_CONSTRAINED_GENE)).not.toContain('intolerant of LoF mutations')
-})
-
-test('LoF constraint details show for a pLI over 0.9', () => {
-  expect(mount(<GeneDetails gene={PLI_CONSTRAINED_GENE} />).text()).toContain('LOF CONSTR')
-  expect(renderedText(PLI_CONSTRAINED_GENE)).toContain(
-    'This gene ranks as 4187 most intolerant of LoF mutations by louef and 3016 by pLi out of 20076 genes under study in gnomAD v4.1.2 (louef: 0.5234, pLi: 0.9621) Karczewski (2020). See Gene Constraint for more information.',
-  )
-
-  const overPliCutoff = withConstraints(PLI_CONSTRAINED_GENE, { pli: 0.901 })
-  expect(mount(<GeneDetails gene={overPliCutoff} />).text()).toContain('LOF CONSTR')
-  expect(renderedText(overPliCutoff)).toContain('intolerant of LoF mutations')
-
-  const atPliCutoff = withConstraints(PLI_CONSTRAINED_GENE, { pli: 0.9 })
-  expect(mount(<GeneDetails gene={atPliCutoff} />).text()).not.toContain('LOF CONSTR')
-  expect(renderedText(atPliCutoff)).not.toContain('intolerant of LoF mutations')
 })
