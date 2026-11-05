@@ -153,7 +153,8 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
                     for s in row['samples']
                     if s['sampleId']
                     not in matched_samples.get(
-                        (row['CollapseId'], row['TRUVARI_FILTER']), set(),
+                        (row['CollapseId'], row['TRUVARI_FILTER']),
+                        set(),
                     )
                 ),
                 None,
