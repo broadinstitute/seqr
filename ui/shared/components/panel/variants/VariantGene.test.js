@@ -37,7 +37,7 @@ test('missense constraint details show the gene rank, z-score and constraint hel
   const text = renderedText(MISSENSE_CONSTRAINED_GENE)
 
   expect(text).toContain(
-    'This gene ranks as the 1,348th most constrained against missense variation among the 20,076 genes evaluated in gnomAD v4.1.2 (Z-score: 4.137). Missense constraint measures the depletion of missense variants observed in a gene relative to the number expected under a statistical model that accounts for local sequence context and other mutational factors [Samocha et al., 2014]. A higher positive Z-score indicates stronger constraint, meaning fewer missense variants are observed than expected. This metric can be particularly useful for prioritizing genes associated with dominant disorders, especially when a large proportion of the protein is functionally constrained. See Gene Constraint for more information.',
+    'This gene ranks as the 1,349th most constrained against missense variation among the 20,076 genes evaluated in gnomAD v4.1.2 (Z-score: 4.137). Missense constraint measures the depletion of missense variants observed in a gene relative to the number expected under a statistical model that accounts for local sequence context and other mutational factors [Samocha et al., 2014]. A higher positive Z-score indicates stronger constraint, meaning fewer missense variants are observed than expected. This metric can be particularly useful for prioritizing genes associated with dominant disorders, especially when a large proportion of the protein is functionally constrained. See Gene Constraint for more information.',
   )
   expect(text).not.toContain('ExAC')
   expect(mount(<GeneDetails gene={MISSENSE_CONSTRAINED_GENE} compact />).text()).toMatch(/4\.137\)\.\sMissense constraint/)
@@ -52,10 +52,10 @@ test('missense constraint details show the gene rank, z-score and constraint hel
   )
 })
 
-test('constraint ranks read as ordinals', () => {
+test('constraint ranks read as ordinals counting from 1st', () => {
   [
-    [0, '0th'], [1, '1st'], [2, '2nd'], [3, '3rd'], [4, '4th'], [11, '11th'], [12, '12th'], [13, '13th'],
-    [21, '21st'], [22, '22nd'], [23, '23rd'], [101, '101st'], [111, '111th'], [1002, '1,002nd'],
+    [0, '1st'], [1, '2nd'], [2, '3rd'], [3, '4th'], [10, '11th'], [11, '12th'], [12, '13th'],
+    [20, '21st'], [21, '22nd'], [22, '23rd'], [100, '101st'], [110, '111th'], [999, '1,000th'], [1001, '1,002nd'],
   ].forEach(([rank, ordinal]) => {
     expect(renderedText(withConstraints(MISSENSE_CONSTRAINED_GENE, { misZRank: rank }))).toContain(
       `This gene ranks as the ${ordinal} most constrained against missense variation`,
@@ -68,7 +68,7 @@ test('constraint ranks read as ordinals', () => {
 
 test('LoF constraint details show for a louef under the gnomAD v4 cutoff of 0.45', () => {
   expect(renderedText(LOF_CONSTRAINED_GENE)).toContain(
-    'This gene ranks as the 2,224th most constrained against loss-of-function (LoF) mutations by LOEUF among the 20,076 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3995; pLI: 0.9995) [Karczewski et al., 2020]. See Gene Constraint for more information.',
+    'This gene ranks as the 2,225th most constrained against loss-of-function (LoF) mutations by LOEUF among the 20,076 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3995; pLI: 0.9995) [Karczewski et al., 2020]. See Gene Constraint for more information.',
   )
   expectGeneConstraintLink(LOF_CONSTRAINED_GENE)
   expectNewTabLink(
@@ -77,7 +77,7 @@ test('LoF constraint details show for a louef under the gnomAD v4 cutoff of 0.45
     'Karczewski et al., 2020',
   )
   expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { pli: 0 }))).toContain(
-    'This gene ranks as the 2,224th most constrained against loss-of-function (LoF) mutations by LOEUF among the 20,076 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3995) [Karczewski et al., 2020]. See Gene Constraint for more information.',
+    'This gene ranks as the 2,225th most constrained against loss-of-function (LoF) mutations by LOEUF among the 20,076 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3995) [Karczewski et al., 2020]. See Gene Constraint for more information.',
   )
 
   expect(mount(<GeneDetails gene={LOF_CONSTRAINED_GENE} compact />).text()).toMatch(/2020\]\.\sSee/)

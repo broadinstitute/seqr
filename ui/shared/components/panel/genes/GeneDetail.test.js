@@ -27,9 +27,9 @@ test('constraint stats name gnomAD v4.1.2 and link to its constraint help', () =
   const wrapper = mount(<Provider store={store}><GeneDetail geneId={geneId} /></Provider>)
   const text = wrapper.text().replace(/\s+/g, ' ')
 
-  expect(text).toContain('z-score: 4.137 (ranked 1348 most constrained out of 20076 genes under study)')
-  expect(text).toContain('louef: 0.8198 (ranked 7626 most intolerant of LoF mutations out of 20076 genes under study)')
-  expect(text).toContain('pLI-score: 0.7190 (ranked 4059 most intolerant of LoF mutations out of 20076 genes under study)')
+  expect(text).toContain('z-score: 4.137 (ranked 1349 most constrained out of 20076 genes under study)')
+  expect(text).toContain('louef: 0.8198 (ranked 7627 most intolerant of LoF mutations out of 20076 genes under study)')
+  expect(text).toContain('pLI-score: 0.7190 (ranked 4060 most intolerant of LoF mutations out of 20076 genes under study)')
   expect(text).toContain(
     'NOTE: Missense constraint measures the depletion of missense variants observed in a gene relative to the number expected under a statistical model that accounts for local sequence context and other mutational factors [Samocha et al., 2014]. A higher positive Z-score indicates stronger constraint, meaning fewer missense variants are observed than expected. This metric can be particularly useful for prioritizing genes associated with dominant disorders, especially when a large proportion of the protein is functionally constrained. See Gene Constraint for more information.',
   )

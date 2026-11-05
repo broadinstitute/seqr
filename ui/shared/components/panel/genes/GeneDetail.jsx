@@ -95,7 +95,7 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
       {fieldsToShow.map(({ value, label, rankField }) => value && (
         <span key={label}>
           {`${label}: ${value.toPrecision(4)} ${rankField ?
-            `(ranked ${scores[rankField]} most ${rankDescription} out of ${scores.totalGenes} genes under study)` : ''}`}
+            `(ranked ${scores[rankField] + 1} most ${rankDescription} out of ${scores.totalGenes} genes under study)` : ''}`}
           <br />
         </span>
       ))}
