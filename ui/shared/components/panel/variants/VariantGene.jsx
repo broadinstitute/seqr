@@ -374,6 +374,10 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
 
 const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
 
+const ORDINAL_SUFFIXES = { one: 'st', two: 'nd', few: 'rd', other: 'th' }
+const ORDINAL_RULES = new Intl.PluralRules('en-US', { type: 'ordinal' })
+const formatRank = rank => `${rank.toLocaleString('en-US')}${ORDINAL_SUFFIXES[ORDINAL_RULES.select(rank)]}`
+
 const GENE_DETAIL_SECTIONS = [
   {
     color: 'red',
@@ -385,8 +389,11 @@ const GENE_DETAIL_SECTIONS = [
     ),
     detailsDisplay: gene => (
       <span>
-        {`This gene ranks ${gene.constraints.misZRank} among ${gene.constraints.totalGenes} genes evaluated for
-        missense constraint (Z-score: ${gene.constraints.misZ.toPrecision(4)}). ${MISSENSE_CONSTRAINT_DESCRIPTION}`}
+        {`This gene ranks as the ${formatRank(gene.constraints.misZRank)} most constrained against missense variation
+        among the ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in ${GENE_CONSTRAINT_VERSION}
+        (Z-score: ${gene.constraints.misZ.toPrecision(4)}).`}
+        &nbsp;
+        {MISSENSE_CONSTRAINT_DESCRIPTION}
         &nbsp;
         {GENE_CONSTRAINT_HELP}
       </span>
@@ -403,20 +410,15 @@ const GENE_DETAIL_SECTIONS = [
       <List bulleted>
         {gene.constraints.louef < LOF_THRESHHOLD && (
           <List.Item>
-            This gene ranks as &nbsp;
-            {gene.constraints.louefRank}
-            &nbsp;most intolerant of LoF mutations by louef
-            {gene.constraints.pli ? ` and ${gene.constraints.pliRank} by pLi` : ''}
-            &nbsp;out of &nbsp;
-            {gene.constraints.totalGenes}
-            &nbsp;genes under study in &nbsp;
-            {GENE_CONSTRAINT_VERSION}
-            &nbsp;(louef: &nbsp;
-            {gene.constraints.louef.toPrecision(4)}
-            {gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}
-            )
-            <a href="https://pubmed.ncbi.nlm.nih.gov/32461654/" target="_blank" rel="noreferrer"> Karczewski (2020)</a>
-            .&nbsp;
+            {`This gene ranks as the ${formatRank(gene.constraints.louefRank)} most constrained against loss-of-function
+            (LoF) mutations by LOEUF among the ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in
+            ${GENE_CONSTRAINT_VERSION} (LOEUF: ${gene.constraints.louef.toPrecision(4)}`}
+            {gene.constraints.pli ? `; pLI: ${gene.constraints.pli.toPrecision(4)}` : ''}
+            ) [
+            <a href="https://pubmed.ncbi.nlm.nih.gov/32461654/" target="_blank" rel="noreferrer">
+              Karczewski et al., 2020
+            </a>
+            ].&nbsp;
             {GENE_CONSTRAINT_HELP}
           </List.Item>
         )}

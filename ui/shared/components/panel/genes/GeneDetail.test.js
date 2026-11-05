@@ -42,4 +42,8 @@ test('constraint stats name gnomAD v4.1.2 and link to its constraint help', () =
   expect(constraintLinks.map(link => link.prop('target'))).toEqual(['_blank', '_blank'])
   expect(constraintLinks.map(link => link.prop('rel'))).toEqual(['noreferrer', 'noreferrer'])
   expect(wrapper.find('a[href^="ftp://"]').exists()).toBe(false)
+  const citationLink = wrapper.find('a[href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4222185/"]')
+  expect(citationLink.text()).toBe('Samocha et al., 2014')
+  expect(citationLink.prop('target')).toBe('_blank')
+  expect(citationLink.prop('rel')).toBe('noreferrer')
 })

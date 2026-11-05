@@ -174,7 +174,16 @@ DosageSensitivity.propTypes = {
 export const HI_THRESHOLD = 0.86
 export const TS_THRESHOLD = 0.94
 export const SHET_THRESHOLD = 0.1
-export const MISSENSE_CONSTRAINT_DESCRIPTION = 'Missense constraint measures the depletion of missense variants observed in a gene relative to the number expected under a statistical model that accounts for local sequence context and other mutational factors [Samocha et al., 2014]. A higher positive Z-score indicates stronger constraint, meaning fewer missense variants are observed than expected. This metric can be particularly useful for prioritizing genes associated with dominant disorders, especially when a large proportion of the protein is functionally constrained.'
+export const MISSENSE_CONSTRAINT_DESCRIPTION = (
+  <span>
+    Missense constraint measures the depletion of missense variants observed in a gene relative to the number
+    expected under a statistical model that accounts for local sequence context and other mutational factors [
+    <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4222185/" target="_blank" rel="noreferrer">Samocha et al., 2014</a>
+    ]. A higher positive Z-score indicates stronger constraint, meaning fewer missense variants are observed than
+    expected. This metric can be particularly useful for prioritizing genes associated with dominant disorders,
+    especially when a large proportion of the protein is functionally constrained.
+  </span>
+)
 export const GENE_CONSTRAINT_HELP = (
   <span>
     See&nbsp;
