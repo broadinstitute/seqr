@@ -33,19 +33,13 @@ GENCODE_RELEASE = 42
 class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     @property
     def annotation_dependencies(self) -> dict[str, hl.Table]:
-        deps = {}
-        for reference_dataset in ReferenceDataset:
-            if (
-                reference_dataset.formatting_annotation
-                and self.dataset_type
-                in reference_dataset.dataset_types(self.reference_genome)
-            ):
-                deps[f'{reference_dataset.value}_ht'] = hl.read_table(
-                    valid_reference_dataset_path(
-                        self.reference_genome,
-                        reference_dataset,
-                    ),
-                )
+        reference_dataset = ReferenceDataset.gnomad_svs
+        deps = {f'{reference_dataset.value}_ht': hl.read_table(
+            valid_reference_dataset_path(
+                self.reference_genome,
+                reference_dataset,
+            ),
+        )}
         return deps
 
     def output(self) -> luigi.Target:

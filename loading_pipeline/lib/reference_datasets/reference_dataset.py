@@ -5,7 +5,6 @@ from enum import StrEnum
 
 import hail as hl
 
-from loading_pipeline.lib.annotations import sv
 from loading_pipeline.lib.core import (
     DatasetType,
     ReferenceGenome,
@@ -20,7 +19,6 @@ from loading_pipeline.lib.reference_datasets.misc import (
 )
 
 DATASET_TYPES = 'dataset_types'
-FORMATTING_ANNOTATION = 'formatting_annotation'
 SELECT = 'select'
 VERSION = 'version'
 PATH = 'path'
@@ -35,10 +33,6 @@ class ReferenceDataset(StrEnum):
     gnomad_genomes = 'gnomad_genomes'
     gnomad_qc = 'gnomad_qc'
     gnomad_svs = 'gnomad_svs'
-
-    @property
-    def formatting_annotation(self) -> Callable | None:
-        return CONFIG[self].get(FORMATTING_ANNOTATION)
 
     def version(self, reference_genome: ReferenceGenome) -> str:
         version = CONFIG[self][reference_genome][VERSION]
@@ -165,7 +159,6 @@ CONFIG = {
         },
     },
     ReferenceDataset.gnomad_svs: {
-        FORMATTING_ANNOTATION: sv.populations,
         ReferenceGenome.GRCh38: {
             DATASET_TYPES: frozenset([DatasetType.SV]),
             VERSION: '1.1',
