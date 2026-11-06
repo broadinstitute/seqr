@@ -42,13 +42,11 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         )}
         return deps
 
-    def output(self) -> luigi.Target:
-        return GCSorLocalTarget(
-            new_variants_parquet_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.run_id,
-            ),
+    def output_dir(self) -> str:
+        return new_variants_parquet_path(
+            self.reference_genome,
+            self.dataset_type,
+            self.run_id,
         )
 
     def requires(self) -> list[luigi.Task]:

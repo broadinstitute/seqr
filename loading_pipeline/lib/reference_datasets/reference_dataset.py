@@ -4,6 +4,7 @@ from collections.abc import Callable
 from enum import StrEnum
 
 import hail as hl
+import pandas as pd
 
 from loading_pipeline.lib.core import (
     DatasetType,
@@ -72,6 +73,12 @@ class ReferenceDataset(StrEnum):
             validate_allele_type(ht, dataset_type)
             validate_no_duplicate_variants(ht, reference_genome, dataset_type)
         return ht
+
+    def format_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        module = importlib.import_module(
+            f'loading_pipeline.lib.reference_datasets.{self.name}',
+        )
+        return module.format_df(df)
 
 
 CONFIG = {
