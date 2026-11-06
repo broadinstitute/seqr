@@ -28,7 +28,7 @@ class UpdatedReferenceDatasetParams(luigi.Task):
 @luigi.util.inherits(UpdatedReferenceDatasetParams)
 class UpdatedReferenceDatasetParquetNoHailTask(BaseWriteParquetFromVcfTask):
     def output_dir(self) -> str:
-        reference_dataset_parquet(
+        return reference_dataset_parquet(
             self.reference_genome,
             self.reference_dataset,
         )
