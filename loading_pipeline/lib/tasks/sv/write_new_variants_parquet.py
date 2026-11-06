@@ -74,12 +74,12 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['END'] = df['END'].astype(int)
 
         lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
-        df[['lifted_over_chrom', 'lifted_over_pos']] = [self._liftover(lo, c, p) for c, p in zip(df['#CHROM'], df['POS'])]
+        df[['lifted_over_chrom', 'lifted_over_pos']] = [self._liftover(lo, c, p) for c, p in zip(df['#CHROM'], df['POS'], strict=False)]
         df['rg37_locus_end'] = [
             {'contig': chrom, 'position': pos} if chrom else None
             for chrom, pos in (
                 self._liftover(lo, c, p)
-                for c, p in zip(df['end_chrom'].fillna(df['#CHROM']), df['END'])
+                for c, p in zip(df['end_chrom'].fillna(df['#CHROM']), df['END'], strict=False)
             )
         ]
 
@@ -111,13 +111,15 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         # Format and validate annotations
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
         if not invalid_sv_types.empty:
-            raise ValueError(f'Unexpected enum value: {invalid_sv_types.iloc[0]}')
+            msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
+            raise ValueError(msg)
 
         df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
         df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(r'^<[^:]+:(.+)>$')[0]
         invalid_details = df['sv_type_detail'].dropna()[~df['sv_type_detail'].dropna().isin(SV_TYPE_DETAILS)]
         if not invalid_details.empty:
-            raise ValueError(f'Unexpected enum value: {invalid_details.iloc[0]}')
+            msg = f'Unexpected enum value: {invalid_details.iloc[0]}'
+            raise ValueError(msg)
 
         df['CPX_INTERVALS'] = df['CPX_INTERVALS'].str.split(',').map(
             lambda intervals: [self._parse_cpx_interval(interval) for interval in intervals],
@@ -128,7 +130,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
         df.loc[(df['SVTYPE'] == 'INS') & df['end_chrom'].notna(), 'sv_source_detail'] = df['end_chrom'].map(
-            lambda chrom: {'chrom': chrom}
+            lambda chrom: {'chrom': chrom},
         )
         df['end_chrom'] = df['end_chrom'].mask(df['SVTYPE'] == 'INS')
         df['xpos'] = df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000 + df['POS']
@@ -153,16 +155,17 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     @staticmethod
     def _parse_cpx_interval(interval):
         # an example format of CPX_INTERVALS is "DUP_chr1:1499897-1499974"
-        type, loc = interval.split('_chr')
-        if type not in SV_TYPES:
-            raise ValueError(f'Unexpected enum value: {type}')
+        sv_type, loc = interval.split('_chr')
+        if sv_type not in SV_TYPES:
+            msg = f'Unexpected enum value: {sv_type}'
+            raise ValueError(msg)
         contig, pos = loc.split(':')
         start, end = pos.split('-')
         return {
             'chrom': contig,
             'start': int(start),
             'end': int(end),
-            'type': type,
+            'type': sv_type,
         }
 
     @staticmethod

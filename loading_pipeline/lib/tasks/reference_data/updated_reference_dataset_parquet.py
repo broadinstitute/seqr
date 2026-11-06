@@ -12,7 +12,11 @@ from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
 from loading_pipeline.lib.tasks.dataproc.base_run_job_on_dataproc import (
     BaseRunJobOnDataprocTask,
 )
-from loading_pipeline.lib.tasks.files import GCSorLocalFolderTarget, GCSorLocalTarget, LocalizableFileTask
+from loading_pipeline.lib.tasks.files import (
+    GCSorLocalFolderTarget,
+    GCSorLocalTarget,
+    LocalizableFileTask,
+)
 
 
 class UpdatedReferenceDatasetParams(luigi.Task):
