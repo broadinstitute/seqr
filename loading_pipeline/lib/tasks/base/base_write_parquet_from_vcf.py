@@ -1,10 +1,24 @@
+import os
+
 import luigi
 import pandas as pd
 
 from loading_pipeline.lib.tasks.base.base_vcf import BaseVCFTask
+from loading_pipeline.lib.tasks.files import GCSorLocalTarget
 
 
 class BaseWriteParquetFromVcfTask(BaseVCFTask):
+    def output(self) -> luigi.Target:
+        return GCSorLocalTarget(
+            os.path.join(
+                self.output_dir(),
+                'part-0.parquet',
+            ),
+        )
+
+    def output_dir(self) -> str:
+        return ''
+
     def run(self) -> None:
         for target in self.input()[0]:
             target.localize()
