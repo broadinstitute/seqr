@@ -43,13 +43,11 @@ class DatasetType(StrEnum):
             lambda s: f'{s.locus.contig if reference_genome == ReferenceGenome.GRCh37 else s.locus.contig.replace("chr", "")}-{s.locus.position}-{"-".join(s.alleles)}'
         )
 
+    @staticmethod
     def entries_table_key_expression(
-        self,
         ht: hl.Table,
         sample_type: SampleType,
     ) -> dict[str, hl.Expression]:
-        if self == DatasetType.SV:
-            return {'sign': 1, 'variantId': ht.variant_id}
         return {
             'sample_type': sample_type.value,
             'sign': 1,
@@ -111,7 +109,6 @@ class DatasetType(StrEnum):
         return {
             DatasetType.SNV_INDEL: hl.empty_set(hl.tstr),
             DatasetType.MITO: hl.set(['PASS']),
-            DatasetType.SV: hl.set(['PASS', 'BOTHSIDES_SUPPORT']),
         }[self]
 
     @property
@@ -291,14 +288,6 @@ class DatasetType(StrEnum):
                 'hl': mito.HL,
                 'mitoCn': mito.mito_cn,
                 'contamination': mito.contamination,
-            },
-            DatasetType.SV: {
-                'gt': shared.gt,
-                'cn': sv.CN,
-                'gq': shared.GQ,
-                'newCall': sv.new_call,
-                'prevCall': sv.prev_call,
-                'prevNumAlt': sv.prev_num_alt,
             },
         }[self]
 

@@ -32,25 +32,6 @@ CONSEQ_PREDICTED_GENE_COLS = {
     'info.PREDICTED_UTR': hl.tarray(hl.tstr),
 }
 
-PREVIOUS_GENOTYPE_N_ALT_ALLELES = hl.dict(
-    {
-        # Map of concordance string -> previous n_alt_alleles()
-        # Concordant
-        frozenset(['TN']): 0,  # 0/0 -> 0/0
-        frozenset(['TP']): 2,  # 1/1 -> 1/1
-        frozenset(['TN', 'TP']): 1,  # 0/1 -> 0/1
-        # Novel
-        frozenset(['FP']): 0,  # 0/0 -> 1/1
-        frozenset(['TN', 'FP']): 0,  # 0/0 -> 0/1
-        # Absent
-        frozenset(['FN']): 2,  # 1/1 -> 0/0
-        frozenset(['TN', 'FN']): 1,  # 0/1 -> 0/0
-        # Discordant
-        frozenset(['FP', 'TP']): 1,  # 0/1 -> 1/1
-        frozenset(['FN', 'TP']): 2,  # 1/1 -> 0/1
-    },
-)
-
 
 def _get_cpx_interval(
     x: hl.StringExpression,
@@ -99,42 +80,6 @@ def sv_source_detail(ht: hl.Table, **_: Any) -> hl.Expression:
         ((sv_type(ht) == 'INS') & (ht.locus.contig != end_locus(ht).contig)),
         hl.Struct(chrom=reference_independent_contig(end_locus(ht).contig)),
     )
-
-
-def CN(mt: hl.MatrixTable, **_: Any) -> hl.Expression:  # noqa: N802
-    return mt.RD_CN
-
-
-def _prev_num_alt(mt: hl.MatrixTable) -> hl.Expression:
-    return hl.or_missing(
-        hl.is_defined(mt.CONC_ST) & ~mt.CONC_ST.contains('EMPTY'),
-        PREVIOUS_GENOTYPE_N_ALT_ALLELES[hl.set(mt.CONC_ST)],
-    )
-
-
-def new_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    prev_num_alt = _prev_num_alt(mt)
-    novel_genotype = hl.if_else(
-        hl.is_defined(prev_num_alt),
-        (mt.GT.n_alt_alleles() != prev_num_alt) & (prev_num_alt == 0),
-        True,
-    )
-    return hl.or_missing(hl.is_defined(mt.GT), novel_genotype)
-
-
-def prev_call(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    prev_num_alt = _prev_num_alt(mt)
-    concordant_genotype = hl.is_defined(prev_num_alt) & (
-        mt.GT.n_alt_alleles() == prev_num_alt
-    )
-    return hl.or_missing(hl.is_defined(mt.GT), concordant_genotype)
-
-
-def prev_num_alt(mt: hl.MatrixTable, **_: Any) -> hl.Expression:
-    num_alt = hl.if_else(hl.is_defined(mt.GT), mt.GT.n_alt_alleles(), -1)
-    prev_num_alt = _prev_num_alt(mt)
-    discordant_genotype = (num_alt != prev_num_alt) & (prev_num_alt > 0)
-    return hl.or_missing(discordant_genotype, prev_num_alt)
 
 
 def cpx_intervals(
