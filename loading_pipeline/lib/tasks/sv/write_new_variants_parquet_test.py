@@ -115,7 +115,9 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         mock_load_gencode_gene_symbol_to_gene_id: Mock,
         mock_random: Mock,
     ) -> None:
-        mock_load_gencode_gene_symbol_to_gene_id.return_value = {'TAS1R1': 'ENSG00000173662'}
+        mock_load_gencode_gene_symbol_to_gene_id.return_value = {
+            'TAS1R1': 'ENSG00000173662',
+        }
         mock_random.randint.side_effect = range(1, 10)
         _write_existing_variants_parquet_fixture()
         copy_project_pedigree_to_mocked_dir(
@@ -174,7 +176,10 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                     'predictions': {'strvctvre': 0.1255},
                     'populations': {
                         'gnomad_svs': {
-                            'af': 0.000032, 'het': 4.0, 'hom': 63042.0, 'id': 'gnomAD-SV_v3_BND_chr1_0001f5b7',
+                            'af': 0.000032,
+                            'het': 4.0,
+                            'hom': 63042.0,
+                            'id': 'gnomAD-SV_v3_BND_chr1_0001f5b7',
                         },
                     },
                     'sortedGeneConsequences': [

@@ -74,12 +74,18 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['END'] = df['END'].astype(int)
 
         lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
-        df[['lifted_over_chrom', 'lifted_over_pos']] = [self._liftover(lo, c, p) for c, p in zip(df['#CHROM'], df['POS'], strict=False)]
+        df[['lifted_over_chrom', 'lifted_over_pos']] = [
+            self._liftover(lo, c, p)
+            for c, p in zip(df['#CHROM'], df['POS'], strict=False)
+        ]
         df['rg37_locus_end'] = [
             {'contig': chrom, 'position': pos} if chrom else None
             for chrom, pos in (
                 self._liftover(lo, c, p)
-                for c, p in zip(df['end_chrom'].fillna(df['#CHROM']), df['END'], strict=False)
+                for c, p in zip(
+                    df['end_chrom'].fillna(df['#CHROM']), df['END'],
+                    strict=False,
+                )
             )
         ]
 
@@ -106,7 +112,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         with gnomad_input.open() as f:
             gnomad_df = pd.read_parquet(f, filters=[('id', 'in', gnomad_ids)])
         gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
-        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)})
+        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
+            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)}
+        )
 
         # Format and validate annotations
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
@@ -115,37 +123,54 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             raise ValueError(msg)
 
         df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
-        df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(r'^<[^:]+:(.+)>$')[0]
-        invalid_details = df['sv_type_detail'].dropna()[~df['sv_type_detail'].dropna().isin(SV_TYPE_DETAILS)]
+        df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(
+            r'^<[^:]+:(.+)>$',
+        )[0]
+        invalid_details = df['sv_type_detail'].dropna()[
+            ~df['sv_type_detail'].dropna().isin(SV_TYPE_DETAILS)
+        ]
         if not invalid_details.empty:
             msg = f'Unexpected enum value: {invalid_details.iloc[0]}'
             raise ValueError(msg)
 
-        df['CPX_INTERVALS'] = df['CPX_INTERVALS'].str.split(',').map(
-            lambda intervals: [self._parse_cpx_interval(interval) for interval in intervals],
-            na_action='ignore',
+        df['CPX_INTERVALS'] = (
+            df['CPX_INTERVALS']
+            .str.split(',')
+            .map(
+                lambda intervals: [self._parse_cpx_interval(interval) for interval in intervals],
+                na_action='ignore',
+            )
         )
 
         df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
-        df.loc[(df['SVTYPE'] == 'INS') & df['end_chrom'].notna(), 'sv_source_detail'] = df['end_chrom'].map(
+        df.loc[
+            (df['SVTYPE'] == 'INS') & df['end_chrom'].notna(), 'sv_source_detail'
+        ] = df['end_chrom'].map(
             lambda chrom: {'chrom': chrom},
         )
         df['end_chrom'] = df['end_chrom'].mask(df['SVTYPE'] == 'INS')
-        df['xpos'] = df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000 + df['POS']
-        df['predictions'] = df.pop('StrVCTVRE').astype(float).map(lambda score: {'strvctvre': score})
+        df['xpos'] = (
+            df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000
+            + df['POS']
+        )
+        df['predictions'] = (
+            df.pop('StrVCTVRE').astype(float).map(lambda score: {'strvctvre': score})
+        )
 
         # Add serial integer index
         max_key_line = self.find_vcf_header_line(self.input()[0][0], '##maxKey')
         curr_max_key = int(max_key_line.removeprefix('##maxKey=').strip())
         df['key'] = range(curr_max_key + 1, curr_max_key + 1 + len(df))
 
-        return df.drop(
-            columns=['REF', 'FILTER', 'QUAL', 'SVLEN', *TRUVARI_INFO_COLS],
-        ).rename(
-            columns={'ID': 'variant_id', 'SVTYPE': 'sv_type'},
-        ).rename(columns=self._to_camel_case)
+        return (
+            df.drop(
+                columns=['REF', 'FILTER', 'QUAL', 'SVLEN', *TRUVARI_INFO_COLS],
+            ).rename(
+                columns={'ID': 'variant_id', 'SVTYPE': 'sv_type'},
+            ).rename(columns=self._to_camel_case)
+        )
 
     @staticmethod
     def _liftover(lo, chrom, pos):
