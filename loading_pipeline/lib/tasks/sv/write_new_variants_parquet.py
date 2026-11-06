@@ -32,6 +32,8 @@ GENCODE_RELEASE = 42
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
+    attempt_id = luigi.IntParameter()
+
     def output_dir(self) -> str:
         return new_variants_parquet_path(
             self.reference_genome,
@@ -43,7 +45,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         return [
             self.clone(WriteDeduplicatedSvVcfTask),
             self.clone(
-                UpdatedReferenceDatasetParquetNoHailTask(reference_dataset=ReferenceDataset.gnomad_svs),
+                UpdatedReferenceDatasetParquetNoHailTask,
+                reference_dataset=ReferenceDataset.gnomad_svs,
+                attempt_id=self.attempt_id,
             ),
         ]
 

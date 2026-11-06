@@ -143,6 +143,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             ],
             validations_to_skip=[ALL_VALIDATIONS],
             run_id=TEST_RUN_ID,
+            attempt_id=1,
             skip_expect_tdr_metrics=True,
         )
         worker.add(task)
