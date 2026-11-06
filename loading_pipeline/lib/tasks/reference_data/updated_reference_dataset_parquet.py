@@ -34,8 +34,7 @@ class UpdatedReferenceDatasetParquetNoHailTask(BaseWriteParquetFromVcfTask):
         )
 
     def requires(self) -> list[luigi.Task]:
-        inout_path = self.reference_dataset.path(self.reference_genome)
-        return [LocalizableFileTask(inout_path)]
+        return [LocalizableFileTask(self.reference_dataset.path(self.reference_genome))]
 
     def create_data_frame(self) -> pd.DataFrame:
         df = self.import_vcf(self.input()[0][0])

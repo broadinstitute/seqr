@@ -1,17 +1,8 @@
-import hail as hl
-
-from loading_pipeline.lib.core import ReferenceGenome
-from loading_pipeline.lib.reference_datasets.misc import vcf_to_ht
+import pandas as pd
 
 
-def get_ht(path: str, reference_genome: ReferenceGenome) -> hl.Table:
-    ht = vcf_to_ht(path, reference_genome)
-    ht = ht.select(
-        KEY=ht.rsid,
-        AF=ht.info.AF[0],
-        AC=ht.info.AC[0],
-        AN=ht.info.AN,
-        N_HET=ht.info.N_HET,
-        N_HOM=ht.info.N_HOMALT,
-    )
-    return ht.key_by('KEY')
+def format_df(df: pd.DataFrame) -> pd.DataFrame:
+    fields = {'af': 'AF', 'het': 'N_HET', 'hom': 'N_HOM'}
+    for field, raw_field in fields.items():
+        df[field] = df[raw_field].astype(float)
+    return  df[['id', *fields.keys()]].rename(columns={'ID': 'id'})

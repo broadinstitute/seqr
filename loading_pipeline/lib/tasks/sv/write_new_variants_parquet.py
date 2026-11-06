@@ -9,7 +9,6 @@ from loading_pipeline.lib.annotations.enums import (
 )
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
-    valid_reference_dataset_path,
 )
 from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
     load_gencode_gene_symbol_to_gene_id,
@@ -21,7 +20,9 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
     BaseWriteParquetFromVcfTask,
 )
-from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.reference_data.updated_reference_dataset_parquet import (
+    UpdatedReferenceDatasetParquetNoHailTask,
+)
 from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
 )
@@ -31,17 +32,6 @@ GENCODE_RELEASE = 42
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
-    @property
-    def annotation_dependencies(self) -> dict[str, hl.Table]:
-        reference_dataset = ReferenceDataset.gnomad_svs
-        deps = {f'{reference_dataset.value}_ht': hl.read_table(
-            valid_reference_dataset_path(
-                self.reference_genome,
-                reference_dataset,
-            ),
-        )}
-        return deps
-
     def output_dir(self) -> str:
         return new_variants_parquet_path(
             self.reference_genome,
@@ -52,6 +42,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WriteDeduplicatedSvVcfTask),
+            self.clone(
+                UpdatedReferenceDatasetParquetNoHailTask(reference_dataset=ReferenceDataset.gnomad_svs),
+            ),
         ]
 
     def create_data_frame(self) -> pd.DataFrame:
