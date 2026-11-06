@@ -3,7 +3,7 @@ from enum import StrEnum
 
 import hail as hl
 
-from loading_pipeline.lib.annotations import mito, shared, snv_indel, sv
+from loading_pipeline.lib.annotations import mito, shared, snv_indel
 from loading_pipeline.lib.core.definitions import ReferenceGenome, SampleType
 from loading_pipeline.lib.core.environment import Env
 
@@ -179,9 +179,6 @@ class DatasetType(StrEnum):
                 'variantId': shared.variant_id,
                 'sortedTranscriptConsequences': shared.sorted_transcript_consequences,
                 'liftedOverPos': shared.lifted_over_pos,
-            },
-            DatasetType.SV: {
-                'populations': sv.populations,
             },
         }
         if reference_genome == ReferenceGenome.GRCh37:

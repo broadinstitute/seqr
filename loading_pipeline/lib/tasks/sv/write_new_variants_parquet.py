@@ -87,6 +87,14 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         )
         df = df.drop(columns=predicted_csq_cols)
 
+        # Add gnomad frequency
+        gnomad_input = self.input()[1]
+        gnomad_input.format = luigi.format.Nop
+        with gnomad_input.open() as f:
+            gnomad_df = pd.read_parquet(f)
+        gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
+        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)})
+
         # Select formatted annotations
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
         if not invalid_sv_types.empty:
@@ -117,20 +125,6 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             'ID': 'variantId',
             'SVTYPE': 'svType',
         })
-
-
-        new_variants_ht = new_variants_ht.select(
-            **{
-                name: fn(
-                    new_variants_ht,
-                    **self.annotation_dependencies,
-                    **self.param_kwargs,
-                )
-                for name, fn in self.dataset_type.formatting_annotation_fns(
-                    self.reference_genome,
-                ).items()
-            },
-        )
 
         # Add serial integer index
         max_key_line = self.find_vcf_header_line(self.input()[0][0], '##maxKey')
