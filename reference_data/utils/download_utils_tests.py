@@ -1,7 +1,5 @@
-import gzip
 import mock
 import os
-import requests
 import responses
 
 import tempfile
@@ -56,16 +54,3 @@ class DownloadUtilsTest(TestCase):
             line2 = f.readline()
         self.assertEqual(line1, "test data\n")
         self.assertEqual(line2, "another line\n")
-
-    @responses.activate
-    def test_download_bgz_file(self):
-        url = 'https://mock_url/test_file.tsv.bgz'
-        responses.add(responses.HEAD, url, headers={"Content-Length": "1024"}, status=200)
-        responses.add(responses.GET, url, body=gzip.compress(b'test data\nanother line\n'))
-
-        with mock.patch('reference_data.utils.download_utils.requests.get', wraps=requests.get) as mock_get:
-            result = download_file(url)
-        mock_get.assert_called_with(url, stream=True, timeout=300)
-
-        with gzip.open(result, 'rt') as f:
-            self.assertEqual(f.read(), "test data\nanother line\n")

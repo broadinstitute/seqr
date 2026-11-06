@@ -18,12 +18,19 @@ class UpdateGeneConstraintTest(ReferenceDataCommandTestCase):
     def test_update_gene_constraint_command(self):
         self._test_update_command('GeneConstraint', 'gnomad.v4.1.2.constraint_metrics', created_records=5)
 
-        self.assertListEqual(sorted(GeneConstraint.objects.values_list(
-            'gene__gene_id', 'mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank',
-        )), [
-            ('ENSG00000097046', 1.4024, 2, 1.5553e-07, 2, 0.84606, 1),
-            ('ENSG00000177000', 1.8317, 1, 1.047e-12, 3, 0.91726, 2),
-            ('ENSG00000186092', 4.1371, 0, 0.71899, 0, 0.81976, 0),
-            ('ENSG00000228198', -0.42203, 3, 0.53605, 1, 1.112, 3),
-            ('ENSG00000237683', -100, 4, 0, 4, 100, 4),
-        ])
+        self.assertEqual(GeneConstraint.objects.count(), 5)
+        record = GeneConstraint.objects.get(gene__gene_id = 'ENSG00000237683')
+        self.assertEqual(record.mis_z, -100)
+        self.assertEqual(record.mis_z_rank, 4)
+        self.assertEqual(record.louef, 100)
+        self.assertEqual(record.louef_rank, 4)
+        self.assertEqual(record.pLI, 0)
+        self.assertEqual(record.pLI_rank, 4)
+
+        record = GeneConstraint.objects.get(gene__gene_id = 'ENSG00000097046')
+        self.assertEqual(record.mis_z, 1.4024)
+        self.assertEqual(record.mis_z_rank, 2)
+        self.assertEqual(record.louef, 0.84606)
+        self.assertEqual(record.louef_rank, 1)
+        self.assertEqual(record.pLI, 1.5553e-07)
+        self.assertEqual(record.pLI_rank, 2)

@@ -432,7 +432,7 @@ class RefseqTranscript(LoadableModel):
             logger.info(f'Skipped {skipped_transcripts[None]} records with unrecognized or duplicated transcripts')
 
 
-# based on https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1.1/constraint/gnomad.v4.1.1.gene_constraint_ht_README.md
+# based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
 class GeneConstraint(GeneMetadataModel):
 
     CURRENT_VERSION = 'gnomad.v4.1.2.constraint_metrics'
@@ -457,7 +457,7 @@ class GeneConstraint(GeneMetadataModel):
 
     @classmethod
     def parse_gene_record(cls, record):
-        # one canonical transcript per gene; for Ensembl genes it is the MANE Select transcript when there is one
+        # only create a record for the canonical transcript of a given gene
         return super().parse_gene_record(record) if record['canonical'] == 'true' else None
 
     @classmethod
