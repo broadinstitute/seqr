@@ -151,13 +151,36 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             ),
         )
         export_json = convert_ndarray_to_list(df.head(2).to_dict('records'))
-        export_json[1]['sortedGeneConsequences'] = [
-            export_json[1]['sortedGeneConsequences'][0],
-        ]
         self.assertEqual(
             export_json,
             [
-                mock.ANY,
+                {
+                    'key': 727,
+                    'xpos': 1004228405,
+                    'chrom': '1',
+                    'pos': 4228405,
+                    'end': 4228448,
+                    'rg37LocusEnd': {'contig': '1', 'position': 4288508},
+                    'variantId': 'INS_chr1_65-1',
+                    'liftedOverChrom': '1',
+                    'liftedOverPos': 4288465,
+                    'algorithms': 'manta,melt',
+                    'bothsidesSupport': None,
+                    'cpxIntervals': None,
+                    'endChrom': None,
+                    'svSourceDetail': None,
+                    'svType': 'INS',
+                    'svTypeDetail': 'ME:ALU',
+                    'predictions': {'strvctvre': 0.1255},
+                    'populations': {
+                        'gnomad_svs': {
+                            'af': 0.000032, 'het': 4.0, 'hom': 63042.0, 'id': 'gnomAD-SV_v3_BND_chr1_0001f5b7',
+                        },
+                    },
+                    'sortedGeneConsequences': [
+                        {'geneId': None, 'majorConsequence': 'NEAREST_TSS'},
+                    ],
+                },
                 {
                     'key': 728,
                     'xpos': 1006558902,

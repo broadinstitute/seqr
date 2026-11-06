@@ -127,10 +127,12 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
-        df.loc[df['SVTYPE'] == 'INS', 'sv_source_detail'] = df['end_chrom'].map(lambda chrom: {'chrom': chrom})
+        df.loc[(df['SVTYPE'] == 'INS') & df['end_chrom'].notna(), 'sv_source_detail'] = df['end_chrom'].map(
+            lambda chrom: {'chrom': chrom}
+        )
         df['end_chrom'] = df['end_chrom'].mask(df['SVTYPE'] == 'INS')
         df['xpos'] = df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000 + df['POS']
-        df['predictions'] = df.pop('StrVCTVRE').map(lambda score: {'strvctvre': score})
+        df['predictions'] = df.pop('StrVCTVRE').astype(float).map(lambda score: {'strvctvre': score})
 
         # Add serial integer index
         max_key_line = self.find_vcf_header_line(self.input()[0][0], '##maxKey')
