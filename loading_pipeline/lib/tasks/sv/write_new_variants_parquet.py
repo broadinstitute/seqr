@@ -63,10 +63,17 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df = self.import_vcf(filtered_target)
 
         # Run liftover
+        if 'END2' in df:
+            df['endChrom'] = df.pop('CHR2').where(df['END2'].notna())
+            df['end'] = df.pop('END2').fillna(df.pop('END')).astype(int)
+        else:
+            df['endChrom'] = None
+            df['end'] = df.pop('END').astype(int)
+            if 'CHR2' in df:
+                df = df.drop(columns=['CHR2'])
+
         lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
         df[['liftedOverChrom', 'liftedOverPos']] = [self._liftover(lo, c, p) for c, p in zip(df['#CHROM'], df['POS'])]
-        df['endChrom'] = df.pop('CHR2').where(df['END2'].notna())
-        df['end'] = df.pop('END2').fillna(df.pop('END')).astype(int)
         df['rg37LocusEnd'] = [
             {'contig': chrom, 'position': pos} if chrom else None
             for chrom, pos in (
@@ -118,6 +125,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
         df['endChrom'] = df['endChrom'].str.removeprefix('chr')
+        df['endChrom'] = df['endChrom'].mask(df['endChrom'] == df['chrom'])
         df.loc[df['SVTYPE'] == 'INS', 'svSourceDetail'] = df['endChrom'].map(lambda chrom: {'chrom': chrom})
         df['endChrom'] = df['endChrom'].mask(df['SVTYPE'] == 'INS')
         df['xpos'] = df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000 + df['POS']
@@ -140,7 +148,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
     @staticmethod
     def _liftover(lo, chrom, pos):
-        result = lo.convert_coordinate(chrom, pos)
+        result = lo.convert_coordinate(chrom, pos - 1)
         return (result[0][0], result[0][1] + 1) if result else (None, None)
 
     @staticmethod
