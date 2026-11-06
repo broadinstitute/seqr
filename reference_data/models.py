@@ -101,8 +101,8 @@ class LoadableModel(models.Model):
         file_path = download_file(cls.get_url(**kwargs))
 
         logger.info(f'Parsing file {file_path}')
-        open_file = gzip.open if file_path.endswith('.gz') else open
-        open_mode = 'rt' if file_path.endswith('.gz') else 'r'
+        open_file = gzip.open if file_path.endswith(('.gz', '.bgz')) else open
+        open_mode = 'rt' if file_path.endswith(('.gz', '.bgz')) else 'r'
         with open_file(file_path, open_mode) as f:
             header_fields = cls.get_file_header(f)
             for line in cls.get_file_iterator(f):
@@ -435,14 +435,14 @@ class RefseqTranscript(LoadableModel):
 # based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
 class GeneConstraint(GeneMetadataModel):
 
-    CURRENT_VERSION = 'gnomad.v2.1.1.lof_metrics.by_gene'
-    URL = f'http://storage.googleapis.com/seqr-reference-data/gene_constraint/{CURRENT_VERSION}.txt'
+    CURRENT_VERSION = 'gnomad.v4.1.2.constraint_metrics'
+    URL = f'https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1.2/constraint/{CURRENT_VERSION}.tsv.bgz'
     RECORD_FIELDS = {
         'gene_id': ('gene_id', lambda gene_id: gene_id.split(".")[0]),
         'gene_symbol': ('gene', None),
-        'mis_z': ('mis_z', lambda value: float(value) if value != 'NaN' else -100),
-        'pLI': ('pLI', lambda value: float(value) if value != 'NA' else 0),
-        'louef': ('oe_lof_upper', lambda value: float(value) if value != 'NA' else 100),
+        'mis_z': ('mis.z_score', lambda value: float(value) if value != 'NA' else -100),
+        'pLI': ('lof.pLI', lambda value: float(value) if value != 'NA' else 0),
+        'louef': ('lof.oe_ci.upper', lambda value: float(value) if value != 'NA' else 100),
     }
 
     mis_z = models.FloatField()
@@ -454,6 +454,11 @@ class GeneConstraint(GeneMetadataModel):
 
     class Meta:
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
+
+    @classmethod
+    def parse_gene_record(cls, record):
+        # only create a record for the canonical transcript of a given gene
+        return super().parse_gene_record(record) if record['canonical'] == 'true' else None
 
     @classmethod
     def get_record_models(cls, records, **kwargs):

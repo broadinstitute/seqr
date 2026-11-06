@@ -217,6 +217,25 @@ export const GENE = {
   symbol: "OR2M3",
 }
 
+export const MISSENSE_CONSTRAINED_GENE = {
+  constraints: { misZ: 4.1371, misZRank: 1348, louef: 0.81976, louefRank: 7626, pli: 0.71899, pliRank: 4059, totalGenes: 20076 },
+  cnSensitivity: {},
+  sHet: {},
+  omimPhenotypes: [],
+  geneId: "ENSG00000186092",
+  geneSymbol: "OR4F5",
+  codingRegionSizeGrch38: 978,
+}
+
+export const LOF_CONSTRAINED_GENE = {
+  constraints: { misZ: 0.78047, misZRank: 9990, louef: 0.3995, louefRank: 2224, pli: 0.99948, pliRank: 2444, totalGenes: 20076 },
+  cnSensitivity: {},
+  sHet: {},
+  omimPhenotypes: [],
+  geneId: "ENSG00000277258",
+  geneSymbol: "PCGF2",
+}
+
 export const LOCUS_LIST_GUID = "LL00132_2017_monogenic_ibd_gen"
 export const LOCUS_LIST = {
   canEdit: false,
