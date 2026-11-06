@@ -23,7 +23,8 @@ from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, Cl
     GnomadGenomesGRCh37Mv, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Mv, GnomadExomesGRCh37Dict, TopmedGRCh37Mv, \
     TopmedGRCh37Dict, GnomadmitoMv, GnomadmitoDict, GnomadmitoheteroplasmyMv, GnomadmitoheteroplasmyDict, HelixmitoMv, \
     HelixmitoDict, HelixmitoheteroplasmyMv, HelixmitoheteroplasmyDict, ScreenDict, MitomapMv, MitomapDict, Absplice2Mv, \
-    Absplice2Dict, PromoterAIMv, PromoterAIDict, PextSnvIndelMv, PextSnvIndelDict, PextMitoMv, PextMitoDict
+    Absplice2Dict, PromoterAIMv, PromoterAIDict, PextSnvIndelMv, PextSnvIndelDict, PextMitoMv, PextMitoDict, AlphagenomeMv, \
+    AlphagenomeDict
 from clickhouse_search.models.search_models import EntriesSnvIndel, VariantsSnvIndel, EntriesSv, EntriesGcnv
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
@@ -91,7 +92,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
             DbnsfpGRCh37SnvIndelMv, EigenGRCh37Mv, SpliceAiGRCh37Mv, DbnsfpMitoMv, MitimpactMv, HmtvarMv, LocalconstraintmitoMv,
             GnomadGenomesMv, GnomadExomesMv, TopmedMv, GnomadGenomesGRCh37Mv, GnomadExomesGRCh37Mv,TopmedGRCh37Mv,
             GnomadmitoMv, GnomadmitoheteroplasmyMv, HelixmitoMv, HelixmitoheteroplasmyMv, MitomapMv, Absplice2Mv,
-            PromoterAIMv, PextSnvIndelMv, PextMitoMv
+            PromoterAIMv, PextSnvIndelMv, PextMitoMv, AlphagenomeMv
         ]:
             view.refresh()
         for dictionary in [
@@ -100,7 +101,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
             SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict, GnomadGenomesDict,
             GnomadExomesDict, TopmedDict, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Dict, TopmedGRCh37Dict,
             GnomadmitoDict, GnomadmitoheteroplasmyDict, HelixmitoDict, HelixmitoheteroplasmyDict, ScreenDict,
-            MitomapDict, Absplice2Dict, PromoterAIDict, PextSnvIndelDict, PextMitoDict
+            MitomapDict, Absplice2Dict, PromoterAIDict, PextSnvIndelDict, PextMitoDict, AlphagenomeDict
         ]:
             dictionary.reload()
         Project.objects.update(genome_version='38')
@@ -2129,16 +2130,16 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
     def test_in_silico_filter(self):
-        main_in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
+        main_in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5, 'alphagenome': 20}
         self._assert_expected_search(
            [VARIANT1, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], in_silico=main_in_silico,
             check_login=self.check_collaborator_login,
         )
 
-        in_silico = {**main_in_silico, 'requireScore': True}
+        in_silico = {**main_in_silico, 'alphagenome': 15, 'requireScore': True}
         in_silico.pop('eigen')
         self._assert_expected_search(
-           [VARIANT4, MITO_VARIANT2], in_silico=in_silico,
+           [VARIANT2, VARIANT4, MITO_VARIANT2], in_silico=in_silico,
         )
 
         self._assert_expected_search(
