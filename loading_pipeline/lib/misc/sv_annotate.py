@@ -15,12 +15,6 @@ PROMOTER = 'PROMOTER'
 BREAKEND_EXON = 'BREAKEND_EXONIC'
 NEAREST_TSS = 'NEAREST_TSS'
 
-CPX_INTERVALS = 'CPX_INTERVALS'
-CPX_TYPE = 'CPX_TYPE'
-CHR2 = 'CHR2'
-END2 = 'END2'
-SVLEN = 'SVLEN'
-
 PROMOTER_WINDOW = 1000
 
 GTF_COLUMNS = [
@@ -152,7 +146,7 @@ def _segment_frame(rows, segment_type, contig, start, end):
             'contig': contig,
             'start': start,
             'end': end,
-            'complex_type': rows[CPX_TYPE],
+            'complex_type': rows['CPX_TYPE'],
         },
     )
 
@@ -172,7 +166,7 @@ def _subtract_dups_from_inversions(inversions, dups):
 
 
 def _complex_segments(df):
-    intervals = df[CPX_INTERVALS].str.split(',').explode()
+    intervals = df['CPX_INTERVALS'].str.split(',').explode()
     parsed = intervals.str.extract(r'^([^_]+)_(.+):(\d+)-(\d+)$')
     segments = pd.DataFrame(
         {
@@ -184,7 +178,7 @@ def _complex_segments(df):
         },
     )
     segments = segments.assign(
-        complex_type=df.loc[segments['variant'], CPX_TYPE].to_numpy(),
+        complex_type=df.loc[segments['variant'], 'CPX_TYPE'].to_numpy(),
         type_rank=segments['segment_type'].map({t: i for i, t in enumerate(SV_TYPES)}),
     ).sort_values(['variant', 'contig', 'start', 'end', 'type_rank'])
 
@@ -209,72 +203,67 @@ def _complex_segments(df):
 
 def _segments(df):
     sv_type = df['SVTYPE']
-    simple = df[~sv_type.isin(['CPX', 'CTX', 'BND', 'INS'])]
-    insertions = df[(sv_type == 'INS') | ((sv_type == 'CPX') & (df[CPX_TYPE] == 'dDUP'))]
-    translocations = df[sv_type == 'CTX']
-    complex_variants = df[
-        (sv_type == 'CPX')
-        | ((sv_type == 'CTX') & (df[CPX_TYPE] == 'CTX_INV') & df[CPX_INTERVALS].notna())
-    ]
+    segment_type = sv_type.case_when(
+        [
+            (df['CPX_TYPE'] == 'dDUP', 'INS'),
+            (df['CPX_TYPE'].isin(TRANSLOCATION_BREAKEND_SUBTYPES), 'CTX'),
+        ],
+    )
+    primary = pd.DataFrame(
+        {
+            'variant': df.index,
+            'segment_type': segment_type,
+            'contig': df['#CHROM'],
+            'start': df['POS'],
+            'end': df['END'].case_when(
+                [
+                    (segment_type == 'INS', df['POS'] + 1),
+                    (segment_type.isin(['BND', 'CTX']), df['POS']),
+                ],
+            ),
+            'complex_type': df['CPX_TYPE'],
+        },
+    )
+    primary_segments = primary[primary['segment_type'] != 'CPX']
 
     breakends = df[sv_type == 'BND']
-    breakend_type = np.where(
-        breakends[CPX_TYPE].isin(TRANSLOCATION_BREAKEND_SUBTYPES),
-        'CTX',
-        'BND',
+    same_chrom = breakends['CHR2'] == breakends['#CHROM']
+    has_same_chrom_length = same_chrom & (breakends['SVLEN'] > 0)
+    has_second_breakend = breakends['CHR2'].notna() & ~(
+        same_chrom
+        & ~has_same_chrom_length
+        & (breakends['END2'].isna() | (breakends['END2'] == breakends['POS']))
     )
-    same_chrom = breakends[CHR2] == breakends['#CHROM']
-    second_breakend_conditions = [
-        same_chrom & (breakends[SVLEN] > 0),
-        same_chrom & breakends[END2].notna() & (breakends[END2] != breakends['POS']),
-        ~same_chrom & breakends[CHR2].notna(),
+    second_breakend = (breakends['POS'] + breakends['SVLEN']).where(
+        has_same_chrom_length,
+        breakends['END2'],
+    )
+    second_breakend_segments = primary.loc[breakends[has_second_breakend].index].assign(
+        contig=breakends['CHR2'],
+        start=second_breakend,
+        end=second_breakend,
+    )
+
+    translocations = df[sv_type == 'CTX']
+    translocation_segments = [
+        _segment_frame(translocations, 'CTX', contig, position, position)
+        for contig, position in [
+            (translocations['#CHROM'], translocations['END']),
+            (translocations['CHR2'], translocations['END2']),
+            (translocations['CHR2'], translocations['END2'] + 1),
+        ]
     ]
-    has_second_breakend = np.logical_or.reduce(second_breakend_conditions)
-    second_breakend = np.select(
-        second_breakend_conditions,
-        [breakends['POS'] + breakends[SVLEN], breakends[END2], breakends[END2]],
+
+    complex_segments = _complex_segments(
+        df[(sv_type == 'CPX') | ((df['CPX_TYPE'] == 'CTX_INV') & df['CPX_INTERVALS'].notna())],
     )
 
     return pd.concat(
         [
-            _segment_frame(
-                simple,
-                simple['SVTYPE'],
-                simple['#CHROM'],
-                simple['POS'],
-                simple['END'],
-            ),
-            _segment_frame(
-                insertions,
-                'INS',
-                insertions['#CHROM'],
-                insertions['POS'],
-                insertions['POS'] + 1,
-            ),
-            _segment_frame(
-                breakends,
-                breakend_type,
-                breakends['#CHROM'],
-                breakends['POS'],
-                breakends['POS'],
-            ),
-            _segment_frame(
-                breakends[has_second_breakend],
-                breakend_type[has_second_breakend],
-                breakends['#CHROM'].where(same_chrom, breakends[CHR2])[has_second_breakend],
-                second_breakend[has_second_breakend],
-                second_breakend[has_second_breakend],
-            ),
-            *(
-                _segment_frame(translocations, 'CTX', contig, position, position)
-                for contig, position in [
-                    (translocations['#CHROM'], translocations['POS']),
-                    (translocations['#CHROM'], translocations['END']),
-                    (translocations[CHR2], translocations[END2]),
-                    (translocations[CHR2], translocations[END2] + 1),
-                ]
-            ),
-            _complex_segments(complex_variants),
+            primary_segments,
+            second_breakend_segments,
+            *translocation_segments,
+            complex_segments,
         ],
         ignore_index=True,
     )
