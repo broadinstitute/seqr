@@ -149,7 +149,8 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
         df.loc[
-            (df['SVTYPE'] == 'INS') & df['end_chrom'].notna(), 'sv_source_detail',
+            (df['SVTYPE'] == 'INS') & df['end_chrom'].notna(),
+            'sv_source_detail',
         ] = df['end_chrom'].map(
             lambda chrom: {'chrom': chrom},
         )
