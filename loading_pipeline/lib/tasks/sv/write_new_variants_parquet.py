@@ -7,6 +7,7 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPE_DETAILS,
     SV_TYPES,
 )
+from loading_pipeline.lib.core import ReferenceGenome
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
 )
@@ -28,6 +29,7 @@ from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
 )
 
 GENCODE_RELEASE = 42
+CONTIGS = list(ReferenceGenome.GRCh38.contig_recoding().values())
 TRUVARI_INFO_COLS = ['TRUVARI_FILTER', 'CollapseId', 'NumCollapsed', 'NumConsolidated']
 
 
@@ -181,6 +183,8 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     @staticmethod
     def _liftover(lo, chrom, pos):
         result = lo.convert_coordinate(chrom, pos - 1)
+        if result and result[0][0] not in CONTIGS:
+            result = None
         return (result[0][0], result[0][1] + 1) if result else (None, None)
 
     @staticmethod
