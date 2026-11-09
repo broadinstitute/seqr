@@ -144,41 +144,10 @@ def _load_annotations(gtf_path):
     return transcripts, features, promoters, tss
 
 
-def _variants(df):
-    info = df.reindex(
-        columns=['END', CHR2, END2, SVLEN, CPX_TYPE, CPX_INTERVALS],
-    ).astype(object)
-    alt = df['ALT']
-    sv_type = alt.str.extract(r'^<([^:>]+)[^>]*>$', expand=False).where(
-        ~alt.str.contains(r'[\[\]]'),
-        np.where(info[CPX_INTERVALS].notna(), 'CPX', 'BND'),
-    )
-    pos = df['POS'].astype(int)
-    variants = pd.DataFrame(
-        {
-            'chrom': df['#CHROM'],
-            'pos': pos,
-            'end': pd.to_numeric(info['END'])
-            .fillna(pos + df['REF'].str.len() - 1)
-            .astype(int),
-            'sv_type': sv_type,
-            'complex_type': info[CPX_TYPE],
-            'chr2': info[CHR2],
-            'end2': pd.to_numeric(info[END2]).fillna(pos).astype(int),
-            'sv_len': pd.to_numeric(info[SVLEN]).fillna(0).astype(int),
-            'cpx_intervals': info[CPX_INTERVALS],
-        },
-    ).reset_index(drop=True)
-    variants['includes_dispersed_dup'] = variants['complex_type'].isin(
-        COMPLEX_SUBTYPES_WITH_DISPERSED_DUP,
-    )
-    return variants
-
-
-def _segment_frame(variants, segment_type, contig, start, end):
+def _segment_frame(rows, segment_type, contig, start, end):
     return pd.DataFrame(
         {
-            'variant': variants.index,
+            'variant': rows.index,
             'segment_type': segment_type,
             'contig': contig,
             'start': start,
@@ -201,8 +170,8 @@ def _subtract_dups_from_inversions(inversions, dups):
     return inversions.reset_index()
 
 
-def _complex_segments(variants):
-    intervals = variants['cpx_intervals'].str.split(',').explode()
+def _complex_segments(df):
+    intervals = df[CPX_INTERVALS].str.split(',').explode()
     parsed = intervals.str.extract(r'^([^_]+)_(.+):(\d+)-(\d+)$')
     segments = pd.DataFrame(
         {
@@ -214,7 +183,7 @@ def _complex_segments(variants):
         },
     )
     segments = segments.assign(
-        complex_type=variants.loc[segments['variant'], 'complex_type'].to_numpy(),
+        complex_type=df.loc[segments['variant'], CPX_TYPE].to_numpy(),
         type_rank=segments['segment_type'].map({t: i for i, t in enumerate(SV_TYPES)}),
     ).sort_values(['variant', 'contig', 'start', 'end', 'type_rank'])
 
@@ -237,81 +206,71 @@ def _complex_segments(variants):
     )[SEGMENT_COLUMNS]
 
 
-def _segments(variants):
-    sv_type = variants['sv_type']
-    simple = variants[~sv_type.isin(['CPX', 'CTX', 'BND', 'INS'])]
-    insertions = variants[
-        (sv_type == 'INS') | ((sv_type == 'CPX') & (variants['complex_type'] == 'dDUP'))
-    ]
-    translocations = variants[sv_type == 'CTX']
-    complex_variants = variants[
+def _segments(df):
+    sv_type = df['SVTYPE']
+    simple = df[~sv_type.isin(['CPX', 'CTX', 'BND', 'INS'])]
+    insertions = df[(sv_type == 'INS') | ((sv_type == 'CPX') & (df[CPX_TYPE] == 'dDUP'))]
+    translocations = df[sv_type == 'CTX']
+    complex_variants = df[
         (sv_type == 'CPX')
-        | (
-            (sv_type == 'CTX')
-            & (variants['complex_type'] == 'CTX_INV')
-            & variants['cpx_intervals'].notna()
-        )
+        | ((sv_type == 'CTX') & (df[CPX_TYPE] == 'CTX_INV') & df[CPX_INTERVALS].notna())
     ]
 
-    breakends = variants[sv_type == 'BND']
+    breakends = df[sv_type == 'BND']
     breakend_type = np.where(
-        breakends['complex_type'].isin(TRANSLOCATION_BREAKEND_SUBTYPES),
+        breakends[CPX_TYPE].isin(TRANSLOCATION_BREAKEND_SUBTYPES),
         'CTX',
         'BND',
     )
-    same_chrom = breakends['chr2'] == breakends['chrom']
+    same_chrom = breakends[CHR2] == breakends['#CHROM']
     second_breakend_conditions = [
-        same_chrom & (breakends['sv_len'] > 0),
-        same_chrom & (breakends['end2'] != breakends['pos']),
-        ~same_chrom & breakends['chr2'].notna(),
+        same_chrom & (breakends[SVLEN] > 0),
+        same_chrom & breakends[END2].notna() & (breakends[END2] != breakends['POS']),
+        ~same_chrom & breakends[CHR2].notna(),
     ]
     has_second_breakend = np.logical_or.reduce(second_breakend_conditions)
     second_breakend = np.select(
         second_breakend_conditions,
-        [
-            breakends['pos'] + breakends['sv_len'],
-            breakends['end2'],
-            breakends['end2'],
-        ],
+        [breakends['POS'] + breakends[SVLEN], breakends[END2], breakends[END2]],
     )
 
     return pd.concat(
         [
             _segment_frame(
                 simple,
-                simple['sv_type'],
-                simple['chrom'],
-                simple['pos'],
-                simple['end'],
+                simple['SVTYPE'],
+                simple['#CHROM'],
+                simple['POS'],
+                simple['END'],
             ),
             _segment_frame(
                 insertions,
                 'INS',
-                insertions['chrom'],
-                insertions['pos'],
-                insertions['pos'] + 1,
+                insertions['#CHROM'],
+                insertions['POS'],
+                insertions['POS'] + 1,
             ),
             _segment_frame(
                 breakends,
                 breakend_type,
-                breakends['chrom'],
-                breakends['pos'],
-                breakends['pos'],
+                breakends['#CHROM'],
+                breakends['POS'],
+                breakends['POS'],
             ),
             _segment_frame(
                 breakends[has_second_breakend],
                 breakend_type[has_second_breakend],
-                breakends['chrom'].where(same_chrom, breakends['chr2'])[has_second_breakend],
+                breakends['#CHROM'].where(same_chrom, breakends[CHR2])[has_second_breakend],
                 second_breakend[has_second_breakend],
                 second_breakend[has_second_breakend],
             ),
             *(
                 _segment_frame(translocations, 'CTX', contig, position, position)
                 for contig, position in [
-                    (translocations['chrom'], translocations['pos']),
-                    (translocations['chrom'], translocations['end']),
-                    (translocations['chr2'], translocations['end2']),
-                    (translocations['chr2'], translocations['end2'] + 1),
+                    (translocations['#CHROM'], translocations['POS']),
+                    (translocations['#CHROM'], translocations['END']),
+                    (translocations[CHR2], translocations[END2]),
+                    (translocations[CHR2], translocations[END2] + 1),
                 ]
             ),
             _complex_segments(complex_variants),
@@ -398,7 +357,7 @@ def _feature_stats(pairs, features):
     )
 
 
-def _transcript_consequences(segments, variants, transcripts, features):
+def _transcript_consequences(segments, includes_dispersed_dup, transcripts, features):
     overlaps = _overlapping_pairs(segments, transcripts)
     segment = segments.loc[overlaps['left']].reset_index(drop=True)
     transcript = transcripts.loc[overlaps['right']].reset_index(drop=True)
@@ -408,9 +367,8 @@ def _transcript_consequences(segments, variants, transcripts, features):
             'segment_type': segment['segment_type'],
             'start': segment['start'],
             'end': segment['end'],
-            'includes_dispersed_dup': variants.loc[
-                segment['variant'],
-                'includes_dispersed_dup',
+            'includes_dispersed_dup': includes_dispersed_dup.loc[
+                segment['variant']
             ].to_numpy(),
             'gene_id': transcript['gene_id'],
             'transcript_id': transcript['transcript_id'],
@@ -504,8 +462,8 @@ def _promoter_consequences(segments, promoters, transcript_consequences):
     ].assign(consequence=PROMOTER)
 
 
-def _nearest_tss_segments(segments, variants):
-    is_merged = variants.loc[segments['variant'], 'complex_type'].isin(
+def _nearest_tss_segments(segments, df):
+    is_merged = df.loc[segments['variant'], CPX_TYPE].isin(
         COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS,
     ).to_numpy()
     return pd.concat(
@@ -562,19 +520,19 @@ def _nearest_tss_consequences(segments, tss):
 
 def annotate_df(df, gtf_path):
     transcripts, features, promoters, tss = _load_annotations(gtf_path)
-    variants = _variants(df)
-    segments = _segments(variants)
+    segments = _segments(df)
+    includes_dispersed_dup = df[CPX_TYPE].isin(COMPLEX_SUBTYPES_WITH_DISPERSED_DUP)
 
     transcript_consequences = _transcript_consequences(
         segments,
-        variants,
+        includes_dispersed_dup,
         transcripts,
         features,
     )
     regulatory_segments = segments[
         ~(
             (segments['segment_type'] == 'DUP')
-            & variants.loc[segments['variant'], 'includes_dispersed_dup'].to_numpy()
+            & includes_dispersed_dup.loc[segments['variant']].to_numpy()
         )
     ]
     promoter_consequences = _promoter_consequences(
@@ -591,7 +549,7 @@ def annotate_df(df, gtf_path):
     nearest_tss_consequences = _nearest_tss_consequences(
         _nearest_tss_segments(
             regulatory_segments[~regulatory_segments['variant'].isin(genic_variants)],
-            variants,
+            df,
         ),
         tss,
     )
@@ -618,6 +576,6 @@ def annotate_df(df, gtf_path):
         .agg(list)
     )
     df['sortedGeneConsequences'] = [
-        consequences_by_variant.get(variant, []) for variant in variants.index
+        consequences_by_variant.get(variant, []) for variant in df.index
     ]
     return df
