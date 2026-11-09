@@ -83,7 +83,8 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             for chrom, pos in (
                 self._liftover(lo, c, p)
                 for c, p in zip(
-                    df['end_chrom'].fillna(df['#CHROM']), df['END'],
+                    df['end_chrom'].fillna(df['#CHROM']),
+                    df['END'],
                     strict=False,
                 )
             )
@@ -137,7 +138,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             df['CPX_INTERVALS']
             .str.split(',')
             .map(
-                lambda intervals: [self._parse_cpx_interval(interval) for interval in intervals],
+                lambda intervals: [
+                    self._parse_cpx_interval(interval) for interval in intervals
+                ],
                 na_action='ignore',
             )
         )
@@ -167,9 +170,11 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         return (
             df.drop(
                 columns=['REF', 'FILTER', 'QUAL', 'SVLEN', *TRUVARI_INFO_COLS],
-            ).rename(
+            )
+            .rename(
                 columns={'ID': 'variant_id', 'SVTYPE': 'sv_type'},
-            ).rename(columns=self._to_camel_case)
+            )
+            .rename(columns=self._to_camel_case)
         )
 
     @staticmethod
