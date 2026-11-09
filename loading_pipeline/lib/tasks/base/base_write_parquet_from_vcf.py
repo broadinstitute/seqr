@@ -20,7 +20,8 @@ class BaseWriteParquetFromVcfTask(BaseVCFTask):
         return ''
 
     def run(self) -> None:
-        for target in self.input()[0]:
+        targets = self.input()[0] if isinstance(self.input()[0], list) else [self.input()[0]]
+        for target in targets:
             target.localize()
 
         df = self.create_data_frame()
