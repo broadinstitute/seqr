@@ -114,7 +114,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             gnomad_df = pd.read_parquet(f, filters=[('id', 'in', gnomad_ids)])
         gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
         df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
-            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)}
+            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
         )
 
         # Format and validate annotations
@@ -149,7 +149,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
         df.loc[
-            (df['SVTYPE'] == 'INS') & df['end_chrom'].notna(), 'sv_source_detail'
+            (df['SVTYPE'] == 'INS') & df['end_chrom'].notna(), 'sv_source_detail',
         ] = df['end_chrom'].map(
             lambda chrom: {'chrom': chrom},
         )
