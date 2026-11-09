@@ -1,71 +1,171 @@
 import json
 
-import hail as hl
 import luigi
 import luigi.util
+import pandas as pd
 
-from loading_pipeline.lib.misc.family_entries import (
-    compute_callset_family_entries_ht,
-    deduplicate_by_most_non_ref_calls,
-)
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
 )
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
-from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
-from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
+    BaseWriteParquetFromVcfTask,
+)
+from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
+    WriteDeduplicatedSvVcfTask,
+)
 from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
     WriteMetadataForSvRunTask,
-)
-from loading_pipeline.lib.tasks.sv.write_postprocessed_callset import (
-    WritePostprocessedSvCallsetTask,
 )
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteNewSvEntriesParquetTask(BaseWriteParquetTask):
-    def output(self) -> luigi.Target:
-        return GCSorLocalTarget(
-            new_entries_parquet_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.run_id,
-            ),
+class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
+    def output_dir(self) -> str:
+        return new_entries_parquet_path(
+            self.reference_genome,
+            self.dataset_type,
+            self.run_id,
         )
 
     def requires(self) -> list[luigi.Task]:
         return [
-            self.clone(WritePostprocessedSvCallsetTask),
+            self.clone(WriteDeduplicatedSvVcfTask),
             self.clone(WriteMetadataForSvRunTask),
         ]
 
-    def create_table(self) -> hl.Table:
-        mt = hl.read_matrix_table(self.input()[0].path)
+    def create_data_frame(self) -> pd.DataFrame:
+        matched_target = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(
+            ['view', '-i', 'GT[1-]="alt"'],
+            matched_target,
+            self.input()[0][:1],
+            output_type='v',
+        )
+        df = self.import_vcf(matched_target)
+
+        existing_id_target = luigi.LocalTarget(is_tmp=True)
+        self.run_bcftools(
+            ['view', '-G', '-i', 'GT[0]="alt" && INFO/MatchId!="."'],
+            existing_id_target,
+            self.input()[0][:1],
+            output_type='v',
+        )
+        id_map_df = self.import_vcf(existing_id_target)
+        id_map = (
+            {}
+            if id_map_df.empty
+            else id_map_df.set_index(['MatchId', 'TRUVARI_FILTER'])['ID'].to_dict()
+        )
+        id_map = (
+            df[df['CollapseId'].notna()]
+            .set_index(['CollapseId', 'TRUVARI_FILTER'])['ID']
+            .to_dict()
+            | id_map
+        )
 
         with self.input()[1].open() as f:
             metadata_json = json.load(f)
-        mt = mt.annotate_globals(
-            family_samples=metadata_json['family_samples'],
-            project_families=metadata_json['project_families'],
+        sample_id_to_family_guid = {
+            s: family_guid
+            for family_guid, sample_ids in metadata_json['family_samples'].items()
+            for s in sample_ids
+        }
+        family_guid_to_project_guid = {
+            family_guid: project_guid
+            for project_guid, family_guids in metadata_json['project_families'].items()
+            for family_guid in family_guids
+        }
+
+        df = self._parsed_sample_df(df, list(sample_id_to_family_guid.keys()))
+        df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
+        df['variantId'] = (
+            df[['CollapseId', 'TRUVARI_FILTER']]
+            .apply(tuple, axis=1)
+            .map(id_map)
+            .fillna(df[['MatchId', 'TRUVARI_FILTER']].apply(tuple, axis=1).map(id_map))
+            .fillna(df['ID'])
         )
 
-        ht = compute_callset_family_entries_ht(
-            self.dataset_type,
-            mt,
-            {
-                name: fn(mt, **self.param_kwargs)
-                for name, fn in self.dataset_type.genotype_entry_annotation_fns.items()
-            },
-            self.sample_type,
+        df = df.groupby(['variantId', 'family_guid'], as_index=False).agg(
+            filters=(
+                'FILTER',
+                lambda values: sorted(set().union(*values.str.split(';')) - {'PASS'}),
+            ),
+            calls=('sample', list),
         )
-        ht = deduplicate_by_most_non_ref_calls(ht)
+        df['project_guid'] = df['family_guid'].map(family_guid_to_project_guid)
+        df['sign'] = 1
+        # Add ref calls for missing family members
+        df['calls'] = df.apply(
+            lambda row: sorted(
+                row['calls']
+                + [
+                    {**dict.fromkeys(row['calls'][0]), 'sampleId': s, 'gt': 0}
+                    for s in metadata_json['family_samples'][row['family_guid']]
+                    if s not in {c['sampleId'] for c in row['calls']}
+                ],
+                key=lambda c: c['sampleId'],
+            ),
+            axis=1,
+        )
 
-        # the family entries ht will contain rows
-        # where at least one family is defined... after explosion,
-        # rows where a family is not defined should be removed.
-        ht = ht.explode(ht.family_entries)
-        ht = ht.filter(hl.is_defined(ht.family_entries))
-        ht = ht.select_globals()
-        return ht.transmute(**ht.family_entries)
+        return df
+
+    @classmethod
+    def _parsed_sample_df(cls, df: pd.DataFrame, sample_ids: list[str]) -> pd.DataFrame:
+        df['samples'] = df.apply(
+            lambda row: [
+                {
+                    'sampleId': s,
+                    **dict(
+                        zip(
+                            row['FORMAT'].lower().split(':'),
+                            row[s].split(':'),
+                            strict=True,
+                        ),
+                    ),
+                }
+                for s in sample_ids
+            ],
+            axis=1,
+        )
+        df['samples'] = df['samples'].map(
+            lambda samples: [s for s in samples if '1' in s['gt']],
+        )
+
+        matched_samples = df.groupby(['MatchId', 'TRUVARI_FILTER'])['samples'].agg(
+            lambda rows: {s['sampleId'] for samples in rows for s in samples},
+        )
+        df['sample'] = df.apply(
+            lambda row: next(
+                (
+                    dict([cls._format_sample_field(*i) for i in s.items()])
+                    for s in row['samples']
+                    if s['sampleId']
+                    not in matched_samples.get(
+                        (row['CollapseId'], row['TRUVARI_FILTER']),
+                        set(),
+                    )
+                ),
+                None,
+            ),
+            axis=1,
+        )
+        df = df[df['sample'].notna()]
+
+        return df.drop(columns=[*sample_ids, 'seqr_existing', 'samples'])
+
+    @staticmethod
+    def _format_sample_field(field, value):
+        if field == 'sampleId':
+            return field, value
+        if field == 'rd_cn':
+            field = 'cn'
+        if value is None:
+            return field, None
+        if field == 'gt':
+            return field, sum(map(int, value.split('/')))
+        return field, int(value)
