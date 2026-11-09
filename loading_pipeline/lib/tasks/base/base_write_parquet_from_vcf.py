@@ -35,6 +35,8 @@ class BaseWriteParquetFromVcfTask(BaseVCFTask):
 
     @staticmethod
     def import_vcf(input_target: luigi.Target) -> pd.DataFrame:
+        if input_target.path.endswith('.gz'):
+            input_target.format = luigi.format.UTF8 >> luigi.format.Gzip
         with input_target.open() as f:
             num_header_rows = next(
                 i for i, line in enumerate(f) if not line.startswith('##')

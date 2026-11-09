@@ -7,7 +7,7 @@ from loading_pipeline.lib.tasks.reference_data.updated_reference_dataset_parquet
     UpdatedReferenceDatasetParquetNoHailTask,
 )
 
-TEST_GNOMAD_SVS_VCF = 'loading_pipeline/var/test/reference_datasets/raw/gnomad_svs.vcf'
+TEST_GNOMAD_SVS_VCF = 'loading_pipeline/var/test/reference_datasets/raw/gnomad_svs.vcf.gz'
 
 
 class GnomadSVsTest(unittest.TestCase):
