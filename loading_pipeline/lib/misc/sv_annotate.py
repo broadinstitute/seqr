@@ -149,24 +149,10 @@ def _variants(df):
         columns=['END', CHR2, END2, SVLEN, CPX_TYPE, CPX_INTERVALS],
     ).astype(object)
     alt = df['ALT']
-    multiallelic = alt.str.contains(',')
-    if multiallelic.any():
-        msg = f'Expected single ALT allele, found multiple: {alt[multiallelic].iloc[0]}'
-        raise ValueError(msg)
-
-    is_breakend = alt.str.contains(r'[\[\]]')
     sv_type = alt.str.extract(r'^<([^:>]+)[^>]*>$', expand=False).where(
-        ~is_breakend,
+        ~alt.str.contains(r'[\[\]]'),
         np.where(info[CPX_INTERVALS].notna(), 'CPX', 'BND'),
     )
-    unexpected = ~sv_type.isin(SV_TYPES)
-    if unexpected.any():
-        msg = (
-            f'Unexpected ALT allele: {alt[unexpected].iloc[0]}. Expected breakpoint or '
-            'symbolic ALT allele representing a structural variant record.'
-        )
-        raise ValueError(msg)
-
     pos = df['POS'].astype(int)
     variants = pd.DataFrame(
         {
@@ -186,20 +172,6 @@ def _variants(df):
     variants['includes_dispersed_dup'] = variants['complex_type'].isin(
         COMPLEX_SUBTYPES_WITH_DISPERSED_DUP,
     )
-
-    is_complex = variants['sv_type'] == 'CPX'
-    if (is_complex & variants['cpx_intervals'].isna()).any():
-        msg = 'Complex (CPX) variant must contain CPX_INTERVALS INFO field'
-        raise ValueError(msg)
-    if (is_complex & variants['complex_type'].isna()).any():
-        msg = 'Complex (CPX) variant must contain CPX_TYPE INFO field'
-        raise ValueError(msg)
-    if ((variants['sv_type'] == 'CTX') & variants['chr2'].isna()).any():
-        msg = (
-            'Translocation (CTX) variant represented as a single record must '
-            'contain CHR2 INFO field'
-        )
-        raise ValueError(msg)
     return variants
 
 
@@ -223,14 +195,6 @@ def _subtract_dups_from_inversions(inversions, dups):
         variants = inversions.index.intersection(rank_dups.index)
         inv = inversions.loc[variants]
         dup = rank_dups.loc[variants]
-        invalid = (
-            (inv['start'] > dup['end'])
-            | (dup['start'] > inv['end'])
-            | ((dup['start'] <= inv['start']) & (inv['end'] <= dup['end']))
-        )
-        if invalid.any():
-            msg = f'Cannot subtract DUP from INV for variant {invalid.idxmax()}'
-            raise ValueError(msg)
         keeps_left = inv['start'] < dup['start']
         inversions.loc[variants, 'start'] = inv['start'].where(keeps_left, dup['end'])
         inversions.loc[variants, 'end'] = dup['start'].where(keeps_left, inv['end'])
@@ -544,17 +508,10 @@ def _nearest_tss_segments(segments, variants):
     is_merged = variants.loc[segments['variant'], 'complex_type'].isin(
         COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS,
     ).to_numpy()
-    merged = segments[is_merged].sort_values(['variant', 'start'])
-    previous_end = (
-        merged.groupby('variant')['end'].cummax().groupby(merged['variant']).shift()
-    )
-    if (merged['start'] > previous_end + 1).any():
-        msg = 'Complex variant segments need to be contiguous to find the nearest TSS'
-        raise ValueError(msg)
     return pd.concat(
         [
             segments[~is_merged],
-            merged.groupby('variant', as_index=False).agg(
+            segments[is_merged].groupby('variant', as_index=False).agg(
                 contig=('contig', 'first'),
                 start=('start', 'min'),
                 end=('end', 'max'),
