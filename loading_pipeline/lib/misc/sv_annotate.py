@@ -81,7 +81,7 @@ COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS = {
 }
 TRANSLOCATION_BREAKEND_SUBTYPES = {'CTX_PP/QQ', 'CTX_PQ/QP'}
 
-SEGMENT_COLUMNS = ['variant', 'segment_type', 'contig', 'start', 'end']
+SEGMENT_COLUMNS = ['variant', 'segment_type', 'contig', 'start', 'end', 'complex_type']
 
 
 def _load_annotations(gtf_path):
@@ -152,6 +152,7 @@ def _segment_frame(rows, segment_type, contig, start, end):
             'contig': contig,
             'start': start,
             'end': end,
+            'complex_type': rows[CPX_TYPE],
         },
     )
 
@@ -357,7 +358,7 @@ def _feature_stats(pairs, features):
     )
 
 
-def _transcript_consequences(segments, includes_dispersed_dup, transcripts, features):
+def _transcript_consequences(segments, transcripts, features):
     overlaps = _overlapping_pairs(segments, transcripts)
     segment = segments.loc[overlaps['left']].reset_index(drop=True)
     transcript = transcripts.loc[overlaps['right']].reset_index(drop=True)
@@ -367,9 +368,7 @@ def _transcript_consequences(segments, includes_dispersed_dup, transcripts, feat
             'segment_type': segment['segment_type'],
             'start': segment['start'],
             'end': segment['end'],
-            'includes_dispersed_dup': includes_dispersed_dup.loc[
-                segment['variant']
-            ].to_numpy(),
+            'complex_type': segment['complex_type'],
             'gene_id': transcript['gene_id'],
             'transcript_id': transcript['transcript_id'],
             'transcript_start': transcript['start'],
@@ -417,7 +416,7 @@ def _transcript_consequences(segments, includes_dispersed_dup, transcripts, feat
             segment_type == 'INS',
             (segment_type == 'DUP')
             & ~spans_transcript
-            & pairs['includes_dispersed_dup'],
+            & pairs['complex_type'].isin(COMPLEX_SUBTYPES_WITH_DISPERSED_DUP),
             segment_type == 'DUP',
             segment_type == 'CNV',
             segment_type == 'INV',
@@ -462,10 +461,8 @@ def _promoter_consequences(segments, promoters, transcript_consequences):
     ].assign(consequence=PROMOTER)
 
 
-def _nearest_tss_segments(segments, df):
-    is_merged = df.loc[segments['variant'], CPX_TYPE].isin(
-        COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS,
-    ).to_numpy()
+def _nearest_tss_segments(segments):
+    is_merged = segments['complex_type'].isin(COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS)
     return pd.concat(
         [
             segments[~is_merged],
@@ -521,18 +518,11 @@ def _nearest_tss_consequences(segments, tss):
 def annotate_df(df, gtf_path):
     transcripts, features, promoters, tss = _load_annotations(gtf_path)
     segments = _segments(df)
-    includes_dispersed_dup = df[CPX_TYPE].isin(COMPLEX_SUBTYPES_WITH_DISPERSED_DUP)
-
-    transcript_consequences = _transcript_consequences(
-        segments,
-        includes_dispersed_dup,
-        transcripts,
-        features,
-    )
+    transcript_consequences = _transcript_consequences(segments, transcripts, features)
     regulatory_segments = segments[
         ~(
             (segments['segment_type'] == 'DUP')
-            & includes_dispersed_dup.loc[segments['variant']].to_numpy()
+            & segments['complex_type'].isin(COMPLEX_SUBTYPES_WITH_DISPERSED_DUP)
         )
     ]
     promoter_consequences = _promoter_consequences(
@@ -549,7 +539,6 @@ def annotate_df(df, gtf_path):
     nearest_tss_consequences = _nearest_tss_consequences(
         _nearest_tss_segments(
             regulatory_segments[~regulatory_segments['variant'].isin(genic_variants)],
-            df,
         ),
         tss,
     )
