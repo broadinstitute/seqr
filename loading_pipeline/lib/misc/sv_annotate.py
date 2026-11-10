@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 LOF = 'LOF'
@@ -372,60 +371,38 @@ def _promoter_overlaps(segments, transcripts):
 
 def _nearest_tss_consequences(segments, transcripts):
     is_merged = segments['complex_type'].isin(COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS)
-    segments = pd.concat(
-        [
-            segments[~is_merged],
-            segments[is_merged].groupby('variant', as_index=False).agg(
-                contig=('contig', 'first'),
-                start=('start', 'min'),
-                end=('end', 'max'),
-            ),
-        ],
-        ignore_index=True,
+    merged_segments = segments[is_merged].groupby('variant')
+    segments = segments.assign(
+        contig=segments['contig'].mask(
+            is_merged,
+            merged_segments['contig'].transform('first'),
+        ),
+        start=segments['start'].mask(
+            is_merged,
+            merged_segments['start'].transform('min'),
+        ),
+        end=segments['end'].mask(is_merged, merged_segments['end'].transform('max')),
     )
 
-    tss = (
-        transcripts[['contig', 'tss', 'geneId']]
-        .drop_duplicates(['contig', 'tss'], keep='last')
-        .sort_values('tss')
+    tss = transcripts[['contig', 'tss', 'geneId']].drop_duplicates(
+        ['contig', 'tss'],
+        keep='last',
     )
-    tss_by_contig = dict(list(tss.groupby('contig')))
-    nearest_genes = []
-    for contig, contig_segments in segments.groupby('contig'):
-        if contig not in tss_by_contig:
-            continue
-        positions = tss_by_contig[contig]['tss'].to_numpy()
-        starts = contig_segments['start'].to_numpy()
-        ends = contig_segments['end'].to_numpy()
-        before = np.searchsorted(positions, starts, side='right') - 1
-        after = np.where(
-            starts == ends,
-            np.searchsorted(positions, starts, side='left'),
-            before + 1,
-        )
-        distance_before = np.where(
-            before >= 0,
-            starts - positions[np.maximum(before, 0)] - 1,
-            np.inf,
-        )
-        distance_after = np.where(
-            after < len(positions),
-            positions[np.minimum(after, len(positions) - 1)] - ends - 1,
-            np.inf,
-        )
-        nearest = np.where(distance_before < distance_after, before, after)
-        nearest_genes.append(
-            pd.DataFrame(
-                {
-                    'variant': contig_segments['variant'].to_numpy(),
-                    'geneId': tss_by_contig[contig]['geneId'].to_numpy()[nearest],
-                },
-            ),
-        )
-    if not nearest_genes:
-        return pd.DataFrame(columns=['variant', 'geneId', 'majorConsequence'])
+    candidates = segments.reset_index(names='segment').merge(tss, on='contig')
+    candidates['is_after'] = (candidates['tss'] > candidates['start']) | (
+        (candidates['tss'] == candidates['start'])
+        & (candidates['start'] == candidates['end'])
+    )
+    candidates['distance'] = candidates['start'] - candidates['tss'] - 1
+    candidates.loc[candidates['is_after'], 'distance'] = (
+        candidates['tss'] - candidates['end'] - 1
+    )
+    nearest_tss = candidates.sort_values(
+        ['distance', 'is_after'],
+        ascending=[True, False],
+    ).drop_duplicates('segment')
     return (
-        pd.concat(nearest_genes, ignore_index=True)
+        nearest_tss[['variant', 'geneId']]
         .drop_duplicates()
         .assign(majorConsequence=NEAREST_TSS)
     )
