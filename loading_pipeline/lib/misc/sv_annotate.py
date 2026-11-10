@@ -229,41 +229,6 @@ def _segments(df):
     )
 
 
-def _overlapping_pairs(left, right):
-    right_by_contig = dict(list(right.groupby('contig')))
-    pairs = []
-    for contig, left_group in left.groupby('contig'):
-        if contig not in right_by_contig:
-            continue
-        right_group = right_by_contig[contig].sort_values('start')
-        right_starts = right_group['start'].to_numpy()
-        right_ends = right_group['end'].to_numpy()
-        max_length = (right_ends - right_starts).max()
-        first = np.searchsorted(
-            right_starts,
-            left_group['start'].to_numpy() - max_length,
-            side='left',
-        )
-        last = np.searchsorted(right_starts, left_group['end'].to_numpy(), side='right')
-        counts = last - first
-        candidates = np.repeat(first, counts) + (
-            np.arange(counts.sum()) - np.repeat(np.cumsum(counts) - counts, counts)
-        )
-        left_starts = np.repeat(left_group['start'].to_numpy(), counts)
-        overlapping = right_ends[candidates] >= left_starts
-        pairs.append(
-            pd.DataFrame(
-                {
-                    'left': np.repeat(left_group.index.to_numpy(), counts)[overlapping],
-                    'right': right_group.index.to_numpy()[candidates[overlapping]],
-                },
-            ),
-        )
-    if not pairs:
-        return pd.DataFrame({'left': [], 'right': []}, dtype=int)
-    return pd.concat(pairs, ignore_index=True)
-
-
 def _feature_stats(pairs, features):
     feature_overlaps = (
         pairs[['start', 'end', 'transcript_id']]
@@ -308,30 +273,18 @@ def _feature_stats(pairs, features):
 
 
 def _transcript_consequences(segments, transcripts, features):
-    overlaps = _overlapping_pairs(segments, transcripts)
-    segment = segments.loc[overlaps['left']].reset_index(drop=True)
-    transcript = transcripts.loc[overlaps['right']].reset_index(drop=True)
-    pairs = pd.DataFrame(
-        {
-            'variant': segment['variant'],
-            'segment_type': segment['segment_type'],
-            'start': segment['start'],
-            'end': segment['end'],
-            'complex_type': segment['complex_type'],
-            'geneId': transcript['geneId'],
-            'transcript_id': transcript['transcript_id'],
-            'transcript_start': transcript['start'],
-            'transcript_end': transcript['end'],
-            'tss': transcript['tss'],
-        },
-    )
+    pairs = segments.merge(transcripts, on='contig', suffixes=('', '_transcript'))
+    pairs = pairs[
+        (pairs['start'] <= pairs['end_transcript'])
+        & (pairs['end'] >= pairs['start_transcript'])
+    ]
     stats = _feature_stats(pairs, features)
 
-    spans_transcript = (pairs['start'] <= pairs['transcript_start']) & (
-        pairs['transcript_end'] <= pairs['end']
+    spans_transcript = (pairs['start'] <= pairs['start_transcript']) & (
+        pairs['end_transcript'] <= pairs['end']
     )
-    within_transcript = (pairs['transcript_start'] <= pairs['start']) & (
-        pairs['end'] <= pairs['transcript_end']
+    within_transcript = (pairs['start_transcript'] <= pairs['start']) & (
+        pairs['end'] <= pairs['end_transcript']
     )
     tss_in_segment = (pairs['start'] <= pairs['tss']) & (pairs['tss'] <= pairs['end'])
     cds_breakends = stats[('breakends', 'CDS')]
@@ -413,13 +366,11 @@ def _promoter_consequences(segments, transcripts, transcript_consequences):
             'geneId': transcripts['geneId'],
         },
     ).drop_duplicates(['contig', 'start', 'end'], keep='last')
-    overlaps = _overlapping_pairs(segments, promoters)
-    promoter_genes = pd.DataFrame(
-        {
-            'variant': segments.loc[overlaps['left'], 'variant'].to_numpy(),
-            'geneId': promoters.loc[overlaps['right'], 'geneId'].to_numpy(),
-        },
-    ).merge(
+    promoter_genes = segments.merge(promoters, on='contig', suffixes=('', '_promoter'))
+    promoter_genes = promoter_genes[
+        (promoter_genes['start'] <= promoter_genes['end_promoter'])
+        & (promoter_genes['end'] >= promoter_genes['start_promoter'])
+    ][['variant', 'geneId']].merge(
         transcript_consequences[['variant', 'geneId']],
         how='left',
         indicator=True,
