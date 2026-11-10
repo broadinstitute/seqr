@@ -263,14 +263,15 @@ def _transcript_consequences(segments, transcripts, features):
     utr = feature_overlaps[feature_overlaps['feature_type'] == 'UTR']
 
     segment_type = transcript_overlaps['segment_type']
-    transcript_overlaps = transcript_overlaps.assign(
-        majorConsequence=pd.Series(INTRONIC, index=transcript_overlaps.index).case_when(
-            [
-                (transcript_overlaps.index.isin(cds['transcript_overlap']), LOF),
-                (transcript_overlaps.index.isin(utr['transcript_overlap']), UTR),
-            ],
-        ),
-    )
+    transcript_overlaps = transcript_overlaps.assign(majorConsequence=INTRONIC)
+    transcript_overlaps.loc[
+        transcript_overlaps.index.isin(utr['transcript_overlap']),
+        'majorConsequence',
+    ] = UTR
+    transcript_overlaps.loc[
+        transcript_overlaps.index.isin(cds['transcript_overlap']),
+        'majorConsequence',
+    ] = LOF
     transcript_overlaps.loc[
         (segment_type == 'BND') & (transcript_overlaps['majorConsequence'] == LOF),
         'majorConsequence',
@@ -310,14 +311,18 @@ def _transcript_consequences(segments, transcripts, features):
     utr_spanned = transcript_overlaps.index.isin(
         utr.loc[utr['spanned'], 'transcript_overlap'],
     )
-    within_transcript = (
-        transcript_overlaps['start_transcript'] <= transcript_overlaps['start']
-    ) & (transcript_overlaps['end'] <= transcript_overlaps['end_transcript'])
-    duplication = pd.Series(INTRONIC, index=transcript_overlaps.index).case_when(
+    transcript_overlaps.loc[
+        segment_type.isin(['DUP', 'CNV']),
+        'majorConsequence',
+    ] = transcript_overlaps['majorConsequence'].case_when(
         [
             (spans_transcript, COPY_GAIN),
             (tss_in_segment, TSS_DUP),
-            (~within_transcript, DUP_PARTIAL),
+            (
+                (transcript_overlaps['start'] < transcript_overlaps['start_transcript'])
+                | (transcript_overlaps['end'] > transcript_overlaps['end_transcript']),
+                DUP_PARTIAL,
+            ),
             (
                 (cds_breakends == 2) | ((cds_breakends == 1) & (utr_breakends == 1)),
                 LOF,
@@ -327,10 +332,7 @@ def _transcript_consequences(segments, transcripts, features):
             ((utr_breakends > 0) | utr_spanned, UTR),
         ],
     )
-    is_copy_number = segment_type.isin(['DUP', 'CNV'])
-    transcript_overlaps.loc[is_copy_number, 'majorConsequence'] = duplication[
-        is_copy_number
-    ]
+
     transcript_overlaps.loc[
         (segment_type == 'CNV')
         & transcript_overlaps['majorConsequence'].isin(
@@ -339,11 +341,10 @@ def _transcript_consequences(segments, transcripts, features):
         'majorConsequence',
     ] = MSV_EXON_OVERLAP
 
-    includes_dispersed_dup = transcript_overlaps['complex_type'].isin(
-        COMPLEX_SUBTYPES_WITH_DISPERSED_DUP,
-    )
     transcript_overlaps.loc[
-        (segment_type == 'DUP') & includes_dispersed_dup & ~spans_transcript,
+        (segment_type == 'DUP')
+        & transcript_overlaps['complex_type'].isin(COMPLEX_SUBTYPES_WITH_DISPERSED_DUP)
+        & ~spans_transcript,
         'majorConsequence',
     ] = None
 
