@@ -8,7 +8,7 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPES,
 )
 from loading_pipeline.lib.core import ReferenceGenome
-from loading_pipeline.lib.misc.sv_annotate import annotate_gene_consequences
+from loading_pipeline.lib.misc.sv import annotate_gene_consequences
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
 )
