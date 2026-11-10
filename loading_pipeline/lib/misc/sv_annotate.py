@@ -229,121 +229,128 @@ def _segments(df):
     )
 
 
-def _feature_stats(pairs, features):
+def _transcript_consequences(segments, transcripts, features):
+    transcript_overlaps = segments.merge(
+        transcripts,
+        on='contig',
+        suffixes=('', '_transcript'),
+    )
+    transcript_overlaps = transcript_overlaps[
+        (transcript_overlaps['start'] <= transcript_overlaps['end_transcript'])
+        & (transcript_overlaps['end'] >= transcript_overlaps['start_transcript'])
+    ]
+
     feature_overlaps = (
-        pairs[['start', 'end', 'transcript_id']]
-        .reset_index(names='pair')
-        .merge(
-            features.rename(
-                columns={'start': 'feature_start', 'end': 'feature_end'},
-            ),
-            on='transcript_id',
-        )
+        transcript_overlaps[['start', 'end', 'transcript_id']]
+        .reset_index(names='transcript_overlap')
+        .merge(features, on='transcript_id', suffixes=('', '_feature'))
     )
     feature_overlaps = feature_overlaps[
-        (feature_overlaps['start'] <= feature_overlaps['feature_end'])
-        & (feature_overlaps['end'] >= feature_overlaps['feature_start'])
+        (feature_overlaps['start'] <= feature_overlaps['end_feature'])
+        & (feature_overlaps['end'] >= feature_overlaps['start_feature'])
     ]
-    spanned = (feature_overlaps['start'] <= feature_overlaps['feature_start']) & (
-        feature_overlaps['feature_end'] <= feature_overlaps['end']
+    spanned = (feature_overlaps['start'] <= feature_overlaps['start_feature']) & (
+        feature_overlaps['end_feature'] <= feature_overlaps['end']
     )
-    contains_segment = (feature_overlaps['feature_start'] <= feature_overlaps['start']) & (
-        feature_overlaps['end'] <= feature_overlaps['feature_end']
+    contains_segment = (feature_overlaps['start_feature'] <= feature_overlaps['start']) & (
+        feature_overlaps['end'] <= feature_overlaps['end_feature']
     )
-    return (
-        feature_overlaps.assign(
-            spanned=spanned,
-            breakends=np.where(spanned, 0, np.where(contains_segment, 2, 1)),
-        )
-        .groupby(['pair', 'feature_type'])
-        .agg(
-            overlapping=('spanned', 'size'),
-            spanned=('spanned', 'sum'),
-            breakends=('breakends', 'sum'),
-        )
-        .unstack(fill_value=0)
-        .reindex(
-            index=pairs.index,
-            columns=pd.MultiIndex.from_product(
-                [['overlapping', 'spanned', 'breakends'], ['CDS', 'UTR']],
+    feature_overlaps = feature_overlaps.assign(
+        spanned=spanned,
+        breakends=(contains_segment + 1).mask(spanned, 0),
+    )
+    cds = feature_overlaps[feature_overlaps['feature_type'] == 'CDS']
+    utr = feature_overlaps[feature_overlaps['feature_type'] == 'UTR']
+
+    segment_type = transcript_overlaps['segment_type']
+    transcript_overlaps = transcript_overlaps.assign(
+        majorConsequence=pd.Series(INTRONIC, index=transcript_overlaps.index).case_when(
+            [
+                (transcript_overlaps.index.isin(cds['transcript_overlap']), LOF),
+                (transcript_overlaps.index.isin(utr['transcript_overlap']), UTR),
+            ],
+        ),
+    )
+    transcript_overlaps.loc[
+        (segment_type == 'BND') & (transcript_overlaps['majorConsequence'] == LOF),
+        'majorConsequence',
+    ] = BREAKEND_EXON
+
+    tss_in_segment = (transcript_overlaps['start'] <= transcript_overlaps['tss']) & (
+        transcript_overlaps['tss'] <= transcript_overlaps['end']
+    )
+    transcript_overlaps.loc[
+        segment_type.isin(['DEL', 'INV']) & tss_in_segment,
+        'majorConsequence',
+    ] = LOF
+
+    spans_transcript = (
+        transcript_overlaps['start'] <= transcript_overlaps['start_transcript']
+    ) & (transcript_overlaps['end_transcript'] <= transcript_overlaps['end'])
+    transcript_overlaps.loc[
+        (segment_type == 'INV') & spans_transcript,
+        'majorConsequence',
+    ] = INV_SPAN
+
+    transcript_overlaps.loc[segment_type == 'CTX', 'majorConsequence'] = LOF
+
+    cds_breakends = (
+        cds.groupby('transcript_overlap')['breakends']
+        .sum()
+        .reindex(transcript_overlaps.index, fill_value=0)
+    )
+    utr_breakends = (
+        utr.groupby('transcript_overlap')['breakends']
+        .sum()
+        .reindex(transcript_overlaps.index, fill_value=0)
+    )
+    cds_spanned = transcript_overlaps.index.isin(
+        cds.loc[cds['spanned'], 'transcript_overlap'],
+    )
+    utr_spanned = transcript_overlaps.index.isin(
+        utr.loc[utr['spanned'], 'transcript_overlap'],
+    )
+    within_transcript = (
+        transcript_overlaps['start_transcript'] <= transcript_overlaps['start']
+    ) & (transcript_overlaps['end'] <= transcript_overlaps['end_transcript'])
+    duplication = pd.Series(INTRONIC, index=transcript_overlaps.index).case_when(
+        [
+            (spans_transcript, COPY_GAIN),
+            (tss_in_segment, TSS_DUP),
+            (~within_transcript, DUP_PARTIAL),
+            (
+                (cds_breakends == 2) | ((cds_breakends == 1) & (utr_breakends == 1)),
+                LOF,
             ),
-            fill_value=0,
-        )
+            (cds_breakends == 1, PARTIAL_EXON_DUP),
+            (cds_spanned, INT_EXON_DUP),
+            ((utr_breakends > 0) | utr_spanned, UTR),
+        ],
     )
-
-
-def _transcript_consequences(segments, transcripts, features):
-    pairs = segments.merge(transcripts, on='contig', suffixes=('', '_transcript'))
-    pairs = pairs[
-        (pairs['start'] <= pairs['end_transcript'])
-        & (pairs['end'] >= pairs['start_transcript'])
+    is_copy_number = segment_type.isin(['DUP', 'CNV'])
+    transcript_overlaps.loc[is_copy_number, 'majorConsequence'] = duplication[
+        is_copy_number
     ]
-    stats = _feature_stats(pairs, features)
+    transcript_overlaps.loc[
+        (segment_type == 'CNV')
+        & transcript_overlaps['majorConsequence'].isin(
+            MSV_EXON_OVERLAP_CLASSIFICATIONS,
+        ),
+        'majorConsequence',
+    ] = MSV_EXON_OVERLAP
 
-    spans_transcript = (pairs['start'] <= pairs['start_transcript']) & (
-        pairs['end_transcript'] <= pairs['end']
+    includes_dispersed_dup = transcript_overlaps['complex_type'].isin(
+        COMPLEX_SUBTYPES_WITH_DISPERSED_DUP,
     )
-    within_transcript = (pairs['start_transcript'] <= pairs['start']) & (
-        pairs['end'] <= pairs['end_transcript']
-    )
-    tss_in_segment = (pairs['start'] <= pairs['tss']) & (pairs['tss'] <= pairs['end'])
-    cds_breakends = stats[('breakends', 'CDS')]
-    utr_breakends = stats[('breakends', 'UTR')]
+    transcript_overlaps.loc[
+        (segment_type == 'DUP') & includes_dispersed_dup & ~spans_transcript,
+        'majorConsequence',
+    ] = None
 
-    simple = np.select(
-        [stats[('overlapping', 'CDS')] > 0, stats[('overlapping', 'UTR')] > 0],
-        [LOF, UTR],
-        INTRONIC,
-    )
-    deletion = np.where(tss_in_segment, LOF, simple)
-    exon_dup = np.select(
-        [
-            (cds_breakends == 2) | ((cds_breakends == 1) & (utr_breakends == 1)),
-            cds_breakends == 1,
-            stats[('spanned', 'CDS')] > 0,
-            (utr_breakends > 0) | (stats[('spanned', 'UTR')] > 0),
-        ],
-        [LOF, PARTIAL_EXON_DUP, INT_EXON_DUP, UTR],
-        INTRONIC,
-    )
-    duplication = np.select(
-        [spans_transcript, tss_in_segment, ~within_transcript],
-        [COPY_GAIN, TSS_DUP, DUP_PARTIAL],
-        exon_dup,
-    )
-    segment_type = pairs['segment_type']
-    consequence = np.select(
-        [
-            segment_type == 'DEL',
-            segment_type == 'INS',
-            (segment_type == 'DUP')
-            & ~spans_transcript
-            & pairs['complex_type'].isin(COMPLEX_SUBTYPES_WITH_DISPERSED_DUP),
-            segment_type == 'DUP',
-            segment_type == 'CNV',
-            segment_type == 'INV',
-            segment_type == 'CTX',
-            segment_type == 'BND',
-        ],
-        [
-            deletion,
-            simple,
-            None,
-            duplication,
-            np.where(
-                np.isin(duplication, list(MSV_EXON_OVERLAP_CLASSIFICATIONS)),
-                MSV_EXON_OVERLAP,
-                duplication,
-            ),
-            np.where(spans_transcript, INV_SPAN, deletion),
-            LOF,
-            np.where(simple == LOF, BREAKEND_EXON, simple),
-        ],
-        None,
-    )
     return (
-        pairs.assign(majorConsequence=consequence)
-        .dropna(subset=['majorConsequence'])[['variant', 'majorConsequence', 'geneId']]
+        transcript_overlaps.dropna(subset=['majorConsequence'])[
+            ['variant', 'majorConsequence', 'geneId']
+        ]
         .drop_duplicates()
     )
 
