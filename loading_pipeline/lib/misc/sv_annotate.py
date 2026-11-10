@@ -58,12 +58,12 @@ def _load_annotations(gtf_path):
             'score',
             'strand',
             'frame',
-            'attributes',
+            'info',
         ],
-        usecols=['contig', 'feature_type', 'start', 'end', 'strand', 'attributes'],
+        usecols=['contig', 'feature_type', 'start', 'end', 'strand', 'info'],
     )
     gtf = gtf[gtf['feature_type'].isin(['transcript', 'CDS', 'UTR'])].assign(
-        transcript_id=lambda df: df['attributes'].str.extract(
+        transcript_id=lambda df: df['info'].str.extract(
             r'transcript_id "([^"]*)"',
             expand=False,
         ),
@@ -73,7 +73,7 @@ def _load_annotations(gtf_path):
         gtf[is_transcript]
         .drop_duplicates(['contig', 'start', 'end'], keep='last')
         .assign(
-            geneId=lambda df: df['attributes'].str.extract(
+            geneId=lambda df: df['info'].str.extract(
                 r'gene_id "([^"]*)"',
                 expand=False,
             ),
@@ -392,11 +392,11 @@ def _nearest_tss_consequences(segments, transcripts):
     )
 
 
-def annotate_df(df, gtf_path):
+def annotate_gene_consequences(df: pd.DataFrame, gencode_df: pd.DataFrame) -> pd.DataFrame:
     # Implementation of gatk's SVAnnotate. Only change is to keep gene ID instead of gene symbol.
     # https://github.com/broadinstitute/gatk/blob/master/src/main/java/org/broadinstitute/hellbender/tools/walkers/sv/SVAnnotate.java
 
-    transcripts, features = _load_annotations(gtf_path)
+    transcripts, features = _load_annotations(gencode_df)
     segments = _segments(df)
     transcript_consequences = _transcript_consequences(segments, transcripts, features)
 
@@ -428,14 +428,10 @@ def annotate_df(df, gtf_path):
     consequences = pd.concat(
         [transcript_consequences, promoter_consequences, nearest_tss_consequences],
     )
-    consequences_by_variant = (
+    return (
         consequences.assign(
             gene_consequence=consequences[['geneId', 'majorConsequence']].to_dict('records'),
         )
         .groupby('variant')['gene_consequence']
         .agg(list)
     )
-    df['sortedGeneConsequences'] = [
-        consequences_by_variant.get(variant, []) for variant in df.index
-    ]
-    return df

@@ -35,19 +35,6 @@ class SingleSampleVCFTask(BaseVCFTask):
         'SVTYPE': ('1', 'String'),
         'StrVCTVRE': ('1', 'String'),
         'GNOMAD_V4.1_TRUTH_VID': ('1', 'String'),
-        'PREDICTED_BREAKEND_EXONIC': ('.', 'String'),
-        'PREDICTED_COPY_GAIN': ('.', 'String'),
-        'PREDICTED_DUP_PARTIAL': ('.', 'String'),
-        'PREDICTED_INTRAGENIC_EXON_DUP': ('.', 'String'),
-        'PREDICTED_INTRONIC': ('.', 'String'),
-        'PREDICTED_INV_SPAN': ('.', 'String'),
-        'PREDICTED_LOF': ('.', 'String'),
-        'PREDICTED_MSV_EXON_OVERLAP': ('.', 'String'),
-        'PREDICTED_NEAREST_TSS': ('.', 'String'),
-        'PREDICTED_PARTIAL_EXON_DUP': ('.', 'String'),
-        'PREDICTED_PROMOTER': ('.', 'String'),
-        'PREDICTED_TSS_DUP': ('.', 'String'),
-        'PREDICTED_UTR': ('.', 'String'),
     }
 
     FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {

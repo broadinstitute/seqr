@@ -8,11 +8,13 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPES,
 )
 from loading_pipeline.lib.core import ReferenceGenome
+from loading_pipeline.lib.misc.sv_annotate import annotate_gene_consequences
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
 )
 from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
-    load_gencode_gene_symbol_to_gene_id,
+    GENCODE_GTF_PATH,
+    GENCODE_FILE_HEADER,
 )
 from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceDataset
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
@@ -21,6 +23,7 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
     BaseWriteParquetFromVcfTask,
 )
+from loading_pipeline.lib.tasks.files import RawFileTask
 from loading_pipeline.lib.tasks.reference_data.updated_reference_dataset_parquet import (
     UpdatedReferenceDatasetParquetNoHailTask,
 )
@@ -28,7 +31,6 @@ from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
 )
 
-GENCODE_RELEASE = 42
 CONTIGS_37 = list(ReferenceGenome.GRCh37.contig_recoding().values())
 TRUVARI_INFO_COLS = ['TRUVARI_FILTER', 'CollapseId', 'NumCollapsed', 'NumConsolidated']
 
@@ -52,6 +54,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
                 reference_dataset=ReferenceDataset.gnomad_svs,
                 attempt_id=self.attempt_id,
             ),
+            RawFileTask(GENCODE_GTF_PATH),
         ]
 
     def create_data_frame(self) -> pd.DataFrame:
@@ -93,20 +96,18 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         ]
 
         # Annotate gene consequences
-        gene_symbol_to_gene_id = load_gencode_gene_symbol_to_gene_id(GENCODE_RELEASE)
-        predicted_csq_cols = [col for col in df.columns if col.startswith('PREDICTED_')]
-        df['sorted_gene_consequences'] = df[predicted_csq_cols].apply(
-            lambda row: [
-                {
-                    'geneId': gene_symbol_to_gene_id.get(gene),
-                    'majorConsequence': col.removeprefix('PREDICTED_'),
-                }
-                for col, genes in row.dropna().items()
-                for gene in genes.split(',')
-            ],
-            axis=1,
-        )
-        df = df.drop(columns=predicted_csq_cols)
+        with self.input()[2].open('r') as f:
+            gencode_df = pd.read_csv(
+                f,
+                sep='\t',
+                comment='#',
+                header=None,
+                names=GENCODE_FILE_HEADER,
+            )
+        consequences_by_variant = annotate_gene_consequences(df, gencode_df)
+        df['sorted_gene_consequences'] = [
+            consequences_by_variant.get(variant, []) for variant in df.index
+        ]
 
         # Add gnomad frequency
         gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
