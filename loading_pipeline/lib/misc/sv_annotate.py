@@ -94,12 +94,12 @@ def _load_annotations(gtf_path):
         gtf[is_transcript]
         .drop_duplicates(['contig', 'start', 'end'], keep='last')
         .assign(
-            gene_id=lambda df: df['attributes'].str.extract(
+            geneId=lambda df: df['attributes'].str.extract(
                 r'gene_id "([^"]*)"',
                 expand=False,
             ),
             tss=lambda df: np.where(df['strand'] == '-', df['end'], df['start']),
-        )[['contig', 'start', 'end', 'strand', 'gene_id', 'tss', 'transcript_id']]
+        )[['contig', 'start', 'end', 'strand', 'geneId', 'tss', 'transcript_id']]
     )
     features = gtf[~is_transcript][['transcript_id', 'feature_type', 'start', 'end']]
 
@@ -318,7 +318,7 @@ def _transcript_consequences(segments, transcripts, features):
             'start': segment['start'],
             'end': segment['end'],
             'complex_type': segment['complex_type'],
-            'gene_id': transcript['gene_id'],
+            'geneId': transcript['geneId'],
             'transcript_id': transcript['transcript_id'],
             'transcript_start': transcript['start'],
             'transcript_end': transcript['end'],
@@ -388,9 +388,11 @@ def _transcript_consequences(segments, transcripts, features):
         ],
         None,
     )
-    return pairs.assign(consequence=consequence).dropna(subset=['consequence'])[
-        ['variant', 'consequence', 'gene_id']
-    ]
+    return (
+        pairs.assign(majorConsequence=consequence)
+        .dropna(subset=['majorConsequence'])[['variant', 'majorConsequence', 'geneId']]
+        .drop_duplicates()
+    )
 
 
 def _promoter_consequences(segments, transcripts, transcript_consequences):
@@ -408,23 +410,25 @@ def _promoter_consequences(segments, transcripts, transcript_consequences):
                 transcripts['tss'] + PROMOTER_WINDOW,
                 transcripts['tss'] - 1,
             ),
-            'gene_id': transcripts['gene_id'],
+            'geneId': transcripts['geneId'],
         },
     ).drop_duplicates(['contig', 'start', 'end'], keep='last')
     overlaps = _overlapping_pairs(segments, promoters)
     promoter_genes = pd.DataFrame(
         {
             'variant': segments.loc[overlaps['left'], 'variant'].to_numpy(),
-            'gene_id': promoters.loc[overlaps['right'], 'gene_id'].to_numpy(),
+            'geneId': promoters.loc[overlaps['right'], 'geneId'].to_numpy(),
         },
     ).merge(
-        transcript_consequences[['variant', 'gene_id']].drop_duplicates(),
+        transcript_consequences[['variant', 'geneId']],
         how='left',
         indicator=True,
     )
-    return promoter_genes[promoter_genes['_merge'] == 'left_only'][
-        ['variant', 'gene_id']
-    ].assign(consequence=PROMOTER)
+    return (
+        promoter_genes[promoter_genes['_merge'] == 'left_only'][['variant', 'geneId']]
+        .drop_duplicates()
+        .assign(majorConsequence=PROMOTER)
+    )
 
 
 def _nearest_tss_segments(segments):
@@ -444,7 +448,7 @@ def _nearest_tss_segments(segments):
 
 def _nearest_tss_consequences(segments, transcripts):
     tss = (
-        transcripts[['contig', 'tss', 'gene_id']]
+        transcripts[['contig', 'tss', 'geneId']]
         .drop_duplicates(['contig', 'tss'], keep='last')
         .sort_values('tss')
     )
@@ -477,13 +481,17 @@ def _nearest_tss_consequences(segments, transcripts):
             pd.DataFrame(
                 {
                     'variant': contig_segments['variant'].to_numpy(),
-                    'gene_id': tss_by_contig[contig]['gene_id'].to_numpy()[nearest],
+                    'geneId': tss_by_contig[contig]['geneId'].to_numpy()[nearest],
                 },
             ),
         )
     if not nearest_genes:
-        return pd.DataFrame(columns=['variant', 'gene_id', 'consequence'])
-    return pd.concat(nearest_genes, ignore_index=True).assign(consequence=NEAREST_TSS)
+        return pd.DataFrame(columns=['variant', 'geneId', 'majorConsequence'])
+    return (
+        pd.concat(nearest_genes, ignore_index=True)
+        .drop_duplicates()
+        .assign(majorConsequence=NEAREST_TSS)
+    )
 
 
 def annotate_df(df, gtf_path):
@@ -503,7 +511,7 @@ def annotate_df(df, gtf_path):
     )
     genic_variants = set(
         transcript_consequences.loc[
-            transcript_consequences['consequence'].isin(PROTEIN_CODING_CONSEQUENCES),
+            transcript_consequences['majorConsequence'].isin(PROTEIN_CODING_CONSEQUENCES),
             'variant',
         ],
     ) | set(promoter_consequences['variant'])
@@ -514,23 +522,12 @@ def annotate_df(df, gtf_path):
         transcripts,
     )
 
-    consequences = (
-        pd.concat(
-            [transcript_consequences, promoter_consequences, nearest_tss_consequences],
-        )
-        .drop_duplicates()
-        .sort_values(['variant', 'consequence', 'gene_id'])
+    consequences = pd.concat(
+        [transcript_consequences, promoter_consequences, nearest_tss_consequences],
     )
     consequences_by_variant = (
         consequences.assign(
-            gene_consequence=[
-                {'geneId': gene_id, 'majorConsequence': consequence}
-                for gene_id, consequence in zip(
-                    consequences['gene_id'],
-                    consequences['consequence'],
-                    strict=True,
-                )
-            ],
+            gene_consequence=consequences[['geneId', 'majorConsequence']].to_dict('records'),
         )
         .groupby('variant')['gene_consequence']
         .agg(list)
