@@ -95,10 +95,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         ]
 
         # Annotate gene consequences
-        gencode_input = self.input()[1]
-        gencode_input.format = luigi.format.Nop
-        with gencode_input.open() as f:
-            gencode_df = pd.read_parquet(f)
+        gencode_df = self._read_parquet(self.input()[1])
         consequences_by_variant = annotate_gene_consequences(df, gencode_df)
         df['sorted_gene_consequences'] = [
             consequences_by_variant.get(variant, []) for variant in df.index
@@ -106,10 +103,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         # Add gnomad frequency
         gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
-        gnomad_input = self.input()[2]
-        gnomad_input.format = luigi.format.Nop
-        with gnomad_input.open() as f:
-            gnomad_df = pd.read_parquet(f, filters=[('id', 'in', gnomad_ids)])
+        gnomad_df = self._read_parquet(self.input()[2], filters=[('id', 'in', gnomad_ids)])
         gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
         df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
             lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
@@ -175,6 +169,13 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             )
             .rename(columns=self._to_camel_case)
         )
+
+    @staticmethod
+    def _read_parquet(input_target: luigi.Target, **kwargs) -> pd.DataFrame:
+        pq_input = input_target
+        pq_input.format = luigi.format.Nop
+        with pq_input.open() as f:
+            return pd.read_parquet(f, **kwargs)
 
     @staticmethod
     def _liftover(lo, chrom, pos):
