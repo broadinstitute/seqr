@@ -5,22 +5,9 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-GENCODE_GTF_PATH = 'gs://gatk-sv-resources-public/hg38/v0/sv-resources/resources/v1/gencode.v47.basic.protein_coding.canonical.gtf'
 # Mirror of 'https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_{gencode_release}/gencode.v{gencode_release}.metadata.RefSeq.gz'
 GENCODE_ENSEMBL_TO_REFSEQ_URL = 'https://storage.googleapis.com/seqr-reference-data/gencode/gencode.v{gencode_release}.metadata.RefSeq.gz'
 
-# expected GTF file header
-GENCODE_FILE_HEADER = [
-    'contig',
-    'source',
-    'feature_type',
-    'start',
-    'end',
-    'score',
-    'strand',
-    'phase',
-    'info',
-]
 EXPECTED_ENSEMBLE_TO_REFSEQ_FIELDS = 3
 
 

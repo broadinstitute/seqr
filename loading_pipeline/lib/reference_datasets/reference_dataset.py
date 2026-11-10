@@ -35,6 +35,7 @@ class ReferenceDataset(StrEnum):
     gnomad_genomes = 'gnomad_genomes'
     gnomad_qc = 'gnomad_qc'
     gnomad_svs = 'gnomad_svs'
+    gencode = 'gencode'
 
     def version(self, reference_genome: ReferenceGenome) -> str:
         version = CONFIG[self][reference_genome][VERSION]
@@ -171,6 +172,14 @@ CONFIG = {
             DATASET_TYPES: frozenset([DatasetType.SV]),
             VERSION: '1.1',
             PATH: 'gs://gcp-public-data--gnomad/release/4.1/genome_sv/gnomad.v4.1.sv.sites.vcf.gz',
+        },
+    },
+    ReferenceDataset.gencode: {
+        ReferenceGenome.GRCh38: {
+            DATASET_TYPES: frozenset([DatasetType.SV]),
+            VERSION: '1.0',
+            # Mirror of 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_42/gencode.v42.annotation.gtf.gz'
+            PATH: 'gs://seqr-reference-data/gencode/gencode.v42.annotation.gtf.gz',
         },
     },
 }

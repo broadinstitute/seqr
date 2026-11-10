@@ -44,25 +44,16 @@ COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS = {
 }
 
 def _load_annotations(gencode_df):
-    gencode_df = gencode_df[gencode_df['feature_type'].isin(['transcript', 'CDS', 'UTR'])].assign(
-        transcript_id=lambda df: df['info'].str.extract(
-            r'transcript_id "([^"]*)"',
-            expand=False,
-        ),
-    )
     is_transcript = gencode_df['feature_type'] == 'transcript'
     transcripts = (
         gencode_df[is_transcript]
         .drop_duplicates(['contig', 'start', 'end'], keep='last')
+        .rename(columns={'gene_id': 'geneId'})
         .assign(
-            geneId=lambda df: df['info'].str.extract(
-                r'gene_id "([^"]*)"',
-                expand=False,
-            ),
             tss=lambda df: df['start'].mask(df['strand'] == '-', df['end']),
-        )[['contig', 'start', 'end', 'strand', 'geneId', 'tss', 'transcript_id']]
+        )[['contig', 'start', 'end', 'strand', 'geneId', 'tss', 'transcriptId']]
     )
-    features = gencode_df[~is_transcript][['transcript_id', 'feature_type', 'start', 'end']]
+    features = gencode_df[~is_transcript][['transcriptId', 'feature_type', 'start', 'end']]
 
     return transcripts, features
 
@@ -198,9 +189,9 @@ def _transcript_consequences(segments, transcripts, features):
     ]
 
     feature_overlaps = (
-        transcript_overlaps[['start', 'end', 'transcript_id']]
+        transcript_overlaps[['start', 'end', 'transcriptId']]
         .reset_index(names='transcript_overlap')
-        .merge(features, on='transcript_id', suffixes=('', '_feature'))
+        .merge(features, on='transcriptId', suffixes=('', '_feature'))
     )
     feature_overlaps = feature_overlaps[
         (feature_overlaps['start'] <= feature_overlaps['end_feature'])

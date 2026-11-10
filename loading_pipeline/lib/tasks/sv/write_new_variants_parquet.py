@@ -12,10 +12,6 @@ from loading_pipeline.lib.misc.sv_annotate import annotate_gene_consequences
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
 )
-from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
-    GENCODE_GTF_PATH,
-    GENCODE_FILE_HEADER,
-)
 from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceDataset
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
@@ -23,7 +19,6 @@ from loading_pipeline.lib.tasks.base.base_loading_run_params import (
 from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
     BaseWriteParquetFromVcfTask,
 )
-from loading_pipeline.lib.tasks.files import RawFileTask
 from loading_pipeline.lib.tasks.reference_data.updated_reference_dataset_parquet import (
     UpdatedReferenceDatasetParquetNoHailTask,
 )
@@ -51,10 +46,14 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             self.clone(WriteDeduplicatedSvVcfTask),
             self.clone(
                 UpdatedReferenceDatasetParquetNoHailTask,
+                reference_dataset=ReferenceDataset.gencode,
+                attempt_id=self.attempt_id,
+            ),
+            self.clone(
+                UpdatedReferenceDatasetParquetNoHailTask,
                 reference_dataset=ReferenceDataset.gnomad_svs,
                 attempt_id=self.attempt_id,
             ),
-            RawFileTask(GENCODE_GTF_PATH),
         ]
 
     def create_data_frame(self) -> pd.DataFrame:
@@ -96,14 +95,10 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         ]
 
         # Annotate gene consequences
-        with self.input()[2].open('r') as f:
-            gencode_df = pd.read_csv(
-                f,
-                sep='\t',
-                comment='#',
-                header=None,
-                names=GENCODE_FILE_HEADER,
-            )
+        gencode_input = self.input()[1]
+        gencode_input.format = luigi.format.Nop
+        with gencode_input.open() as f:
+            gencode_df = pd.read_parquet(f)
         consequences_by_variant = annotate_gene_consequences(df, gencode_df)
         df['sorted_gene_consequences'] = [
             consequences_by_variant.get(variant, []) for variant in df.index
@@ -111,7 +106,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         # Add gnomad frequency
         gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
-        gnomad_input = self.input()[1]
+        gnomad_input = self.input()[2]
         gnomad_input.format = luigi.format.Nop
         with gnomad_input.open() as f:
             gnomad_df = pd.read_parquet(f, filters=[('id', 'in', gnomad_ids)])
