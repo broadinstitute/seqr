@@ -98,7 +98,7 @@ def _load_annotations(gtf_path):
                 r'gene_id "([^"]*)"',
                 expand=False,
             ),
-            tss=lambda df: np.where(df['strand'] == '-', df['end'], df['start']),
+            tss=lambda df: df['start'].mask(df['strand'] == '-', df['end']),
         )[['contig', 'start', 'end', 'strand', 'geneId', 'tss', 'transcript_id']]
     )
     features = gtf[~is_transcript][['transcript_id', 'feature_type', 'start', 'end']]
@@ -360,15 +360,12 @@ def _promoter_consequences(segments, transcripts, transcript_consequences):
     promoters = pd.DataFrame(
         {
             'contig': transcripts['contig'],
-            'start': np.where(
-                negative_strand,
-                transcripts['tss'] + 1,
-                np.maximum(transcripts['tss'] - PROMOTER_WINDOW, 1),
-            ),
-            'end': np.where(
+            'start': (transcripts['tss'] - PROMOTER_WINDOW)
+            .clip(lower=1)
+            .mask(negative_strand, transcripts['tss'] + 1),
+            'end': (transcripts['tss'] - 1).mask(
                 negative_strand,
                 transcripts['tss'] + PROMOTER_WINDOW,
-                transcripts['tss'] - 1,
             ),
             'geneId': transcripts['geneId'],
         },
