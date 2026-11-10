@@ -1,5 +1,12 @@
 import pandas as pd
 
+from loading_pipeline.lib.annotations.enums import (
+    COMPLEX_SUBTYPES_WITH_DUP_ADJUSTED_INVERSION,
+    COMPLEX_SUBTYPES_WITH_OTHER_INVERSION,
+    COMPLEX_SUBTYPES_WITH_DUP,
+    COMPLEX_SUBTYPES_WITH_INSERTION,
+)
+
 LOF = 'LOF'
 INT_EXON_DUP = 'INTRAGENIC_EXON_DUP'
 COPY_GAIN = 'COPY_GAIN'
@@ -25,30 +32,15 @@ MSV_EXON_OVERLAP_CLASSIFICATIONS = {
     TSS_DUP,
 }
 COMPLEX_SUBTYPES_WITH_DISPERSED_DUP = {
-    'dDUP',
-    'dupINV',
-    'INVdup',
-    'dupINVdup',
-    'dupINVdel',
-    'delINVdup',
-    'dDUP_iDEL',
-}
-COMPLEX_SUBTYPES_WITHOUT_INVERSION = {'dDUP', 'dDUP_iDEL', 'INS_iDEL'}
-COMPLEX_SUBTYPES_WITH_DUP_ADJUSTED_INVERSION = {
-    'dupINV',
-    'INVdup',
-    'dupINVdup',
-    'delINVdup',
-    'dupINVdel',
+    *COMPLEX_SUBTYPES_WITH_DUP_ADJUSTED_INVERSION,
+    *COMPLEX_SUBTYPES_WITH_DUP,
 }
 COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS = {
-    'INS_iDEL',
+    *COMPLEX_SUBTYPES_WITH_INSERTION,
+    *COMPLEX_SUBTYPES_WITH_OTHER_INVERSION,
     'dDUP_iDEL',
-    'delINV',
-    'INVdel',
     'dupINVdel',
     'delINVdup',
-    'delINVdel',
 }
 
 def _load_annotations(gtf_path):
@@ -115,7 +107,10 @@ def _complex_segments(df):
     segments = segments[
         ~(
             (segments['segment_type'] == 'INV')
-            & segments['complex_type'].isin(COMPLEX_SUBTYPES_WITHOUT_INVERSION)
+            & segments['complex_type'].isin({
+                *COMPLEX_SUBTYPES_WITH_DUP,
+                *COMPLEX_SUBTYPES_WITH_INSERTION,
+        })
         )
         & ~((segments['segment_type'] == 'INS') & (segments['complex_type'] == 'INS_iDEL'))
     ]
