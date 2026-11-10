@@ -29,8 +29,6 @@ GTF_COLUMNS = [
     'attributes',
 ]
 
-SV_TYPES = ['DEL', 'DUP', 'INS', 'INV', 'CPX', 'BND', 'CTX', 'CNV']
-
 MSV_EXON_OVERLAP_CLASSIFICATIONS = {
     LOF,
     INT_EXON_DUP,
@@ -74,8 +72,6 @@ COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS = {
     'delINVdel',
 }
 TRANSLOCATION_BREAKEND_SUBTYPES = {'CTX_PP/QQ', 'CTX_PQ/QP'}
-
-SEGMENT_COLUMNS = ['variant', 'segment_type', 'contig', 'start', 'end', 'complex_type']
 
 
 def _load_annotations(gtf_path):
@@ -138,67 +134,54 @@ def _load_annotations(gtf_path):
     return transcripts, features, promoters, tss
 
 
-def _segment_frame(rows, segment_type, contig, start, end):
-    return pd.DataFrame(
-        {
-            'variant': rows.index,
-            'segment_type': segment_type,
-            'contig': contig,
-            'start': start,
-            'end': end,
-            'complex_type': rows['CPX_TYPE'],
-        },
-    )
-
-
-def _subtract_dups_from_inversions(inversions, dups):
-    inversions = inversions.drop_duplicates('variant', keep='last').set_index('variant')
-    dups = dups.assign(dup_rank=dups.groupby('variant').cumcount())
-    for _, rank_dups in dups.groupby('dup_rank'):
-        rank_dups = rank_dups.set_index('variant')
-        variants = inversions.index.intersection(rank_dups.index)
-        inv = inversions.loc[variants]
-        dup = rank_dups.loc[variants]
-        keeps_left = inv['start'] < dup['start']
-        inversions.loc[variants, 'start'] = inv['start'].where(keeps_left, dup['end'])
-        inversions.loc[variants, 'end'] = dup['start'].where(keeps_left, inv['end'])
-    return inversions.reset_index()
-
-
 def _complex_segments(df):
-    intervals = df['CPX_INTERVALS'].str.split(',').explode()
-    parsed = intervals.str.extract(r'^([^_]+)_(.+):(\d+)-(\d+)$')
-    segments = pd.DataFrame(
-        {
-            'variant': intervals.index,
-            'segment_type': parsed[0].to_numpy(),
-            'contig': parsed[1].to_numpy(),
-            'start': parsed[2].astype(int).to_numpy(),
-            'end': parsed[3].astype(int).to_numpy(),
-        },
+    segments = (
+        df['CPX_INTERVALS']
+        .str.split(',')
+        .explode()
+        .rename_axis('variant')
+        .reset_index(name='interval')
+    )
+    parsed = segments['interval'].str.extract(
+        r'^(?P<segment_type>[^_]+)_(?P<contig>.+):(?P<start>\d+)-(?P<end>\d+)$',
     )
     segments = segments.assign(
-        complex_type=df.loc[segments['variant'], 'CPX_TYPE'].to_numpy(),
-        type_rank=segments['segment_type'].map({t: i for i, t in enumerate(SV_TYPES)}),
-    ).sort_values(['variant', 'contig', 'start', 'end', 'type_rank'])
+        segment_type=parsed['segment_type'],
+        contig=parsed['contig'],
+        start=parsed['start'].astype(int),
+        end=parsed['end'].astype(int),
+        complex_type=segments['variant'].map(df['CPX_TYPE']),
+    ).drop(columns='interval')
 
-    is_inversion = segments['segment_type'] == 'INV'
-    dropped = (
-        is_inversion
-        & segments['complex_type'].isin(COMPLEX_SUBTYPES_WITHOUT_INVERSION)
-    ) | ((segments['segment_type'] == 'INS') & (segments['complex_type'] == 'INS_iDEL'))
-    adjusted = is_inversion & segments['complex_type'].isin(
-        COMPLEX_SUBTYPES_WITH_DUP_ADJUSTED_INVERSION,
+    segments = segments[
+        ~(
+            (segments['segment_type'] == 'INV')
+            & segments['complex_type'].isin(COMPLEX_SUBTYPES_WITHOUT_INVERSION)
+        )
+        & ~((segments['segment_type'] == 'INS') & (segments['complex_type'] == 'INS_iDEL'))
+    ]
+
+    is_dup_adjusted_inversion = (segments['segment_type'] == 'INV') & (
+        segments['complex_type'].isin(COMPLEX_SUBTYPES_WITH_DUP_ADJUSTED_INVERSION)
     )
-    return pd.concat(
-        [
-            segments[~dropped & ~adjusted],
-            _subtract_dups_from_inversions(
-                segments[adjusted],
-                segments[segments['segment_type'] == 'DUP'],
-            ),
-        ],
-    )[SEGMENT_COLUMNS]
+    dups = segments[segments['segment_type'] == 'DUP']
+    inversion_start = dups['variant'].map(
+        segments[is_dup_adjusted_inversion].set_index('variant')['start'],
+    )
+    trims_end = dups['start'] > inversion_start
+    new_end = dups[trims_end].set_index('variant')['start']
+    new_start = dups[inversion_start.notna() & ~trims_end].set_index('variant')['end']
+
+    return segments.assign(
+        start=segments['variant']
+        .map(new_start)
+        .where(is_dup_adjusted_inversion)
+        .fillna(segments['start']),
+        end=segments['variant']
+        .map(new_end)
+        .where(is_dup_adjusted_inversion)
+        .fillna(segments['end']),
+    )
 
 
 def _segments(df):
@@ -228,17 +211,18 @@ def _segments(df):
 
     breakends = df[sv_type == 'BND']
     same_chrom = breakends['CHR2'] == breakends['#CHROM']
-    has_same_chrom_length = same_chrom & (breakends['SVLEN'] > 0)
-    has_second_breakend = breakends['CHR2'].notna() & ~(
-        same_chrom
-        & ~has_same_chrom_length
-        & (breakends['END2'].isna() | (breakends['END2'] == breakends['POS']))
+    second_breakend = breakends['END2'].case_when(
+        [
+            (
+                same_chrom & (breakends['SVLEN'] > 0),
+                breakends['POS'] + breakends['SVLEN'],
+            ),
+        ],
     )
-    second_breakend = (breakends['POS'] + breakends['SVLEN']).where(
-        has_same_chrom_length,
-        breakends['END2'],
-    )
-    second_breakend_segments = primary.loc[breakends[has_second_breakend].index].assign(
+    second_breakend = second_breakend[
+        breakends['CHR2'].notna() & ~(same_chrom & (second_breakend == breakends['POS']))
+    ]
+    second_breakend_segments = primary.loc[second_breakend.index].assign(
         contig=breakends['CHR2'],
         start=second_breakend,
         end=second_breakend,
@@ -246,7 +230,11 @@ def _segments(df):
 
     translocations = df[sv_type == 'CTX']
     translocation_segments = [
-        _segment_frame(translocations, 'CTX', contig, position, position)
+        primary.loc[translocations.index].assign(
+            contig=contig,
+            start=position,
+            end=position,
+        )
         for contig, position in [
             (translocations['#CHROM'], translocations['END']),
             (translocations['CHR2'], translocations['END2']),
