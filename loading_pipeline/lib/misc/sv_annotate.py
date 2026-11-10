@@ -100,38 +100,10 @@ def _load_annotations(gtf_path):
             ),
             tss=lambda df: np.where(df['strand'] == '-', df['end'], df['start']),
         )[['contig', 'start', 'end', 'strand', 'gene_id', 'tss', 'transcript_id']]
-        .reset_index(drop=True)
     )
     features = gtf[~is_transcript][['transcript_id', 'feature_type', 'start', 'end']]
 
-    negative_strand = transcripts['strand'] == '-'
-    promoters = (
-        pd.DataFrame(
-            {
-                'contig': transcripts['contig'],
-                'start': np.where(
-                    negative_strand,
-                    transcripts['tss'] + 1,
-                    np.maximum(transcripts['tss'] - PROMOTER_WINDOW, 1),
-                ),
-                'end': np.where(
-                    negative_strand,
-                    transcripts['tss'] + PROMOTER_WINDOW,
-                    transcripts['tss'] - 1,
-                ),
-                'gene_id': transcripts['gene_id'],
-            },
-        )
-        .drop_duplicates(['contig', 'start', 'end'], keep='last')
-        .reset_index(drop=True)
-    )
-    tss = (
-        transcripts[['contig', 'tss', 'gene_id']]
-        .drop_duplicates(['contig', 'tss'], keep='last')
-        .sort_values('tss')
-        .reset_index(drop=True)
-    )
-    return transcripts, features, promoters, tss
+    return transcripts, features
 
 
 def _complex_segments(df):
@@ -421,7 +393,24 @@ def _transcript_consequences(segments, transcripts, features):
     ]
 
 
-def _promoter_consequences(segments, promoters, transcript_consequences):
+def _promoter_consequences(segments, transcripts, transcript_consequences):
+    negative_strand = transcripts['strand'] == '-'
+    promoters = pd.DataFrame(
+        {
+            'contig': transcripts['contig'],
+            'start': np.where(
+                negative_strand,
+                transcripts['tss'] + 1,
+                np.maximum(transcripts['tss'] - PROMOTER_WINDOW, 1),
+            ),
+            'end': np.where(
+                negative_strand,
+                transcripts['tss'] + PROMOTER_WINDOW,
+                transcripts['tss'] - 1,
+            ),
+            'gene_id': transcripts['gene_id'],
+        },
+    ).drop_duplicates(['contig', 'start', 'end'], keep='last')
     overlaps = _overlapping_pairs(segments, promoters)
     promoter_genes = pd.DataFrame(
         {
@@ -453,7 +442,12 @@ def _nearest_tss_segments(segments):
     )
 
 
-def _nearest_tss_consequences(segments, tss):
+def _nearest_tss_consequences(segments, transcripts):
+    tss = (
+        transcripts[['contig', 'tss', 'gene_id']]
+        .drop_duplicates(['contig', 'tss'], keep='last')
+        .sort_values('tss')
+    )
     tss_by_contig = dict(list(tss.groupby('contig')))
     nearest_genes = []
     for contig, contig_segments in segments.groupby('contig'):
@@ -493,7 +487,7 @@ def _nearest_tss_consequences(segments, tss):
 
 
 def annotate_df(df, gtf_path):
-    transcripts, features, promoters, tss = _load_annotations(gtf_path)
+    transcripts, features = _load_annotations(gtf_path)
     segments = _segments(df)
     transcript_consequences = _transcript_consequences(segments, transcripts, features)
     regulatory_segments = segments[
@@ -504,7 +498,7 @@ def annotate_df(df, gtf_path):
     ]
     promoter_consequences = _promoter_consequences(
         regulatory_segments,
-        promoters,
+        transcripts,
         transcript_consequences,
     )
     genic_variants = set(
@@ -517,7 +511,7 @@ def annotate_df(df, gtf_path):
         _nearest_tss_segments(
             regulatory_segments[~regulatory_segments['variant'].isin(genic_variants)],
         ),
-        tss,
+        transcripts,
     )
 
     consequences = (
