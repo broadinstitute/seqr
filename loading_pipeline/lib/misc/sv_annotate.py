@@ -16,18 +16,6 @@ NEAREST_TSS = 'NEAREST_TSS'
 
 PROMOTER_WINDOW = 1000
 
-GTF_COLUMNS = [
-    'contig',
-    'source',
-    'feature_type',
-    'start',
-    'end',
-    'score',
-    'strand',
-    'frame',
-    'attributes',
-]
-
 MSV_EXON_OVERLAP_CLASSIFICATIONS = {
     LOF,
     INT_EXON_DUP,
@@ -62,8 +50,6 @@ COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS = {
     'delINVdup',
     'delINVdel',
 }
-TRANSLOCATION_BREAKEND_SUBTYPES = {'CTX_PP/QQ', 'CTX_PQ/QP'}
-
 
 def _load_annotations(gtf_path):
     gtf = pd.read_csv(
@@ -71,7 +57,17 @@ def _load_annotations(gtf_path):
         sep='\t',
         comment='#',
         header=None,
-        names=GTF_COLUMNS,
+        names=[
+            'contig',
+            'source',
+            'feature_type',
+            'start',
+            'end',
+            'score',
+            'strand',
+            'frame',
+            'attributes',
+        ],
         usecols=['contig', 'feature_type', 'start', 'end', 'strand', 'attributes'],
     )
     gtf = gtf[gtf['feature_type'].isin(['transcript', 'CDS', 'UTR'])].assign(
@@ -149,12 +145,7 @@ def _complex_segments(df):
 
 def _segments(df):
     sv_type = df['SVTYPE']
-    segment_type = sv_type.case_when(
-        [
-            (df['CPX_TYPE'] == 'dDUP', 'INS'),
-            (df['CPX_TYPE'].isin(TRANSLOCATION_BREAKEND_SUBTYPES), 'CTX'),
-        ],
-    )
+    segment_type = sv_type.mask(df['CPX_TYPE'] == 'dDUP', 'INS')
     primary = pd.DataFrame(
         {
             'variant': df.index,
@@ -205,9 +196,7 @@ def _segments(df):
         ]
     ]
 
-    complex_segments = _complex_segments(
-        df[(sv_type == 'CPX') | ((df['CPX_TYPE'] == 'CTX_INV') & df['CPX_INTERVALS'].notna())],
-    )
+    complex_segments = _complex_segments(df[sv_type == 'CPX'])
 
     return pd.concat(
         [
