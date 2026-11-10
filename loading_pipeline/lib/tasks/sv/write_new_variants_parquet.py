@@ -103,7 +103,10 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         # Add gnomad frequency
         gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
-        gnomad_df = self._read_parquet(self.input()[2], filters=[('id', 'in', gnomad_ids)])
+        gnomad_df = self._read_parquet(
+            self.input()[2],
+            filters=[('id', 'in', gnomad_ids)],
+        )
         gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
         df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
             lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},

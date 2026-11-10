@@ -55,7 +55,8 @@ def run_command(cmd: list[str]):
 
 
 def annotate_gene_consequences(
-    df: pd.DataFrame, gencode_df: pd.DataFrame,
+    df: pd.DataFrame,
+    gencode_df: pd.DataFrame,
 ) -> pd.DataFrame:
     # Implementation of gatk's SVAnnotate. Only change is to keep gene ID instead of gene symbol.
     # https://github.com/broadinstitute/gatk/blob/master/src/main/java/org/broadinstitute/hellbender/tools/walkers/sv/SVAnnotate.java
