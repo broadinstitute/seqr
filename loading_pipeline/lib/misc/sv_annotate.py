@@ -43,34 +43,16 @@ COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS = {
     'delINVdup',
 }
 
-def _load_annotations(gtf_path):
-    gtf = pd.read_csv(
-        gtf_path,
-        sep='\t',
-        comment='#',
-        header=None,
-        names=[
-            'contig',
-            'source',
-            'feature_type',
-            'start',
-            'end',
-            'score',
-            'strand',
-            'frame',
-            'info',
-        ],
-        usecols=['contig', 'feature_type', 'start', 'end', 'strand', 'info'],
-    )
-    gtf = gtf[gtf['feature_type'].isin(['transcript', 'CDS', 'UTR'])].assign(
+def _load_annotations(gencode_df):
+    gencode_df = gencode_df[gencode_df['feature_type'].isin(['transcript', 'CDS', 'UTR'])].assign(
         transcript_id=lambda df: df['info'].str.extract(
             r'transcript_id "([^"]*)"',
             expand=False,
         ),
     )
-    is_transcript = gtf['feature_type'] == 'transcript'
+    is_transcript = gencode_df['feature_type'] == 'transcript'
     transcripts = (
-        gtf[is_transcript]
+        gencode_df[is_transcript]
         .drop_duplicates(['contig', 'start', 'end'], keep='last')
         .assign(
             geneId=lambda df: df['info'].str.extract(
@@ -80,7 +62,7 @@ def _load_annotations(gtf_path):
             tss=lambda df: df['start'].mask(df['strand'] == '-', df['end']),
         )[['contig', 'start', 'end', 'strand', 'geneId', 'tss', 'transcript_id']]
     )
-    features = gtf[~is_transcript][['transcript_id', 'feature_type', 'start', 'end']]
+    features = gencode_df[~is_transcript][['transcript_id', 'feature_type', 'start', 'end']]
 
     return transcripts, features
 

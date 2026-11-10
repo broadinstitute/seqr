@@ -4,6 +4,7 @@ from collections.abc import Callable
 from enum import StrEnum
 
 import hail as hl
+import luigi
 import pandas as pd
 
 from loading_pipeline.lib.core import (
@@ -74,11 +75,11 @@ class ReferenceDataset(StrEnum):
             validate_no_duplicate_variants(ht, reference_genome, dataset_type)
         return ht
 
-    def format_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def get_df(self, input_target: luigi.Target) -> pd.DataFrame:
         module = importlib.import_module(
             f'loading_pipeline.lib.reference_datasets.{self.name}',
         )
-        return module.format_df(df)
+        return module.get_df(input_target)
 
 
 CONFIG = {
