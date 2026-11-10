@@ -393,6 +393,9 @@ def _nearest_tss_consequences(segments, transcripts):
 
 
 def annotate_df(df, gtf_path):
+    # Implementation of gatk's SVAnnotate. Only change is to keep gene ID instead of gene symbol.
+    # https://github.com/broadinstitute/gatk/blob/master/src/main/java/org/broadinstitute/hellbender/tools/walkers/sv/SVAnnotate.java
+
     transcripts, features = _load_annotations(gtf_path)
     segments = _segments(df)
     transcript_consequences = _transcript_consequences(segments, transcripts, features)
