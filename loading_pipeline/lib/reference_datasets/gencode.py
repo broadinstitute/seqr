@@ -36,4 +36,6 @@ def get_df(input_target: luigi.Target) -> pd.DataFrame:
         ),
     )
 
-    return df[['contig', 'start', 'end', 'strand', 'feature_type', 'transcriptId', 'geneId']]
+    return df[
+        ['contig', 'start', 'end', 'strand', 'feature_type', 'transcriptId', 'geneId']
+    ]

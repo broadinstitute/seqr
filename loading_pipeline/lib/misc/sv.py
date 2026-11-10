@@ -54,7 +54,9 @@ def run_command(cmd: list[str]):
         raise
 
 
-def annotate_gene_consequences(df: pd.DataFrame, gencode_df: pd.DataFrame) -> pd.DataFrame:
+def annotate_gene_consequences(
+    df: pd.DataFrame, gencode_df: pd.DataFrame,
+) -> pd.DataFrame:
     # Implementation of gatk's SVAnnotate. Only change is to keep gene ID instead of gene symbol.
     # https://github.com/broadinstitute/gatk/blob/master/src/main/java/org/broadinstitute/hellbender/tools/walkers/sv/SVAnnotate.java
 
@@ -92,11 +94,14 @@ def annotate_gene_consequences(df: pd.DataFrame, gencode_df: pd.DataFrame) -> pd
     )
     return (
         consequences.assign(
-            gene_consequence=consequences[['geneId', 'majorConsequence']].to_dict('records'),
+            gene_consequence=consequences[['geneId', 'majorConsequence']].to_dict(
+                'records',
+            ),
         )
         .groupby('variant')['gene_consequence']
         .agg(list)
     )
+
 
 def _load_annotations(gencode_df):
     is_transcript = gencode_df['feature_type'] == 'transcript'
@@ -108,7 +113,9 @@ def _load_annotations(gencode_df):
             tss=lambda df: df['start'].mask(df['strand'] == '-', df['end']),
         )[['contig', 'start', 'end', 'strand', 'geneId', 'tss', 'transcriptId']]
     )
-    features = gencode_df[~is_transcript][['transcriptId', 'feature_type', 'start', 'end']]
+    features = gencode_df[~is_transcript][
+        ['transcriptId', 'feature_type', 'start', 'end']
+    ]
 
     return transcripts, features
 
@@ -135,12 +142,17 @@ def _complex_segments(df):
     segments = segments[
         ~(
             (segments['segment_type'] == 'INV')
-            & segments['complex_type'].isin({
-                *COMPLEX_SUBTYPES_WITH_DUP,
-                *COMPLEX_SUBTYPES_WITH_INSERTION,
-        })
+            & segments['complex_type'].isin(
+                {
+                    *COMPLEX_SUBTYPES_WITH_DUP,
+                    *COMPLEX_SUBTYPES_WITH_INSERTION,
+                },
+            )
         )
-        & ~((segments['segment_type'] == 'INS') & (segments['complex_type'] == 'INS_iDEL'))
+        & ~(
+            (segments['segment_type'] == 'INS')
+            & (segments['complex_type'] == 'INS_iDEL')
+        )
     ]
 
     is_dup_adjusted_inversion = (segments['segment_type'] == 'INV') & (
@@ -197,7 +209,8 @@ def _segments(df):
         ],
     )
     second_breakend = second_breakend[
-        breakends['CHR2'].notna() & ~(same_chrom & (second_breakend == breakends['POS']))
+        breakends['CHR2'].notna()
+        & ~(same_chrom & (second_breakend == breakends['POS']))
     ]
     second_breakend_segments = primary.loc[second_breakend.index].assign(
         contig=breakends['CHR2'],
@@ -255,9 +268,9 @@ def _transcript_consequences(segments, transcripts, features):
     spanned = (feature_overlaps['start'] <= feature_overlaps['start_feature']) & (
         feature_overlaps['end_feature'] <= feature_overlaps['end']
     )
-    contains_segment = (feature_overlaps['start_feature'] <= feature_overlaps['start']) & (
-        feature_overlaps['end'] <= feature_overlaps['end_feature']
-    )
+    contains_segment = (
+        feature_overlaps['start_feature'] <= feature_overlaps['start']
+    ) & (feature_overlaps['end'] <= feature_overlaps['end_feature'])
     feature_overlaps = feature_overlaps.assign(
         spanned=spanned,
         breakends=(contains_segment + 1).mask(spanned, 0),
@@ -351,12 +364,9 @@ def _transcript_consequences(segments, transcripts, features):
         'majorConsequence',
     ] = None
 
-    return (
-        transcript_overlaps.dropna(subset=['majorConsequence'])[
-            ['variant', 'majorConsequence', 'geneId']
-        ]
-        .drop_duplicates()
-    )
+    return transcript_overlaps.dropna(subset=['majorConsequence'])[
+        ['variant', 'majorConsequence', 'geneId']
+    ].drop_duplicates()
 
 
 def _promoter_overlaps(segments, transcripts):
