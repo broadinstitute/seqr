@@ -37,14 +37,6 @@ MSV_EXON_OVERLAP_CLASSIFICATIONS = {
     COPY_GAIN,
     TSS_DUP,
 }
-PROTEIN_CODING_CONSEQUENCES = {
-    *MSV_EXON_OVERLAP_CLASSIFICATIONS,
-    INV_SPAN,
-    MSV_EXON_OVERLAP,
-    UTR,
-    INTRONIC,
-    BREAKEND_EXON,
-}
 COMPLEX_SUBTYPES_WITH_DISPERSED_DUP = {
     'dDUP',
     'dupINV',
@@ -356,40 +348,31 @@ def _transcript_consequences(segments, transcripts, features):
     )
 
 
-def _promoter_consequences(segments, transcripts, transcript_consequences):
+def _promoter_overlaps(segments, transcripts):
     negative_strand = transcripts['strand'] == '-'
-    promoters = pd.DataFrame(
-        {
-            'contig': transcripts['contig'],
-            'start': (transcripts['tss'] - PROMOTER_WINDOW)
-            .clip(lower=1)
-            .mask(negative_strand, transcripts['tss'] + 1),
-            'end': (transcripts['tss'] - 1).mask(
-                negative_strand,
-                transcripts['tss'] + PROMOTER_WINDOW,
-            ),
-            'geneId': transcripts['geneId'],
-        },
+    promoters = transcripts.assign(
+        start=(transcripts['tss'] - PROMOTER_WINDOW)
+        .clip(lower=1)
+        .mask(negative_strand, transcripts['tss'] + 1),
+        end=(transcripts['tss'] - 1).mask(
+            negative_strand,
+            transcripts['tss'] + PROMOTER_WINDOW,
+        ),
     ).drop_duplicates(['contig', 'start', 'end'], keep='last')
-    promoter_genes = segments.merge(promoters, on='contig', suffixes=('', '_promoter'))
-    promoter_genes = promoter_genes[
-        (promoter_genes['start'] <= promoter_genes['end_promoter'])
-        & (promoter_genes['end'] >= promoter_genes['start_promoter'])
-    ][['variant', 'geneId']].merge(
-        transcript_consequences[['variant', 'geneId']],
-        how='left',
-        indicator=True,
+    promoter_overlaps = segments.merge(
+        promoters,
+        on='contig',
+        suffixes=('', '_promoter'),
     )
-    return (
-        promoter_genes[promoter_genes['_merge'] == 'left_only'][['variant', 'geneId']]
-        .drop_duplicates()
-        .assign(majorConsequence=PROMOTER)
-    )
+    return promoter_overlaps[
+        (promoter_overlaps['start'] <= promoter_overlaps['end_promoter'])
+        & (promoter_overlaps['end'] >= promoter_overlaps['start_promoter'])
+    ]
 
 
-def _nearest_tss_segments(segments):
+def _nearest_tss_consequences(segments, transcripts):
     is_merged = segments['complex_type'].isin(COMPLEX_SUBTYPES_WITH_MERGED_NEAREST_TSS)
-    return pd.concat(
+    segments = pd.concat(
         [
             segments[~is_merged],
             segments[is_merged].groupby('variant', as_index=False).agg(
@@ -401,8 +384,6 @@ def _nearest_tss_segments(segments):
         ignore_index=True,
     )
 
-
-def _nearest_tss_consequences(segments, transcripts):
     tss = (
         transcripts[['contig', 'tss', 'geneId']]
         .drop_duplicates(['contig', 'tss'], keep='last')
@@ -454,27 +435,29 @@ def annotate_df(df, gtf_path):
     transcripts, features = _load_annotations(gtf_path)
     segments = _segments(df)
     transcript_consequences = _transcript_consequences(segments, transcripts, features)
+
     regulatory_segments = segments[
         ~(
             (segments['segment_type'] == 'DUP')
             & segments['complex_type'].isin(COMPLEX_SUBTYPES_WITH_DISPERSED_DUP)
         )
     ]
-    promoter_consequences = _promoter_consequences(
-        regulatory_segments,
-        transcripts,
-        transcript_consequences,
+    promoter_genes = _promoter_overlaps(regulatory_segments, transcripts).set_index(
+        ['variant', 'geneId'],
     )
-    genic_variants = set(
-        transcript_consequences.loc[
-            transcript_consequences['majorConsequence'].isin(PROTEIN_CODING_CONSEQUENCES),
-            'variant',
-        ],
-    ) | set(promoter_consequences['variant'])
+    transcript_genes = transcript_consequences.set_index(['variant', 'geneId']).index
+    promoter_consequences = (
+        promoter_genes[~promoter_genes.index.isin(transcript_genes)]
+        .index.to_frame(index=False)
+        .drop_duplicates()
+        .assign(majorConsequence=PROMOTER)
+    )
+
+    annotated_variants = pd.concat(
+        [transcript_consequences['variant'], promoter_consequences['variant']],
+    )
     nearest_tss_consequences = _nearest_tss_consequences(
-        _nearest_tss_segments(
-            regulatory_segments[~regulatory_segments['variant'].isin(genic_variants)],
-        ),
+        regulatory_segments[~regulatory_segments['variant'].isin(annotated_variants)],
         transcripts,
     )
 
