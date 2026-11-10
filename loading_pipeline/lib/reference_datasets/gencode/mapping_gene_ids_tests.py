@@ -8,7 +8,6 @@ from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
     load_gencode_ensembl_to_refseq_id,
 )
 
-
 ENSEMBL_TO_REFSEQ_DATA = b"""ENST00000424215.1\tNR_121638.1
 ENST00000378391.6\tNM_199454.3\tNP_955533.2
 ENST00000270722.10\tNM_022114.4\tNP_071397.3

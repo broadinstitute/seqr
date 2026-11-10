@@ -1,7 +1,6 @@
 import luigi
 import pandas as pd
 
-
 GENCODE_FILE_HEADER = [
     'contig',
     'source',
