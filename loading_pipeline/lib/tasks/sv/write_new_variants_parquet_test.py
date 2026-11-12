@@ -176,7 +176,10 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                         },
                     },
                     'sortedGeneConsequences': [
-                        {'geneId': 'ENSG00000173662', 'majorConsequence': 'NEAREST_TSS'},
+                        {
+                            'geneId': 'ENSG00000173662',
+                            'majorConsequence': 'NEAREST_TSS',
+                        },
                     ],
                 },
                 {

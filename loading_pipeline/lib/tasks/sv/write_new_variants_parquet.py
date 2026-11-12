@@ -98,7 +98,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         df['END'] = df['END'].astype(int)
         if 'END2' in df:
-            df['end_chrom'] = df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
+            df['end_chrom'] = (
+                df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
+            )
             df['END2'] = df['END2'].astype(int)
         else:
             df['end_chrom'] = df['#CHROM']
@@ -110,7 +112,10 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         consequences_by_variant = annotate_gene_consequences(df, gencode_df)
         df['sorted_gene_consequences'] = [
             [
-                {'geneId': consequence['geneId'], 'majorConsequence': consequence['majorConsequence']}
+                {
+                    'geneId': consequence['geneId'],
+                    'majorConsequence': consequence['majorConsequence'],
+                }
                 for consequence in consequences_by_variant.get(variant, [])
             ]
             for variant in df.index
