@@ -59,7 +59,13 @@ def annotate_gene_consequences(
     gencode_df: pd.DataFrame,
 ) -> pd.DataFrame:
     # Implementation of gatk's SVAnnotate: https://github.com/broadinstitute/gatk/blob/master/src/main/java/org/broadinstitute/hellbender/tools/walkers/sv/SVAnnotate.java
-    # Updated to return consequences per transcript instead of per gene, and to return gene ID instead of gene symbol
+    # Changes from base implementation:
+    #     - Returns consequences on a per transcript basis instead of per gene
+    #     - Returns gene ID instead of gene symbol
+    #     - Does not annotate the consequences that are later dropped by seqr:
+    #       PARTIAL_DISPERSED_DUP, NONCODING_SPAN, NONCODING_BREAKPOINT, and INTERGENIC
+    #     - Does not handle cases for CPX_TYPE inputs that are not allowed through the input validation:
+    #       CTX_PP/QQ, CTX_PQ_QP, and CTX_INV
 
     transcripts, features = _load_annotations(gencode_df)
     segments = _segments(df)
