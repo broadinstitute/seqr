@@ -101,7 +101,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             df['end_chrom'] = df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
             df['END2'] = df['END2'].astype(int)
         else:
-            df['end_chrom'] = None
+            df['end_chrom'] = df['#CHROM']
             df['END2'] = None
             if 'CHR2' in df:
                 df = df.drop(columns=['CHR2'])
