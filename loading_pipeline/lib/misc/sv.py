@@ -266,27 +266,25 @@ def _transcript_consequences(segments, transcripts, features):
         (feature_overlaps['start'] <= feature_overlaps['end_feature'])
         & (feature_overlaps['end'] >= feature_overlaps['start_feature'])
     ]
-    spanned = (feature_overlaps['start'] <= feature_overlaps['start_feature']) & (
-        feature_overlaps['end_feature'] <= feature_overlaps['end']
-    )
-    contains_segment = (
-        feature_overlaps['start_feature'] <= feature_overlaps['start']
-    ) & (feature_overlaps['end'] <= feature_overlaps['end_feature'])
-    feature_overlaps = feature_overlaps.assign(
-        spanned=spanned,
-        breakends=(contains_segment + 1).mask(spanned, 0),
-    )
-    cds = feature_overlaps[feature_overlaps['feature_type'] == 'CDS']
-    utr = feature_overlaps[feature_overlaps['feature_type'] == 'UTR']
 
     segment_type = transcript_overlaps['segment_type']
     transcript_overlaps = transcript_overlaps.assign(majorConsequence=INTRONIC)
     transcript_overlaps.loc[
-        transcript_overlaps.index.isin(utr['transcript_overlap']),
+        transcript_overlaps.index.isin(
+            feature_overlaps.loc[
+                feature_overlaps['feature_type'] == 'UTR',
+                'transcript_overlap',
+            ],
+        ),
         'majorConsequence',
     ] = UTR
     transcript_overlaps.loc[
-        transcript_overlaps.index.isin(cds['transcript_overlap']),
+        transcript_overlaps.index.isin(
+            feature_overlaps.loc[
+                feature_overlaps['feature_type'] == 'CDS',
+                'transcript_overlap',
+            ],
+        ),
         'majorConsequence',
     ] = LOF
     transcript_overlaps.loc[
@@ -312,21 +310,22 @@ def _transcript_consequences(segments, transcripts, features):
 
     transcript_overlaps.loc[segment_type == 'CTX', 'majorConsequence'] = LOF
 
-    cds_breakends = (
-        cds.groupby('transcript_overlap')['breakends']
-        .sum()
-        .reindex(transcript_overlaps.index, fill_value=0)
+    spanned = (feature_overlaps['start'] <= feature_overlaps['start_feature']) & (
+        feature_overlaps['end_feature'] <= feature_overlaps['end']
     )
-    utr_breakends = (
-        utr.groupby('transcript_overlap')['breakends']
-        .sum()
-        .reindex(transcript_overlaps.index, fill_value=0)
-    )
-    cds_spanned = transcript_overlaps.index.isin(
-        cds.loc[cds['spanned'], 'transcript_overlap'],
-    )
-    utr_spanned = transcript_overlaps.index.isin(
-        utr.loc[utr['spanned'], 'transcript_overlap'],
+    spanned_features = feature_overlaps[spanned]
+    partial_features = feature_overlaps[~spanned]
+    start_breakpoints = partial_features[
+        partial_features['start_feature'] <= partial_features['start']
+    ]
+    end_breakpoints = partial_features[
+        partial_features['end'] <= partial_features['end_feature']
+    ]
+    cds_breakpoint = transcript_overlaps.index.isin(
+        partial_features.loc[
+            partial_features['feature_type'] == 'CDS',
+            'transcript_overlap',
+        ],
     )
     transcript_overlaps.loc[
         segment_type.isin(['DUP', 'CNV']),
@@ -341,12 +340,30 @@ def _transcript_consequences(segments, transcripts, features):
                 DUP_PARTIAL,
             ),
             (
-                (cds_breakends == 2) | ((cds_breakends == 1) & (utr_breakends == 1)),
+                transcript_overlaps.index.isin(start_breakpoints['transcript_overlap'])
+                & transcript_overlaps.index.isin(end_breakpoints['transcript_overlap'])
+                & cds_breakpoint,
                 LOF,
             ),
-            (cds_breakends == 1, PARTIAL_EXON_DUP),
-            (cds_spanned, INT_EXON_DUP),
-            ((utr_breakends > 0) | utr_spanned, UTR),
+            (cds_breakpoint, PARTIAL_EXON_DUP),
+            (
+                transcript_overlaps.index.isin(
+                    spanned_features.loc[
+                        spanned_features['feature_type'] == 'CDS',
+                        'transcript_overlap',
+                    ],
+                ),
+                INT_EXON_DUP,
+            ),
+            (
+                transcript_overlaps.index.isin(
+                    feature_overlaps.loc[
+                        feature_overlaps['feature_type'] == 'UTR',
+                        'transcript_overlap',
+                    ],
+                ),
+                UTR,
+            ),
         ],
     )
 
