@@ -95,24 +95,6 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         ]
 
         # Annotate gene consequences
-        gencode_df = self._read_parquet(self.input()[1])
-        consequences_by_variant = annotate_gene_consequences(df, gencode_df)
-        df['sorted_gene_consequences'] = [
-            consequences_by_variant.get(variant, []) for variant in df.index
-        ]
-
-        # Add gnomad frequency
-        gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
-        gnomad_df = self._read_parquet(
-            self.input()[2],
-            filters=[('id', 'in', gnomad_ids)],
-        )
-        gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
-        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
-            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
-        )
-
-        # Format and validate annotations
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
         if not invalid_sv_types.empty:
             msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
@@ -140,6 +122,24 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             )
         )
 
+        gencode_df = self._read_parquet(self.input()[1])
+        consequences_by_variant = annotate_gene_consequences(df, gencode_df)
+        df['sorted_gene_consequences'] = [
+            consequences_by_variant.get(variant, []) for variant in df.index
+        ]
+
+        # Add gnomad frequency
+        gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
+        gnomad_df = self._read_parquet(
+            self.input()[2],
+            filters=[('id', 'in', gnomad_ids)],
+        )
+        gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
+        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
+            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
+        )
+
+        # Format annotations
         df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
