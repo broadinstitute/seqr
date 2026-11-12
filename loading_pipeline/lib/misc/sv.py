@@ -205,7 +205,7 @@ def _segments(df):
 
     breakends = df[sv_type == 'BND']
     same_chrom = breakends['end_chrom'] == breakends['#CHROM']
-    second_breakend = breakends['END2'].case_when(
+    second_breakend = breakends['END2'].fillna(df['POS']).case_when(
         [
             (
                 same_chrom & (breakends['SVLEN'] > 0),
@@ -231,8 +231,8 @@ def _segments(df):
         )
         for contig, position in [
             (translocations['#CHROM'], translocations['END']),
-            (translocations['end_chrom'], translocations['END2']),
-            (translocations['end_chrom'], translocations['END2'] + 1),
+            (translocations['end_chrom'], translocations['END2'].fillna(df['POS'])),
+            (translocations['end_chrom'], translocations['END2'].fillna(df['POS']) + 1),
         ]
     ]
 
