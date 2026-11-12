@@ -58,8 +58,8 @@ def annotate_gene_consequences(
     df: pd.DataFrame,
     gencode_df: pd.DataFrame,
 ) -> pd.DataFrame:
-    # Implementation of gatk's SVAnnotate. Only change is to keep gene ID instead of gene symbol.
-    # https://github.com/broadinstitute/gatk/blob/master/src/main/java/org/broadinstitute/hellbender/tools/walkers/sv/SVAnnotate.java
+    # Implementation of gatk's SVAnnotate: https://github.com/broadinstitute/gatk/blob/master/src/main/java/org/broadinstitute/hellbender/tools/walkers/sv/SVAnnotate.java
+    # Updated to return consequences per transcript instead of per gene, and to return gene ID instead of gene symbol
 
     transcripts, features = _load_annotations(gencode_df)
     segments = _segments(df)
@@ -72,9 +72,11 @@ def annotate_gene_consequences(
         )
     ]
     promoter_genes = _promoter_overlaps(regulatory_segments, transcripts).set_index(
-        ['variant', 'geneId'],
+        ['variant', 'geneId', 'transcriptId'],
     )
-    transcript_genes = transcript_consequences.set_index(['variant', 'geneId']).index
+    transcript_genes = transcript_consequences.set_index(
+        ['variant', 'geneId', 'transcriptId'],
+    ).index
     promoter_consequences = (
         promoter_genes[~promoter_genes.index.isin(transcript_genes)]
         .index.to_frame(index=False)
@@ -95,9 +97,9 @@ def annotate_gene_consequences(
     )
     return (
         consequences.assign(
-            gene_consequence=consequences[['geneId', 'majorConsequence']].to_dict(
-                'records',
-            ),
+            gene_consequence=consequences[
+                ['geneId', 'transcriptId', 'majorConsequence']
+            ].to_dict('records'),
         )
         .groupby('variant')['gene_consequence']
         .agg(list)
@@ -375,7 +377,7 @@ def _transcript_consequences(segments, transcripts, features):
     ] = None
 
     return transcript_overlaps.dropna(subset=['majorConsequence'])[
-        ['variant', 'majorConsequence', 'geneId']
+        ['variant', 'majorConsequence', 'geneId', 'transcriptId']
     ].drop_duplicates()
 
 
@@ -416,7 +418,7 @@ def _nearest_tss_consequences(segments, transcripts):
         end=segments['end'].mask(is_merged, merged_segments['end'].transform('max')),
     )
 
-    tss = transcripts[['contig', 'tss', 'geneId']].drop_duplicates(
+    tss = transcripts[['contig', 'tss', 'geneId', 'transcriptId']].drop_duplicates(
         ['contig', 'tss'],
         keep='last',
     )
@@ -434,7 +436,7 @@ def _nearest_tss_consequences(segments, transcripts):
         ascending=[True, False],
     ).drop_duplicates('segment')
     return (
-        nearest_tss[['variant', 'geneId']]
+        nearest_tss[['variant', 'geneId', 'transcriptId']]
         .drop_duplicates()
         .assign(majorConsequence=NEAREST_TSS)
     )

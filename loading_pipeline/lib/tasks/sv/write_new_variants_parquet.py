@@ -109,7 +109,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         gencode_df = self._read_parquet(self.input()[1])
         consequences_by_variant = annotate_gene_consequences(df, gencode_df)
         df['sorted_gene_consequences'] = [
-            consequences_by_variant.get(variant, []) for variant in df.index
+            {'geneId': consequence['geneId'], 'majorConsequence': consequence['majorConsequence']}
+            for variant in df.index
+            for consequence in consequences_by_variant.get(variant, [])
         ]
 
         # Run liftover
