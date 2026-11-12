@@ -67,43 +67,17 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         )
         df = self.import_vcf(filtered_target)
 
-        # Run liftover
-        if 'END2' in df:
-            df['end_chrom'] = df.pop('CHR2').where(df['END2'].notna())
-            df['END'] = df.pop('END2').fillna(df['END']).astype(int)
-        else:
-            df['end_chrom'] = None
-            if 'CHR2' in df:
-                df = df.drop(columns=['CHR2'])
-        df['END'] = df['END'].astype(int)
-
-        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
-        df[['lifted_over_chrom', 'lifted_over_pos']] = [
-            self._liftover(lo, c, p)
-            for c, p in zip(df['#CHROM'], df['POS'], strict=False)
-        ]
-        df['rg37_locus_end'] = [
-            {'contig': chrom, 'position': pos} if chrom else None
-            for chrom, pos in (
-                self._liftover(lo, c, p)
-                for c, p in zip(
-                    df['end_chrom'].fillna(df['#CHROM']),
-                    df['END'],
-                    strict=False,
-                )
-            )
-        ]
-
         # Annotate gene consequences
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
         if not invalid_sv_types.empty:
             msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
             raise ValueError(msg)
 
-        df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
         df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(
             r'^<[^:]+:(.+)>$',
         )[0]
+        if 'CPX_TYPE' in df:
+            df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
         invalid_details = df['sv_type_detail'].dropna()[
             ~df['sv_type_detail'].dropna().isin(SV_TYPE_DETAILS)
         ]
@@ -112,7 +86,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             raise ValueError(msg)
 
         df['CPX_INTERVALS'] = (
-            df['CPX_INTERVALS']
+            (df['CPX_INTERVALS'] if 'CPX_INTERVALS' in df.columns else None)
             .str.split(',')
             .map(
                 lambda intervals: [
@@ -122,10 +96,36 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             )
         )
 
+        df['END'] = df['END'].astype(int)
+        if 'END2' in df:
+            df['end_chrom'] = df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
+            df['END2'] = df['END2'].astype(int)
+        else:
+            df['end_chrom'] = None
+            df['END2'] = None
+            if 'CHR2' in df:
+                df = df.drop(columns=['CHR2'])
+
         gencode_df = self._read_parquet(self.input()[1])
         consequences_by_variant = annotate_gene_consequences(df, gencode_df)
         df['sorted_gene_consequences'] = [
             consequences_by_variant.get(variant, []) for variant in df.index
+        ]
+
+        # Run liftover
+        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
+        df[['lifted_over_chrom', 'lifted_over_pos']] = [
+            self._liftover(lo, c, p)
+            for c, p in zip(df['#CHROM'], df['POS'], strict=False)
+        ]
+
+        df['END'] = df.pop('END2').fillna(df['END']).astype(int)
+        df['rg37_locus_end'] = [
+            {'contig': chrom, 'position': pos} if chrom else None
+            for chrom, pos in (
+                self._liftover(lo, c, p)
+                for c, p in zip(df['end_chrom'], df['END'], strict=False)
+            )
         ]
 
         # Add gnomad frequency

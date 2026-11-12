@@ -193,7 +193,7 @@ def _segments(df):
     primary_segments = primary[primary['segment_type'] != 'CPX']
 
     breakends = df[sv_type == 'BND']
-    same_chrom = breakends['CHR2'] == breakends['#CHROM']
+    same_chrom = breakends['end_chrom'] == breakends['#CHROM']
     second_breakend = breakends['END2'].case_when(
         [
             (
@@ -203,11 +203,10 @@ def _segments(df):
         ],
     )
     second_breakend = second_breakend[
-        breakends['CHR2'].notna()
-        & ~(same_chrom & (second_breakend == breakends['POS']))
+        ~(same_chrom & (second_breakend == breakends['POS']))
     ]
     second_breakend_segments = primary.loc[second_breakend.index].assign(
-        contig=breakends['CHR2'],
+        contig=breakends['end_chrom'],
         start=second_breakend,
         end=second_breakend,
     )
@@ -221,8 +220,8 @@ def _segments(df):
         )
         for contig, position in [
             (translocations['#CHROM'], translocations['END']),
-            (translocations['CHR2'], translocations['END2']),
-            (translocations['CHR2'], translocations['END2'] + 1),
+            (translocations['end_chrom'], translocations['END2']),
+            (translocations['end_chrom'], translocations['END2'] + 1),
         ]
     ]
 
