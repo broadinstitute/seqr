@@ -197,7 +197,9 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
         self.assertEqual(
             consequences.to_dict(),
             {
-                f'{sv_type}_{start}_{end}': [_consequence(*csqs) for csqs in expected_consequences]
+                f'{sv_type}_{start}_{end}': [
+                    _consequence(*csqs) for csqs in expected_consequences
+                ]
                 for (start, end), expected_consequences in expected.items()
             },
         )
