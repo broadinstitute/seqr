@@ -14,6 +14,7 @@ from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceD
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
+from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
     BaseWriteParquetFromVcfTask,
 )
@@ -26,7 +27,7 @@ GENCODE_RELEASE = 42
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
+class WriteNewSvVariantsParquetTask(BaseWriteParquetTask, BaseWriteParquetFromVcfTask):
     @property
     def annotation_dependencies(self) -> dict[str, hl.Table]:
         deps = {
@@ -61,6 +62,11 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         return [
             self.clone(WriteDeduplicatedSvVcfTask),
         ]
+
+    def run(self) -> None:
+        for target in self.input()[0]:
+            target.localize()
+        super().run()
 
     def create_table(self) -> hl.Table:
         # Identify new variants.

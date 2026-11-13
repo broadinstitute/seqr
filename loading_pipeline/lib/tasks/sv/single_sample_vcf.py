@@ -55,7 +55,6 @@ class SingleSampleVCFTask(BaseVCFTask):
         'GT': ('1', 'String'),
         'GQ': ('1', 'Integer'),
         'RD_CN': ('1', 'Integer'),
-        'CONC_ST': ('.', 'String'),
     }
 
     KEEP_FIELDS: ClassVar[str] = ','.join(
@@ -118,7 +117,7 @@ class SingleSampleVCFTask(BaseVCFTask):
             reformatted_target = haploid_target
 
         annotated_target = luigi.LocalTarget(is_tmp=True)
-        rand_id = random.randint(100_000, 999_999)  # noqa: S311 # nosec
+        rand_id = random.randint(10_000_000, 99_999_999)  # noqa: S311 # nosec
         self.run_bcftools(
             [
                 'annotate',
