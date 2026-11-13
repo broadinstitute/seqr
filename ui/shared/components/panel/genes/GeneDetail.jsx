@@ -8,15 +8,13 @@ import { Grid, Popup, Loader, Label } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
-import { getDecipherGeneLink } from 'shared/utils/constants'
+import { getDecipherGeneLink, GENE_CONSTRAINT_VERSION } from 'shared/utils/constants'
 import { SectionHeader, ColoredLabel } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import { HorizontalSpacer } from '../../Spacers'
 
 const Gtex = React.lazy(() => import('../../graph/Gtex'))
-
-const EXAC_README_URL = 'ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt'
 
 const GRAY_STYLE = { color: 'gray' }
 
@@ -97,7 +95,7 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
       {fieldsToShow.map(({ value, label, rankField }) => value && (
         <span key={label}>
           {`${label}: ${value.toPrecision(4)} ${rankField ?
-            `(ranked ${scores[rankField]} most ${rankDescription} out of ${scores.totalGenes} genes under study)` : ''}`}
+            `(ranked ${scores[rankField] + 1} most ${rankDescription} out of ${scores.totalGenes} genes under study)` : ''}`}
           <br />
         </span>
       ))}
@@ -176,6 +174,23 @@ DosageSensitivity.propTypes = {
 export const HI_THRESHOLD = 0.86
 export const TS_THRESHOLD = 0.94
 export const SHET_THRESHOLD = 0.1
+export const MISSENSE_CONSTRAINT_DESCRIPTION = (
+  <span>
+    Missense constraint measures the depletion of missense variants observed in a gene relative to the number
+    expected under a statistical model that accounts for local sequence context and other mutational factors [
+    <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4222185/" target="_blank" rel="noreferrer">Samocha et al., 2014</a>
+    ]. A higher positive Z-score indicates stronger constraint, meaning fewer missense variants are observed than
+    expected. This metric can be particularly useful for prioritizing genes associated with dominant disorders,
+    especially when a large proportion of the protein is functionally constrained.
+  </span>
+)
+export const GENE_CONSTRAINT_HELP = (
+  <span>
+    See&nbsp;
+    <a href="https://gnomad.broadinstitute.org/help/constraint" target="_blank" rel="noreferrer">Gene Constraint</a>
+    &nbsp;for more information.
+  </span>
+)
 const HAPLOINSUFFICIENT_FIELDS = [{ field: 'phi', label: 'pHaplo' }]
 const TRIPLOSENSITIVE_FIELDS = [{ field: 'pts', label: 'pTriplo' }]
 const STAT_DETAILS = [
@@ -187,16 +202,9 @@ const STAT_DETAILS = [
     rankDescription: 'constrained',
     note: (
       <span>
-        Missense contraint is a measure of the degree to which the number of missense variants found
-        in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
-        described in [
-        <a href="http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html" target="_blank" rel="noreferrer">
-          K. Samocha 2014
-        </a>
-        ]. In general this metric is most useful for genes that act via a dominant mechanism, and where
-        a large proportion of the protein is heavily functionally constrained. For more details see
-        this &nbsp;
-        <a href={EXAC_README_URL} target="_blank" rel="noreferrer">README</a>
+        {MISSENSE_CONSTRAINT_DESCRIPTION}
+        &nbsp;
+        {GENE_CONSTRAINT_HELP}
       </span>
     ),
   },
@@ -208,8 +216,14 @@ const STAT_DETAILS = [
       { field: 'pli', rankField: 'pliRank', label: 'pLI-score' },
     ],
     rankDescription: 'intolerant of LoF mutations',
-    note: 'These metrics are based on the amount of expected variation observed in the gnomAD data and is a measure ' +
-    'of how likely the gene is to be intolerant of loss-of-function mutations.',
+    note: (
+      <span>
+        {`These metrics are based on the amount of expected variation observed in the ${GENE_CONSTRAINT_VERSION} data ` +
+        'and is a measure of how likely the gene is to be intolerant of loss-of-function mutations.'}
+        &nbsp;
+        {GENE_CONSTRAINT_HELP}
+      </span>
+    ),
   },
   {
     title: 'Shet',

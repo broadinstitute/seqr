@@ -9,6 +9,7 @@ import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/sele
 import DataTable from 'shared/components/table/DataTable'
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
+  GENE_CONSTRAINT_VERSION,
   MISSENSE_THRESHHOLD,
   LOF_THRESHHOLD,
   PANEL_APP_CONFIDENCE_LEVEL_COLORS,
@@ -23,7 +24,15 @@ import { InlineHeader, NoBorderTable, ButtonLink, ColoredLabel } from '../../Sty
 import { PermissiveGeneSearchLink } from '../../buttons/SearchResultsLink'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import Modal from '../../modal/Modal'
-import { GenCC, ClingenLabel, HI_THRESHOLD, TS_THRESHOLD, SHET_THRESHOLD } from '../genes/GeneDetail'
+import {
+  GenCC,
+  ClingenLabel,
+  HI_THRESHOLD,
+  TS_THRESHOLD,
+  SHET_THRESHOLD,
+  MISSENSE_CONSTRAINT_DESCRIPTION,
+  GENE_CONSTRAINT_HELP,
+} from '../genes/GeneDetail'
 import { getIndividualGeneDataByFamilyGene } from './selectors'
 
 const RnaSeqTpm = React.lazy(() => import('./RnaSeqTpm'))
@@ -365,6 +374,10 @@ const PHENOTYPE_GENE_INFO_COLUMNS = [
 
 const HOVER_DATA_TABLE_PROPS = { basic: 'very', compact: 'very', singleLine: true }
 
+const ORDINAL_SUFFIXES = { one: 'st', two: 'nd', few: 'rd', other: 'th' }
+const ORDINAL_RULES = new Intl.PluralRules('en-US', { type: 'ordinal' })
+const formatRank = rank => `${rank.toLocaleString('en-US')}${ORDINAL_SUFFIXES[ORDINAL_RULES.select(rank)]}`
+
 const GENE_DETAIL_SECTIONS = [
   {
     color: 'red',
@@ -375,12 +388,16 @@ const GENE_DETAIL_SECTIONS = [
       (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)
     ),
     detailsDisplay: gene => (
-      `This gene ranks ${gene.constraints.misZRank} most constrained out of
-      ${gene.constraints.totalGenes} genes under study in terms of missense constraint (z-score:
-      ${gene.constraints.misZ.toPrecision(4)}). Missense contraint is a measure of the degree to which the number
-      of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the
-      statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act
-      via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.`),
+      <span>
+        {`This gene ranks as the ${formatRank(gene.constraints.misZRank + 1)} most constrained against missense variation
+        among the ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in ${GENE_CONSTRAINT_VERSION}
+        (Z-score: ${gene.constraints.misZ.toPrecision(4)}).`}
+        &nbsp;
+        {MISSENSE_CONSTRAINT_DESCRIPTION}
+        &nbsp;
+        {GENE_CONSTRAINT_HELP}
+      </span>
+    ),
   },
   {
     color: 'red',
@@ -393,15 +410,16 @@ const GENE_DETAIL_SECTIONS = [
       <List bulleted>
         {gene.constraints.louef < LOF_THRESHHOLD && (
           <List.Item>
-            This gene ranks as &nbsp;
-            {gene.constraints.louefRank}
-            &nbsp;most intolerant of LoF mutations out of &nbsp;
-            {gene.constraints.totalGenes}
-            &nbsp;genes under study (louef: &nbsp;
-            {gene.constraints.louef.toPrecision(4)}
-            {gene.constraints.pli ? `, pLi: ${gene.constraints.pli.toPrecision(4)}` : ''}
-            )
-            <a href="https://pubmed.ncbi.nlm.nih.gov/32461654/" target="_blank" rel="noreferrer"> Karczewski (2020)</a>
+            {`This gene ranks as the ${formatRank(gene.constraints.louefRank + 1)} most constrained against loss-of-function
+            (LoF) mutations by LOEUF among the ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in
+            ${GENE_CONSTRAINT_VERSION} (LOEUF: ${gene.constraints.louef.toPrecision(4)}`}
+            {gene.constraints.pli ? `; pLI: ${gene.constraints.pli.toPrecision(4)}` : ''}
+            ) [
+            <a href="https://pubmed.ncbi.nlm.nih.gov/32461654/" target="_blank" rel="noreferrer">
+              Karczewski et al., 2020
+            </a>
+            ].&nbsp;
+            {GENE_CONSTRAINT_HELP}
           </List.Item>
         )}
         {gene.sHet.postMean > SHET_THRESHOLD && (

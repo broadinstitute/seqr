@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Updates gene constraint metrics from gnomAD v2.1.1 to gnomAD v4.1.2, loaded by `update_all_reference_data`
 
 ## 3/1/26
 * Deprecate Elasticsearch support
