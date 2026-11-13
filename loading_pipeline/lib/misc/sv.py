@@ -205,14 +205,15 @@ def _segments(df):
 
     breakends = df[sv_type == 'BND']
     same_chrom = breakends['end_chrom'] == breakends['#CHROM']
+    sv_len =  pd.to_numeric(breakends['SVLEN'])
     second_breakend = (
         breakends['END2']
         .fillna(df['POS'])
         .case_when(
             [
                 (
-                    same_chrom & (breakends['SVLEN'] > 0),
-                    breakends['POS'] + breakends['SVLEN'],
+                    same_chrom & (sv_len > 0),
+                    breakends['POS'] + sv_len,
                 ),
             ],
         )

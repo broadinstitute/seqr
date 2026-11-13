@@ -15,6 +15,7 @@ GENCODE_FILE_HEADER = [
 
 
 def get_df(input_target: luigi.Target) -> pd.DataFrame:
+    input_target.format = luigi.format.UTF8 >> luigi.format.Gzip
     with input_target.open('r') as f:
         df = pd.read_csv(
             f,
@@ -26,11 +27,11 @@ def get_df(input_target: luigi.Target) -> pd.DataFrame:
 
     df = df[df['feature_type'].isin(['transcript', 'CDS', 'UTR'])].assign(
         transcriptId=lambda df: df['info'].str.extract(
-            r'transcript_id "([^"]*)"',
+            r'transcript_id "([^".]*)',
             expand=False,
         ),
         geneId=lambda df: df['info'].str.extract(
-            r'gene_id "([^"]*)"',
+            r'gene_id "([^".]*)',
             expand=False,
         ),
     )

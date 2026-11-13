@@ -85,23 +85,22 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             msg = f'Unexpected enum value: {invalid_details.iloc[0]}'
             raise ValueError(msg)
 
-        df['CPX_INTERVALS'] = (
-            (df['CPX_INTERVALS'] if 'CPX_INTERVALS' in df.columns else None)
-            .str.split(',')
-            .map(
+        if 'CPX_INTERVALS' in df.columns:
+            df['CPX_INTERVALS'] = df['CPX_INTERVALS'].str.split(',').map(
                 lambda intervals: [
                     self._parse_cpx_interval(interval) for interval in intervals
                 ],
                 na_action='ignore',
             )
-        )
+        else:
+            df['CPX_INTERVALS'] = None
 
         df['END'] = df['END'].astype(int)
         if 'END2' in df:
             df['end_chrom'] = (
                 df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
             )
-            df['END2'] = df['END2'].astype(int)
+            df['END2'] =  pd.to_numeric(df['END2'])
         else:
             df['end_chrom'] = df['#CHROM']
             df['END2'] = None
