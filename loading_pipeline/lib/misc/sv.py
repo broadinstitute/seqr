@@ -15,6 +15,13 @@ BREAKPOINT_SV_TYPES = ('INS', 'BND', 'CTX')
 
 
 def annotate_gnomad_af(variants_df, gnomad_df):
+    # Implementation of gatk-sv's AnnotateExternalAFPerShard: https://github.com/broadinstitute/gatk-sv/blob/main/wdl/AnnotateExternalAFPerShard.wdl
+    # Changes from base implementation:
+    #     - INS / BND multi-candidate selector: replace R2's vestigial col-21 (MID_AF) sort with a deterministic
+    #       content-based rule (smallest INS_dis, then |INS_ratio - 1| nearest 0, then lex-smallest ref_svid)
+    #     - BND ratio filter dropped: DRAGEN BNDs lack SVLEN; INS_ratio is always None
+    #     - CNV tie-break by lex-smallest ref_svid instead of R1's input-order pick
+
     variant_is_breakpoint = variants_df['svtype'].isin(BREAKPOINT_SV_TYPES)
     gnomad_is_breakpoint = gnomad_df['svtype'].isin(BREAKPOINT_SV_TYPES)
 
