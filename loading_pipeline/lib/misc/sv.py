@@ -12,8 +12,7 @@ def run_command(cmd: list[str]):
         raise
 
 
-SV_TYPE_GROUP_OVERRIDES = {'CPX': 'INV', 'CTX': 'BND'}
-OVERLAP_SV_TYPE_GROUPS = ('DEL', 'DUP', 'INV')
+BREAKPOINT_SV_TYPES = ('INS', 'BND', 'CTX')
 
 
 def _closest_pairs(variants_df, gnomad_df):
@@ -30,7 +29,10 @@ def _closest_pairs(variants_df, gnomad_df):
     return pairs[pairs['distance'] == pairs.groupby('id_query')['distance'].transform('min')]
 
 
-def _best_overlap_matches(pairs):
+def _best_overlap_matches(query_df, ref_df):
+    query_df = query_df.assign(sv_type_group=query_df['svtype'].replace({'CPX': 'INV'}))
+    ref_df = ref_df.assign(sv_type_group=ref_df['svtype'].replace({'CPX': 'INV'}))
+    pairs = _closest_pairs(query_df, ref_df)
     overlap = np.minimum(pairs['end_query'], pairs['end_ref']) - np.maximum(pairs['start_query'], pairs['start_ref'])
     denom = np.maximum(pairs['svlen_query'], pairs['svlen_ref'])
     pairs = pairs.assign(ro=(overlap / denom).where(denom > 0, 0.0))
@@ -38,7 +40,16 @@ def _best_overlap_matches(pairs):
     return best[best['ro'] > 0.5]
 
 
-def _best_breakpoint_matches(pairs):
+def _best_breakpoint_matches(query_df, ref_df):
+    query_df = query_df.assign(
+        sv_type_group=query_df['svtype'].replace({'CTX': 'BND'}),
+        # Differs from svtk vcf2bed, which uses END rather than a 1bp interval for INS
+        end=query_df['start'] + 1,
+    )
+    ref_df = ref_df.assign(
+        sv_type_group=ref_df['svtype'].replace({'CTX': 'BND'}),
+    )
+    pairs = _closest_pairs(query_df, ref_df)
     ins_dis = (pairs['start_ref'] - pairs['start_query']).abs()
     has_svlen = (pairs['svlen_ref'] > 0) & (pairs['svlen_query'] > 0)
     ins_ratio = (pairs['svlen_ref'] / pairs['svlen_query']).where(has_svlen)
@@ -48,25 +59,16 @@ def _best_breakpoint_matches(pairs):
     return survivors.sort_values(['ins_dis', 'ratio_dist', 'id_ref']).drop_duplicates('id_query')
 
 
-def _query_intervals(variants_df):
-    is_cnv = variants_df['svtype'] == 'CNV'
-    sv_type_group = variants_df['svtype'].replace(SV_TYPE_GROUP_OVERRIDES).mask(is_cnv, variants_df['alt'].str.strip('<>'))
-    df = variants_df.assign(sv_type_group=sv_type_group)
-    is_overlap_group = df['sv_type_group'].isin(OVERLAP_SV_TYPE_GROUPS)
-    return df.assign(start=df['pos'] - 1, end=df['end'].where(is_overlap_group, df['pos']))
+def annotate_gnomad_af(variants_df, gnomad_df):
+    query_is_breakpoint = variants_df['svtype'].isin(BREAKPOINT_SV_TYPES)
+    ref_is_breakpoint = gnomad_df['svtype'].isin(BREAKPOINT_SV_TYPES)
 
-
-def annotate_external_af(variants_df, gnomad_df):
-    af_columns = [c for c in gnomad_df.columns if c not in ('chrom', 'start', 'end', 'id', 'svtype', 'svlen')]
-    pairs = _closest_pairs(
-        _query_intervals(variants_df),
-        gnomad_df.assign(sv_type_group=gnomad_df['svtype'].replace(SV_TYPE_GROUP_OVERRIDES)),
-    )
-    is_overlap_group = pairs['sv_type_group'].isin(OVERLAP_SV_TYPE_GROUPS)
     matches = pd.concat([
-        _best_overlap_matches(pairs[is_overlap_group]),
-        _best_breakpoint_matches(pairs[~is_overlap_group]),
+        _best_overlap_matches(variants_df[~query_is_breakpoint], gnomad_df[~ref_is_breakpoint]),
+        _best_breakpoint_matches(variants_df[query_is_breakpoint], gnomad_df[ref_is_breakpoint]),
     ])
+
+    af_columns = [c for c in gnomad_df.columns if c not in variants_df.columns]
     matches = matches[['id_query', 'id_ref', *af_columns]].rename(
         columns={'id_query': 'id', 'id_ref': 'gnomad_id'},
     )
