@@ -8,6 +8,7 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPES,
 )
 from loading_pipeline.lib.core import ReferenceGenome
+from loading_pipeline.lib.misc.sv import match_gnomad_af
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
 )
@@ -109,22 +110,21 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df = df.drop(columns=predicted_csq_cols)
 
         # Add gnomad frequency
-        gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
-        gnomad_input = self.input()[1]
-        gnomad_input.format = luigi.format.Nop
-        with gnomad_input.open() as f:
-            gnomad_df = pd.read_parquet(f, filters=[('id', 'in', gnomad_ids)])
-        gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
-        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
-            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
-        )
-
-        # Format and validate annotations
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
         if not invalid_sv_types.empty:
             msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
             raise ValueError(msg)
 
+        gnomad_input = self.input()[1]
+        gnomad_input.format = luigi.format.Nop
+        with gnomad_input.open() as f:
+            gnomad_df = pd.read_parquet(f)
+        gnomad_lookup = match_gnomad_af(df, gnomad_df)
+        df['populations'] = df['ID'].map(
+            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
+        )
+
+        # Format and validate annotations
         df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
         df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(
             r'^<[^:]+:(.+)>$',
