@@ -14,7 +14,7 @@ def run_command(cmd: list[str]):
 BREAKPOINT_SV_TYPES = ('INS', 'BND', 'CTX')
 
 
-def annotate_gnomad_af(variants_df, gnomad_df):
+def match_gnomad_af(variants_df, gnomad_df):
     # Implementation of gatk-sv's AnnotateExternalAFPerShard: https://github.com/broadinstitute/gatk-sv/blob/main/wdl/AnnotateExternalAFPerShard.wdl
     # Changes from base implementation:
     #     - INS / BND multi-candidate selector: replace R2's vestigial col-21 (MID_AF) sort with a deterministic
@@ -32,10 +32,11 @@ def annotate_gnomad_af(variants_df, gnomad_df):
     ])
 
     af_columns = [c for c in gnomad_df.columns if c not in variants_df.columns]
-    matches = matches[['ID_variant', 'ID_gnomad', *af_columns]].rename(
-        columns={'ID_variant': 'ID', 'ID_gnomad': 'gnomad_id'},
+    return (
+        matches.set_index('ID_variant')[['ID_gnomad', *af_columns]]
+        .rename(columns={'ID_gnomad': 'id'})
+        .to_dict('index')
     )
-    return variants_df.merge(matches, on='ID', how='left')
 
 
 def _closest_pairs(variants_df, gnomad_df):
