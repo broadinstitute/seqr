@@ -42,30 +42,34 @@ def _closest_pairs(variants_df, gnomad_df):
 
 
 def _best_overlap_matches(variants_df, gnomad_df):
-    variants_df = variants_df.assign(svtype=variants_df['svtype'].replace({'CPX': 'INV'}))
-    gnomad_df = gnomad_df.assign(svtype=gnomad_df['svtype'].replace({'CPX': 'INV'}))
-    pairs = _closest_pairs(variants_df, gnomad_df)
+    pairs = _closest_pairs(
+        variants_df.replace({'svtype': {'CPX': 'INV'}}),
+        gnomad_df.replace({'svtype': {'CPX': 'INV'}}),
+    )
     overlap = pairs['end_variant'].clip(upper=pairs['end_gnomad']) - pairs['start_variant'].clip(lower=pairs['start_gnomad'])
-    denom = pairs[['svlen_variant', 'svlen_gnomad']].max(axis=1, skipna=False)
-    pairs = pairs.assign(ro=(overlap / denom).where(denom > 0, 0.0))
-    best = pairs.sort_values(['ro', 'id_gnomad'], ascending=[False, True]).drop_duplicates('id_variant')
-    return best[best['ro'] > 0.5]
+    svlen = pairs[['svlen_variant', 'svlen_gnomad']].max(axis=1, skipna=False)
+    pairs = pairs.assign(reciprocal_overlap=(overlap / svlen).where(svlen > 0, 0.0))
+    best = pairs.sort_values(
+        ['reciprocal_overlap', 'id_gnomad'],
+        ascending=[False, True],
+    ).drop_duplicates('id_variant')
+    return best[best['reciprocal_overlap'] > 0.5]
 
 
 def _best_breakpoint_matches(variants_df, gnomad_df):
-    variants_df = variants_df.assign(
-        svtype=variants_df['svtype'].replace({'CTX': 'BND'}),
-        # Differs from svtk vcf2bed, which uses END rather than a 1bp interval for INS
-        end=variants_df['start'] + 1,
+    pairs = _closest_pairs(
+        variants_df.replace({'svtype': {'CTX': 'BND'}}).assign(
+            # Differs from svtk vcf2bed, which uses END rather than a 1bp interval for INS - revisit once using DRAGEN
+            end=variants_df['start'] + 1,
+        ),
+        gnomad_df.replace({'svtype': {'CTX': 'BND'}}),
     )
-    gnomad_df = gnomad_df.assign(
-        svtype=gnomad_df['svtype'].replace({'CTX': 'BND'}),
-    )
-    pairs = _closest_pairs(variants_df, gnomad_df)
-    ins_dis = (pairs['start_gnomad'] - pairs['start_variant']).abs()
     has_svlen = (pairs['svlen_gnomad'] > 0) & (pairs['svlen_variant'] > 0)
     ins_ratio = (pairs['svlen_gnomad'] / pairs['svlen_variant']).where(has_svlen)
-    pairs = pairs.assign(ins_dis=ins_dis, ratio_dist=(ins_ratio - 1).abs().fillna(float('inf')))
-    ratio_ok = (pairs['svtype'] == 'BND') | ((ins_ratio > 0.1) & (ins_ratio < 10))
-    survivors = pairs[(ins_dis < 100) & ratio_ok]
+    pairs['ratio_dist'] = (ins_ratio - 1).abs().fillna(float('inf'))
+    pairs['ins_dis'] = (pairs['start_gnomad'] - pairs['start_variant']).abs()
+    survivors = pairs[
+        (pairs['ins_dis'] < 100) &
+        (pairs['svtype'] == 'BND') | ((ins_ratio > 0.1) & (ins_ratio < 10))
+    ]
     return survivors.sort_values(['ins_dis', 'ratio_dist', 'id_gnomad']).drop_duplicates('id_variant')
