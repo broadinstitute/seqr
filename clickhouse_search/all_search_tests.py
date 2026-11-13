@@ -2128,6 +2128,89 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ]], project_families=[{**DEFAULT_PROJECT_FAMILIES[0], 'familyGuids': ['F000002_2_x', *DEFAULT_PROJECT_FAMILIES[0]['familyGuids'][1:]]}],
         )
 
+    def test_hypomorph_variants_filter(self):
+        annotations = {'missense': ['missense_variant']}
+        comp_het_cached_fields = [
+            {'selectedGeneId':  'ENSG00000097046'},
+            {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[4][1]},
+        ]
+
+        self._assert_expected_search(
+            [[VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='compound_het', annotations=annotations,
+            hypomorph_variants='chr1-91502721-G-A', cached_variant_fields=[comp_het_cached_fields],
+            check_login=self.check_collaborator_login,
+        )
+
+        self._assert_expected_search(
+            [VARIANT2, [VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='recessive', annotations=annotations,
+            hypomorph_variants='1-91502721-G-A, 1-38724419-T-G', cached_variant_fields=[
+                {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, comp_het_cached_fields,
+            ],
+        )
+
+        # Hypomorph variant must be in the same gene as the primary variant
+        self._assert_expected_search(
+            [], inheritance_mode='compound_het', annotations=annotations, hypomorph_variants='1-38724419-T-G',
+        )
+
+        # Secondary annotations further restrict the hypomorph variants
+        self._assert_expected_search(
+            [[VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='compound_het', annotations=annotations,
+            annotations_secondary={'other': ['intron_variant']}, hypomorph_variants='1-91502721-G-A',
+            cached_variant_fields=[[
+                {'selectedGeneId':  'ENSG00000097046', 'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[3][0]},
+                comp_het_cached_fields[1],
+            ]],
+        )
+
+        self._assert_expected_search(
+            [], inheritance_mode='compound_het', annotations=annotations,
+            annotations_secondary={'frameshift': ['frameshift_variant']}, hypomorph_variants='1-91502721-G-A',
+        )
+
+        # Hypomorph frequency filter overrides the main frequency filter for the hypomorph variant only
+        self._assert_expected_search(
+            [], inheritance_mode='compound_het', annotations=annotations, hypomorph_variants='1-91502721-G-A',
+            freqs={'callset': {'ac': 1000}, 'topmed': {'af': 0.05}},
+        )
+
+        self._assert_expected_search(
+            [[VARIANT3, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4]], inheritance_mode='compound_het', annotations=annotations,
+            hypomorph_variants='1-91502721-G-A', freqs={'callset': {'ac': 1000}, 'topmed': {'af': 0.05}},
+            hypomorph_freqs={'topmed': {'af': 0.5}, 'gnomad_genomes': None}, cached_variant_fields=[comp_het_cached_fields],
+        )
+
+        self._assert_expected_search(
+            [], inheritance_mode='compound_het', annotations=annotations, hypomorph_variants='1-91502721-G-A',
+            freqs={'callset': {'ac': 1000}, 'topmed': {'af': 0.5}}, hypomorph_freqs={'gnomad_genomes': {'af': 0.001}},
+        )
+
+        self._assert_expected_search(
+            [], inheritance_mode='compound_het', annotations=annotations, hypomorph_variants='1-91502721-G-A',
+            freqs={'callset': {'ac': 1000}, 'gnomad_genomes': {'af': 0.001}}, hypomorph_freqs={'gnomad_genomes': {'af': 0.01}},
+        )
+
+        self._assert_expected_search(
+            [[MULTI_DATA_TYPE_COMP_HET_VARIANT2, GCNV_VARIANT4]], inheritance_mode='compound_het',
+            annotations={'structural_consequence': ['LOF'], 'structural': []}, hypomorph_variants='1-38724419-T-G',
+            cached_variant_fields=[[{'selectedGeneId': 'ENSG00000277258'}, {'selectedGeneId': 'ENSG00000277258'}]],
+        )
+
+        self._assert_expected_search(
+            [], inheritance_mode='compound_het', annotations={'structural_consequence': ['LOF'], 'structural': []},
+            hypomorph_variants='1-38724419-T-G', hypomorph_freqs={'gnomad_genomes': {'ac': 1}},
+        )
+
+        self._assert_expected_search(
+            [], inheritance_mode='compound_het', annotations={'structural': ['gCNV_DUP']},
+            hypomorph_variants='1-38724419-T-G',
+        )
+
+        self._assert_expected_search_error(
+            'Invalid hypomorph variants: rs9876, 2-A-C', inheritance_mode='compound_het', annotations=annotations,
+            hypomorph_variants='1-91502721-G-A rs9876,chr2-A-C',
+        )
+
     def test_in_silico_filter(self):
         main_in_silico = {'eigen': '3.5', 'mut_taster': 'N', 'vest': 0.5}
         self._assert_expected_search(

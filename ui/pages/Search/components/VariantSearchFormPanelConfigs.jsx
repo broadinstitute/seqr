@@ -450,6 +450,21 @@ export const ANNOTATION_SECONDARY_PANEL = {
   },
 }
 
+export const HYPOMORPH_VARIANTS_NAME = 'hypomorph_variants'
+export const HYPOMORPH_VARIANTS_PANEL = {
+  name: HYPOMORPH_VARIANTS_NAME,
+  headerProps: { title: 'Putative Hypomorph Variants (Second Hit)' },
+  fields: [{
+    name: HYPOMORPH_VARIANTS_NAME,
+    fullFieldValue: true,
+    label: 'Hypomorph Variants',
+    labelHelp: 'A list of variants. Can be separated by commas or whitespace. Variants must be represented in the form <chrom>-<pos>-<ref>-<alt>',
+    component: Form.TextArea,
+    rows: 8,
+  }],
+  helpText: 'Restrict compound heterozygous pairs to those where one variant matches the main annotation and pathogenicity filters and the other variant, in the same gene, is one of the provided putative hypomorphic variants, regardless of its annotation (e.g. both variants may be missense). If a secondary annotation filter is also specified, the hypomorphic variant must match it as well. In silico and call quality filters apply to both variants.',
+}
+
 export const FREQUENCY_PANEL = {
   name: 'freqs',
   headerProps: {
@@ -472,6 +487,14 @@ export const FREQUENCY_PANEL = {
   },
   fieldLayout: freqFieldLayout,
   helpText: 'Filter by allele frequency (popmax AF where available) or by allele count (AC). In applicable populations, also filter by homozygous/hemizygous count (H/H).',
+}
+
+export const HYPOMORPH_FREQUENCY_NAME = 'hypomorph_freqs'
+export const HYPOMORPH_FREQUENCY_PANEL = {
+  ...FREQUENCY_PANEL,
+  name: HYPOMORPH_FREQUENCY_NAME,
+  headerProps: { ...FREQUENCY_PANEL.headerProps, title: 'Frequency (Hypomorph)' },
+  helpText: 'Apply a separate frequency filter to the putative hypomorphic variants. Any frequency left unset here uses the value from the main frequency filter, which is still applied to the other variant in the pair.',
 }
 
 export const LOCATION_PANEL = {
