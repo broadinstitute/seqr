@@ -195,6 +195,22 @@ SV_TYPE_DETAILS = [
     'ME:SVA',
 ]
 
+SV_CONSEQUENCE_RANKS = [
+    'LOF',
+    'INTRAGENIC_EXON_DUP',
+    'PARTIAL_EXON_DUP',
+    'COPY_GAIN',
+    'DUP_PARTIAL',
+    'MSV_EXON_OVERLAP',
+    'INV_SPAN',
+    'UTR',
+    'PROMOTER',
+    'TSS_DUP',
+    'BREAKEND_EXONIC',
+    'INTRONIC',
+    'NEAREST_TSS',
+]
+
 
 def validated_enum_member(
     value: hl.StringExpression,

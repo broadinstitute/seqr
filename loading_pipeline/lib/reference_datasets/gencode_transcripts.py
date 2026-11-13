@@ -34,8 +34,12 @@ def get_df(input_target: luigi.Target) -> pd.DataFrame:
             r'gene_id "([^".]*)',
             expand=False,
         ),
+        gene_type=lambda df: df['info'].str.extract(
+            r'gene_type "([^"]*)',
+            expand=False,
+        ),
     )
 
-    return df[
+    return df[df['gene_type'] == 'protein_coding'][
         ['contig', 'start', 'end', 'strand', 'feature_type', 'transcriptId', 'geneId']
     ]

@@ -7,6 +7,7 @@ from loading_pipeline.lib.annotations.enums import (
     COMPLEX_SUBTYPES_WITH_DUP_ADJUSTED_INVERSION,
     COMPLEX_SUBTYPES_WITH_INSERTION,
     COMPLEX_SUBTYPES_WITH_OTHER_INVERSION,
+    SV_CONSEQUENCE_RANKS,
 )
 
 LOF = 'LOF'
@@ -100,6 +101,10 @@ def annotate_gene_consequences(
 
     consequences = pd.concat(
         [transcript_consequences, promoter_consequences, nearest_tss_consequences],
+    ).sort_values(
+        'majorConsequence',
+        key=lambda c: c.map(SV_CONSEQUENCE_RANKS.index),
+        kind='stable',
     )
     return (
         consequences.assign(
