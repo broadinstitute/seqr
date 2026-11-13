@@ -1,11 +1,15 @@
-import hail as hl
 import luigi
 import luigi.util
+import pandas as pd
+from pyliftover import LiftOver
 
-from loading_pipeline.lib.misc.io import import_vcf
+from loading_pipeline.lib.annotations.enums import (
+    SV_TYPE_DETAILS,
+    SV_TYPES,
+)
+from loading_pipeline.lib.core import ReferenceGenome
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
-    valid_reference_dataset_path,
 )
 from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
     load_gencode_gene_symbol_to_gene_id,
@@ -14,113 +18,192 @@ from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceD
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
     BaseLoadingRunParams,
 )
-from loading_pipeline.lib.tasks.base.base_write_parquet import BaseWriteParquetTask
 from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
     BaseWriteParquetFromVcfTask,
 )
-from loading_pipeline.lib.tasks.files import GCSorLocalTarget
+from loading_pipeline.lib.tasks.reference_data.updated_reference_dataset_parquet import (
+    UpdatedReferenceDatasetParquetNoHailTask,
+)
 from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
 )
 
 GENCODE_RELEASE = 42
+CONTIGS_37 = list(ReferenceGenome.GRCh37.contig_recoding().values())
+TRUVARI_INFO_COLS = ['TRUVARI_FILTER', 'CollapseId', 'NumCollapsed', 'NumConsolidated']
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
-class WriteNewSvVariantsParquetTask(BaseWriteParquetTask, BaseWriteParquetFromVcfTask):
-    @property
-    def annotation_dependencies(self) -> dict[str, hl.Table]:
-        deps = {
-            'gencode_gene_symbol_to_gene_id_mapping': hl.literal(
-                load_gencode_gene_symbol_to_gene_id(GENCODE_RELEASE),
-            ),
-        }
-        for reference_dataset in ReferenceDataset:
-            if (
-                reference_dataset.formatting_annotation
-                and self.dataset_type
-                in reference_dataset.dataset_types(self.reference_genome)
-            ):
-                deps[f'{reference_dataset.value}_ht'] = hl.read_table(
-                    valid_reference_dataset_path(
-                        self.reference_genome,
-                        reference_dataset,
-                    ),
-                )
-        return deps
+class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
+    attempt_id = luigi.IntParameter()
 
-    def output(self) -> luigi.Target:
-        return GCSorLocalTarget(
-            new_variants_parquet_path(
-                self.reference_genome,
-                self.dataset_type,
-                self.run_id,
-            ),
+    def output_dir(self) -> str:
+        return new_variants_parquet_path(
+            self.reference_genome,
+            self.dataset_type,
+            self.run_id,
         )
 
     def requires(self) -> list[luigi.Task]:
         return [
             self.clone(WriteDeduplicatedSvVcfTask),
+            self.clone(
+                UpdatedReferenceDatasetParquetNoHailTask,
+                reference_dataset=ReferenceDataset.gnomad_svs,
+                attempt_id=self.attempt_id,
+            ),
         ]
 
-    def run(self) -> None:
-        for target in self.input()[0]:
-            target.localize()
-        super().run()
-
-    def create_table(self) -> hl.Table:
+    def create_data_frame(self) -> pd.DataFrame:
         # Identify new variants.
         filtered_target = luigi.LocalTarget(is_tmp=True)
-        filtered_target.path += '.vcf.gz'
         self.run_bcftools(
-            ['view', '-i', 'GT[0]="mis" && INFO/MatchId="."'],
+            ['view', '-G', '-i', 'GT[0]="mis" && INFO/MatchId="."'],
             filtered_target,
             self.input()[0][:1],
+            output_type='v',
         )
-
-        ht = import_vcf(
-            filtered_target.path,
-            self.reference_genome,
-        ).rows()
-        ht = ht.key_by(variant_id=ht.rsid)
-        new_variants_ht = ht.transmute(
-            **{f'info.{field}': ht.info[field] for field in ht.info},
-        )
+        df = self.import_vcf(filtered_target)
 
         # Run liftover
-        new_variants_ht = new_variants_ht.annotate(
-            **{
-                name: fn(new_variants_ht)
-                for name, fn in self.dataset_type.liftover_annotation_fns(
-                    self.reference_genome,
-                ).items()
-            },
+        if 'END2' in df:
+            df['end_chrom'] = df.pop('CHR2').where(df['END2'].notna())
+            df['END'] = df.pop('END2').fillna(df['END']).astype(int)
+        else:
+            df['end_chrom'] = None
+            if 'CHR2' in df:
+                df = df.drop(columns=['CHR2'])
+        df['END'] = df['END'].astype(int)
+
+        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
+        df[['lifted_over_chrom', 'lifted_over_pos']] = [
+            self._liftover(lo, c, p)
+            for c, p in zip(df['#CHROM'], df['POS'], strict=False)
+        ]
+        df['rg37_locus_end'] = [
+            {'contig': chrom, 'position': pos} if chrom else None
+            for chrom, pos in (
+                self._liftover(lo, c, p)
+                for c, p in zip(
+                    df['end_chrom'].fillna(df['#CHROM']),
+                    df['END'],
+                    strict=False,
+                )
+            )
+        ]
+
+        # Annotate gene consequences
+        gene_symbol_to_gene_id = load_gencode_gene_symbol_to_gene_id(GENCODE_RELEASE)
+        predicted_csq_cols = [col for col in df.columns if col.startswith('PREDICTED_')]
+        df['sorted_gene_consequences'] = df[predicted_csq_cols].apply(
+            lambda row: [
+                {
+                    'geneId': gene_symbol_to_gene_id.get(gene),
+                    'majorConsequence': col.removeprefix('PREDICTED_'),
+                }
+                for col, genes in row.dropna().items()
+                for gene in genes.split(',')
+            ],
+            axis=1,
+        )
+        df = df.drop(columns=predicted_csq_cols)
+
+        # Add gnomad frequency
+        gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
+        gnomad_input = self.input()[1]
+        gnomad_input.format = luigi.format.Nop
+        with gnomad_input.open() as f:
+            gnomad_df = pd.read_parquet(f, filters=[('id', 'in', gnomad_ids)])
+        gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
+        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
+            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
         )
 
-        # Select down to the formatting annotations fields and
-        # any reference dataset collection annotations.
-        new_variants_ht = new_variants_ht.select(
-            **{
-                name: fn(
-                    new_variants_ht,
-                    **self.annotation_dependencies,
-                    **self.param_kwargs,
-                )
-                for name, fn in self.dataset_type.formatting_annotation_fns(
-                    self.reference_genome,
-                ).items()
-            },
+        # Format and validate annotations
+        invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
+        if not invalid_sv_types.empty:
+            msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
+            raise ValueError(msg)
+
+        df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
+        df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(
+            r'^<[^:]+:(.+)>$',
+        )[0]
+        invalid_details = df['sv_type_detail'].dropna()[
+            ~df['sv_type_detail'].dropna().isin(SV_TYPE_DETAILS)
+        ]
+        if not invalid_details.empty:
+            msg = f'Unexpected enum value: {invalid_details.iloc[0]}'
+            raise ValueError(msg)
+
+        df['CPX_INTERVALS'] = (
+            df['CPX_INTERVALS']
+            .str.split(',')
+            .map(
+                lambda intervals: [
+                    self._parse_cpx_interval(interval) for interval in intervals
+                ],
+                na_action='ignore',
+            )
+        )
+
+        df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
+        df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
+        df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
+        df.loc[
+            (df['SVTYPE'] == 'INS') & df['end_chrom'].notna(),
+            'sv_source_detail',
+        ] = df['end_chrom'].map(
+            lambda chrom: {'chrom': chrom},
+        )
+        df['end_chrom'] = df['end_chrom'].mask(df['SVTYPE'] == 'INS')
+        df['xpos'] = (
+            df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000
+            + df['POS']
+        )
+        df['predictions'] = (
+            df.pop('StrVCTVRE').astype(float).map(lambda score: {'strvctvre': score})
         )
 
         # Add serial integer index
         max_key_line = self.find_vcf_header_line(self.input()[0][0], '##maxKey')
-        curr_max_key_ = int(max_key_line.removeprefix('##maxKey=').strip())
-        new_variants_ht = new_variants_ht.add_index(name='key_')
-        new_variants_ht = new_variants_ht.transmute(
-            key_=new_variants_ht.key_ + curr_max_key_ + 1,
+        curr_max_key = int(max_key_line.removeprefix('##maxKey=').strip())
+        df['key'] = range(curr_max_key + 1, curr_max_key + 1 + len(df))
+
+        return (
+            df.drop(
+                columns=['REF', 'FILTER', 'QUAL', 'SVLEN', *TRUVARI_INFO_COLS],
+            )
+            .rename(
+                columns={'ID': 'variant_id', 'SVTYPE': 'sv_type'},
+            )
+            .rename(columns=self._to_camel_case)
         )
-        new_variants_ht = new_variants_ht.key_by()
-        return new_variants_ht.select(
-            'key_',
-            *self.dataset_type.variants_export_field_names(self.reference_genome),
-        )
+
+    @staticmethod
+    def _liftover(lo, chrom, pos):
+        result = lo.convert_coordinate(chrom, pos - 1)
+        if result and result[0][0] not in CONTIGS_37:
+            result = None
+        return (result[0][0], result[0][1] + 1) if result else (None, None)
+
+    @staticmethod
+    def _parse_cpx_interval(interval):
+        # an example format of CPX_INTERVALS is "DUP_chr1:1499897-1499974"
+        sv_type, loc = interval.split('_chr')
+        if sv_type not in SV_TYPES:
+            msg = f'Unexpected enum value: {sv_type}'
+            raise ValueError(msg)
+        contig, pos = loc.split(':')
+        start, end = pos.split('-')
+        return {
+            'chrom': contig,
+            'start': int(start),
+            'end': int(end),
+            'type': sv_type,
+        }
+
+    @staticmethod
+    def _to_camel_case(snake_case_str):
+        converted = snake_case_str.replace('_', ' ').title().replace(' ', '')
+        return converted[0].lower() + converted[1:]

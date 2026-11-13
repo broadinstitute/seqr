@@ -53,22 +53,6 @@ def lifted_over_pos(ht: hl.Table, **_: Any) -> hl.Expression:
     )
 
 
-def lifted_over_locus_end(ht: hl.Table, **_: Any) -> hl.Expression:
-    return hl.Struct(
-        contig=expression_helpers.reference_independent_contig(
-            ht.lifted_over_locus_end.contig,
-        ),
-        position=hl.or_missing(
-            hl.is_defined(
-                expression_helpers.reference_independent_contig(
-                    ht.lifted_over_locus_end.contig,
-                ),
-            ),
-            ht.lifted_over_locus_end.position,
-        ),
-    )
-
-
 def variant_id(ht: hl.Table, **_: Any) -> hl.Expression:
     return expression_helpers.get_expr_for_variant_id(ht)
 
