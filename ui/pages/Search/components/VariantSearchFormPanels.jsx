@@ -14,12 +14,16 @@ import {
   PATHOGENICITY_PANEL,
   ANNOTATION_PANEL,
   ANNOTATION_SECONDARY_PANEL,
+  HYPOMORPH_VARIANTS_PANEL,
+  HYPOMORPH_FREQUENCY_PANEL,
   IN_SILICO_PANEL,
   FREQUENCY_PANEL,
   LOCATION_PANEL,
   QUALITY_PANEL,
   EXCLUDE_PANEL,
   ANNOTATION_SECONDARY_NAME,
+  HYPOMORPH_VARIANTS_NAME,
+  HYPOMORPH_FREQUENCY_NAME,
   PATHOGENICITY_PANEL_NAME,
   HGMD_HEADER_INPUT_PROPS,
   PATHOGENICITY_FIELDS,
@@ -91,6 +95,8 @@ const PANELS = [
   PATHOGENICITY_PANEL,
   ANNOTATION_PANEL,
   ANNOTATION_SECONDARY_PANEL,
+  HYPOMORPH_VARIANTS_PANEL,
+  HYPOMORPH_FREQUENCY_PANEL,
   IN_SILICO_PANEL,
   FREQUENCY_PANEL,
   LOCATION_PANEL,
@@ -163,6 +169,8 @@ PanelContent.propTypes = {
 
 const hasSecondaryAnnotation = inheritance => ALL_RECESSIVE_INHERITANCE_FILTERS.includes(inheritance?.mode)
 
+const SECONDARY_HIT_PANEL_NAMES = [ANNOTATION_SECONDARY_NAME, HYPOMORPH_VARIANTS_NAME, HYPOMORPH_FREQUENCY_NAME]
+
 const HGMD_PATHOGENICITY_FIELDS = [...PATHOGENICITY_FIELDS, HGMD_FIELD]
 
 class VariantSearchFormPanels extends React.PureComponent {
@@ -209,7 +217,7 @@ class VariantSearchFormPanels extends React.PureComponent {
         <VerticalSpacer height={10} />
         <Accordion fluid exclusive={false}>
           {PANELS.reduce((acc, { name, headerProps, fields, ...panelContentProps }, i) => {
-            if (name === ANNOTATION_SECONDARY_NAME && !hasSecondaryAnnotation(inheritance)) {
+            if (SECONDARY_HIT_PANEL_NAMES.includes(name) && !hasSecondaryAnnotation(inheritance)) {
               return acc
             }
             const showHgmd = name === PATHOGENICITY_PANEL_NAME && hasHgmdPermission

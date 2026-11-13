@@ -22,6 +22,7 @@ from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION
 from seqr.models import Dataset, PhenotypePrioritization, Family, Individual
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.logging_utils import SeqrLogger
+from seqr.utils.xpos_utils import parse_variant_id
 from clickhouse_search.constants import MAX_VARIANTS, XPOS_SORT_KEY, PATHOGENICTY_SORT_KEY, PATHOGENICTY_HGMD_SORT_KEY, \
     PRIORITIZED_GENE_SORT, COMPOUND_HET, COMPOUND_HET_ALLOW_HOM_ALTS, RECESSIVE, AFFECTED, \
     X_LINKED_RECESSIVE, X_LINKED_RECESSIVE_MALE_AFFECTED
@@ -41,7 +42,7 @@ SELECTED_GENE_FIELD = 'selectedGeneId'
 SELECTED_TRANSCRIPT_FIELD = 'selectedTranscript'
 
 
-def get_clickhouse_variants(families, user, genome_version=None, sort=None, sample_data_by_dataset_type=None, inheritance=None, locus=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, **search):
+def get_clickhouse_variants(families, user, genome_version=None, sort=None, sample_data_by_dataset_type=None, inheritance=None, locus=None, exclude_keys=None, exclude_key_pairs=None, no_access_project_genome_version=None, hypomorph_variants=None, hypomorph_freqs=None, **search):
     genome_version = genome_version or no_access_project_genome_version or _get_search_genome_version(families)
 
     search['inheritance_filter'] = (inheritance or {}).get('filter') or {}
@@ -49,6 +50,7 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
     _parse_locus_search(locus or {}, genome_version, search)
 
     has_comp_het = inheritance_mode in {RECESSIVE, COMPOUND_HET}
+    hypomorph_search = _parse_hypomorph_search(hypomorph_variants, hypomorph_freqs, search.get('freqs')) if has_comp_het else None
     has_x_chrom_comp_het = has_comp_het and _is_x_chrom_only(**search)
     has_x_linked = inheritance_mode in {RECESSIVE, X_LINKED_RECESSIVE} and _has_x_chrom(**search)
     sample_data_by_dataset_type = sample_data_by_dataset_type or {}
@@ -94,11 +96,12 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
         if not sample_data:
             continue
 
-        if has_comp_het:
+        if has_comp_het and not (hypomorph_search and dataset_type.startswith(Dataset.DATASET_TYPE_SV_CALLS)):
             dataset_results += _get_data_type_comp_het_results_queryset(
                 entry_qs, variants_qs, sample_data, user, parsed_filters, **search,
                 exclude_key_pairs=(exclude_key_pairs or {}).get(dataset_type),
                 is_x_chrom=has_x_chrom_comp_het and dataset_type == Dataset.DATASET_TYPE_VARIANT_CALLS,
+                hypomorph_search=hypomorph_search,
             )
 
         if 'samples' not in sample_data:
@@ -107,7 +110,10 @@ def get_clickhouse_variants(families, user, genome_version=None, sort=None, samp
         searched_dataset_types.add(dataset_type)
 
     if has_comp_het and any(dt.startswith(Dataset.DATASET_TYPE_SV_CALLS) for dt in VARIANTS_CLASS_MAP[genome_version]):
-        results += _get_multi_data_type_comp_het_results(genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs or {}, searched_dataset_types, **search)
+        results += _get_multi_data_type_comp_het_results(
+            genome_version, families, sample_data_by_dataset_type, user, exclude_key_pairs or {}, searched_dataset_types,
+            hypomorph_search=hypomorph_search, **search,
+        )
 
     if not searched_dataset_types:
         _raise_dataset_type_errors(sample_data_errors, sample_data_by_dataset_type)
@@ -156,6 +162,19 @@ def _parse_locus_search(locus, genome_version, search):
     search.update({
         'genes': genes, 'intervals': intervals, 'exclude_intervals': exclude_intervals, 'raw_variant_items': locus.get('rawVariantItems'),
     })
+
+
+def _parse_hypomorph_search(hypomorph_variants, hypomorph_freqs, freqs):
+    variant_ids = [item.replace('chr', '') for item in (hypomorph_variants or '').replace(',', ' ').split()]
+    if not variant_ids:
+        return None
+    invalid_items = [variant_id for variant_id in variant_ids if not parse_variant_id(variant_id)]
+    if invalid_items:
+        raise InvalidSearchException('Invalid hypomorph variants: {}'.format(', '.join(invalid_items)))
+    return {
+        'variant_ids': variant_ids,
+        'freqs': {**(freqs or {}), **{k: v for k, v in (hypomorph_freqs or {}).items() if v}},
+    }
 
 
 def get_search_genes(gene_ids, genome_version):
@@ -247,19 +266,24 @@ def _evaluate_results(result_q, is_comp_het=False):
         raise InvalidSearchException('This search returned too many results')
     return results
 
-def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, annotations=None, annotations_secondary=None, **search_kwargs):
-    if annotations_secondary:
-        annotations = {
-            **annotations,
-            **{k: v + annotations[k] if annotations.get(k) else v for k, v in annotations_secondary.items()},
-        }
+def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_data_by_dataset_type, user, exclude_key_pairs, searched_dataset_types, annotations=None, annotations_secondary=None, hypomorph_search=None, **search_kwargs):
+    if hypomorph_search:
+        snv_indel_filter_kwargs = {'annotations': annotations_secondary}
+        sv_filter_kwargs = {**search_kwargs, 'annotations': annotations}
+    else:
+        if annotations_secondary:
+            annotations = {
+                **annotations,
+                **{k: v + annotations[k] if annotations.get(k) else v for k, v in annotations_secondary.items()},
+            }
+        snv_indel_filter_kwargs = sv_filter_kwargs = {**search_kwargs, 'annotations': annotations}
 
     try:
         snv_indel_entry_qs = ENTRY_CLASS_MAP[genome_version][Dataset.DATASET_TYPE_VARIANT_CALLS].objects.filter_locus(**search_kwargs)
         snv_indel_variants_qs = VARIANTS_CLASS_MAP[genome_version][Dataset.DATASET_TYPE_VARIANT_CALLS].objects
-        snv_indel_parsed_filters = snv_indel_variants_qs.get_parsed_annotations_filters(annotations=annotations, **search_kwargs)
+        snv_indel_parsed_filters = snv_indel_variants_qs.get_parsed_annotations_filters(**snv_indel_filter_kwargs)
         sv_variants_cls = VARIANTS_CLASS_MAP[genome_version][f'{Dataset.DATASET_TYPE_SV_CALLS}_{Dataset.SAMPLE_TYPE_WES}']
-        sv_parsed_filters = sv_variants_cls.objects.get_parsed_annotations_filters(annotations=annotations, **search_kwargs)
+        sv_parsed_filters = sv_variants_cls.objects.get_parsed_annotations_filters(**sv_filter_kwargs)
     except InvalidDatasetTypeException:
         return []
 
@@ -311,11 +335,15 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
             'samples': [s for s in sv_sample_data['samples'] if s['family_guid'] in families] if 'samples' in sv_sample_data else None,
         }
 
+        snv_indel_search_kwargs = search_kwargs
+        if hypomorph_search:
+            snv_indel_entry_qs = snv_indel_entry_qs.filter_variant_ids(hypomorph_search['variant_ids'])
+            snv_indel_search_kwargs = {**search_kwargs, 'freqs': hypomorph_search['freqs']}
         entries = snv_indel_entry_qs.search(
             type_snv_indel_sample_data, inheritance_mode=COMPOUND_HET_ALLOW_HOM_ALTS, annotate_carriers=True,
-            annotate_hom_alts=True, **search_kwargs,
+            annotate_hom_alts=True, **snv_indel_search_kwargs,
         )
-        snv_indel_q = snv_indel_variants_qs.subquery_join(entries).search(**search_kwargs, **snv_indel_parsed_filters)
+        snv_indel_q = snv_indel_variants_qs.subquery_join(entries).search(**snv_indel_search_kwargs, **snv_indel_parsed_filters)
 
         sv_entries = ENTRY_CLASS_MAP[genome_version][sv_dataset_type].objects.filter_locus(**search_kwargs).search(
             sv_sample_data, **search_kwargs, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
@@ -341,12 +369,12 @@ def _get_multi_data_type_comp_het_results(genome_version, all_families, sample_d
     return results
 
 
-def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, user, parsed_filters, is_x_chrom=False, annotations_secondary=None, exclude_key_pairs=None, **search_kwargs):
+def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data, user, parsed_filters, is_x_chrom=False, annotations_secondary=None, exclude_key_pairs=None, hypomorph_search=None, **search_kwargs):
     if not any(parsed_filters.values()):
         raise InvalidSearchException('Annotations must be specified to search for compound heterozygous variants')
 
     parsed_secondary_filters = {}
-    if annotations_secondary:
+    if annotations_secondary or hypomorph_search:
         try:
             parsed_secondary_filters = variants_qs.get_parsed_annotations_filters(annotations=annotations_secondary)
         except InvalidDatasetTypeException:
@@ -361,7 +389,13 @@ def _get_data_type_comp_het_results_queryset(entry_qs, variants_qs, sample_data,
 
     primary_q = variants_qs.subquery_join(entries).search(**search_kwargs, **parsed_filters)
     secondary_kwargs = {**search_kwargs, **parsed_filters, **parsed_secondary_filters}
-    secondary_q = variants_qs.subquery_join(entries).search(**secondary_kwargs)
+    secondary_entries = entries
+    if hypomorph_search:
+        secondary_kwargs['freqs'] = hypomorph_search['freqs']
+        secondary_entries = entry_qs.filter_variant_ids(hypomorph_search['variant_ids']).search(
+            sample_data, **secondary_kwargs, inheritance_mode=COMPOUND_HET, annotate_carriers=True,
+        )
+    secondary_q = variants_qs.subquery_join(secondary_entries).search(**secondary_kwargs)
 
     result_q = _get_comp_het_results_queryset(variants_qs, primary_q, secondary_q, sample_data['num_families'], exclude_key_pairs)
     return _evaluate_results(result_q, is_comp_het=True) if result_q is not None else []
