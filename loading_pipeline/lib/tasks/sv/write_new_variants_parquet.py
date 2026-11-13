@@ -109,6 +109,11 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df = df.drop(columns=predicted_csq_cols)
 
         # Add gnomad frequency
+        invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
+        if not invalid_sv_types.empty:
+            msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
+            raise ValueError(msg)
+
         gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
         gnomad_input = self.input()[1]
         gnomad_input.format = luigi.format.Nop
@@ -120,11 +125,6 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         )
 
         # Format and validate annotations
-        invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
-        if not invalid_sv_types.empty:
-            msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
-            raise ValueError(msg)
-
         df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
         df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(
             r'^<[^:]+:(.+)>$',
