@@ -35,7 +35,7 @@ class ReferenceDataset(StrEnum):
     gnomad_genomes = 'gnomad_genomes'
     gnomad_qc = 'gnomad_qc'
     gnomad_svs = 'gnomad_svs'
-    gencode = 'gencode'
+    gencode_transcripts = 'gencode_transcripts'
 
     def version(self, reference_genome: ReferenceGenome) -> str:
         version = CONFIG[self][reference_genome][VERSION]
@@ -174,7 +174,7 @@ CONFIG = {
             PATH: 'gs://gcp-public-data--gnomad/release/4.1/genome_sv/gnomad.v4.1.sv.sites.vcf.gz',
         },
     },
-    ReferenceDataset.gencode: {
+    ReferenceDataset.gencode_transcripts: {
         ReferenceGenome.GRCh38: {
             DATASET_TYPES: frozenset([DatasetType.SV]),
             VERSION: '1.0',
