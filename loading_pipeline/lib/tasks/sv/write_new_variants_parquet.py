@@ -46,7 +46,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             self.clone(WriteDeduplicatedSvVcfTask),
             self.clone(
                 UpdatedReferenceDatasetParquetNoHailTask,
-                reference_dataset=ReferenceDataset.gencode,
+                reference_dataset=ReferenceDataset.gencode_transcripts,
                 attempt_id=self.attempt_id,
             ),
             self.clone(
