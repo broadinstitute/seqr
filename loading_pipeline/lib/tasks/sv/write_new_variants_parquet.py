@@ -86,11 +86,15 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             raise ValueError(msg)
 
         if 'CPX_INTERVALS' in df.columns:
-            df['CPX_INTERVALS'] = df['CPX_INTERVALS'].str.split(',').map(
-                lambda intervals: [
-                    self._parse_cpx_interval(interval) for interval in intervals
-                ],
-                na_action='ignore',
+            df['CPX_INTERVALS'] = (
+                df['CPX_INTERVALS']
+                .str.split(',')
+                .map(
+                    lambda intervals: [
+                        self._parse_cpx_interval(interval) for interval in intervals
+                    ],
+                    na_action='ignore',
+                )
             )
         else:
             df['CPX_INTERVALS'] = None
@@ -100,7 +104,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             df['end_chrom'] = (
                 df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
             )
-            df['END2'] =  pd.to_numeric(df['END2'])
+            df['END2'] = pd.to_numeric(df['END2'])
         else:
             df['end_chrom'] = df['#CHROM']
             df['END2'] = None

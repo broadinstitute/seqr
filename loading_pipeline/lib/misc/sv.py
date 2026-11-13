@@ -205,7 +205,7 @@ def _segments(df):
 
     breakends = df[sv_type == 'BND']
     same_chrom = breakends['end_chrom'] == breakends['#CHROM']
-    sv_len =  pd.to_numeric(breakends['SVLEN'])
+    sv_len = pd.to_numeric(breakends['SVLEN'])
     second_breakend = (
         breakends['END2']
         .fillna(df['POS'])
