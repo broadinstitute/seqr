@@ -170,22 +170,45 @@ SV_TYPES = [
     'CNV',
 ]
 
-SV_TYPE_DETAILS = [
-    'INS_iDEL',
-    'INVdel',
+COMPLEX_SUBTYPES_WITH_DUP_ADJUSTED_INVERSION = {
+    'dupINV',
     'INVdup',
+    'dupINVdup',
+    'delINVdup',
+    'dupINVdel',
+}
+COMPLEX_SUBTYPES_WITH_OTHER_INVERSION = {
+    'delINV',
+    'INVdel',
+    'delINVdel',
+}
+COMPLEX_SUBTYPES_WITH_DUP = {'dDUP', 'dDUP_iDEL'}
+COMPLEX_SUBTYPES_WITH_INSERTION = {'INS_iDEL'}
+SV_TYPE_DETAILS = [
+    *COMPLEX_SUBTYPES_WITH_DUP_ADJUSTED_INVERSION,
+    *COMPLEX_SUBTYPES_WITH_OTHER_INVERSION,
+    *COMPLEX_SUBTYPES_WITH_DUP,
+    *COMPLEX_SUBTYPES_WITH_INSERTION,
     'ME',
     'ME:ALU',
     'ME:LINE1',
     'ME:SVA',
-    'dDUP',
-    'dDUP_iDEL',
-    'delINV',
-    'delINVdel',
-    'delINVdup',
-    'dupINV',
-    'dupINVdel',
-    'dupINVdup',
+]
+
+SV_CONSEQUENCE_RANKS = [
+    'LOF',
+    'INTRAGENIC_EXON_DUP',
+    'PARTIAL_EXON_DUP',
+    'COPY_GAIN',
+    'DUP_PARTIAL',
+    'MSV_EXON_OVERLAP',
+    'INV_SPAN',
+    'UTR',
+    'PROMOTER',
+    'TSS_DUP',
+    'BREAKEND_EXONIC',
+    'INTRONIC',
+    'NEAREST_TSS',
 ]
 
 

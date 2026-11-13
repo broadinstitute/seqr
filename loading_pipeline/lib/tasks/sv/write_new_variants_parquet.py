@@ -8,11 +8,9 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPES,
 )
 from loading_pipeline.lib.core import ReferenceGenome
+from loading_pipeline.lib.misc.sv import annotate_gene_consequences
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
-)
-from loading_pipeline.lib.reference_datasets.gencode.mapping_gene_ids import (
-    load_gencode_gene_symbol_to_gene_id,
 )
 from loading_pipeline.lib.reference_datasets.reference_dataset import ReferenceDataset
 from loading_pipeline.lib.tasks.base.base_loading_run_params import (
@@ -28,7 +26,6 @@ from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
 )
 
-GENCODE_RELEASE = 42
 CONTIGS_37 = list(ReferenceGenome.GRCh37.contig_recoding().values())
 TRUVARI_INFO_COLS = ['TRUVARI_FILTER', 'CollapseId', 'NumCollapsed', 'NumConsolidated']
 
@@ -49,6 +46,11 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             self.clone(WriteDeduplicatedSvVcfTask),
             self.clone(
                 UpdatedReferenceDatasetParquetNoHailTask,
+                reference_dataset=ReferenceDataset.gencode_transcripts,
+                attempt_id=self.attempt_id,
+            ),
+            self.clone(
+                UpdatedReferenceDatasetParquetNoHailTask,
                 reference_dataset=ReferenceDataset.gnomad_svs,
                 attempt_id=self.attempt_id,
             ),
@@ -65,70 +67,17 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         )
         df = self.import_vcf(filtered_target)
 
-        # Run liftover
-        if 'END2' in df:
-            df['end_chrom'] = df.pop('CHR2').where(df['END2'].notna())
-            df['END'] = df.pop('END2').fillna(df['END']).astype(int)
-        else:
-            df['end_chrom'] = None
-            if 'CHR2' in df:
-                df = df.drop(columns=['CHR2'])
-        df['END'] = df['END'].astype(int)
-
-        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
-        df[['lifted_over_chrom', 'lifted_over_pos']] = [
-            self._liftover(lo, c, p)
-            for c, p in zip(df['#CHROM'], df['POS'], strict=False)
-        ]
-        df['rg37_locus_end'] = [
-            {'contig': chrom, 'position': pos} if chrom else None
-            for chrom, pos in (
-                self._liftover(lo, c, p)
-                for c, p in zip(
-                    df['end_chrom'].fillna(df['#CHROM']),
-                    df['END'],
-                    strict=False,
-                )
-            )
-        ]
-
         # Annotate gene consequences
-        gene_symbol_to_gene_id = load_gencode_gene_symbol_to_gene_id(GENCODE_RELEASE)
-        predicted_csq_cols = [col for col in df.columns if col.startswith('PREDICTED_')]
-        df['sorted_gene_consequences'] = df[predicted_csq_cols].apply(
-            lambda row: [
-                {
-                    'geneId': gene_symbol_to_gene_id.get(gene),
-                    'majorConsequence': col.removeprefix('PREDICTED_'),
-                }
-                for col, genes in row.dropna().items()
-                for gene in genes.split(',')
-            ],
-            axis=1,
-        )
-        df = df.drop(columns=predicted_csq_cols)
-
-        # Add gnomad frequency
-        gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
-        gnomad_input = self.input()[1]
-        gnomad_input.format = luigi.format.Nop
-        with gnomad_input.open() as f:
-            gnomad_df = pd.read_parquet(f, filters=[('id', 'in', gnomad_ids)])
-        gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
-        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
-            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
-        )
-
-        # Format and validate annotations
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
         if not invalid_sv_types.empty:
             msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
             raise ValueError(msg)
 
-        df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
         df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(
             r'^<[^:]+:(.+)>$',
         )[0]
+        if 'CPX_TYPE' in df:
+            df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
         invalid_details = df['sv_type_detail'].dropna()[
             ~df['sv_type_detail'].dropna().isin(SV_TYPE_DETAILS)
         ]
@@ -136,17 +85,73 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             msg = f'Unexpected enum value: {invalid_details.iloc[0]}'
             raise ValueError(msg)
 
-        df['CPX_INTERVALS'] = (
-            df['CPX_INTERVALS']
-            .str.split(',')
-            .map(
-                lambda intervals: [
-                    self._parse_cpx_interval(interval) for interval in intervals
-                ],
-                na_action='ignore',
+        if 'CPX_INTERVALS' in df.columns:
+            df['CPX_INTERVALS'] = (
+                df['CPX_INTERVALS']
+                .str.split(',')
+                .map(
+                    lambda intervals: [
+                        self._parse_cpx_interval(interval) for interval in intervals
+                    ],
+                    na_action='ignore',
+                )
             )
+        else:
+            df['CPX_INTERVALS'] = None
+
+        df['END'] = df['END'].astype(int)
+        if 'END2' in df:
+            df['end_chrom'] = (
+                df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
+            )
+            df['END2'] = pd.to_numeric(df['END2'])
+        else:
+            df['end_chrom'] = df['#CHROM']
+            df['END2'] = None
+            if 'CHR2' in df:
+                df = df.drop(columns=['CHR2'])
+
+        gencode_df = self._read_parquet(self.input()[1])
+        consequences_by_variant = annotate_gene_consequences(df, gencode_df)
+        df['sorted_gene_consequences'] = [
+            [
+                {
+                    'geneId': consequence['geneId'],
+                    'majorConsequence': consequence['majorConsequence'],
+                }
+                for consequence in consequences_by_variant.get(variant, [])
+            ]
+            for variant in df.index
+        ]
+
+        # Run liftover
+        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
+        df[['lifted_over_chrom', 'lifted_over_pos']] = [
+            self._liftover(lo, c, p)
+            for c, p in zip(df['#CHROM'], df['POS'], strict=False)
+        ]
+
+        df['END'] = df.pop('END2').fillna(df['END']).astype(int)
+        df['rg37_locus_end'] = [
+            {'contig': chrom, 'position': pos} if chrom else None
+            for chrom, pos in (
+                self._liftover(lo, c, p)
+                for c, p in zip(df['end_chrom'], df['END'], strict=False)
+            )
+        ]
+
+        # Add gnomad frequency
+        gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
+        gnomad_df = self._read_parquet(
+            self.input()[2],
+            filters=[('id', 'in', gnomad_ids)],
+        )
+        gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
+        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
+            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
         )
 
+        # Format annotations
         df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
@@ -179,6 +184,13 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             )
             .rename(columns=self._to_camel_case)
         )
+
+    @staticmethod
+    def _read_parquet(input_target: luigi.Target, **kwargs) -> pd.DataFrame:
+        pq_input = input_target
+        pq_input.format = luigi.format.Nop
+        with pq_input.open() as f:
+            return pd.read_parquet(f, **kwargs)
 
     @staticmethod
     def _liftover(lo, chrom, pos):

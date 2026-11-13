@@ -4,6 +4,7 @@ from collections.abc import Callable
 from enum import StrEnum
 
 import hail as hl
+import luigi
 import pandas as pd
 
 from loading_pipeline.lib.core import (
@@ -34,6 +35,7 @@ class ReferenceDataset(StrEnum):
     gnomad_genomes = 'gnomad_genomes'
     gnomad_qc = 'gnomad_qc'
     gnomad_svs = 'gnomad_svs'
+    gencode_transcripts = 'gencode_transcripts'
 
     def version(self, reference_genome: ReferenceGenome) -> str:
         version = CONFIG[self][reference_genome][VERSION]
@@ -74,11 +76,11 @@ class ReferenceDataset(StrEnum):
             validate_no_duplicate_variants(ht, reference_genome, dataset_type)
         return ht
 
-    def format_df(self, df: pd.DataFrame) -> pd.DataFrame:
+    def get_df(self, input_target: luigi.Target) -> pd.DataFrame:
         module = importlib.import_module(
             f'loading_pipeline.lib.reference_datasets.{self.name}',
         )
-        return module.format_df(df)
+        return module.get_df(input_target)
 
 
 CONFIG = {
@@ -170,6 +172,14 @@ CONFIG = {
             DATASET_TYPES: frozenset([DatasetType.SV]),
             VERSION: '1.1',
             PATH: 'gs://gcp-public-data--gnomad/release/4.1/genome_sv/gnomad.v4.1.sv.sites.vcf.gz',
+        },
+    },
+    ReferenceDataset.gencode_transcripts: {
+        ReferenceGenome.GRCh38: {
+            DATASET_TYPES: frozenset([DatasetType.SV]),
+            VERSION: '1.0',
+            # Mirror of 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_42/gencode.v42.annotation.gtf.gz'
+            PATH: 'gs://seqr-reference-data/gencode/gencode.v42.annotation.gtf.gz',
         },
     },
 }
