@@ -6,18 +6,8 @@ import pyBigWig
 from joblib import load
 
 
-def intersect(a, b, window=0):
-    a = a.set_axis(range(a.shape[1]), axis=1)
-    b = b.set_axis(range(a.shape[1], a.shape[1] + b.shape[1]), axis=1)
-    merged = a.merge(b, left_on=0, right_on=a.shape[1])
-    return merged[
-        (merged[1] - window < merged[a.shape[1] + 2])
-        & (merged[2] + window > merged[a.shape[1] + 1])
-    ].reset_index(drop=True)
-
-
-def read_bed(data_dir, file_name):
-    return pd.read_csv(os.path.join(data_dir, file_name), sep='\t', header=None)
+def read_bed(data_dir, file_name, names):
+    return pd.read_csv(os.path.join(data_dir, file_name), sep='\t', names=names)
 
 
 def topUsage(df,n):
@@ -37,11 +27,11 @@ def cdsRank(df):
             df['early'] = dff['start'] - dff['cStart'] + dff['cdsCount']
             return df
     if dff['strand'] == -1:
-        if dff['cStop'] - dff['stop'] < 0:
+        if dff['cStop'] - dff['end'] < 0:
             df['early'] = dff['cdsCount']
             return df
         else:
-            df['early'] = dff['cStop'] - dff['stop'] + dff['cdsCount']
+            df['early'] = dff['cStop'] - dff['end'] + dff['cdsCount']
             return df
 
 
@@ -49,11 +39,11 @@ def cdsEnd(df):
     l = df.shape[0]
     dff = df.iloc[0,:]
     if dff['strand'] == 1:
-        if dff['stop'] > dff['cStop']:
+        if dff['end'] > dff['cStop']:
             df['late'] = dff['cdsCount'] + dff['size']
             return df
         else:
-            df['late'] = dff['stop'] - dff['cStart'] + dff['cdsCount']
+            df['late'] = dff['end'] - dff['cStart'] + dff['cdsCount']
             return df
     if dff['strand'] == -1:
         if dff['start'] < dff['cStart']:
@@ -94,18 +84,18 @@ def annotateSVs(df, exonOverlap, phylopPath, data_dir):
     cons = [np.mean(y[np.argsort(y)[-size:]]) for y in x]
     df['phyloP'] = pd.Series(cons)
 
-    tads = read_bed(data_dir, 'rep12tadsMergedhg38.bed')
-    tadOverlap = intersect(df[['chrom','start','end','variant']], tads).set_axis(
-        ['chrom', 'start', 'stop', 'variant', 'tChrom', 'tStart', 'tStop', 'strength'], axis=1)
+    tads = read_bed(data_dir, 'rep12tadsMergedhg38.bed', ['tChrom', 'tStart', 'tStop', 'strength'])
+    tadOverlap = df[['chrom','start','end','variant']].merge(tads, left_on='chrom', right_on='tChrom')
+    tadOverlap = tadOverlap[(tadOverlap['start'] < tadOverlap['tStop']) & (tadOverlap['end'] > tadOverlap['tStart'])]
 
     tadOverlap['maxStrength'] = tadOverlap.groupby(by='variant').strength.transform('max')
     tadOverlap.drop_duplicates(subset='variant', inplace=True)
     df = df.merge(tadOverlap[['variant', 'maxStrength']], how='left', on='variant')
     df['maxStrength'].fillna(value=0, inplace=True)
 
-    cds = read_bed(data_dir, 'exons_CDS_Chr1-Y.sorted.bed')
-    cdsOverlap = intersect(df[['chrom','start','end','variant']], cds).set_axis(
-        ['chrom', 'start', 'stop', 'variant', 'cChrom', 'cStart', 'cStop', 'CDSLength', 'size', 'exonRank', 'strand','gene', 'cdsCount', 'pLI','loeuf'], axis=1)
+    cds = read_bed(data_dir, 'exons_CDS_Chr1-Y.sorted.bed', ['cChrom', 'cStart', 'cStop', 'CDSLength', 'size', 'exonRank', 'strand','gene', 'cdsCount', 'pLI','loeuf'])
+    cdsOverlap = df[['chrom','start','end','variant']].merge(cds, left_on='chrom', right_on='cChrom')
+    cdsOverlap = cdsOverlap[(cdsOverlap['start'] < cdsOverlap['cStop']) & (cdsOverlap['end'] > cdsOverlap['cStart'])]
     if cdsOverlap.shape[0] != 0:
         out = cdsOverlap.sort_values('exonRank').groupby(['variant','gene']).apply(cdsRank)
         out.reset_index(drop=True, inplace=True)
@@ -150,15 +140,15 @@ def annotateSVs(df, exonOverlap, phylopPath, data_dir):
     final['pLI_max25_ID'].fillna(value=-1, inplace=True)
     final['loeuf_min25_ID'].fillna(value=3, inplace=True)
 
-    usage = read_bed(data_dir, 'summary_exon_usage_hg38.sorted.bed')
-    usageOverlap = intersect(final[['chrom','start','end','variant']], usage).set_axis(
-        ['chrom', 'start', 'stop', 'variant', 'uChrom', 'uStart', 'uStop', 'avgUsage', 'avgExp'], axis=1)
+    usage = read_bed(data_dir, 'summary_exon_usage_hg38.sorted.bed', ['uChrom', 'uStart', 'uStop', 'avgUsage', 'avgExp'])
+    usageOverlap = final[['chrom','start','end','variant']].merge(usage, left_on='chrom', right_on='uChrom')
+    usageOverlap = usageOverlap[(usageOverlap['start'] < usageOverlap['uStop']) & (usageOverlap['end'] > usageOverlap['uStart'])]
     out = usageOverlap.groupby('variant').apply(topUsage,n=size)
     out.drop_duplicates(subset='variant', inplace=True)
 
     if out.shape[0] == 0:
-        usageOverlap = intersect(final[['chrom','start','end','variant']], usage, window=1000).set_axis(
-            ['chrom', 'start', 'stop', 'variant', 'uChrom', 'uStart', 'uStop', 'avgUsage', 'avgExp'], axis=1)
+        usageOverlap = final[['chrom','start','end','variant']].merge(usage, left_on='chrom', right_on='uChrom')
+        usageOverlap = usageOverlap[(usageOverlap['start'] - 1000 < usageOverlap['uStop']) & (usageOverlap['end'] + 1000 > usageOverlap['uStart'])]
         pd.read_csv(os.path.join(data_dir, 'summary_exon_usage_hg38.sorted.bed'))
         out = usageOverlap.groupby('variant').apply(topUsage,n=size)
         out.drop_duplicates(subset='variant', inplace=True)
@@ -190,9 +180,9 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     df = df[df['length'] > 49]
     df = df[df['DEL'] | (df['svtype'] == 'DUP')]
 
-    exons = read_bed('loading_pipeline/var/strvctre', 'exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed')
-    exonOverlap = intersect(df[['chrom','start','end','variant']], exons).set_axis(
-        ['chrom', 'start', 'stop', 'variant', 'eChrom', 'eStart', 'eStop', 'gene', 'exonRank', 'skippable', 'exonsInGene', 'const','pLI','loeuf'], axis=1)
+    exons = read_bed('loading_pipeline/var/strvctre', 'exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed', ['eChrom', 'eStart', 'eStop', 'gene', 'exonRank', 'skippable', 'exonsInGene', 'const','pLI','loeuf'])
+    exonOverlap = df[['chrom','start','end','variant']].merge(exons, left_on='chrom', right_on='eChrom')
+    exonOverlap = exonOverlap[(exonOverlap['start'] < exonOverlap['eStop']) & (exonOverlap['end'] > exonOverlap['eStart'])]
     out = df[df['variant'].isin(exonOverlap['variant'])]
     scores = dict.fromkeys(out['variant'], 1.0)
     out = out[out['length'] < 3000000]
