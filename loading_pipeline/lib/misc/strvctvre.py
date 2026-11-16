@@ -70,7 +70,6 @@ def annotateSVs(df, phylopPath, data_dir):
     df['ID'] = 'sv' + pd.Series(df.index.values).apply(str)
     exonOverlap = intersect(df[['chrom','start','end','ID']], exons).set_axis(
         ['chrom', 'start', 'stop', 'ID', 'eChrom', 'eStart', 'eStop', 'gene', 'exonRank', 'skippable', 'exonsInGene', 'const','pLI','loeuf'], axis=1)
-    del exons
 
     exonOverlap['numExonsFinal'] = exonOverlap.groupby(by='ID').eStart.transform('size')
     exonOverlap['allSkippable'] = exonOverlap.groupby(by='ID').skippable.transform(lambda x: all(x))
@@ -82,7 +81,6 @@ def annotateSVs(df, phylopPath, data_dir):
 
     exonOverlap.drop_duplicates(subset='ID', inplace=True)
     df = df.merge(exonOverlap[['ID', 'numExonsFinal', 'allSkippable', 'lowestExonRank', 'lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin']], how='left', on='ID')
-    del exonOverlap
 
     size = 400
 
@@ -99,11 +97,8 @@ def annotateSVs(df, phylopPath, data_dir):
                 x.append(np.nan_to_num(np.array(consBW.values(df.loc[i,'chrom'], int(df.loc[i,'start']), int(df.loc[i,'end'])))))
             except:
                 x.append(np.array([0.5]))
-    del consBW
     cons = [np.mean(y[np.argsort(y)[-size:]]) for y in x]
-    del x
     df['phyloP'] = pd.Series(cons)
-    del cons
 
     tads = read_bed(data_dir, 'rep12tadsMergedhg38.bed')
     tadOverlap = intersect(df[['chrom','start','end','ID']], tads).set_axis(
@@ -113,13 +108,10 @@ def annotateSVs(df, phylopPath, data_dir):
     tadOverlap.drop_duplicates(subset='ID', inplace=True)
     df = df.merge(tadOverlap[['ID', 'maxStrength']], how='left', on='ID')
     df['maxStrength'].fillna(value=0, inplace=True)
-    del tads
-    del tadOverlap
 
     cds = read_bed(data_dir, 'exons_CDS_Chr1-Y.sorted.bed')
     cdsOverlap = intersect(df[['chrom','start','end','ID']], cds).set_axis(
         ['chrom', 'start', 'stop', 'ID', 'cChrom', 'cStart', 'cStop', 'CDSLength', 'size', 'exonRank', 'strand','gene', 'cdsCount', 'pLI','loeuf'], axis=1)
-    del cds
     if cdsOverlap.shape[0] != 0:
         out = cdsOverlap.sort_values('exonRank').groupby(['ID','gene']).apply(cdsRank)
         out.reset_index(drop=True, inplace=True)
@@ -150,17 +142,14 @@ def annotateSVs(df, phylopPath, data_dir):
         out.drop_duplicates(subset='ID', inplace=True)
 
         final = df.merge(out[['ID', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID']], how='left')
-        del out
     else:
         final = df
-        del df
         final['cdsFracStartMin'] = float('NaN')
         final['cdsFracEndMax'] = float('NaN')
         final['cdsFracMax'] = float('NaN')
         final['pLI_max25_ID'] = float('NaN')
         final['loeuf_min25_ID'] = float('NaN')
 
-    del cdsOverlap
     final['cdsFracStartMin'].fillna(value=2, inplace=True)
     final['cdsFracEndMax'].fillna(value=-1, inplace=True)
     final['cdsFracMax'].fillna(value=-1, inplace=True)
@@ -190,8 +179,6 @@ def annotateSVs(df, phylopPath, data_dir):
 
     out.reset_index(drop=True, inplace=True)
     final2 = final.merge(out[['ID', 'topUsage', 'topExp']], how='left', on='ID')
-    del final
-    del out
     final2['topExp'].fillna(value=final2['topExp'].median(), inplace=True)
     final2['topUsage'].fillna(value=final2['topUsage'].median(), inplace=True)
 
@@ -215,18 +202,14 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     exonOverlap['numExons'] = exonOverlap.groupby(by='variant').chrom.transform('size')
     exonOverlap.drop_duplicates(subset='variant', inplace=True)
 
-    del exons
 
     out = df.merge(exonOverlap[['numExons','variant']],how='left',on='variant')
-    del exonOverlap
-    del df
     out = out[out['numExons'] > 0]
     scores = dict.fromkeys(out['variant'], 1.0)
     out = out[out['length'] < 3000000]
 
     if out.shape[0] != 0:
         an = annotateSVs(out[['chrom','start','end','variant','DEL']].reset_index(drop=True), phylopPath, data_dir)
-        del out
 
         an['path'] = 0
 
