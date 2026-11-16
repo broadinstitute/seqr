@@ -6,7 +6,7 @@ import pyBigWig
 from joblib import load
 
 
-def _overlap(df, path, columns, window=0):
+def _bed_overlap(df, path, columns, window=0):
     features = pd.read_csv(path, sep='\t', names=['feature_chrom', 'feature_start', 'feature_end', *columns])
     overlap = df[['chrom', 'start', 'end', 'variant']].merge(features, left_on='chrom', right_on='feature_chrom')
     return overlap[
@@ -15,20 +15,29 @@ def _overlap(df, path, columns, window=0):
     ]
 
 
+def _add_aggregates(df, overlap, **features):
+    aggregated = overlap.groupby('variant').agg(
+        **{name: (column, func) for name, (column, func, _) in features.items()},
+    )
+    fill_values = {name: default for name, (_, _, default) in features.items() if default is not None}
+    return df.merge(aggregated, how='left', left_on='variant', right_index=True).fillna(fill_values)
+
+
 TOP_N = 400
 
 
 def _add_exon_features(df, exon_overlap):
-    exon_features = exon_overlap.groupby('variant').agg(
-        numExonsFinal=('feature_start', 'size'),
-        allSkippable=('skippable', 'all'),
-        lowestExonRank=('exonRank', 'min'),
-        lowestExonsInGene=('exonsInGene', 'min'),
-        anyConstExon=('const', 'max'),
-        pLIMax=('pLI', 'max'),
-        loeufMin=('loeuf', 'min'),
+    return _add_aggregates(
+        df,
+        exon_overlap,
+        numExonsFinal=('feature_start', 'size', None),
+        allSkippable=('skippable', 'all', None),
+        lowestExonRank=('exonRank', 'min', None),
+        lowestExonsInGene=('exonsInGene', 'min', None),
+        anyConstExon=('const', 'max', None),
+        pLIMax=('pLI', 'max', None),
+        loeufMin=('loeuf', 'min', None),
     )
-    return df.merge(exon_features, how='left', left_on='variant', right_index=True)
 
 
 def _add_phylop_features(df, phylopPath):
@@ -48,23 +57,18 @@ def _add_phylop_features(df, phylopPath):
 
 
 def _add_tad_features(df):
-    tad_overlap = _overlap(df, 'loading_pipeline/var/strvctre/rep12tadsMergedhg38.bed', ['strength'])
-    return df.merge(
-        tad_overlap.groupby('variant').agg(maxStrength=('strength', 'max')),
-        how='left',
-        left_on='variant',
-        right_index=True,
-    ).fillna({'maxStrength': 0})
+    tad_overlap = _bed_overlap(df, 'loading_pipeline/var/strvctre/rep12tadsMergedhg38.bed', ['strength'])
+    return _add_aggregates(df, tad_overlap, maxStrength=('strength', 'max', 0))
 
 
 def _add_cds_features(df):
-    cds_overlap = _overlap(
+    cds_overlap = _bed_overlap(
         df,
         'loading_pipeline/var/strvctre/exons_CDS_Chr1-Y.sorted.bed',
         ['CDSLength', 'size', 'exonRank', 'strand', 'gene', 'cdsCount', 'pLI', 'loeuf'],
     )
-    cds_overlap = cds_overlap.sort_values('exonRank')
 
+    cds_overlap = cds_overlap.sort_values('exonRank')
     group_columns = ['start', 'end', 'feature_start', 'feature_end', 'strand', 'cdsCount', 'size']
     variant_gene_groups = cds_overlap.groupby(['variant', 'gene'])[group_columns]
     first = variant_gene_groups.transform('first')
@@ -84,46 +88,32 @@ def _add_cds_features(df):
     cds_overlap['pLI25'] = cds_overlap['pLI'].where(covers_start_or_quarter)
     cds_overlap['loeuf25'] = cds_overlap['loeuf'].where(covers_start_or_quarter)
 
-    cds_features = cds_overlap.groupby('variant').agg(
-        cdsFracStartMin=('cdsFracStart', 'min'),
-        cdsFracEndMax=('cdsFracEnd', 'max'),
-        cdsFracMax=('cdsFrac', 'max'),
-        pLI_max25_ID=('pLI25', 'max'),
-        loeuf_min25_ID=('loeuf25', 'min'),
+    return _add_aggregates(
+        df,
+        cds_overlap,
+        cdsFracStartMin=('cdsFracStart', 'min', 2),
+        cdsFracEndMax=('cdsFracEnd', 'max', -1),
+        cdsFracMax=('cdsFrac', 'max', -1),
+        pLI_max25_ID=('pLI25', 'max', -1),
+        loeuf_min25_ID=('loeuf25', 'min', 3),
     )
-    return df.merge(cds_features, how='left', left_on='variant', right_index=True).fillna({
-        'cdsFracStartMin': 2,
-        'cdsFracEndMax': -1,
-        'cdsFracMax': -1,
-        'pLI_max25_ID': -1,
-        'loeuf_min25_ID': 3,
-    })
 
 
 def _add_usage_features(df, data_dir):
     usage_path = os.path.join(data_dir, 'summary_exon_usage_hg38.sorted.bed')
-    usage_overlap = _overlap(df, usage_path, ['avgUsage', 'avgExp'])
-    top_usage = {
-        'topUsage': ('avgUsage', lambda x: x.nlargest(TOP_N).mean()),
-        'topExp': ('avgExp', lambda x: x.nlargest(TOP_N).mean()),
-    }
-    usage_features = usage_overlap.groupby('variant').agg(**top_usage)
+    usage_overlap = _bed_overlap(df, usage_path, ['avgUsage', 'avgExp'])
+    if usage_overlap.empty:
+        usage_overlap = _bed_overlap(df, usage_path, ['avgUsage', 'avgExp'], window=1000)
+    if usage_overlap.empty:
+        exp = pd.read_csv(usage_path, names=['uChrom', 'uStart', 'uStop','Usage','Exp'],sep='\t')
+        return df.assign(topUsage=exp.Usage.median(), topExp=exp.Exp.median())
 
-    if usage_features.shape[0] == 0:
-        usage_overlap = _overlap(df, usage_path, ['avgUsage', 'avgExp'], window=1000)
-        usage_features = usage_overlap.groupby('variant').agg(**top_usage)
-
-        if usage_features.shape[0] == 0:
-            exp = pd.read_csv(usage_path, names=['uChrom', 'uStart', 'uStop','Usage','Exp'],sep='\t')
-            usage_features = pd.DataFrame(
-                {'topUsage': exp.Usage.median(), 'topExp': exp.Exp.median()},
-                index=df['variant'],
-            )
-
-    final = df.merge(usage_features, how='left', left_on='variant', right_index=True)
-    final['topExp'].fillna(value=final['topExp'].median(), inplace=True)
-    final['topUsage'].fillna(value=final['topUsage'].median(), inplace=True)
-    return final
+    usage_features = usage_overlap.groupby('variant').agg(
+        topUsage=('avgUsage', lambda x: x.nlargest(TOP_N).mean()),
+        topExp=('avgExp', lambda x: x.nlargest(TOP_N).mean()),
+    )
+    df = df.merge(usage_features, how='left', left_on='variant', right_index=True)
+    return df.fillna({'topExp': df['topExp'].median(), 'topUsage': df['topUsage'].median()})
 
 
 def annotate_strvctvre(svs, data_dir, phylopPath):
@@ -137,7 +127,7 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     df = df[df['length'] > 49]
     df = df[df['DEL'] | (df['svtype'] == 'DUP')]
 
-    exon_overlap = _overlap(
+    exon_overlap = _bed_overlap(
         df,
         'loading_pipeline/var/strvctre/exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed',
         ['gene', 'exonRank', 'skippable', 'exonsInGene', 'const', 'pLI', 'loeuf'],
@@ -156,6 +146,7 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     df = _add_tad_features(df)
     df = _add_cds_features(df)
     df = _add_usage_features(df, data_dir)
+
     rf = load(os.path.join(data_dir, 'rfTrainedAllChromsPy3.joblib'))
     X = df[['DEL','numExonsFinal','phyloP', 'lowestExonRank', 'allSkippable','lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID','topExp','topUsage','maxStrength']]
     df['path'] = rf.predict_proba(X)[:,1]
