@@ -121,7 +121,13 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             gnomad_df = pd.read_parquet(f)
         gnomad_lookup = match_gnomad_af(df, gnomad_df)
         df['populations'] = df['ID'].map(
-            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
+            lambda vid: {
+                'gnomad_svs': {
+                    k: v for k, v in gnomad_lookup[vid].items() if k not in ('ac', 'an')
+                }
+                if vid in gnomad_lookup
+                else None,
+            },
         )
 
         # Format and validate annotations

@@ -6,6 +6,8 @@ def format_df(df: pd.DataFrame) -> pd.DataFrame:
         'END': 'END',
         'SVLEN': 'SVLEN',
         'af': 'AF',
+        'ac': 'AC',
+        'an': 'AN',
         'het': 'N_HET',
         'hom': 'N_HOMALT',
     }
