@@ -183,13 +183,14 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     exons = read_bed('loading_pipeline/var/strvctre', 'exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed', ['eChrom', 'eStart', 'eStop', 'gene', 'exonRank', 'skippable', 'exonsInGene', 'const','pLI','loeuf'])
     exonOverlap = df[['chrom','start','end','variant']].merge(exons, left_on='chrom', right_on='eChrom')
     exonOverlap = exonOverlap[(exonOverlap['start'] < exonOverlap['eStop']) & (exonOverlap['end'] > exonOverlap['eStart'])]
-    out = df[df['variant'].isin(exonOverlap['variant'])]
-    scores = dict.fromkeys(out['variant'], 1.0)
-    out = out[out['length'] < 3000000]
+    df = df[df['variant'].isin(exonOverlap['variant'])]
 
-    if out.shape[0] != 0:
+    scores = dict.fromkeys(df['variant'], 1.0)
+
+    df = df[df['length'] < 3000000]
+    if len(df):
         an = annotateSVs(
-            out[['chrom','start','end','variant','DEL']].reset_index(drop=True),
+            df[['chrom','start','end','variant','DEL']].reset_index(drop=True),
             exonOverlap,
             phylopPath,
             data_dir,
