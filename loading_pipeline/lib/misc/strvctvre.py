@@ -64,23 +64,17 @@ def cdsEnd(df):
             return df
 
 
-def annotateSVs(df, phylopPath, data_dir):
+def annotateSVs(df, exonOverlap, phylopPath, data_dir):
+    exonOverlap['numExonsFinal'] = exonOverlap.groupby(by='variant').eStart.transform('size')
+    exonOverlap['allSkippable'] = exonOverlap.groupby(by='variant').skippable.transform(lambda x: all(x))
+    exonOverlap['lowestExonRank'] = exonOverlap.groupby(by='variant').exonRank.transform('min')
+    exonOverlap['lowestExonsInGene'] = exonOverlap.groupby(by='variant').exonsInGene.transform('min')
+    exonOverlap['anyConstExon'] = exonOverlap.groupby(by='variant').const.transform('max')
+    exonOverlap['pLIMax'] = exonOverlap.groupby(by='variant').pLI.transform('max')
+    exonOverlap['loeufMin'] = exonOverlap.groupby(by='variant').loeuf.transform('min')
 
-    exons = read_bed(data_dir, 'exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed')
-    df['ID'] = 'sv' + pd.Series(df.index.values).apply(str)
-    exonOverlap = intersect(df[['chrom','start','end','ID']], exons).set_axis(
-        ['chrom', 'start', 'stop', 'ID', 'eChrom', 'eStart', 'eStop', 'gene', 'exonRank', 'skippable', 'exonsInGene', 'const','pLI','loeuf'], axis=1)
-
-    exonOverlap['numExonsFinal'] = exonOverlap.groupby(by='ID').eStart.transform('size')
-    exonOverlap['allSkippable'] = exonOverlap.groupby(by='ID').skippable.transform(lambda x: all(x))
-    exonOverlap['lowestExonRank'] = exonOverlap.groupby(by='ID').exonRank.transform('min')
-    exonOverlap['lowestExonsInGene'] = exonOverlap.groupby(by='ID').exonsInGene.transform('min')
-    exonOverlap['anyConstExon'] = exonOverlap.groupby(by='ID').const.transform('max')
-    exonOverlap['pLIMax'] = exonOverlap.groupby(by='ID').pLI.transform('max')
-    exonOverlap['loeufMin'] = exonOverlap.groupby(by='ID').loeuf.transform('min')
-
-    exonOverlap.drop_duplicates(subset='ID', inplace=True)
-    df = df.merge(exonOverlap[['ID', 'numExonsFinal', 'allSkippable', 'lowestExonRank', 'lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin']], how='left', on='ID')
+    exonOverlap.drop_duplicates(subset='variant', inplace=True)
+    df = df.merge(exonOverlap[['variant', 'numExonsFinal', 'allSkippable', 'lowestExonRank', 'lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin']], how='left', on='variant')
 
     size = 400
 
@@ -101,47 +95,47 @@ def annotateSVs(df, phylopPath, data_dir):
     df['phyloP'] = pd.Series(cons)
 
     tads = read_bed(data_dir, 'rep12tadsMergedhg38.bed')
-    tadOverlap = intersect(df[['chrom','start','end','ID']], tads).set_axis(
-        ['chrom', 'start', 'stop', 'ID', 'tChrom', 'tStart', 'tStop', 'strength'], axis=1)
+    tadOverlap = intersect(df[['chrom','start','end','variant']], tads).set_axis(
+        ['chrom', 'start', 'stop', 'variant', 'tChrom', 'tStart', 'tStop', 'strength'], axis=1)
 
-    tadOverlap['maxStrength'] = tadOverlap.groupby(by='ID').strength.transform('max')
-    tadOverlap.drop_duplicates(subset='ID', inplace=True)
-    df = df.merge(tadOverlap[['ID', 'maxStrength']], how='left', on='ID')
+    tadOverlap['maxStrength'] = tadOverlap.groupby(by='variant').strength.transform('max')
+    tadOverlap.drop_duplicates(subset='variant', inplace=True)
+    df = df.merge(tadOverlap[['variant', 'maxStrength']], how='left', on='variant')
     df['maxStrength'].fillna(value=0, inplace=True)
 
     cds = read_bed(data_dir, 'exons_CDS_Chr1-Y.sorted.bed')
-    cdsOverlap = intersect(df[['chrom','start','end','ID']], cds).set_axis(
-        ['chrom', 'start', 'stop', 'ID', 'cChrom', 'cStart', 'cStop', 'CDSLength', 'size', 'exonRank', 'strand','gene', 'cdsCount', 'pLI','loeuf'], axis=1)
+    cdsOverlap = intersect(df[['chrom','start','end','variant']], cds).set_axis(
+        ['chrom', 'start', 'stop', 'variant', 'cChrom', 'cStart', 'cStop', 'CDSLength', 'size', 'exonRank', 'strand','gene', 'cdsCount', 'pLI','loeuf'], axis=1)
     if cdsOverlap.shape[0] != 0:
-        out = cdsOverlap.sort_values('exonRank').groupby(['ID','gene']).apply(cdsRank)
+        out = cdsOverlap.sort_values('exonRank').groupby(['variant','gene']).apply(cdsRank)
         out.reset_index(drop=True, inplace=True)
-        out = out.sort_values('exonRank', ascending=False).groupby(['ID','gene']).apply(cdsEnd)
+        out = out.sort_values('exonRank', ascending=False).groupby(['variant','gene']).apply(cdsEnd)
 
-        out.drop_duplicates(subset='ID').shape[0]
+        out.drop_duplicates(subset='variant').shape[0]
 
         out['cdsFracStart'] = out['early']/out['CDSLength']
         out['cdsFracEnd'] = out['late']/out['CDSLength']
         out['cdsFrac'] = (out['late'] - out['early'])/out['CDSLength']
 
         out.reset_index(drop=True, inplace=True)
-        out['pLI_max25'] = out[(out['cdsFracStart'] == 0) | (out['cdsFrac'] > 0.25)].groupby('ID')['pLI'].transform('max')
+        out['pLI_max25'] = out[(out['cdsFracStart'] == 0) | (out['cdsFrac'] > 0.25)].groupby('variant')['pLI'].transform('max')
         out.reset_index(drop=True, inplace=True)
-        out['loeuf_min25']= out[(out['cdsFracStart'] == 0) | (out['cdsFrac'] > 0.25)].groupby('ID')['loeuf'].transform('min')
+        out['loeuf_min25']= out[(out['cdsFracStart'] == 0) | (out['cdsFrac'] > 0.25)].groupby('variant')['loeuf'].transform('min')
         out.reset_index(drop=True, inplace=True)
 
-        out['pLI_max25_ID'] = out.groupby('ID')['pLI_max25'].transform('max')
+        out['pLI_max25_ID'] = out.groupby('variant')['pLI_max25'].transform('max')
         out.reset_index(drop=True, inplace=True)
-        out['loeuf_min25_ID'] = out.groupby('ID')['loeuf_min25'].transform('max')
+        out['loeuf_min25_ID'] = out.groupby('variant')['loeuf_min25'].transform('max')
         out.reset_index(drop=True, inplace=True)
-        out['cdsFracMax'] = out.groupby('ID')['cdsFrac'].transform('max')
+        out['cdsFracMax'] = out.groupby('variant')['cdsFrac'].transform('max')
         out.reset_index(drop=True, inplace=True)
-        out['cdsFracStartMin'] = out.groupby('ID')['cdsFracStart'].transform('min')
+        out['cdsFracStartMin'] = out.groupby('variant')['cdsFracStart'].transform('min')
         out.reset_index(drop=True, inplace=True)
-        out['cdsFracEndMax'] = out.groupby('ID')['cdsFracEnd'].transform('max')
+        out['cdsFracEndMax'] = out.groupby('variant')['cdsFracEnd'].transform('max')
         out.reset_index(drop=True, inplace=True)
-        out.drop_duplicates(subset='ID', inplace=True)
+        out.drop_duplicates(subset='variant', inplace=True)
 
-        final = df.merge(out[['ID', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID']], how='left')
+        final = df.merge(out[['variant', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID']], how='left')
     else:
         final = df
         final['cdsFracStartMin'] = float('NaN')
@@ -157,28 +151,28 @@ def annotateSVs(df, phylopPath, data_dir):
     final['loeuf_min25_ID'].fillna(value=3, inplace=True)
 
     usage = read_bed(data_dir, 'summary_exon_usage_hg38.sorted.bed')
-    usageOverlap = intersect(final[['chrom','start','end','ID']], usage).set_axis(
-        ['chrom', 'start', 'stop', 'ID', 'uChrom', 'uStart', 'uStop', 'avgUsage', 'avgExp'], axis=1)
-    out = usageOverlap.groupby('ID').apply(topUsage,n=size)
-    out.drop_duplicates(subset='ID', inplace=True)
+    usageOverlap = intersect(final[['chrom','start','end','variant']], usage).set_axis(
+        ['chrom', 'start', 'stop', 'variant', 'uChrom', 'uStart', 'uStop', 'avgUsage', 'avgExp'], axis=1)
+    out = usageOverlap.groupby('variant').apply(topUsage,n=size)
+    out.drop_duplicates(subset='variant', inplace=True)
 
     if out.shape[0] == 0:
-        usageOverlap = intersect(final[['chrom','start','end','ID']], usage, window=1000).set_axis(
-            ['chrom', 'start', 'stop', 'ID', 'uChrom', 'uStart', 'uStop', 'avgUsage', 'avgExp'], axis=1)
+        usageOverlap = intersect(final[['chrom','start','end','variant']], usage, window=1000).set_axis(
+            ['chrom', 'start', 'stop', 'variant', 'uChrom', 'uStart', 'uStop', 'avgUsage', 'avgExp'], axis=1)
         pd.read_csv(os.path.join(data_dir, 'summary_exon_usage_hg38.sorted.bed'))
-        out = usageOverlap.groupby('ID').apply(topUsage,n=size)
-        out.drop_duplicates(subset='ID', inplace=True)
+        out = usageOverlap.groupby('variant').apply(topUsage,n=size)
+        out.drop_duplicates(subset='variant', inplace=True)
 
         if out.shape[0] == 0:
             exp = pd.read_csv(os.path.join(data_dir, 'summary_exon_usage_hg38.sorted.bed'), names=['uChrom', 'uStart', 'uStop','Usage','Exp'],sep='\t')
             usageMed = exp.Usage.median()
             expMed = exp.Exp.median()
-            out = final[['ID']]
+            out = final[['variant']]
             out['topUsage'] = usageMed
             out['topExp'] = expMed
 
     out.reset_index(drop=True, inplace=True)
-    final2 = final.merge(out[['ID', 'topUsage', 'topExp']], how='left', on='ID')
+    final2 = final.merge(out[['variant', 'topUsage', 'topExp']], how='left', on='variant')
     final2['topExp'].fillna(value=final2['topExp'].median(), inplace=True)
     final2['topUsage'].fillna(value=final2['topUsage'].median(), inplace=True)
 
@@ -197,19 +191,19 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     df = df[df['DEL'] | (df['svtype'] == 'DUP')]
 
     exons = read_bed('loading_pipeline/var/strvctre', 'exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed')
-    exonOverlap = intersect(df[['chrom','start','end','variant']], exons).iloc[:, [0,1,2,3]].set_axis(
-        ['chrom', 'start', 'stop', 'variant'], axis=1)
-    exonOverlap['numExons'] = exonOverlap.groupby(by='variant').chrom.transform('size')
-    exonOverlap.drop_duplicates(subset='variant', inplace=True)
-
-
-    out = df.merge(exonOverlap[['numExons','variant']],how='left',on='variant')
-    out = out[out['numExons'] > 0]
+    exonOverlap = intersect(df[['chrom','start','end','variant']], exons).set_axis(
+        ['chrom', 'start', 'stop', 'variant', 'eChrom', 'eStart', 'eStop', 'gene', 'exonRank', 'skippable', 'exonsInGene', 'const','pLI','loeuf'], axis=1)
+    out = df[df['variant'].isin(exonOverlap['variant'])]
     scores = dict.fromkeys(out['variant'], 1.0)
     out = out[out['length'] < 3000000]
 
     if out.shape[0] != 0:
-        an = annotateSVs(out[['chrom','start','end','variant','DEL']].reset_index(drop=True), phylopPath, data_dir)
+        an = annotateSVs(
+            out[['chrom','start','end','variant','DEL']].reset_index(drop=True),
+            exonOverlap,
+            phylopPath,
+            data_dir,
+        )
 
         an['path'] = 0
 
