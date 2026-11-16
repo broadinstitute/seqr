@@ -10,7 +10,10 @@ def read_bed(data_dir, file_name, names):
     return pd.read_csv(os.path.join(data_dir, file_name), sep='\t', names=names)
 
 
-def _annotate_sv_features(df, exonOverlap, phylopPath, data_dir):
+TOP_N = 400
+
+
+def _add_exon_features(df, exonOverlap):
     exon_features = exonOverlap.groupby('variant').agg(
         numExonsFinal=('eStart', 'size'),
         allSkippable=('skippable', 'all'),
@@ -20,23 +23,26 @@ def _annotate_sv_features(df, exonOverlap, phylopPath, data_dir):
         pLIMax=('pLI', 'max'),
         loeufMin=('loeuf', 'min'),
     )
-    df = df.merge(exon_features, how='left', left_on='variant', right_index=True)
+    return df.merge(exon_features, how='left', left_on='variant', right_index=True)
 
-    size = 400
 
+def _add_phylop_features(df, phylopPath):
     consBW = pyBigWig.open(phylopPath)
     x = []
-    for i in range(df.shape[0]):
-        if int(df.loc[i,'end']) - int(df.loc[i,'start']) > 1000000:
+    for chrom, start, end in zip(df['chrom'], df['start'], df['end']):
+        if int(end) - int(start) > 1000000:
             x.append(np.array([15.0]))
         else:
             try:
-                x.append(np.nan_to_num(np.array(consBW.values(df.loc[i,'chrom'], int(df.loc[i,'start']), int(df.loc[i,'end'])))))
+                x.append(np.nan_to_num(np.array(consBW.values(chrom, int(start), int(end)))))
             except:
                 x.append(np.array([0.5]))
-    cons = [np.mean(y[np.argsort(y)[-size:]]) for y in x]
-    df['phyloP'] = pd.Series(cons)
+    cons = [np.mean(y[np.argsort(y)[-TOP_N:]]) for y in x]
+    df['phyloP'] = cons
+    return df
 
+
+def _add_tad_features(df, data_dir):
     tads = read_bed(data_dir, 'rep12tadsMergedhg38.bed', ['tChrom', 'tStart', 'tStop', 'strength'])
     tadOverlap = df[['chrom','start','end','variant']].merge(tads, left_on='chrom', right_on='tChrom')
     tadOverlap = tadOverlap[(tadOverlap['start'] < tadOverlap['tStop']) & (tadOverlap['end'] > tadOverlap['tStart'])]
@@ -47,7 +53,10 @@ def _annotate_sv_features(df, exonOverlap, phylopPath, data_dir):
         right_index=True,
     )
     df['maxStrength'].fillna(value=0, inplace=True)
+    return df
 
+
+def _add_cds_features(df, data_dir):
     cds = read_bed(data_dir, 'exons_CDS_Chr1-Y.sorted.bed', ['cChrom', 'cStart', 'cStop', 'CDSLength', 'size', 'exonRank', 'strand','gene', 'cdsCount', 'pLI','loeuf'])
     cdsOverlap = df[['chrom','start','end','variant']].merge(cds, left_on='chrom', right_on='cChrom')
     cdsOverlap = cdsOverlap[(cdsOverlap['start'] < cdsOverlap['cStop']) & (cdsOverlap['end'] > cdsOverlap['cStart'])]
@@ -85,18 +94,21 @@ def _annotate_sv_features(df, exonOverlap, phylopPath, data_dir):
     final['cdsFracMax'].fillna(value=-1, inplace=True)
     final['pLI_max25_ID'].fillna(value=-1, inplace=True)
     final['loeuf_min25_ID'].fillna(value=3, inplace=True)
+    return final
 
+
+def _add_usage_features(df, data_dir):
     usage = read_bed(data_dir, 'summary_exon_usage_hg38.sorted.bed', ['uChrom', 'uStart', 'uStop', 'avgUsage', 'avgExp'])
-    usageOverlap = final[['chrom','start','end','variant']].merge(usage, left_on='chrom', right_on='uChrom')
+    usageOverlap = df[['chrom','start','end','variant']].merge(usage, left_on='chrom', right_on='uChrom')
     usageOverlap = usageOverlap[(usageOverlap['start'] < usageOverlap['uStop']) & (usageOverlap['end'] > usageOverlap['uStart'])]
     top_usage = {
-        'topUsage': ('avgUsage', lambda x: x.nlargest(size).mean()),
-        'topExp': ('avgExp', lambda x: x.nlargest(size).mean()),
+        'topUsage': ('avgUsage', lambda x: x.nlargest(TOP_N).mean()),
+        'topExp': ('avgExp', lambda x: x.nlargest(TOP_N).mean()),
     }
     usage_features = usageOverlap.groupby('variant').agg(**top_usage)
 
     if usage_features.shape[0] == 0:
-        usageOverlap = final[['chrom','start','end','variant']].merge(usage, left_on='chrom', right_on='uChrom')
+        usageOverlap = df[['chrom','start','end','variant']].merge(usage, left_on='chrom', right_on='uChrom')
         usageOverlap = usageOverlap[(usageOverlap['start'] - 1000 < usageOverlap['uStop']) & (usageOverlap['end'] + 1000 > usageOverlap['uStart'])]
         usage_features = usageOverlap.groupby('variant').agg(**top_usage)
 
@@ -104,14 +116,13 @@ def _annotate_sv_features(df, exonOverlap, phylopPath, data_dir):
             exp = pd.read_csv(os.path.join(data_dir, 'summary_exon_usage_hg38.sorted.bed'), names=['uChrom', 'uStart', 'uStop','Usage','Exp'],sep='\t')
             usage_features = pd.DataFrame(
                 {'topUsage': exp.Usage.median(), 'topExp': exp.Exp.median()},
-                index=final['variant'],
+                index=df['variant'],
             )
 
-    final2 = final.merge(usage_features, how='left', left_on='variant', right_index=True)
-    final2['topExp'].fillna(value=final2['topExp'].median(), inplace=True)
-    final2['topUsage'].fillna(value=final2['topUsage'].median(), inplace=True)
-
-    return final2
+    final = df.merge(usage_features, how='left', left_on='variant', right_index=True)
+    final['topExp'].fillna(value=final['topExp'].median(), inplace=True)
+    final['topUsage'].fillna(value=final['topUsage'].median(), inplace=True)
+    return final
 
 
 def annotate_strvctvre(svs, data_dir, phylopPath):
@@ -133,20 +144,19 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     scores = dict.fromkeys(df['variant'], 1.0)
 
     df = df[df['length'] < 3000000]
-    if len(df):
-        an = _annotate_sv_features(
-            df[['chrom','start','end','variant','DEL']].reset_index(drop=True),
-            exonOverlap,
-            phylopPath,
-            data_dir,
-        )
+    if df.empty:
+        svs['StrVCTVRE'] = svs.index.map(scores.get)
+        return
 
-        an['path'] = 0
-
-        rf = load(os.path.join(data_dir, 'rfTrainedAllChromsPy3.joblib'))
-        X = an[['DEL','numExonsFinal','phyloP', 'lowestExonRank', 'allSkippable','lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID','topExp','topUsage','maxStrength']]
-        an['path'] = rf.predict_proba(X)[:,1]
-        scores.update({variant: round(path, 3) for variant, path in zip(an['variant'], an['path'])})
+    df = _add_exon_features(df, exonOverlap)
+    df = _add_phylop_features(df, phylopPath)
+    df = _add_tad_features(df, data_dir)
+    df = _add_cds_features(df, data_dir)
+    df = _add_usage_features(df, data_dir)
+    rf = load(os.path.join(data_dir, 'rfTrainedAllChromsPy3.joblib'))
+    X = df[['DEL','numExonsFinal','phyloP', 'lowestExonRank', 'allSkippable','lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID','topExp','topUsage','maxStrength']]
+    df['path'] = rf.predict_proba(X)[:,1]
+    scores.update({variant: round(path, 3) for variant, path in zip(df['variant'], df['path'])})
 
     svs['StrVCTVRE'] = svs.index.map(scores.get)
 
