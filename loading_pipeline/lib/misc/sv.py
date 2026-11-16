@@ -99,7 +99,10 @@ def _best_breakpoint_matches(variants_df, gnomad_df):
     pairs['ins_dis'] = (pairs['POS_gnomad'] - pairs['POS_variant']).abs()
     survivors = pairs[
         (pairs['ins_dis'] < MAX_INSERTION_DISTANCE)
-        & ((pairs['SVTYPE'] == 'BND') | ((ins_ratio > MIN_INSERTION_RATIO) & (ins_ratio < MAX_INSERTION_RATIO)))
+        & (
+            (pairs['SVTYPE'] == 'BND')
+            | ((ins_ratio > MIN_INSERTION_RATIO) & (ins_ratio < MAX_INSERTION_RATIO))
+        )
     ]
     return survivors.sort_values(
         ['ins_dis', 'ratio_dist', 'ID_gnomad'],
