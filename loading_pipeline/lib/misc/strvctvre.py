@@ -43,17 +43,15 @@ def _add_phylop_features(df, phylopPath):
 
 
 def _add_tad_features(df, data_dir):
-    tads = read_bed(data_dir, 'rep12tadsMergedhg38.bed', ['tChrom', 'tStart', 'tStop', 'strength'])
+    tads = read_bed('loading_pipeline/var/strvctre', 'rep12tadsMergedhg38.bed', ['tChrom', 'tStart', 'tStop', 'strength'])
     tad_overlap = df[['chrom','start','end','variant']].merge(tads, left_on='chrom', right_on='tChrom')
     tad_overlap = tad_overlap[(tad_overlap['start'] < tad_overlap['tStop']) & (tad_overlap['end'] > tad_overlap['tStart'])]
-    df = df.merge(
+    return df.merge(
         tad_overlap.groupby('variant').agg(maxStrength=('strength', 'max')),
         how='left',
         left_on='variant',
         right_index=True,
-    )
-    df['maxStrength'].fillna(value=0, inplace=True)
-    return df
+    ).fillna({'maxStrength': 0})
 
 
 def _add_cds_features(df, data_dir):
