@@ -26,7 +26,7 @@ def match_gnomad_af(variants_df, gnomad_df):
     #     - BND ratio filter dropped: DRAGEN BNDs lack SVLEN; INS_ratio is always None
     #     - CNV tie-break by lex-smallest ref_svid instead of R1's input-order pick
 
-    variants_df['SVLEN:'] = variants_df['SVLEN:'].astype(int)
+    variants_df['SVLEN'] = variants_df['SVLEN'].astype(int)
     variant_is_breakpoint = variants_df['SVTYPE'].isin(BREAKPOINT_SV_TYPES)
     gnomad_is_breakpoint = gnomad_df['SVTYPE'].isin(BREAKPOINT_SV_TYPES)
 
