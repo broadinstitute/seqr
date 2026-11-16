@@ -42,7 +42,7 @@ def _add_phylop_features(df, phylopPath):
     return df
 
 
-def _add_tad_features(df, data_dir):
+def _add_tad_features(df):
     tads = read_bed('loading_pipeline/var/strvctre', 'rep12tadsMergedhg38.bed', ['tChrom', 'tStart', 'tStop', 'strength'])
     tad_overlap = df[['chrom','start','end','variant']].merge(tads, left_on='chrom', right_on='tChrom')
     tad_overlap = tad_overlap[(tad_overlap['start'] < tad_overlap['tStop']) & (tad_overlap['end'] > tad_overlap['tStart'])]
@@ -54,45 +54,45 @@ def _add_tad_features(df, data_dir):
     ).fillna({'maxStrength': 0})
 
 
-def _add_cds_features(df, data_dir):
-    cds = read_bed(data_dir, 'exons_CDS_Chr1-Y.sorted.bed', ['cChrom', 'cStart', 'cStop', 'CDSLength', 'size', 'exonRank', 'strand','gene', 'cdsCount', 'pLI','loeuf'])
+def _add_cds_features(df):
+    cds = read_bed('loading_pipeline/var/strvctre', 'exons_CDS_Chr1-Y.sorted.bed', ['cChrom', 'cStart', 'cStop', 'CDSLength', 'size', 'exonRank', 'strand','gene', 'cdsCount', 'pLI','loeuf'])
     cds_overlap = df[['chrom','start','end','variant']].merge(cds, left_on='chrom', right_on='cChrom')
     cds_overlap = cds_overlap[(cds_overlap['start'] < cds_overlap['cStop']) & (cds_overlap['end'] > cds_overlap['cStart'])]
-    exon_columns = ['start', 'end', 'cStart', 'cStop', 'strand', 'cdsCount', 'size']
-    out = cds_overlap.sort_values('exonRank')
-    first = out.groupby(['variant', 'gene'])[exon_columns].transform('first')
-    overhang = (first['start'] - first['cStart']).where(first['strand'] == 1, first['cStop'] - first['end'])
-    out['early'] = first['cdsCount'] + overhang.clip(lower=0)
+    cds_overlap = cds_overlap.sort_values('exonRank')
 
-    out = out.sort_values('exonRank', ascending=False)
-    last = out.groupby(['variant', 'gene'])[exon_columns].transform('first')
+    group_columns = ['start', 'end', 'cStart', 'cStop', 'strand', 'cdsCount', 'size']
+    variant_gene_groups = cds_overlap.groupby(['variant', 'gene'])[group_columns]
+    first = variant_gene_groups.transform('first')
+    last = variant_gene_groups.transform('last')
+    overhang = (first['start'] - first['cStart']).where(first['strand'] == 1, first['cStop'] - first['end'])
+    cds_overlap['early'] = first['cdsCount'] + overhang.clip(lower=0)
+
     plus_late = (last['end'] - last['cStart']).where(last['end'] <= last['cStop'], last['size'])
     minus_late = (last['cStop'] - last['start']).where(last['start'] >= last['cStart'], last['size'])
-    out['late'] = last['cdsCount'] + plus_late.where(last['strand'] == 1, minus_late)
+    cds_overlap['late'] = last['cdsCount'] + plus_late.where(last['strand'] == 1, minus_late)
 
-    out['cdsFracStart'] = out['early']/out['CDSLength']
-    out['cdsFracEnd'] = out['late']/out['CDSLength']
-    out['cdsFrac'] = (out['late'] - out['early'])/out['CDSLength']
+    cds_overlap['cdsFracStart'] = cds_overlap['early']/cds_overlap['CDSLength']
+    cds_overlap['cdsFracEnd'] = cds_overlap['late']/cds_overlap['CDSLength']
+    cds_overlap['cdsFrac'] = (cds_overlap['late'] - cds_overlap['early'])/cds_overlap['CDSLength']
 
-    qualifying = out[(out['cdsFracStart'] == 0) | (out['cdsFrac'] > 0.25)]
-    cds_features = out.groupby('variant').agg(
+    covers_start_or_quarter = (cds_overlap['cdsFracStart'] == 0) | (cds_overlap['cdsFrac'] > 0.25)
+    cds_overlap['pLI25'] = cds_overlap['pLI'].where(covers_start_or_quarter)
+    cds_overlap['loeuf25'] = cds_overlap['loeuf'].where(covers_start_or_quarter)
+
+    cds_features = cds_overlap.groupby('variant').agg(
         cdsFracStartMin=('cdsFracStart', 'min'),
         cdsFracEndMax=('cdsFracEnd', 'max'),
         cdsFracMax=('cdsFrac', 'max'),
-    ).join(
-        qualifying.groupby('variant').agg(
-            pLI_max25_ID=('pLI', 'max'),
-            loeuf_min25_ID=('loeuf', 'min'),
-        ),
+        pLI_max25_ID=('pLI25', 'max'),
+        loeuf_min25_ID=('loeuf25', 'min'),
     )
-    final = df.merge(cds_features, how='left', left_on='variant', right_index=True)
-
-    final['cdsFracStartMin'].fillna(value=2, inplace=True)
-    final['cdsFracEndMax'].fillna(value=-1, inplace=True)
-    final['cdsFracMax'].fillna(value=-1, inplace=True)
-    final['pLI_max25_ID'].fillna(value=-1, inplace=True)
-    final['loeuf_min25_ID'].fillna(value=3, inplace=True)
-    return final
+    return df.merge(cds_features, how='left', left_on='variant', right_index=True).fillna({
+        'cdsFracStartMin': 2,
+        'cdsFracEndMax': -1,
+        'cdsFracMax': -1,
+        'pLI_max25_ID': -1,
+        'loeuf_min25_ID': 3,
+    })
 
 
 def _add_usage_features(df, data_dir):
@@ -148,8 +148,8 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
 
     df = _add_exon_features(df, exon_overlap)
     df = _add_phylop_features(df, phylopPath)
-    df = _add_tad_features(df, data_dir)
-    df = _add_cds_features(df, data_dir)
+    df = _add_tad_features(df)
+    df = _add_cds_features(df)
     df = _add_usage_features(df, data_dir)
     rf = load(os.path.join(data_dir, 'rfTrainedAllChromsPy3.joblib'))
     X = df[['DEL','numExonsFinal','phyloP', 'lowestExonRank', 'allSkippable','lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID','topExp','topUsage','maxStrength']]
