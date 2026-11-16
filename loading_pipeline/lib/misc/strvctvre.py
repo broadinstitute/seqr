@@ -209,7 +209,7 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     df = df[df['length'] > 49]
     df = df[df['DEL'] | (df['svtype'] == 'DUP')]
 
-    exons = read_bed(data_dir, 'exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed')
+    exons = read_bed('loading_pipeline/var/strvctre', 'exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed')
     exonOverlap = intersect(df[['chrom','start','end','variant']], exons).iloc[:, [0,1,2,3]].set_axis(
         ['chrom', 'start', 'stop', 'variant'], axis=1)
     exonOverlap['numExons'] = exonOverlap.groupby(by='variant').chrom.transform('size')
