@@ -26,16 +26,18 @@ def match_gnomad_af(variants_df, gnomad_df):
     variant_is_breakpoint = variants_df['SVTYPE'].isin(BREAKPOINT_SV_TYPES)
     gnomad_is_breakpoint = gnomad_df['SVTYPE'].isin(BREAKPOINT_SV_TYPES)
 
-    matches = pd.concat([
-        _best_overlap_matches(
-            variants_df[~variant_is_breakpoint],
-            gnomad_df[~gnomad_is_breakpoint],
-        ),
-        _best_breakpoint_matches(
-            variants_df[variant_is_breakpoint],
-            gnomad_df[gnomad_is_breakpoint],
-        ),
-    ])
+    matches = pd.concat(
+        [
+            _best_overlap_matches(
+                variants_df[~variant_is_breakpoint],
+                gnomad_df[~gnomad_is_breakpoint],
+            ),
+            _best_breakpoint_matches(
+                variants_df[variant_is_breakpoint],
+                gnomad_df[gnomad_is_breakpoint],
+            ),
+        ],
+    )
 
     af_columns = [c for c in gnomad_df.columns if c not in variants_df.columns]
     return (
