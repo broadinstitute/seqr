@@ -1,4 +1,5 @@
 import os
+import random
 from typing import ClassVar
 
 import luigi
@@ -133,11 +134,21 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
         flags: list[str],
     ) -> list[luigi.LocalTarget]:
         filtered_target = luigi.LocalTarget(is_tmp=True)
-        filtered_target.path += '.vcf.gz'
         self.run_bcftools(
             ['view', '-i', filter_expr],
             filtered_target,
             [input_target],
+            output_type='u',
+        )
+
+        rand_id = random.randint(10_000_000, 99_999_999)  # noqa: S311 # nosec
+        filtered_annotated_target = luigi.LocalTarget(is_tmp=True)
+        filtered_annotated_target.path += '.vcf.gz'
+        self.run_bcftools(
+            ['+fill-tags'],
+            filtered_annotated_target,
+            [filtered_target],
+            plugin_options=['--', '-t', f'TRUVARI_FILTER={rand_id}'],
         )
 
         collapsed_target = luigi.LocalTarget(is_tmp=True)
@@ -147,7 +158,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
                 'truvari',
                 'collapse',
                 '-i',
-                filtered_target.path,
+                filtered_annotated_target.path,
                 *flags,
                 '-o',
                 collapsed_target.path,
@@ -162,6 +173,7 @@ class WriteDeduplicatedSvVcfTask(BaseVCFTask):
             ['view', '-i', 'GT[1-]="alt"'],
             collapsed_filtered_target,
             [collapsed_target],
+            output_type='u',
         )
 
         sorted_targets = []

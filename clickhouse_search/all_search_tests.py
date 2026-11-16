@@ -305,12 +305,12 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES, **VariantSearch.objects.get(name='De Novo/Dominant Permissive').search,
         )
 
-        self._assert_expected_search([VARIANT2, MITO_VARIANT3], cached_variant_fields=[
-            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, {},
+        self._assert_expected_search([VARIANT2, GCNV_VARIANT3, MITO_VARIANT3], cached_variant_fields=[
+            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, {}, {},
         ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES, **VariantSearch.objects.get(name='Recessive Restrictive').search)
 
-        self._assert_expected_search([VARIANT2, MITO_VARIANT3], cached_variant_fields=[
-            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, {},
+        self._assert_expected_search([VARIANT2, GCNV_VARIANT3, MITO_VARIANT3], cached_variant_fields=[
+            {'selectedTranscript': CACHED_CONSEQUENCES_BY_KEY[2][0]}, {}, {},
         ], project_families=SINGLE_FAMILY_PROJECT_FAMILIES, **VariantSearch.objects.get(name='Recessive Permissive').search)
 
     def test_single_project_search(self):
@@ -451,8 +451,8 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4],
-            inheritance_mode='any_affected', quality_filter={'min_gq': 40, 'min_qs': 20}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
+            [VARIANT2_BOTH_SAMPLE_TYPES, VARIANT3_BOTH_SAMPLE_TYPES, GCNV_VARIANT1, GCNV_VARIANT3, GCNV_VARIANT4],
+            inheritance_mode='any_affected', quality_filter={'min_gq': 40, 'min_qs': 30}, project_families=SINGLE_FAMILY_PROJECT_FAMILIES,
         )
 
         self._assert_expected_search(
@@ -736,9 +736,9 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             [SV_VARIANT4], quality_filter=quality_filter, project_families=SV_PROJECT_FAMILIES,
         )
 
-        gcnv_quality_filter = {'min_gq': 40, 'min_qs': 20, 'min_hl': 5}
+        gcnv_quality_filter = {'min_gq': 40, 'min_qs': 30, 'min_hl': 5}
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT3], quality_filter=gcnv_quality_filter,
+            [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT3], quality_filter=gcnv_quality_filter,
         )
 
         sv_quality_filter = {'min_gq_sv': 40}
@@ -747,7 +747,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         )
 
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT1, MITO_VARIANT1, MITO_VARIANT2], quality_filter={'min_gq': 40, 'min_qs': 30, 'vcf_filter': 'pass'},
+            [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2], quality_filter={'min_gq': 40, 'min_qs': 200, 'vcf_filter': 'pass'},
         )
 
         self._assert_expected_search(

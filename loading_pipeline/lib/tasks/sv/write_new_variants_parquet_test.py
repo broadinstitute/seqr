@@ -2,7 +2,6 @@ import os
 from unittest import mock
 from unittest.mock import Mock
 
-import hail as hl
 import luigi.worker
 import pandas as pd
 
@@ -37,7 +36,6 @@ EXISTING_SV_VARIANT_IDS = [
     'DUP_chr1_5',
     'DEL_chr1_12',
     'BND_chr1_9',
-    'INS_chr1_65',
     'CPX_chr1_41',
     'INS_chr1_268',
     'CPX_chr1_54',
@@ -66,7 +64,6 @@ def _write_existing_variants_parquet_fixture() -> None:
                 263666,
                 428500,
                 789481,
-                4228448,
                 16089601,
                 17465723,
                 21480419,
@@ -81,7 +78,6 @@ def _write_existing_variants_parquet_fixture() -> None:
                 257666,
                 413968,
                 789481,
-                4228405,
                 16088760,
                 17465707,
                 21427498,
@@ -95,7 +91,6 @@ def _write_existing_variants_parquet_fixture() -> None:
                 b'DUP',
                 b'DEL',
                 b'BND',
-                b'INS',
                 b'CPX',
                 b'INS',
                 b'CPX',
@@ -120,9 +115,9 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
         mock_load_gencode_gene_symbol_to_gene_id: Mock,
         mock_random: Mock,
     ) -> None:
-        mock_load_gencode_gene_symbol_to_gene_id.return_value = hl.dict(
-            {'TAS1R1': 'ENSG00000173662'},
-        )
+        mock_load_gencode_gene_symbol_to_gene_id.return_value = {
+            'TAS1R1': 'ENSG00000173662',
+        }
         mock_random.randint.side_effect = range(1, 10)
         _write_existing_variants_parquet_fixture()
         copy_project_pedigree_to_mocked_dir(
@@ -143,6 +138,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             ],
             validations_to_skip=[ALL_VALIDATIONS],
             run_id=TEST_RUN_ID,
+            attempt_id=1,
             skip_expect_tdr_metrics=True,
         )
         worker.add(task)
@@ -156,15 +152,42 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 TEST_RUN_ID,
             ),
         )
-        export_json = convert_ndarray_to_list(df.head(1).to_dict('records'))
-        export_json[0]['sortedGeneConsequences'] = [
-            export_json[0]['sortedGeneConsequences'][0],
-        ]
+        export_json = convert_ndarray_to_list(df.head(2).to_dict('records'))
         self.assertEqual(
             export_json,
             [
                 {
                     'key': 727,
+                    'xpos': 1004228405,
+                    'chrom': '1',
+                    'pos': 4228405,
+                    'end': 4228448,
+                    'rg37LocusEnd': {'contig': '1', 'position': 4288508},
+                    'variantId': 'INS_chr1_65-1',
+                    'liftedOverChrom': '1',
+                    'liftedOverPos': 4288465,
+                    'algorithms': 'manta,melt',
+                    'bothsidesSupport': None,
+                    'cpxIntervals': None,
+                    'endChrom': None,
+                    'svSourceDetail': None,
+                    'svType': 'INS',
+                    'svTypeDetail': 'ME:ALU',
+                    'predictions': {'strvctvre': 0.1255},
+                    'populations': {
+                        'gnomad_svs': {
+                            'af': 0.000032,
+                            'het': 4.0,
+                            'hom': 63042.0,
+                            'id': 'gnomAD-SV_v3_BND_chr1_0001f5b7',
+                        },
+                    },
+                    'sortedGeneConsequences': [
+                        {'geneId': None, 'majorConsequence': 'NEAREST_TSS'},
+                    ],
+                },
+                {
+                    'key': 728,
                     'xpos': 1006558902,
                     'chrom': '1',
                     'pos': 6558902,
