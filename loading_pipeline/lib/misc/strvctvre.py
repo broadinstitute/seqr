@@ -199,29 +199,10 @@ def annotateSVs(df, phylopPath, data_dir):
 
 
 def annotate_strvctvre(svs, data_dir, phylopPath):
-    has_end_and_svtype = svs['end'].notna() & svs['svtype'].notna()
-    df = svs[has_end_and_svtype][['chrom','start','end','svtype']].reset_index(drop=True)
+    # Implementation of StrVCTVRE: https://github.com/andrewSharo/StrVCTVRE/blob/master/StrVCTVRE.py
 
-    if df.shape[0] == 0:
-        return svs.assign(StrVCTVRE=None)
-
-    df['OldID'] = pd.Series(df.index.values)
-
-    if sum(df['chrom'].astype(str).str.startswith('chr',na=False))/df.shape[0] < 0.5:
-        df['chrom'] = 'chr' + df['chrom'].astype(str)
-
-    acceptedChroms = ['chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8','chr9','chr10','chr11','chr12','chr13',
-                     'chr14','chr15','chr16','chr17','chr18','chr19','chr20','chr21','chr22','chrX','chrY']
-    df = df[df['chrom'].isin(acceptedChroms)].copy()
-
-    df = df[pd.to_numeric(df['start'], errors='coerce').notnull()].copy()
-    df = df[pd.to_numeric(df['end'], errors='coerce').notnull()].copy()
-    df['start'] = df['start'].astype(float)
-    df['end'] = df['end'].astype(float)
-    df = df[df['start'] == df['start'] // 1]
-    df = df[df['end'] == df['end'] // 1]
-    df['start'] = df['start'].astype(int)
-    df['end'] = df['end'].astype(int)
+    df = svs[['chrom','start','end','svtype']].copy()
+    df['OldID'] = df.index
 
     df['length'] = df['end'].astype(int) - df['start'].astype(int)
     df = df[df['length'] > 49].copy()
@@ -241,8 +222,7 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     del exonOverlap
     del df
     out = out[out['numExons'] > 0]
-    validExon = out.set_index('OldID').copy()
-    validExon['validExon'] = True
+    scores = dict.fromkeys(out['OldID'], 1.0)
     out = out[out['length'] < 3000000]
 
     if out.shape[0] != 0:
@@ -254,21 +234,7 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
         rf = load(os.path.join(data_dir, 'rfTrainedAllChromsPy3.joblib'))
         X = an[['DEL','numExonsFinal','phyloP', 'lowestExonRank', 'allSkippable','lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID','topExp','topUsage','maxStrength']].copy()
         an['path'] = rf.predict_proba(X)[:,1]
-        an.set_index('OldID', inplace=True)
-    else:
-        an = pd.DataFrame()
+        scores.update({old_id: round(path, 3) for old_id, path in zip(an['OldID'], an['path'])})
 
-    scores = []
-    count = 0
-    for valid in has_end_and_svtype:
-        if valid:
-            if count in an.index:
-                scores.append(round(an.loc[count,'path'],3))
-            elif count in validExon.index:
-                scores.append(1.0)
-            else:
-                scores.append(None)
-            count += 1
-        else:
-            scores.append(None)
-    return svs.assign(StrVCTVRE=scores)
+    svs['StrVCTVRE'] = svs.index.map(scores.get)
+
