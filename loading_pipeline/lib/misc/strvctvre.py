@@ -10,45 +10,7 @@ def read_bed(data_dir, file_name, names):
     return pd.read_csv(os.path.join(data_dir, file_name), sep='\t', names=names)
 
 
-def cdsRank(df):
-    l = df.shape[0]
-    dff = df.iloc[0,:]
-    if dff['strand'] == 1:
-        if dff['start'] - dff['cStart'] < 0:
-            df['early'] = dff['cdsCount']
-            return df
-        else:
-            df['early'] = dff['start'] - dff['cStart'] + dff['cdsCount']
-            return df
-    if dff['strand'] == -1:
-        if dff['cStop'] - dff['end'] < 0:
-            df['early'] = dff['cdsCount']
-            return df
-        else:
-            df['early'] = dff['cStop'] - dff['end'] + dff['cdsCount']
-            return df
-
-
-def cdsEnd(df):
-    l = df.shape[0]
-    dff = df.iloc[0,:]
-    if dff['strand'] == 1:
-        if dff['end'] > dff['cStop']:
-            df['late'] = dff['cdsCount'] + dff['size']
-            return df
-        else:
-            df['late'] = dff['end'] - dff['cStart'] + dff['cdsCount']
-            return df
-    if dff['strand'] == -1:
-        if dff['start'] < dff['cStart']:
-            df['late'] = dff['cdsCount'] + dff['size']
-            return df
-        else:
-            df['late'] = dff['cStop'] - dff['start'] + dff['cdsCount']
-            return df
-
-
-def annotateSVs(df, exonOverlap, phylopPath, data_dir):
+def _annotate_sv_features(df, exonOverlap, phylopPath, data_dir):
     exon_features = exonOverlap.groupby('variant').agg(
         numExonsFinal=('eStart', 'size'),
         allSkippable=('skippable', 'all'),
@@ -78,7 +40,6 @@ def annotateSVs(df, exonOverlap, phylopPath, data_dir):
     tads = read_bed(data_dir, 'rep12tadsMergedhg38.bed', ['tChrom', 'tStart', 'tStop', 'strength'])
     tadOverlap = df[['chrom','start','end','variant']].merge(tads, left_on='chrom', right_on='tChrom')
     tadOverlap = tadOverlap[(tadOverlap['start'] < tadOverlap['tStop']) & (tadOverlap['end'] > tadOverlap['tStart'])]
-
     df = df.merge(
         tadOverlap.groupby('variant').agg(maxStrength=('strength', 'max')),
         how='left',
@@ -90,35 +51,34 @@ def annotateSVs(df, exonOverlap, phylopPath, data_dir):
     cds = read_bed(data_dir, 'exons_CDS_Chr1-Y.sorted.bed', ['cChrom', 'cStart', 'cStop', 'CDSLength', 'size', 'exonRank', 'strand','gene', 'cdsCount', 'pLI','loeuf'])
     cdsOverlap = df[['chrom','start','end','variant']].merge(cds, left_on='chrom', right_on='cChrom')
     cdsOverlap = cdsOverlap[(cdsOverlap['start'] < cdsOverlap['cStop']) & (cdsOverlap['end'] > cdsOverlap['cStart'])]
-    if cdsOverlap.shape[0] != 0:
-        out = cdsOverlap.sort_values('exonRank').groupby(['variant','gene']).apply(cdsRank)
-        out.reset_index(drop=True, inplace=True)
-        out = out.sort_values('exonRank', ascending=False).groupby(['variant','gene']).apply(cdsEnd)
+    exon_columns = ['start', 'end', 'cStart', 'cStop', 'strand', 'cdsCount', 'size']
+    out = cdsOverlap.sort_values('exonRank')
+    first = out.groupby(['variant', 'gene'])[exon_columns].transform('first')
+    overhang = (first['start'] - first['cStart']).where(first['strand'] == 1, first['cStop'] - first['end'])
+    out['early'] = first['cdsCount'] + overhang.clip(lower=0)
 
-        out['cdsFracStart'] = out['early']/out['CDSLength']
-        out['cdsFracEnd'] = out['late']/out['CDSLength']
-        out['cdsFrac'] = (out['late'] - out['early'])/out['CDSLength']
-        out.reset_index(drop=True, inplace=True)
+    out = out.sort_values('exonRank', ascending=False)
+    last = out.groupby(['variant', 'gene'])[exon_columns].transform('first')
+    plus_late = (last['end'] - last['cStart']).where(last['end'] <= last['cStop'], last['size'])
+    minus_late = (last['cStop'] - last['start']).where(last['start'] >= last['cStart'], last['size'])
+    out['late'] = last['cdsCount'] + plus_late.where(last['strand'] == 1, minus_late)
 
-        qualifying = out[(out['cdsFracStart'] == 0) | (out['cdsFrac'] > 0.25)]
-        cds_features = out.groupby('variant').agg(
-            cdsFracStartMin=('cdsFracStart', 'min'),
-            cdsFracEndMax=('cdsFracEnd', 'max'),
-            cdsFracMax=('cdsFrac', 'max'),
-        ).join(
-            qualifying.groupby('variant').agg(
-                pLI_max25_ID=('pLI', 'max'),
-                loeuf_min25_ID=('loeuf', 'min'),
-            ),
-        )
-        final = df.merge(cds_features, how='left', left_on='variant', right_index=True)
-    else:
-        final = df
-        final['cdsFracStartMin'] = float('NaN')
-        final['cdsFracEndMax'] = float('NaN')
-        final['cdsFracMax'] = float('NaN')
-        final['pLI_max25_ID'] = float('NaN')
-        final['loeuf_min25_ID'] = float('NaN')
+    out['cdsFracStart'] = out['early']/out['CDSLength']
+    out['cdsFracEnd'] = out['late']/out['CDSLength']
+    out['cdsFrac'] = (out['late'] - out['early'])/out['CDSLength']
+
+    qualifying = out[(out['cdsFracStart'] == 0) | (out['cdsFrac'] > 0.25)]
+    cds_features = out.groupby('variant').agg(
+        cdsFracStartMin=('cdsFracStart', 'min'),
+        cdsFracEndMax=('cdsFracEnd', 'max'),
+        cdsFracMax=('cdsFrac', 'max'),
+    ).join(
+        qualifying.groupby('variant').agg(
+            pLI_max25_ID=('pLI', 'max'),
+            loeuf_min25_ID=('loeuf', 'min'),
+        ),
+    )
+    final = df.merge(cds_features, how='left', left_on='variant', right_index=True)
 
     final['cdsFracStartMin'].fillna(value=2, inplace=True)
     final['cdsFracEndMax'].fillna(value=-1, inplace=True)
@@ -174,7 +134,7 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
 
     df = df[df['length'] < 3000000]
     if len(df):
-        an = annotateSVs(
+        an = _annotate_sv_features(
             df[['chrom','start','end','variant','DEL']].reset_index(drop=True),
             exonOverlap,
             phylopPath,
