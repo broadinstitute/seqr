@@ -152,7 +152,7 @@ def annotateSVs(df, phylopPath, data_dir):
         final = df.merge(out[['ID', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID']], how='left')
         del out
     else:
-        final = df.copy()
+        final = df
         del df
         final['cdsFracStartMin'] = float('NaN')
         final['cdsFracEndMax'] = float('NaN')
@@ -184,7 +184,7 @@ def annotateSVs(df, phylopPath, data_dir):
             exp = pd.read_csv(os.path.join(data_dir, 'summary_exon_usage_hg38.sorted.bed'), names=['uChrom', 'uStart', 'uStop','Usage','Exp'],sep='\t')
             usageMed = exp.Usage.median()
             expMed = exp.Exp.median()
-            out = final[['ID']].copy()
+            out = final[['ID']]
             out['topUsage'] = usageMed
             out['topExp'] = expMed
 
@@ -201,40 +201,39 @@ def annotateSVs(df, phylopPath, data_dir):
 def annotate_strvctvre(svs, data_dir, phylopPath):
     # Implementation of StrVCTVRE: https://github.com/andrewSharo/StrVCTVRE/blob/master/StrVCTVRE.py
 
-    df = svs[['chrom','start','end','svtype']].copy()
-    df['OldID'] = df.index
+    df = svs[['chrom','start','end','svtype']]
+    df['variant'] = df.index
 
     df['length'] = df['end'].astype(int) - df['start'].astype(int)
-    df = df[df['length'] > 49].copy()
-
-    df = df[((df['svtype'] == 'DEL') | (df['svtype'] == 'DUP'))].copy()
     df['DEL'] = df['svtype'] == 'DEL'
+    df = df[df['length'] > 49]
+    df = df[df['DEL'] | (df['svtype'] == 'DUP')]
 
     exons = read_bed(data_dir, 'exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed')
-    exonOverlap = intersect(df[['chrom','start','end','OldID']], exons).iloc[:, [0,1,2,3]].set_axis(
-        ['chrom', 'start', 'stop', 'OldID'], axis=1)
-    exonOverlap['numExons'] = exonOverlap.groupby(by='OldID').chrom.transform('size')
-    exonOverlap.drop_duplicates(subset='OldID', inplace=True)
+    exonOverlap = intersect(df[['chrom','start','end','variant']], exons).iloc[:, [0,1,2,3]].set_axis(
+        ['chrom', 'start', 'stop', 'variant'], axis=1)
+    exonOverlap['numExons'] = exonOverlap.groupby(by='variant').chrom.transform('size')
+    exonOverlap.drop_duplicates(subset='variant', inplace=True)
 
     del exons
 
-    out = df.merge(exonOverlap[['numExons','OldID']],how='left',on='OldID')
+    out = df.merge(exonOverlap[['numExons','variant']],how='left',on='variant')
     del exonOverlap
     del df
     out = out[out['numExons'] > 0]
-    scores = dict.fromkeys(out['OldID'], 1.0)
+    scores = dict.fromkeys(out['variant'], 1.0)
     out = out[out['length'] < 3000000]
 
     if out.shape[0] != 0:
-        an = annotateSVs(out[['chrom','start','end','OldID','DEL']].reset_index(drop=True), phylopPath, data_dir)
+        an = annotateSVs(out[['chrom','start','end','variant','DEL']].reset_index(drop=True), phylopPath, data_dir)
         del out
 
         an['path'] = 0
 
         rf = load(os.path.join(data_dir, 'rfTrainedAllChromsPy3.joblib'))
-        X = an[['DEL','numExonsFinal','phyloP', 'lowestExonRank', 'allSkippable','lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID','topExp','topUsage','maxStrength']].copy()
+        X = an[['DEL','numExonsFinal','phyloP', 'lowestExonRank', 'allSkippable','lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID','topExp','topUsage','maxStrength']]
         an['path'] = rf.predict_proba(X)[:,1]
-        scores.update({old_id: round(path, 3) for old_id, path in zip(an['OldID'], an['path'])})
+        scores.update({variant: round(path, 3) for variant, path in zip(an['variant'], an['path'])})
 
     svs['StrVCTVRE'] = svs.index.map(scores.get)
 
