@@ -12,6 +12,10 @@ def run_command(cmd: list[str]):
 
 
 BREAKPOINT_SV_TYPES = ('INS', 'BND', 'CTX')
+MIN_RECIPROCAL_OVERLAP = 0.5
+MAX_INSERTION_DISTANCE = 100
+MIN_INSERTION_RATIO = 0.1
+MAX_INSERTION_RATIO = 10
 
 
 def match_gnomad_af(variants_df, gnomad_df):
@@ -78,7 +82,7 @@ def _best_overlap_matches(variants_df, gnomad_df):
         ['reciprocal_overlap', 'ID_gnomad'],
         ascending=[False, True],
     ).drop_duplicates('ID_variant')
-    return best[best['reciprocal_overlap'] > 0.5]
+    return best[best['reciprocal_overlap'] > MIN_RECIPROCAL_OVERLAP]
 
 
 def _best_breakpoint_matches(variants_df, gnomad_df):
@@ -94,8 +98,8 @@ def _best_breakpoint_matches(variants_df, gnomad_df):
     pairs['ratio_dist'] = (ins_ratio - 1).abs().fillna(float('inf'))
     pairs['ins_dis'] = (pairs['POS_gnomad'] - pairs['POS_variant']).abs()
     survivors = pairs[
-        (pairs['ins_dis'] < 100)
-        & ((pairs['SVTYPE'] == 'BND') | ((ins_ratio > 0.1) & (ins_ratio < 10)))
+        (pairs['ins_dis'] < MAX_INSERTION_DISTANCE)
+        & ((pairs['SVTYPE'] == 'BND') | ((ins_ratio > MIN_INSERTION_RATIO) & (ins_ratio < MAX_INSERTION_RATIO)))
     ]
     return survivors.sort_values(
         ['ins_dis', 'ratio_dist', 'ID_gnomad'],
