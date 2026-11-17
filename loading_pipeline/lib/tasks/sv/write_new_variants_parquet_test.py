@@ -34,7 +34,6 @@ TEST_RUN_ID = 'manual__2024-04-03'
 EXISTING_SV_VARIANT_IDS = [
     'BND_chr1_6',
     'DUP_chr1_5',
-    'DEL_chr1_12',
     'BND_chr1_9',
     'CPX_chr1_41',
     'INS_chr1_268',
@@ -62,7 +61,6 @@ def _write_existing_variants_parquet_fixture() -> None:
             'end': [
                 20404,
                 263666,
-                428500,
                 789481,
                 16089601,
                 17465723,
@@ -76,7 +74,6 @@ def _write_existing_variants_parquet_fixture() -> None:
             'pos': [
                 180928,
                 257666,
-                413968,
                 789481,
                 16088760,
                 17465707,
@@ -89,7 +86,6 @@ def _write_existing_variants_parquet_fixture() -> None:
             'svType': [
                 b'BND',
                 b'DUP',
-                b'DEL',
                 b'BND',
                 b'CPX',
                 b'INS',
@@ -145,12 +141,38 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 TEST_RUN_ID,
             ),
         )
-        export_json = convert_ndarray_to_list(df.head(2).to_dict('records'))
+        export_json = convert_ndarray_to_list(df.head(3).to_dict('records'))
         self.assertEqual(
             export_json,
             [
                 {
                     'key': 727,
+                    'xpos': 1000413968,
+                    'chrom': '1',
+                    'pos': 413968,
+                    'end': 451000,
+                    'rg37LocusEnd': {'contig': '5', 'position': 180794966},
+                    'variantId': 'DEL_chr1_12-1',
+                    'liftedOverChrom': '5',
+                    'liftedOverPos': 180831919,
+                    'algorithms': 'depth',
+                    'bothsidesSupport': None,
+                    'cpxIntervals': None,
+                    'endChrom': None,
+                    'svSourceDetail': None,
+                    'svType': 'DEL',
+                    'svTypeDetail': None,
+                    'predictions': {'strvctvre': 0.103},
+                    'populations': {'gnomad_svs': None},
+                    'sortedGeneConsequences': [
+                        {
+                            'geneId': 'ENSG00000173662',
+                            'majorConsequence': 'NEAREST_TSS',
+                        },
+                    ],
+                },
+                {
+                    'key': 728,
                     'xpos': 1004228405,
                     'chrom': '1',
                     'pos': 4228405,
@@ -166,7 +188,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                     'svSourceDetail': None,
                     'svType': 'INS',
                     'svTypeDetail': 'ME:ALU',
-                    'predictions': {'strvctvre': 0.1255},
+                    'predictions': {'strvctvre': None},
                     'populations': {
                         'gnomad_svs': {
                             'af': 0.000032,
@@ -183,7 +205,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                     ],
                 },
                 {
-                    'key': 728,
+                    'key': 729,
                     'xpos': 1006558902,
                     'chrom': '1',
                     'pos': 6558902,

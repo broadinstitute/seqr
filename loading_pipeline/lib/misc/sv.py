@@ -473,8 +473,8 @@ def run_strvctvre(df, phylop_file):
     df = df[['#CHROM', 'POS', 'END', 'SVTYPE']]
     df['DEL'] = df['SVTYPE'] == 'DEL'
     df = df[df['DEL'] | (df['SVTYPE'] == 'DUP')]
-    df = df[df['length'] > MIN_STRVCTRE_LENGTH]
     df['length'] = df['END'] - df['POS']
+    df = df[df['length'] > MIN_STRVCTRE_LENGTH]
 
 
     exon_overlap = _bed_overlap(
