@@ -57,20 +57,19 @@ def _add_exon_features(df, exon_overlap):
 
 
 def _add_phylop_features(df, phylop_file):
-    phylop = np.load(phylop_file)
     starts = df['start'].astype(int).to_numpy()
     ends = df['end'].astype(int).to_numpy()
     cons = np.empty(len(df))
     for chrom, positions in df.groupby('chrom').indices.items():
-        values = phylop[chrom] if chrom in phylop.files else None
+        phylop = pd.read_parquet(phylop_file, filters=[('chrom', '==', chrom)], columns=['phylop'])['phylop'].to_numpy()
         for i in positions:
             start, end = starts[i], ends[i]
             if end - start > 1000000:
                 y = np.array([15.0])
-            elif values is None or start >= end or end > len(values):
+            elif start >= end or end > len(phylop):
                 y = np.array([0.5])
             else:
-                y = np.nan_to_num(values[start:end].astype(np.float64))
+                y = np.nan_to_num(phylop[start:end].astype(np.float64))
             cons[i] = np.mean(y[np.argsort(y)[-TOP_N:]])
     df['phyloP'] = cons
     return df
