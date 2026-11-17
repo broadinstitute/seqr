@@ -465,8 +465,9 @@ def _nearest_tss_consequences(segments, transcripts):
 def run_strvctvre(df, phylop_file):
     # Implementation of StrVCTVRE: https://github.com/andrewSharo/StrVCTVRE/blob/master/StrVCTVRE.py
 
-    df = df[['chrom','start','end','svtype']]
-    df['variant'] = df.index
+    df = df[['#CHROM', 'POS', 'END', 'SVTYPE']].rename(
+        columns={'#CHROM': 'chrom', 'POS': 'start', 'END': 'end', 'SVTYPE': 'svtype'},
+    )
 
     df['length'] = df['end'].astype(int) - df['start'].astype(int)
     df['DEL'] = df['svtype'] == 'DEL'
@@ -478,9 +479,9 @@ def run_strvctvre(df, phylop_file):
         'loading_pipeline/var/strvctre/exons_Appris_featurized_transcript_Chr1-Y_loeuf.sorted.bed',
         ['gene', 'exonRank', 'skippable', 'exonsInGene', 'const', 'pLI', 'loeuf'],
     )
-    df = df[df['variant'].isin(exon_overlap['variant'])]
+    df = df[df.index.isin(exon_overlap.index)]
 
-    scores = dict.fromkeys(df['variant'], 1.0)
+    scores = dict.fromkeys(df.index, 1.0)
 
     df = df[df['length'] < 3000000]
     if df.empty:
@@ -493,7 +494,7 @@ def run_strvctvre(df, phylop_file):
     df = _add_usage_features(df)
 
     df['path'] = _predict_pathogenicity(df)
-    scores.update({variant: round(path, 3) for variant, path in zip(df['variant'], df['path'])})
+    scores.update({variant: round(path, 3) for variant, path in zip(df.index, df['path'])})
 
     return scores
 
@@ -502,7 +503,7 @@ TOP_N = 400
 
 
 def _features_overlap(df, features, window=0):
-    overlap = df[['chrom', 'start', 'end', 'variant']].merge(features, left_on='chrom', right_on='feature_chrom')
+    overlap = df[['chrom', 'start', 'end']].join(features.set_index('feature_chrom'), on='chrom', how='inner')
     return overlap[
         (overlap['start'] - window < overlap['feature_end'])
         & (overlap['end'] + window > overlap['feature_start'])
@@ -515,11 +516,11 @@ def _bed_overlap(df, path, columns, window=0):
 
 
 def _add_aggregates(df, overlap, **features):
-    aggregated = overlap.groupby('variant').agg(
+    aggregated = overlap.groupby(level=0).agg(
         **{name: (column, func) for name, (column, func, _) in features.items()},
     )
     fill_values = {name: default for name, (_, _, default) in features.items() if default is not None}
-    return df.merge(aggregated, how='left', left_on='variant', right_index=True).fillna(fill_values)
+    return df.join(aggregated).fillna(fill_values)
 
 
 def _predict_pathogenicity(df):
@@ -585,7 +586,7 @@ def _add_cds_features(df):
 
     cds_overlap = cds_overlap.sort_values('exonRank')
     group_columns = ['start', 'end', 'feature_start', 'feature_end', 'strand', 'cdsCount', 'size']
-    variant_gene_groups = cds_overlap.groupby(['variant', 'gene'])[group_columns]
+    variant_gene_groups = cds_overlap.groupby([cds_overlap.index, 'gene'])[group_columns]
     first = variant_gene_groups.transform('first')
     last = variant_gene_groups.transform('last')
     overhang = (first['start'] - first['feature_start']).where(first['strand'] == 1, first['feature_end'] - first['end'])
