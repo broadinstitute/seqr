@@ -1,9 +1,9 @@
-import os
-
 import numpy as np
 import pandas as pd
 import pyBigWig
-from joblib import load
+
+
+TOP_N = 400
 
 
 def _features_overlap(df, features, window=0):
@@ -27,7 +27,20 @@ def _add_aggregates(df, overlap, **features):
     return df.merge(aggregated, how='left', left_on='variant', right_index=True).fillna(fill_values)
 
 
-TOP_N = 400
+def _predict_pathogenicity(df):
+    model = np.load('loading_pipeline/var/strvctre/rfTrainedAllChromsPy3.npz')
+    features = df[model['feature_names']].to_numpy(dtype=np.float32)
+    nodes = np.tile(model['roots'], (len(features), 1))
+    rows = np.arange(len(features))[:, None]
+    for _ in range(int(model['max_depth'])):
+        left = model['children_left'][nodes]
+        go_left = features[rows, model['feature'][nodes]] <= model['threshold'][nodes]
+        nodes = np.where(left == -1, nodes, np.where(go_left, left, model['children_right'][nodes]))
+    leaf_proba = model['proba'][nodes]
+    total = np.zeros(len(features))
+    for tree in range(leaf_proba.shape[1]):
+        total += leaf_proba[:, tree]
+    return total / leaf_proba.shape[1]
 
 
 def _add_exon_features(df, exon_overlap):
@@ -124,7 +137,7 @@ def _add_usage_features(df):
     return df.fillna({'topExp': df['topExp'].median(), 'topUsage': df['topUsage'].median()})
 
 
-def annotate_strvctvre(svs, data_dir, phylopPath):
+def annotate_strvctvre(svs, phylopPath):
     # Implementation of StrVCTVRE: https://github.com/andrewSharo/StrVCTVRE/blob/master/StrVCTVRE.py
 
     df = svs[['chrom','start','end','svtype']]
@@ -155,9 +168,7 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     df = _add_cds_features(df)
     df = _add_usage_features(df)
 
-    rf = load(os.path.join(data_dir, 'rfTrainedAllChromsPy3.joblib'))
-    X = df[['DEL','numExonsFinal','phyloP', 'lowestExonRank', 'allSkippable','lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID','topExp','topUsage','maxStrength']]
-    df['path'] = rf.predict_proba(X)[:,1]
+    df['path'] = _predict_pathogenicity(df)
     scores.update({variant: round(path, 3) for variant, path in zip(df['variant'], df['path'])})
 
     svs['StrVCTVRE'] = svs.index.map(scores.get)
