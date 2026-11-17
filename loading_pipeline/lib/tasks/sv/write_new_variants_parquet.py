@@ -8,7 +8,7 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPES,
 )
 from loading_pipeline.lib.core import ReferenceGenome
-from loading_pipeline.lib.misc.sv import annotate_gene_consequences
+from loading_pipeline.lib.misc.sv import annotate_gene_consequences, run_strvctvre
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
 )
@@ -52,6 +52,11 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             self.clone(
                 UpdatedReferenceDatasetParquetNoHailTask,
                 reference_dataset=ReferenceDataset.gnomad_svs,
+                attempt_id=self.attempt_id,
+            ),
+            self.clone(
+                UpdatedReferenceDatasetParquetNoHailTask,
+                reference_dataset=ReferenceDataset.strvctre_phylop,
                 attempt_id=self.attempt_id,
             ),
         ]
@@ -151,6 +156,13 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
         )
 
+        # Add StrVCTVRE
+        strvctvre_input = self.input()[3]
+        strvctvre_input.format = luigi.format.Nop
+        with strvctvre_input.open() as f:
+            strvctvre = run_strvctvre(df, f)
+        df['predictions'] = df.index.map(lambda vid: {'strvctvre': strvctvre.get(vid)})
+
         # Format annotations
         df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
@@ -165,9 +177,6 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['xpos'] = (
             df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000
             + df['POS']
-        )
-        df['predictions'] = (
-            df.pop('StrVCTVRE').astype(float).map(lambda score: {'strvctvre': score})
         )
 
         # Add serial integer index

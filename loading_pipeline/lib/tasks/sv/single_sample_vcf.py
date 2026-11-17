@@ -33,7 +33,6 @@ class SingleSampleVCFTask(BaseVCFTask):
         'END2': ('1', 'Integer'),
         'SVLEN': ('1', 'Integer'),
         'SVTYPE': ('1', 'String'),
-        'StrVCTVRE': ('1', 'String'),
         'GNOMAD_V4.1_TRUTH_VID': ('1', 'String'),
     }
 
