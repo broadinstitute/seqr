@@ -157,9 +157,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         )
 
         # Add StrVCTVRE
-        strvctvre_input = self.input()[3]
-        strvctvre_input.format = luigi.format.Nop
-        with strvctvre_input.open() as f:
+        with self._open_parquet(self.input()[3]) as f:
             strvctvre = run_strvctvre(df, f)
         df['predictions'] = df.index.map(lambda vid: {'strvctvre': strvctvre.get(vid)})
 
@@ -195,10 +193,13 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         )
 
     @staticmethod
-    def _read_parquet(input_target: luigi.Target, **kwargs) -> pd.DataFrame:
-        pq_input = input_target
-        pq_input.format = luigi.format.Nop
-        with pq_input.open() as f:
+    def _open_parquet(input_target: luigi.Target):
+        input_target.format = luigi.format.Nop
+        return input_target.open()
+
+    @classmethod
+    def _read_parquet(cls, input_target: luigi.Target, **kwargs) -> pd.DataFrame:
+        with cls._open_parquet(input_target) as f:
             return pd.read_parquet(f, **kwargs)
 
     @staticmethod
