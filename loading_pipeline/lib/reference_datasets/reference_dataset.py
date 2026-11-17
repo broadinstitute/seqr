@@ -36,6 +36,7 @@ class ReferenceDataset(StrEnum):
     gnomad_qc = 'gnomad_qc'
     gnomad_svs = 'gnomad_svs'
     gencode_transcripts = 'gencode_transcripts'
+    strvctre_phylop = 'strvctre_phylop'
 
     def version(self, reference_genome: ReferenceGenome) -> str:
         version = CONFIG[self][reference_genome][VERSION]
@@ -180,6 +181,13 @@ CONFIG = {
             VERSION: '1.0',
             # Mirror of 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_42/gencode.v42.annotation.gtf.gz'
             PATH: 'gs://seqr-reference-data/gencode/gencode.v42.annotation.gtf.gz',
+        },
+    },
+    ReferenceDataset.strvctre_phylop: {
+        ReferenceGenome.GRCh38: {
+            DATASET_TYPES: frozenset([DatasetType.SV]),
+            VERSION: '1.0',
+            PATH: 'gs://seqr-reference-data/strvctvre_data/hg38.phyloP100way.parquet',
         },
     },
 }
