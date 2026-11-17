@@ -6,13 +6,17 @@ import pyBigWig
 from joblib import load
 
 
-def _bed_overlap(df, path, columns, window=0):
-    features = pd.read_csv(path, sep='\t', names=['feature_chrom', 'feature_start', 'feature_end', *columns])
+def _features_overlap(df, features, window=0):
     overlap = df[['chrom', 'start', 'end', 'variant']].merge(features, left_on='chrom', right_on='feature_chrom')
     return overlap[
         (overlap['start'] - window < overlap['feature_end'])
         & (overlap['end'] + window > overlap['feature_start'])
     ]
+
+
+def _bed_overlap(df, path, columns, window=0):
+    features = pd.read_csv(path, sep='\t', names=['feature_chrom', 'feature_start', 'feature_end', *columns])
+    return _features_overlap(df, features, window)
 
 
 def _add_aggregates(df, overlap, **features):
@@ -99,20 +103,24 @@ def _add_cds_features(df):
     )
 
 
-def _add_usage_features(df, data_dir):
-    usage_path = os.path.join(data_dir, 'summary_exon_usage_hg38.sorted.bed')
-    usage_overlap = _bed_overlap(df, usage_path, ['avgUsage', 'avgExp'])
-    if usage_overlap.empty:
-        usage_overlap = _bed_overlap(df, usage_path, ['avgUsage', 'avgExp'], window=1000)
-    if usage_overlap.empty:
-        exp = pd.read_csv(usage_path, names=['uChrom', 'uStart', 'uStop','Usage','Exp'],sep='\t')
-        return df.assign(topUsage=exp.Usage.median(), topExp=exp.Exp.median())
-
-    usage_features = usage_overlap.groupby('variant').agg(
-        topUsage=('avgUsage', lambda x: x.nlargest(TOP_N).mean()),
-        topExp=('avgExp', lambda x: x.nlargest(TOP_N).mean()),
+def _add_usage_features(df):
+    usage = pd.read_csv(
+        'loading_pipeline/var/strvctre/summary_exon_usage_hg38.sorted.bed',
+        sep='\t',
+        names=['feature_chrom', 'feature_start', 'feature_end', 'avgUsage', 'avgExp'],
     )
-    df = df.merge(usage_features, how='left', left_on='variant', right_index=True)
+    usage_overlap = _features_overlap(df, usage)
+    if usage_overlap.empty:
+        usage_overlap = _features_overlap(df, usage, window=1000)
+    if usage_overlap.empty:
+        return df.assign(topUsage=usage.avgUsage.median(), topExp=usage.avgExp.median())
+
+    df = _add_aggregates(
+        df,
+        usage_overlap,
+        topUsage=('avgUsage', lambda x: x.nlargest(TOP_N).mean(), None),
+        topExp=('avgExp', lambda x: x.nlargest(TOP_N).mean(), None),
+    )
     return df.fillna({'topExp': df['topExp'].median(), 'topUsage': df['topUsage'].median()})
 
 
@@ -145,7 +153,7 @@ def annotate_strvctvre(svs, data_dir, phylopPath):
     df = _add_phylop_features(df, phylopPath)
     df = _add_tad_features(df)
     df = _add_cds_features(df)
-    df = _add_usage_features(df, data_dir)
+    df = _add_usage_features(df)
 
     rf = load(os.path.join(data_dir, 'rfTrainedAllChromsPy3.joblib'))
     X = df[['DEL','numExonsFinal','phyloP', 'lowestExonRank', 'allSkippable','lowestExonsInGene', 'anyConstExon','pLIMax','loeufMin', 'cdsFracStartMin', 'cdsFracEndMax', 'cdsFracMax', 'pLI_max25_ID', 'loeuf_min25_ID','topExp','topUsage','maxStrength']]
