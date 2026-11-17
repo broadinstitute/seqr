@@ -464,6 +464,8 @@ def _nearest_tss_consequences(segments, transcripts):
 
 MIN_STRVCTRE_LENGTH = 49
 MAX_STRVCTRE_LENGTH = 3000000
+MAX_PHYLOP_LENGTH = 1000000
+MIN_CDS_FRACTION = 0.25
 TOP_N = 400
 
 
@@ -475,7 +477,6 @@ def run_strvctvre(df, phylop_file):
     df = df[df['DEL'] | (df['SVTYPE'] == 'DUP')]
     df['length'] = df['END'] - df['POS']
     df = df[df['length'] > MIN_STRVCTRE_LENGTH]
-
 
     exon_overlap = _bed_overlap(
         df,
@@ -497,13 +498,22 @@ def run_strvctvre(df, phylop_file):
     df = _add_usage_features(df)
 
     df['path'] = _predict_pathogenicity(df)
-    scores.update({variant: round(path, 3) for variant, path in zip(df.index, df['path'])})
+    scores.update(
+        {
+            variant: round(path, 3)
+            for variant, path in zip(df.index, df['path'], strict=False)
+        },
+    )
 
     return scores
 
 
 def _features_overlap(df, features, window=0):
-    overlap = df[['#CHROM', 'POS', 'END']].join(features.set_index('feature_chrom'), on='#CHROM', how='inner')
+    overlap = df[['#CHROM', 'POS', 'END']].join(
+        features.set_index('feature_chrom'),
+        on='#CHROM',
+        how='inner',
+    )
     return overlap[
         (overlap['POS'] - window < overlap['feature_end'])
         & (overlap['END'] + window > overlap['feature_start'])
@@ -511,7 +521,11 @@ def _features_overlap(df, features, window=0):
 
 
 def _bed_overlap(df, path, columns, window=0):
-    features = pd.read_csv(path, sep='\t', names=['feature_chrom', 'feature_start', 'feature_end', *columns])
+    features = pd.read_csv(
+        path,
+        sep='\t',
+        names=['feature_chrom', 'feature_start', 'feature_end', *columns],
+    )
     return _features_overlap(df, features, window)
 
 
@@ -519,7 +533,11 @@ def _add_aggregates(df, overlap, **features):
     aggregated = overlap.groupby(level=0).agg(
         **{name: (column, func) for name, (column, func, _) in features.items()},
     )
-    fill_values = {name: default for name, (_, _, default) in features.items() if default is not None}
+    fill_values = {
+        name: default
+        for name, (_, _, default) in features.items()
+        if default is not None
+    }
     return df.join(aggregated).fillna(fill_values)
 
 
@@ -531,7 +549,11 @@ def _predict_pathogenicity(df):
     for _ in range(int(model['max_depth'])):
         left = model['children_left'][nodes]
         go_left = features[rows, model['feature'][nodes]] <= model['threshold'][nodes]
-        nodes = np.where(left == -1, nodes, np.where(go_left, left, model['children_right'][nodes]))
+        nodes = np.where(
+            left == -1,
+            nodes,
+            np.where(go_left, left, model['children_right'][nodes]),
+        )
     leaf_proba = model['proba'][nodes]
     total = np.zeros(len(features))
     for tree in range(leaf_proba.shape[1]):
@@ -558,10 +580,14 @@ def _add_phylop_features(df, phylop_file):
     ends = df['END'].astype(int).to_numpy()
     cons = np.empty(len(df))
     for chrom, positions in df.groupby('#CHROM').indices.items():
-        phylop = pd.read_parquet(phylop_file, filters=[('chrom', '==', chrom)], columns=['phylop'])['phylop'].to_numpy()
+        phylop = pd.read_parquet(
+            phylop_file,
+            filters=[('chrom', '==', chrom)],
+            columns=['phylop'],
+        )['phylop'].to_numpy()
         for i in positions:
             start, end = starts[i], ends[i]
-            if end - start > 1000000:
+            if end - start > MAX_PHYLOP_LENGTH:
                 y = np.array([15.0])
             elif start >= end or end > len(phylop):
                 y = np.array([0.5])
@@ -573,7 +599,11 @@ def _add_phylop_features(df, phylop_file):
 
 
 def _add_tad_features(df):
-    tad_overlap = _bed_overlap(df, 'loading_pipeline/var/strvctre/rep12tadsMergedhg38.bed', ['strength'])
+    tad_overlap = _bed_overlap(
+        df,
+        'loading_pipeline/var/strvctre/rep12tadsMergedhg38.bed',
+        ['strength'],
+    )
     return _add_aggregates(df, tad_overlap, maxStrength=('strength', 'max', 0))
 
 
@@ -585,22 +615,48 @@ def _add_cds_features(df):
     )
 
     cds_overlap = cds_overlap.sort_values('exonRank')
-    group_columns = ['POS', 'END', 'feature_start', 'feature_end', 'strand', 'cdsCount', 'size']
-    variant_gene_groups = cds_overlap.groupby([cds_overlap.index, 'gene'])[group_columns]
+    group_columns = [
+        'POS',
+        'END',
+        'feature_start',
+        'feature_end',
+        'strand',
+        'cdsCount',
+        'size',
+    ]
+    variant_gene_groups = cds_overlap.groupby([cds_overlap.index, 'gene'])[
+        group_columns
+    ]
     first = variant_gene_groups.transform('first')
     last = variant_gene_groups.transform('last')
-    overhang = (first['POS'] - first['feature_start']).where(first['strand'] == 1, first['feature_end'] - first['END'])
+    overhang = (first['POS'] - first['feature_start']).where(
+        first['strand'] == 1,
+        first['feature_end'] - first['END'],
+    )
     cds_overlap['early'] = first['cdsCount'] + overhang.clip(lower=0)
 
-    plus_late = (last['END'] - last['feature_start']).where(last['END'] <= last['feature_end'], last['size'])
-    minus_late = (last['feature_end'] - last['POS']).where(last['POS'] >= last['feature_start'], last['size'])
-    cds_overlap['late'] = last['cdsCount'] + plus_late.where(last['strand'] == 1, minus_late)
+    plus_late = (last['END'] - last['feature_start']).where(
+        last['END'] <= last['feature_end'],
+        last['size'],
+    )
+    minus_late = (last['feature_end'] - last['POS']).where(
+        last['POS'] >= last['feature_start'],
+        last['size'],
+    )
+    cds_overlap['late'] = last['cdsCount'] + plus_late.where(
+        last['strand'] == 1,
+        minus_late,
+    )
 
-    cds_overlap['cdsFracStart'] = cds_overlap['early']/cds_overlap['CDSLength']
-    cds_overlap['cdsFracEnd'] = cds_overlap['late']/cds_overlap['CDSLength']
-    cds_overlap['cdsFrac'] = (cds_overlap['late'] - cds_overlap['early'])/cds_overlap['CDSLength']
+    cds_overlap['cdsFracStart'] = cds_overlap['early'] / cds_overlap['CDSLength']
+    cds_overlap['cdsFracEnd'] = cds_overlap['late'] / cds_overlap['CDSLength']
+    cds_overlap['cdsFrac'] = (cds_overlap['late'] - cds_overlap['early']) / cds_overlap[
+        'CDSLength'
+    ]
 
-    covers_start_or_quarter = (cds_overlap['cdsFracStart'] == 0) | (cds_overlap['cdsFrac'] > 0.25)
+    covers_start_or_quarter = (cds_overlap['cdsFracStart'] == 0) | (
+        cds_overlap['cdsFrac'] > MIN_CDS_FRACTION
+    )
     cds_overlap['pLI25'] = cds_overlap['pLI'].where(covers_start_or_quarter)
     cds_overlap['loeuf25'] = cds_overlap['loeuf'].where(covers_start_or_quarter)
 
@@ -633,4 +689,6 @@ def _add_usage_features(df):
         topUsage=('avgUsage', lambda x: x.nlargest(TOP_N).mean(), None),
         topExp=('avgExp', lambda x: x.nlargest(TOP_N).mean(), None),
     )
-    return df.fillna({'topExp': df['topExp'].median(), 'topUsage': df['topUsage'].median()})
+    return df.fillna(
+        {'topExp': df['topExp'].median(), 'topUsage': df['topUsage'].median()},
+    )
