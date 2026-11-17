@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import pyBigWig
 
 
 TOP_N = 400
@@ -57,18 +56,22 @@ def _add_exon_features(df, exon_overlap):
     )
 
 
-def _add_phylop_features(df, phylopPath):
-    consBW = pyBigWig.open(phylopPath)
-    x = []
-    for chrom, start, end in zip(df['chrom'], df['start'], df['end']):
-        if int(end) - int(start) > 1000000:
-            x.append(np.array([15.0]))
-        else:
-            try:
-                x.append(np.nan_to_num(np.array(consBW.values(chrom, int(start), int(end)))))
-            except:
-                x.append(np.array([0.5]))
-    cons = [np.mean(y[np.argsort(y)[-TOP_N:]]) for y in x]
+def _add_phylop_features(df, phylop_file):
+    phylop = np.load(phylop_file)
+    starts = df['start'].astype(int).to_numpy()
+    ends = df['end'].astype(int).to_numpy()
+    cons = np.empty(len(df))
+    for chrom, positions in df.groupby('chrom').indices.items():
+        values = phylop[chrom] if chrom in phylop.files else None
+        for i in positions:
+            start, end = starts[i], ends[i]
+            if end - start > 1000000:
+                y = np.array([15.0])
+            elif values is None or start >= end or end > len(values):
+                y = np.array([0.5])
+            else:
+                y = np.nan_to_num(values[start:end].astype(np.float64))
+            cons[i] = np.mean(y[np.argsort(y)[-TOP_N:]])
     df['phyloP'] = cons
     return df
 
@@ -137,7 +140,7 @@ def _add_usage_features(df):
     return df.fillna({'topExp': df['topExp'].median(), 'topUsage': df['topUsage'].median()})
 
 
-def annotate_strvctvre(svs, phylopPath):
+def annotate_strvctvre(svs, phylop_file):
     # Implementation of StrVCTVRE: https://github.com/andrewSharo/StrVCTVRE/blob/master/StrVCTVRE.py
 
     df = svs[['chrom','start','end','svtype']]
@@ -163,7 +166,7 @@ def annotate_strvctvre(svs, phylopPath):
         return
 
     df = _add_exon_features(df, exon_overlap)
-    df = _add_phylop_features(df, phylopPath)
+    df = _add_phylop_features(df, phylop_file)
     df = _add_tad_features(df)
     df = _add_cds_features(df)
     df = _add_usage_features(df)
