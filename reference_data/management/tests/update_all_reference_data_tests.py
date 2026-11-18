@@ -63,9 +63,9 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
         gene_kwargs = {**kwargs, 'skipped_genes': {None: 0}}
         self.assertListEqual(self.mock_update_calls, [
             (RefseqTranscript, {'transcript_id_map': {}, 'skipped_transcripts': {None: 0}}),
+            (GeneConstraint, {'transcript_id_map': {}, 'skipped_transcripts': {None: 0}}),
             (Omim, {**kwargs, 'omim_key': 'test_key'}),
             (dbNSFPGene, gene_kwargs),
-            (GeneConstraint, gene_kwargs),
             (GeneCopyNumberSensitivity, gene_kwargs),
             (PrimateAI, gene_kwargs),
             (MGI, {**gene_kwargs, 'entrez_id_to_gene': {}}),
@@ -90,7 +90,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
                 '@type': 'type.googleapis.com/google.devtools.clouderrorreporting.v1beta1.ReportedErrorEvent',
             }),
             ('Done', None),
-            ('Updated: GeneInfo, Omim, dbNSFPGene, GeneConstraint, GeneCopyNumberSensitivity, GenCC, ClinGen, GeneShet, HumanPhenotypeOntology, PanelAppAU, PanelAppUK', None),
+            ('Updated: GeneInfo, GeneConstraint, Omim, dbNSFPGene, GeneCopyNumberSensitivity, GenCC, ClinGen, GeneShet, HumanPhenotypeOntology, PanelAppAU, PanelAppUK', None),
         ])
 
         self.assertEqual(str(e.exception),'Failed to Update: PrimateAI, MGI')

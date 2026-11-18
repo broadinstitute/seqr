@@ -1,3 +1,4 @@
+from bisect import bisect_left
 import csv
 
 from collections import defaultdict
@@ -400,11 +401,26 @@ class TranscriptInfo(GeneMetadataModel):
         logger.info(f'Created {len(records)} {cls.__name__} records')
 
 
-class RefseqTranscript(LoadableModel):
+class TranscriptMetadataModel(LoadableModel):
+
+    transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def update_records(cls, **kwargs):
+        transcript_id_map = dict(TranscriptInfo.objects.values_list('transcript_id', 'id'))
+        skipped_transcripts = {None: 0}
+        super().update_records(transcript_id_map=transcript_id_map, skipped_transcripts=skipped_transcripts, **kwargs)
+        if skipped_transcripts[None]:
+            logger.info(f'Skipped {skipped_transcripts[None]} records with unrecognized or duplicated transcripts')
+
+
+class RefseqTranscript(TranscriptMetadataModel):
 
     URL = GENCODE_URL_TEMPLATE.format(path='', file='.metadata.RefSeq.gz', gencode_release=GeneInfo.CURRENT_VERSION)
 
-    transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
     refseq_id = models.CharField(max_length=20)
 
     @staticmethod
@@ -423,49 +439,68 @@ class RefseqTranscript(LoadableModel):
             'refseq_id': record['refseq_id'],
         } if transcript else None
 
-    @classmethod
-    def update_records(cls, **kwargs):
-        transcript_id_map = dict(TranscriptInfo.objects.values_list('transcript_id', 'id'))
-        skipped_transcripts = {None: 0}
-        super().update_records(transcript_id_map=transcript_id_map, skipped_transcripts=skipped_transcripts, **kwargs)
-        if skipped_transcripts[None]:
-            logger.info(f'Skipped {skipped_transcripts[None]} records with unrecognized or duplicated transcripts')
 
-
-# based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
-class GeneConstraint(GeneMetadataModel):
+class GeneConstraint(TranscriptMetadataModel):
 
     CURRENT_VERSION = 'gnomad.v4.1.2.constraint_metrics'
     URL = f'https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1.2/constraint/{CURRENT_VERSION}.tsv.bgz'
-    RECORD_FIELDS = {
-        'gene_id': ('gene_id', lambda gene_id: gene_id.split(".")[0]),
-        'gene_symbol': ('gene', None),
-        'mis_z': ('mis.z_score', lambda value: float(value) if value != 'NA' else -100),
-        'pLI': ('lof.pLI', lambda value: float(value) if value != 'NA' else 0),
-        'louef': ('lof.oe_ci.upper', lambda value: float(value) if value != 'NA' else 100),
+    SCORE_FIELDS = {
+        'mis_z': ('mis.z_score', 'no_exp_mis'),
+        'pLI': ('lof.pLI', 'no_exp_lof'),
+        'louef': ('lof.oe_ci.upper', 'no_exp_lof'),
     }
 
-    mis_z = models.FloatField()
-    mis_z_rank = models.IntegerField()
-    pLI = models.FloatField()
-    pLI_rank = models.IntegerField()
-    louef = models.FloatField()
-    louef_rank = models.IntegerField()
+    canonical = models.BooleanField(default=False)
+    mane_select = models.BooleanField(default=False)
+    constraint_flags = models.JSONField(default=list)
+    mis_z = models.FloatField(null=True)
+    mis_z_rank = models.IntegerField(null=True)
+    pLI = models.FloatField(null=True)
+    pLI_rank = models.IntegerField(null=True)
+    louef = models.FloatField(null=True)
+    louef_rank = models.IntegerField(null=True)
 
     class Meta:
-        json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
+        json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank', 'canonical', 'mane_select']
 
     @classmethod
-    def parse_gene_record(cls, record):
-        # only create a record for the canonical transcript of a given gene
-        return super().parse_gene_record(record) if record['canonical'] == 'true' else None
+    def parse_record(cls, record, transcript_id_map=None, skipped_transcripts=None, **kwargs):
+        # seqr annotates variants with Ensembl transcripts only, so RefSeq rows are not loaded
+        if not record['transcript'].startswith('ENST'):
+            yield None
+            return
+
+        transcript = transcript_id_map.pop(record['transcript'], None)
+        if not transcript:
+            skipped_transcripts[None] += 1
+            yield None
+            return
+
+        constraint_flags = json.loads(record['constraint_flags'])
+        yield {
+            'transcript_id': transcript,
+            'canonical': record['canonical'] == 'true',
+            'mane_select': record['mane_select'] == 'true',
+            'constraint_flags': constraint_flags,
+            **{
+                field: float(record[record_field]) if record[record_field] != 'NA' and flag not in constraint_flags else None
+                for field, (record_field, flag) in cls.SCORE_FIELDS.items()
+            },
+        }
 
     @classmethod
     def get_record_models(cls, records, **kwargs):
+        preferred = [record for record in records if record['canonical']]
+        others = [record for record in records if not record['canonical']]
         # add _rank fields
         for field, order in [('mis_z', -1), ('pLI', -1), ('louef', 1)]:
-            for i, record in enumerate(sorted(records, key=lambda record: order * record[field])):
-                record['{}_rank'.format(field)] = i
+            rank_field = '{}_rank'.format(field)
+            sorted_records = sorted(preferred, key=lambda record: (record[field] is None, order * (record[field] or 0)))
+            for i, record in enumerate(sorted_records):
+                record[rank_field] = i
+            preferred_scores = sorted(order * record[field] for record in preferred if record[field] is not None)
+            for record in others:
+                record[rank_field] = None if record[field] is None else bisect_left(preferred_scores, order * record[field])
         return super().get_record_models(records, **kwargs)
 
 
