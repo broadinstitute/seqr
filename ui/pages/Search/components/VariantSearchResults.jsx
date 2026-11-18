@@ -43,15 +43,10 @@ const LargeRow = styled(Grid.Row)`
 
 const scrollToTop = () => window.scrollTo(0, 0)
 
-const DisplayVariants = React.memo(({ displayVariants, compoundHetToggle, searchHash }) => (
+const DisplayVariants = React.memo(({ displayVariants, ...props }) => (
   <Grid.Row>
     <Grid.Column width={16}>
-      <Variants
-        variants={displayVariants}
-        compoundHetToggle={compoundHetToggle}
-        searchHash={searchHash}
-        linkToSavedVariants
-      />
+      <Variants variants={displayVariants} {...props} linkToSavedVariants />
     </Grid.Column>
   </Grid.Row>
 ))
@@ -59,7 +54,6 @@ const DisplayVariants = React.memo(({ displayVariants, compoundHetToggle, search
 DisplayVariants.propTypes = {
   displayVariants: PropTypes.arrayOf(PropTypes.object),
   compoundHetToggle: PropTypes.func,
-  searchHash: PropTypes.string,
 }
 
 const compHetToggleLabel = helpLabel('Unpair', 'Display individual variants instead of pairs for compound heterozygous mutations')
@@ -168,10 +162,8 @@ const BaseVariantSearchResults = React.memo(({
     reloadOnIdUpdate
     errorMessage={errorMessage && <ErrorResults errorMessage={errorMessage} match={match} />}
   >
-    {React.createElement(
-      match.params.variantId ? DisplayVariants : VariantSearchResultsContent,
-      { match, displayVariants, ...props },
-    )}
+    {match.params.variantId ? <DisplayVariants displayVariants={displayVariants} /> :
+    <VariantSearchResultsContent match={match} displayVariants={displayVariants} {...props} />}
   </DataLoader>
 ))
 
