@@ -97,12 +97,12 @@ class EntriesToProjectGtStatsMito(BaseEntriesToProjectGtStats):
             'hom_samples': "sumIf(sign, calls.hl >= '0.95')",
         }
 
-class ProjectGtStatsSv(BaseProjectGtStats):
+class ProjectGtStatsGatkSv(BaseProjectGtStats):
 
     class Meta(BaseProjectGtStats.Meta):
-        db_table = 'GRCh38/SV/project_gt_stats'
+        db_table = 'GRCh38/GATK_SV/project_gt_stats'
 
-class EntriesToProjectGtStatsSv(IncrementalMaterializedView):
+class EntriesToProjectGtStatsGatkSv(IncrementalMaterializedView):
     project_guid = models.StringField(low_cardinality=True)
     key = UInt32FieldDeltaCodecField(primary_key=True)
     affected = models.Enum8Field(choices=[(1, 'A'), (2, 'N'), (3, 'U')])
@@ -111,7 +111,7 @@ class EntriesToProjectGtStatsSv(IncrementalMaterializedView):
     hom_samples = models.Int64Field()
 
     class Meta(EntriesToProjectGtStatsMeta):
-        db_table = 'GRCh38/SV/entries_to_project_gt_stats_mv'
+        db_table = 'GRCh38/GATK_SV/entries_to_project_gt_stats_mv'
         to_table = 'ProjectGtStatsSv'
         source_table = 'EntriesSv'
         source_sql = 'ARRAY JOIN calls GROUP BY project_guid, key, affected'
@@ -155,7 +155,7 @@ class GtStatsMito(models.ClickhouseModel):
     class Meta(BaseGtStats.Meta):
         db_table = 'GRCh38/MITO/gt_stats'
 
-class GtStatsSv(models.ClickhouseModel):
+class GtStatsGatkSv(models.ClickhouseModel):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
@@ -163,7 +163,7 @@ class GtStatsSv(models.ClickhouseModel):
     hom_affected = models.UInt32Field()
 
     class Meta(BaseGtStats.Meta):
-        db_table = 'GRCh38/SV/gt_stats'
+        db_table = 'GRCh38/GATK_SV/gt_stats'
 
 class BaseProjectsToGtStats(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
@@ -225,7 +225,7 @@ class ProjectsToGtStatsMito(RefreshableMaterializedView):
         }
 
 
-class ProjectsToGtStatsSv(RefreshableMaterializedView):
+class ProjectsToGtStatsGatkSv(RefreshableMaterializedView):
     key = UInt32FieldDeltaCodecField(primary_key=True)
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
@@ -233,7 +233,7 @@ class ProjectsToGtStatsSv(RefreshableMaterializedView):
     hom_affected = models.UInt32Field()
 
     class Meta(ProjectsToGtStatsMeta):
-        db_table = 'GRCh38/SV/project_gt_stats_to_gt_stats_mv'
+        db_table = 'GRCh38/GATK_SV/project_gt_stats_to_gt_stats_mv'
         to_table = 'GtStatsSv'
         source_table = 'ProjectGtStatsSv'
         column_selects = {
@@ -292,17 +292,17 @@ class GtStatsDictMito(Dictionary):
         source_table = 'GtStatsMito'
         layout = 'FLAT(MAX_ARRAY_SIZE 1000000)'
 
-class GtStatsDictSv(Dictionary):
+class GtStatsDictGatkSv(Dictionary):
     SEQR_POPULATIONS = [('sv_seqr', 'ac')]
 
-    key = DictKeyForeignKey('EntriesSv', related_name='gt_stats')
+    key = DictKeyForeignKey('EntriesGatkSv', related_name='gt_stats')
     ac_wgs = models.UInt32Field()
     ac_affected = models.UInt32Field()
     hom_wgs = models.UInt32Field()
     hom_affected = models.UInt32Field()
 
     class Meta(GtStatsDictMeta):
-        db_table = 'GRCh38/SV/gt_stats_dict'
+        db_table = 'GRCh38/GATK_SV/gt_stats_dict'
         source_table = 'GtStatsSv'
         layout = 'FLAT(MAX_ARRAY_SIZE 5000000)'
 
@@ -311,6 +311,6 @@ PROJECT_GT_STATS_VIEW_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         DATASET_TYPE_VARIANT_CALLS: ProjectsToGtStatsSnvIndel,
         DATASET_TYPE_MITO_CALLS: ProjectsToGtStatsMito,
-        DATASET_TYPE_SV_CALLS: ProjectsToGtStatsSv,
+        DATASET_TYPE_SV_CALLS: ProjectsToGtStatsGatkSv,
     },
 }

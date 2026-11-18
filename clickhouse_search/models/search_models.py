@@ -214,16 +214,16 @@ class BaseVariantsSv(BaseVariantsSvGcnv):
     class Meta:
         abstract = True
 
-class VariantsSv(BaseVariantsSv):
+class VariantsGatkSv(BaseVariantsSv):
 
     class Meta:
-        db_table = 'GRCh38/SV/variants_memory'
+        db_table = 'GRCh38/GATK_SV/variants_memory'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/variants', primary_key='key', flatten_nested=0)
 
-class VariantsDiskSv(BaseVariantsSv):
+class VariantsDiskGatkSv(BaseVariantsSv):
 
     class Meta:
-        db_table = 'GRCh38/SV/variants_disk'
+        db_table = 'GRCh38/GATK_SV/variants_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/variants', primary_key='key', flatten_nested=0)
 
 class BaseVariantsGcnv(BaseVariantsSvGcnv):
@@ -405,7 +405,7 @@ class EntriesMito(BaseEntries):
             index_granularity=8192,
         )
 
-class EntriesSv(BaseEntries):
+class EntriesGatkSv(BaseEntries):
     SAMPLE_TYPE = SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
@@ -420,12 +420,12 @@ class EntriesSv(BaseEntries):
     objects = SvEntriesManager.as_manager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('VariantsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('VariantsGatkSv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
     geneId_ids = models.ArrayField(models.UInt32Field())
 
     class Meta(BaseEntries.Meta):
-        db_table = 'GRCh38/SV/entries'
+        db_table = 'GRCh38/GATK_SV/entries'
 
 class EntriesGcnv(BaseEntries):
     SAMPLE_TYPE = SAMPLE_TYPE_WES
@@ -573,11 +573,11 @@ class KeyLookupMito(BaseKeyLookup):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
-class KeyLookupSv(BaseKeyLookup):
-    key = OneToOneField('VariantsSv', db_column='key', on_delete=CASCADE)
+class KeyLookupGatkSv(BaseKeyLookup):
+    key = OneToOneField('VariantsGatkSv', db_column='key', on_delete=CASCADE)
 
     class Meta:
-        db_table = 'GRCh38/SV/key_lookup'
+        db_table = 'GRCh38/GATK_SV/key_lookup'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
@@ -617,7 +617,7 @@ ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
         DATASET_TYPE_MITO_CALLS: EntriesMito,
-        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': EntriesSv,
+        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': EntriesGatkSv,
         f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WES}': EntriesGcnv,
     },
 }
@@ -626,7 +626,7 @@ VARIANTS_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         DATASET_TYPE_VARIANT_CALLS: VariantsSnvIndel,
         DATASET_TYPE_MITO_CALLS: VariantsMito,
-        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': VariantsSv,
+        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': VariantsGatkSv,
         f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WES}': VariantsGcnv,
     },
 }

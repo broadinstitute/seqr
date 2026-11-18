@@ -10,8 +10,8 @@ import random
 import responses
 
 from clickhouse_search.models.gt_stats_models import ProjectGtStatsSnvIndel, \
-    ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv, \
-    GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv
+    ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsGatkSv, \
+    GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictGatkSv
 from clickhouse_search.models.postgres_dicts import AffectedDict, SexDict, IndividualMetadataDict, DiscoveryVariantDict, \
     ExcludedVariantDict
 from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, \
@@ -25,7 +25,7 @@ from clickhouse_search.models.reference_data_models import ClinvarMvSnvIndel, Cl
     HelixmitoDict, HelixmitoheteroplasmyMv, HelixmitoheteroplasmyDict, ScreenDict, MitomapMv, MitomapDict, Absplice2Mv, \
     Absplice2Dict, PromoterAIMv, PromoterAIDict, PextSnvIndelMv, PextSnvIndelDict, PextMitoMv, PextMitoDict, AlphagenomeMv, \
     AlphagenomeDict
-from clickhouse_search.models.search_models import EntriesSnvIndel, VariantsSnvIndel, EntriesSv, EntriesGcnv
+from clickhouse_search.models.search_models import EntriesSnvIndel, VariantsSnvIndel, EntriesGatkSv, EntriesGcnv
 from clickhouse_search.test_utils import VARIANT1, VARIANT2, VARIANT3, VARIANT4, CACHED_CONSEQUENCES_BY_KEY, \
     VARIANT_ID_SEARCH, VARIANT_IDS, LOCATION_SEARCH, GENE_IDS, SELECTED_TRANSCRIPT_MULTI_FAMILY_VARIANT, \
     SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_4, SELECTED_ANNOTATION_TRANSCRIPT_VARIANT_3, COMP_HET_ALL_PASS_FILTERS, \
@@ -86,7 +86,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
         for postgres_dict in [AffectedDict, SexDict, IndividualMetadataDict, DiscoveryVariantDict, ExcludedVariantDict]:
             postgres_dict.reload()
         for view in [
-            ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsSv,
+            ProjectsToGtStatsGRCh37SnvIndel, ProjectsToGtStatsSnvIndel, ProjectsToGtStatsMito, ProjectsToGtStatsGatkSv,
             ClinvarMvSnvIndel, ClinvarSearchMvSnvIndel, ClinvarMvMito, ClinvarSearchMvMito, ClinvarMvGRCh37SnvIndel,
             ClinvarSearchMvGRCh37SnvIndel, HgmdMv, HgmdSearchMv, DbnsfpSnvIndelMv, EigenMv, SpliceAiMv,
             DbnsfpGRCh37SnvIndelMv, EigenGRCh37Mv, SpliceAiGRCh37Mv, DbnsfpMitoMv, MitimpactMv, HmtvarMv, LocalconstraintmitoMv,
@@ -96,7 +96,7 @@ class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
         ]:
             view.refresh()
         for dictionary in [
-            GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictSv, DbnsfpSnvIndelDict,
+            GtStatsDictGRCh37SnvIndel, GtStatsDictSnvIndel, GtStatsDictMito, GtStatsDictGatkSv, DbnsfpSnvIndelDict,
             EigenDict, SpliceAiDict, GnomadNonCodingConstraintDict, DbnsfpGRCh37SnvIndelDict, EigenGRCh37Dict,
             SpliceAiGRCh37Dict, DbnsfpMitoDict, MitimpactDict, HmtvarDict, LocalconstraintmitoDict, GnomadGenomesDict,
             GnomadExomesDict, TopmedDict, GnomadGenomesGRCh37Dict, GnomadExomesGRCh37Dict, TopmedGRCh37Dict,
@@ -1002,7 +1002,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
     def test_variant_lookup(self, mock_liftover):
         mock_convert_coordinate = mock_liftover.return_value.convert_coordinate
         mock_convert_coordinate.side_effect = lambda chrom, pos: [(chrom, pos + 10000)]
-        EntriesSv.objects.using('clickhouse_write').filter(family_guid='F000002_2_x').delete()
+        EntriesGatkSv.objects.using('clickhouse_write').filter(family_guid='F000002_2_x').delete()
         EntriesGcnv.objects.using('clickhouse_write').filter(family_guid='F000002_2_x').delete()
 
         self.check_require_login(reverse(variant_lookup_handler))
