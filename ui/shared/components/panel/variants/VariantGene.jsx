@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListsByGuid, getFamiliesByGuid } from 'redux/selectors'
+import { getGenesById, getLocusListsByGuid, getFamiliesByGuid, getTranscriptsById } from 'redux/selectors'
 import DataTable from 'shared/components/table/DataTable'
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
@@ -15,6 +15,8 @@ import {
   PANEL_APP_CONFIDENCE_LEVEL_COLORS,
   PANEL_APP_CONFIDENCE_DESCRIPTION,
   getDecipherGeneLink,
+  getVariantMainGeneId,
+  getVariantMainTranscript,
 } from '../../../utils/constants'
 import { compareObjects } from '../../../utils/sortUtils'
 import { camelcaseToTitlecase } from '../../../utils/stringUtils'
@@ -378,20 +380,25 @@ const ORDINAL_SUFFIXES = { one: 'st', two: 'nd', few: 'rd', other: 'th' }
 const ORDINAL_RULES = new Intl.PluralRules('en-US', { type: 'ordinal' })
 const formatRank = rank => `${rank.toLocaleString('en-US')}${ORDINAL_SUFFIXES[ORDINAL_RULES.select(rank)]}`
 
-const GENE_DETAIL_SECTIONS = [
+const hasValue = val => val !== null && val !== undefined
+const isLofConstrained = ({ louef }) => hasValue(louef) && louef < LOF_THRESHHOLD
+
+const constraintSubject = gene => (gene.isTranscriptConstraints ? 'transcript' : 'gene')
+
+const CONSTRAINT_DETAIL_SECTIONS = [
   {
     color: 'red',
     description: 'Missense Constraint',
     label: 'MISSENSE CONSTR',
-    showDetails: gene => (
-      (gene.constraints.misZ && gene.constraints.misZ > MISSENSE_THRESHHOLD) ||
+    showDetails: gene => !gene.hideConstraints && hasValue(gene.constraints.misZ) && (
+      gene.constraints.misZ > MISSENSE_THRESHHOLD ||
       (gene.constraints.misZRank && gene.constraints.misZRank < CONSTRAINED_GENE_RANK_THRESHOLD)
     ),
     detailsDisplay: gene => (
       <span>
-        {`This gene ranks as the ${formatRank(gene.constraints.misZRank + 1)} most constrained against missense variation
-        among the ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in ${GENE_CONSTRAINT_VERSION}
-        (Z-score: ${gene.constraints.misZ.toPrecision(4)}).`}
+        {`This ${constraintSubject(gene)} ranks as the ${formatRank(gene.constraints.misZRank + 1)} most constrained against
+        missense variation among the ${gene.constraints.misZTotal.toLocaleString('en-US')} genes evaluated in
+        ${GENE_CONSTRAINT_VERSION} (Z-score: ${gene.constraints.misZ.toPrecision(4)}).`}
         &nbsp;
         {MISSENSE_CONSTRAINT_DESCRIPTION}
         &nbsp;
@@ -403,16 +410,19 @@ const GENE_DETAIL_SECTIONS = [
     color: 'red',
     description: 'Loss of Function Constraint',
     label: 'LOF CONSTR',
-    showDetails: gene => (gene.constraints.louef < LOF_THRESHHOLD) ||
+    showDetails: gene => !gene.hideConstraints && (
+      isLofConstrained(gene.constraints) ||
       (gene.cnSensitivity.phi && gene.cnSensitivity.phi > HI_THRESHOLD) ||
-      (gene.sHet.postMean && gene.sHet.postMean > SHET_THRESHOLD),
+      (gene.sHet.postMean && gene.sHet.postMean > SHET_THRESHOLD)
+    ),
     detailsDisplay: gene => (
       <List bulleted>
-        {gene.constraints.louef < LOF_THRESHHOLD && (
+        {isLofConstrained(gene.constraints) && (
           <List.Item>
-            {`This gene ranks as the ${formatRank(gene.constraints.louefRank + 1)} most constrained against loss-of-function
-            (LoF) mutations by LOEUF among the ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in
-            ${GENE_CONSTRAINT_VERSION} (LOEUF: ${gene.constraints.louef.toPrecision(4)}`}
+            {`This ${constraintSubject(gene)} ranks as the ${formatRank(gene.constraints.louefRank + 1)} most constrained
+            against loss-of-function (LoF) mutations by LOEUF among the
+            ${gene.constraints.louefTotal.toLocaleString('en-US')} genes evaluated in ${GENE_CONSTRAINT_VERSION}
+            (LOEUF: ${gene.constraints.louef.toPrecision(4)}`}
             {gene.constraints.pli ? `; pLI: ${gene.constraints.pli.toPrecision(4)}` : ''}
             ) [
             <a href="https://pubmed.ncbi.nlm.nih.gov/32461654/" target="_blank" rel="noreferrer">
@@ -439,6 +449,10 @@ const GENE_DETAIL_SECTIONS = [
       </List>
     ),
   },
+]
+
+const GENE_DETAIL_SECTIONS = [
+  ...CONSTRAINT_DETAIL_SECTIONS,
   {
     color: 'red',
     description: 'TriploSensitive',
@@ -543,6 +557,14 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
   )
 ))
 
+export const TranscriptConstraintLabels = ({ constraints }) => getDetailSections(
+  CONSTRAINT_DETAIL_SECTIONS, { constraints, cnSensitivity: {}, sHet: {}, isTranscriptConstraints: true }, false, {},
+)
+
+TranscriptConstraintLabels.propTypes = {
+  constraints: PropTypes.object,
+}
+
 export const GeneDetails = React.memo((
   { gene, compact, showLocusLists, showInlineDetails, individualGeneData, noExpand, ...labelProps },
 ) => {
@@ -595,9 +617,27 @@ const getGeneConsequence = (geneId, variant) => {
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 }
 
+const getConstraintGene = (gene, variant, mainTranscriptConstraints) => {
+  const mainGeneId = variant && !variant.svType && getVariantMainGeneId(variant)
+  if (!mainGeneId) {
+    return gene
+  }
+  const isMainGene = mainGeneId === gene.geneId
+  return {
+    ...gene,
+    constraints: (isMainGene && mainTranscriptConstraints) || {},
+    hideConstraints: !isMainGene,
+    isTranscriptConstraints: true,
+  }
+}
+
+const getMainTranscriptConstraints = (state, { variant }) => (
+  variant ? getTranscriptsById(state)?.[getVariantMainTranscript(variant).transcriptId]?.constraints : undefined
+)
+
 export const BaseVariantGene = React.memo(({
   geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, tpmGenes, individualGeneData, geneModalId,
-  noExpand, geneSearchFamily, hideLocusLists,
+  noExpand, geneSearchFamily, hideLocusLists, mainTranscriptConstraints,
 }) => {
   const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
@@ -609,7 +649,7 @@ export const BaseVariantGene = React.memo(({
 
   const geneDetails = (
     <GeneDetails
-      gene={gene}
+      gene={getConstraintGene(gene, variant, mainTranscriptConstraints)}
       compact={compactDetails}
       showInlineDetails={showInlineDetails}
       noExpand={noExpand}
@@ -705,6 +745,7 @@ BaseVariantGene.propTypes = {
   noExpand: PropTypes.bool,
   geneSearchFamily: PropTypes.string,
   hideLocusLists: PropTypes.bool,
+  mainTranscriptConstraints: PropTypes.object,
   ...RNA_SEQ_PROP_TYPES,
 }
 
@@ -715,6 +756,7 @@ const getRnaSeqProps = (state, ownProps) => ({
 
 const mapStateToProps = (state, ownProps) => ({
   gene: getGenesById(state)[ownProps.geneId],
+  mainTranscriptConstraints: getMainTranscriptConstraints(state, ownProps),
   ...getRnaSeqProps(state, ownProps),
 })
 
@@ -726,6 +768,7 @@ class VariantGenes extends React.PureComponent {
     variant: PropTypes.object.isRequired,
     mainGeneId: PropTypes.string,
     genesById: PropTypes.object.isRequired,
+    mainTranscriptConstraints: PropTypes.object,
     showMainGene: PropTypes.bool,
     ...RNA_SEQ_PROP_TYPES,
   }
@@ -741,7 +784,9 @@ class VariantGenes extends React.PureComponent {
   }
 
   render() {
-    const { variant, genesById, mainGeneId, showMainGene, individualGeneData, tpmGenes } = this.props
+    const {
+      variant, genesById, mainTranscriptConstraints, mainGeneId, showMainGene, individualGeneData, tpmGenes,
+    } = this.props
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {}).filter(geneId => geneId !== 'null')
     const genes = geneIds.map(geneId => genesById[geneId]).filter(gene => gene)
@@ -762,6 +807,7 @@ class VariantGenes extends React.PureComponent {
               variant={variant}
               individualGeneData={individualGeneData}
               tpmGenes={tpmGenes}
+              mainTranscriptConstraints={mainTranscriptConstraints}
               showInlineDetails={!mainGeneId}
               compact
             />
@@ -775,6 +821,8 @@ class VariantGenes extends React.PureComponent {
       geneId => (variant.transcripts[geneId][0] || {}).majorConsequence,
     ).filter(consequence => consequence).map(consequence => consequence.replace(/_/g, ' '))))].join(', ')
 
+    const constraintGenes = genes.map(gene => getConstraintGene(gene, variant, mainTranscriptConstraints))
+
     return (
       <div>
         <ButtonLink fontWeight="bold" size="large" onClick={this.showGenes}>{`${geneIds.length} Genes`}</ButtonLink>
@@ -784,7 +832,7 @@ class VariantGenes extends React.PureComponent {
           <div>
             {[...GENE_DISEASE_DETAIL_SECTIONS, ...GENE_DETAIL_SECTIONS].map(
               ({ showDetails, detailsDisplay, expandedDisplay, expandedLabel, ...sectionConfig }) => {
-                const sectionGenes = genes.filter(gene => showDetails(gene))
+                const sectionGenes = constraintGenes.filter(gene => showDetails(gene))
                 return (
                   <GeneDetailSection
                     key={sectionConfig.label}
@@ -811,6 +859,7 @@ class VariantGenes extends React.PureComponent {
 
 const mapAllGenesStateToProps = (state, ownProps) => ({
   genesById: getGenesById(state),
+  mainTranscriptConstraints: getMainTranscriptConstraints(state, ownProps),
   ...getRnaSeqProps(state, ownProps),
 })
 

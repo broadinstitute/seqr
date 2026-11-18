@@ -218,7 +218,10 @@ export const GENE = {
 }
 
 export const MISSENSE_CONSTRAINED_GENE = {
-  constraints: { misZ: 4.1371, misZRank: 1348, louef: 0.81976, louefRank: 7626, pli: 0.71899, pliRank: 4059, totalGenes: 20076 },
+  constraints: {
+    misZ: 4.1371, misZRank: 1348, misZTotal: 20076, louef: 0.81976, louefRank: 7626, louefTotal: 19990,
+    pli: 0.71899, pliRank: 4059, pliTotal: 19950, transcriptId: "ENST00000641515", canonical: true, maneSelect: true,
+  },
   cnSensitivity: {},
   sHet: {},
   omimPhenotypes: [],
@@ -228,12 +231,66 @@ export const MISSENSE_CONSTRAINED_GENE = {
 }
 
 export const LOF_CONSTRAINED_GENE = {
-  constraints: { misZ: 0.78047, misZRank: 9990, louef: 0.3995, louefRank: 2224, pli: 0.99948, pliRank: 2444, totalGenes: 20076 },
+  constraints: {
+    misZ: 0.78047, misZRank: 9990, misZTotal: 20076, louef: 0.3995, louefRank: 2224, louefTotal: 19990,
+    pli: 0.99948, pliRank: 2444, pliTotal: 19950, transcriptId: "ENST00000620225", canonical: true, maneSelect: true,
+  },
   cnSensitivity: {},
   sHet: {},
   omimPhenotypes: [],
   geneId: "ENSG00000277258",
   geneSymbol: "PCGF2",
+}
+
+export const CONSTRAINT_TRANSCRIPTS_BY_ID = {
+  ENST00000335137: {
+    transcriptId: "ENST00000335137",
+    constraints: {
+      misZ: 3.5, misZRank: 3200, misZTotal: 20076, louef: null, louefRank: null, louefTotal: 19990,
+      pli: null, pliRank: null, pliTotal: 19950, transcriptId: "ENST00000335137", canonical: false, maneSelect: false,
+    },
+  },
+  ENST00000611883: {
+    transcriptId: "ENST00000611883",
+    constraints: {
+      misZ: 0.78047, misZRank: 9990, misZTotal: 20076, louef: 0.3995, louefRank: 2224, louefTotal: 19990,
+      pli: 0.99948, pliRank: 2444, pliTotal: 19950, transcriptId: "ENST00000611883", canonical: false, maneSelect: false,
+    },
+  },
+  ENST00000641999: {
+    transcriptId: "ENST00000641999",
+    constraints: {
+      misZ: 5.2, misZRank: 812, misZTotal: 20076, louef: 0.3, louefRank: 1500, louefTotal: 19990,
+      pli: 0.1, pliRank: 8000, pliTotal: 19950, transcriptId: "ENST00000641999", canonical: false, maneSelect: false,
+    },
+  },
+}
+
+export const SV_VARIANT_WITH_CONSTRAINED_GENES = {
+  variantId: "batch_123_DEL",
+  svType: "DEL",
+  familyGuids: [],
+  transcripts: {
+    ENSG00000186092: [],
+    ENSG00000277258: [],
+  },
+}
+
+export const NON_PREFERRED_TRANSCRIPT_VARIANT = {
+  variantId: "1-69134-A-G",
+  chrom: "1",
+  pos: 69134,
+  familyGuids: [],
+  mainTranscriptId: "ENST00000335137",
+  transcripts: {
+    ENSG00000186092: [
+      { geneId: "ENSG00000186092", transcriptId: "ENST00000335137", majorConsequence: "missense_variant" },
+      { geneId: "ENSG00000186092", transcriptId: "ENST00000641515", majorConsequence: "missense_variant" },
+    ],
+    ENSG00000277258: [
+      { geneId: "ENSG00000277258", transcriptId: "ENST00000611883", majorConsequence: "missense_variant" },
+    ],
+  },
 }
 
 export const LOCUS_LIST_GUID = "LL00132_2017_monogenic_ibd_gen"
