@@ -329,6 +329,7 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
     PREDICTIONS = {
         **BaseEntriesSnvIndel.PREDICTIONS,
         'absplice': {},
+        'alphagenome': {},
         'pext': {},
         'promoter_ai': {},
     }
