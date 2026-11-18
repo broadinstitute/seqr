@@ -35,7 +35,6 @@ class SingleSampleVCFTask(BaseVCFTask):
         'SVTYPE': ('1', 'String'),
         'StrVCTVRE': ('1', 'String'),
         'GNOMAD_V4.1_TRUTH_VID': ('1', 'String'),
-        'SEQR_INTERNAL_TRUTH_VID': ('1', 'String'),
         'PREDICTED_BREAKEND_EXONIC': ('.', 'String'),
         'PREDICTED_COPY_GAIN': ('.', 'String'),
         'PREDICTED_DUP_PARTIAL': ('.', 'String'),

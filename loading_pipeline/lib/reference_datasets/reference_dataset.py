@@ -4,8 +4,8 @@ from collections.abc import Callable
 from enum import StrEnum
 
 import hail as hl
+import pandas as pd
 
-from loading_pipeline.lib.annotations import sv
 from loading_pipeline.lib.core import (
     DatasetType,
     ReferenceGenome,
@@ -20,7 +20,6 @@ from loading_pipeline.lib.reference_datasets.misc import (
 )
 
 DATASET_TYPES = 'dataset_types'
-FORMATTING_ANNOTATION = 'formatting_annotation'
 SELECT = 'select'
 VERSION = 'version'
 PATH = 'path'
@@ -35,10 +34,6 @@ class ReferenceDataset(StrEnum):
     gnomad_genomes = 'gnomad_genomes'
     gnomad_qc = 'gnomad_qc'
     gnomad_svs = 'gnomad_svs'
-
-    @property
-    def formatting_annotation(self) -> Callable | None:
-        return CONFIG[self].get(FORMATTING_ANNOTATION)
 
     def version(self, reference_genome: ReferenceGenome) -> str:
         version = CONFIG[self][reference_genome][VERSION]
@@ -78,6 +73,12 @@ class ReferenceDataset(StrEnum):
             validate_allele_type(ht, dataset_type)
             validate_no_duplicate_variants(ht, reference_genome, dataset_type)
         return ht
+
+    def format_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        module = importlib.import_module(
+            f'loading_pipeline.lib.reference_datasets.{self.name}',
+        )
+        return module.format_df(df)
 
 
 CONFIG = {
@@ -165,7 +166,6 @@ CONFIG = {
         },
     },
     ReferenceDataset.gnomad_svs: {
-        FORMATTING_ANNOTATION: sv.populations,
         ReferenceGenome.GRCh38: {
             DATASET_TYPES: frozenset([DatasetType.SV]),
             VERSION: '1.1',

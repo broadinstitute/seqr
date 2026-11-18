@@ -3,7 +3,7 @@ from enum import StrEnum
 
 import hail as hl
 
-from loading_pipeline.lib.annotations import mito, shared, snv_indel, sv
+from loading_pipeline.lib.annotations import mito, shared, snv_indel
 from loading_pipeline.lib.core.definitions import ReferenceGenome, SampleType
 from loading_pipeline.lib.core.environment import Env
 
@@ -180,26 +180,6 @@ class DatasetType(StrEnum):
                 'sortedTranscriptConsequences': shared.sorted_transcript_consequences,
                 'liftedOverPos': shared.lifted_over_pos,
             },
-            DatasetType.SV: {
-                'algorithms': sv.algorithms,
-                'bothsidesSupport': sv.bothsides_support,
-                'chrom': sv.chrom,
-                'cpxIntervals': sv.cpx_intervals,
-                'end': sv.end,
-                'pos': sv.pos,
-                'populations': sv.populations,
-                'predictions': sv.predictions,
-                'sortedGeneConsequences': sv.sorted_gene_consequences,
-                'svType': sv.sv_type,
-                'svTypeDetail': sv.sv_type_detail,
-                'variantId': sv.variant_id,
-                'xpos': shared.xpos,
-                'endChrom': sv.end_chrom,
-                'svSourceDetail': sv.sv_source_detail,
-                'liftedOverChrom': shared.lifted_over_chrom,
-                'liftedOverPos': shared.lifted_over_pos,
-                'rg37LocusEnd': shared.lifted_over_locus_end,
-            },
         }
         if reference_genome == ReferenceGenome.GRCh37:
             return GRCh37_fns[self]
@@ -215,9 +195,6 @@ class DatasetType(StrEnum):
             },
             DatasetType.MITO: {
                 **GRCh37_fns[DatasetType.MITO],
-            },
-            DatasetType.SV: {
-                **GRCh37_fns[DatasetType.SV],
             },
         }[self]
 
@@ -267,10 +244,6 @@ class DatasetType(StrEnum):
         return {
             DatasetType.SNV_INDEL: {'lifted_over_locus': shared.rg37_locus},
             DatasetType.MITO: {'lifted_over_locus': shared.rg37_locus},
-            DatasetType.SV: {
-                'lifted_over_locus': shared.rg37_locus,
-                'lifted_over_locus_end': sv.rg37_locus_end,
-            },
         }[self]
 
     @property
