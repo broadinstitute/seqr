@@ -112,8 +112,8 @@ class EntriesToProjectGtStatsGatkSv(IncrementalMaterializedView):
 
     class Meta(EntriesToProjectGtStatsMeta):
         db_table = 'GRCh38/GATK_SV/entries_to_project_gt_stats_mv'
-        to_table = 'ProjectGtStatsSv'
-        source_table = 'EntriesSv'
+        to_table = 'ProjectGtStatsGatkSv'
+        source_table = 'EntriesGatkSv'
         source_sql = 'ARRAY JOIN calls GROUP BY project_guid, key, affected'
 
 
@@ -234,8 +234,8 @@ class ProjectsToGtStatsGatkSv(RefreshableMaterializedView):
 
     class Meta(ProjectsToGtStatsMeta):
         db_table = 'GRCh38/GATK_SV/project_gt_stats_to_gt_stats_mv'
-        to_table = 'GtStatsSv'
-        source_table = 'ProjectGtStatsSv'
+        to_table = 'GtStatsGatkSv'
+        source_table = 'ProjectGtStatsGatkSv'
         column_selects = {
             'ac_wgs': 'sum((het_samples * 1) + (hom_samples * 2))',
             'ac_affected': "sumIf((het_samples * 1) + (hom_samples * 2), affected = 'A')",
@@ -303,7 +303,7 @@ class GtStatsDictGatkSv(Dictionary):
 
     class Meta(GtStatsDictMeta):
         db_table = 'GRCh38/GATK_SV/gt_stats_dict'
-        source_table = 'GtStatsSv'
+        source_table = 'GtStatsGatkSv'
         layout = 'FLAT(MAX_ARRAY_SIZE 5000000)'
 
 PROJECT_GT_STATS_VIEW_CLASS_MAP = {
