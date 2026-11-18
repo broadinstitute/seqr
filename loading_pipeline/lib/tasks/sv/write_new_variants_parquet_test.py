@@ -107,17 +107,10 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     @mock.patch(
         'loading_pipeline.lib.tasks.sv.single_sample_vcf.random',
     )
-    @mock.patch(
-        'loading_pipeline.lib.tasks.sv.write_new_variants_parquet.load_gencode_gene_symbol_to_gene_id',
-    )
     def test_sv_write_new_variants_parquet_test(
         self,
-        mock_load_gencode_gene_symbol_to_gene_id: Mock,
         mock_random: Mock,
     ) -> None:
-        mock_load_gencode_gene_symbol_to_gene_id.return_value = {
-            'TAS1R1': 'ENSG00000173662',
-        }
         mock_random.randint.side_effect = range(1, 10)
         _write_existing_variants_parquet_fixture()
         copy_project_pedigree_to_mocked_dir(
@@ -183,7 +176,10 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                         },
                     },
                     'sortedGeneConsequences': [
-                        {'geneId': None, 'majorConsequence': 'NEAREST_TSS'},
+                        {
+                            'geneId': 'ENSG00000173662',
+                            'majorConsequence': 'NEAREST_TSS',
+                        },
                     ],
                 },
                 {
