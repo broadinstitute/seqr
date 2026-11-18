@@ -23,5 +23,5 @@ class RunSvPipelineTask(luigi.WrapperTask):
         return [
             self.clone(WriteMetadataForSvRunTask),
             self.clone(WriteNewSvEntriesParquetTask),
-            self.clone(WriteNewSvVariantsParquetTask),
+            self.clone(WriteNewSvVariantsParquetTask, attempt_id=self.attempt_id),
         ]

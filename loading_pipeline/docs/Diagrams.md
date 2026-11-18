@@ -65,8 +65,7 @@
                |__________________________________|
                                 |                              
                                 v
-                   WritePostprocessedSvCallsetTask
-                   (merge and deduplicate)
+                     WriteDeduplicatedSvVcfTask
                                 |
                _________________+_________________          
                |                                 |          
