@@ -33,6 +33,11 @@ SAVED_VARIANT_RESPONSE_KEYS = {
     'genesById', 'locusListsByGuid', 'rnaSeqData', 'mmeSubmissionsByGuid', 'transcriptsById', 'phenotypeGeneScores',
 }
 
+TRANSCRIPT_CONSTRAINTS = {
+    'canonical': False, 'louef': 0.9173, 'louefRank': 0, 'maneSelect': False, 'misZ': 2.1543, 'misZRank': 0,
+    'pli': 0.000001047, 'pliRank': 1, 'louefTotal': 1, 'misZTotal': 1, 'pliTotal': 1, 'transcriptId': 'ENST00000258436',
+}
+
 COMPOUND_HET_3_JSON = {
     'key': 113,
     'alt': 'C',
@@ -217,7 +222,10 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
 
         self.assertDictEqual(
             response_json['transcriptsById'],
-            {'ENST00000258436': {'isManeSelect': True, 'refseqId': 'NM_017900.2', 'transcriptId': 'ENST00000258436'}},
+            {'ENST00000258436': {
+                'isManeSelect': True, 'refseqId': 'NM_017900.2', 'transcriptId': 'ENST00000258436',
+                'constraints': TRANSCRIPT_CONSTRAINTS,
+            }},
         )
 
         self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {
@@ -412,7 +420,10 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals', 'transcriptsById'})
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals'})
+        self.assertDictEqual(response_json['transcriptsById'], {
+            'ENST00000258436': {'transcriptId': 'ENST00000258436', 'constraints': TRANSCRIPT_CONSTRAINTS},
+        })
         self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()), fields)
         self.assertSetEqual(set(response_json['variantsById']['1-248367227-TC-T'].keys()), {
             *variant_fields, *SAVED_VARIANT_DETAIL_FIELDS, 'discoveryTags', 'noAccessDiscoveryFamilies', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',
