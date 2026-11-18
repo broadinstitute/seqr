@@ -6,6 +6,8 @@ from django.db import migrations
 import django.db.models.deletion
 import django.db.models.manager
 
+from clickhouse_search.backend.table_models import conditionally_reload_dictionary
+
 
 class Migration(migrations.Migration):
 
@@ -135,4 +137,5 @@ class Migration(migrations.Migration):
                 ('_overwrite_base_manager', django.db.models.manager.Manager()),
             ],
         ),
+        migrations.RunPython(conditionally_reload_dictionary('GRCh38/GATK_SV/gt_stats_dict')),
     ]
