@@ -53,6 +53,20 @@ SEARCH_RESPONSE_KEYS = {
     'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid', 'totalSampleCounts',
 }
 
+PREFERRED_TRANSCRIPT_CONSTRAINTS = {
+    'canonical': True, 'maneSelect': True, 'misZ': -0.7773, 'misZRank': 1, 'louef': 1.606, 'louefRank': 3,
+    'pli': 0.00090576, 'pliRank': 1,
+}
+CONSTRAINT_TOTALS = {'misZTotal': 4, 'pliTotal': 3, 'louefTotal': 4}
+TRANSCRIPT_CONSTRAINTS = {
+    'ENST00000383791': PREFERRED_TRANSCRIPT_CONSTRAINTS,
+    'ENST00000234626': {**PREFERRED_TRANSCRIPT_CONSTRAINTS, 'misZRank': 3, 'louefRank': 0},
+    'ENST00000408919': {
+        'canonical': False, 'maneSelect': False, 'misZ': 2.1543, 'misZRank': 0, 'louef': 0.1, 'louefRank': 0,
+        'pli': 0.99, 'pliRank': 0,
+    },
+}
+
 
 class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
@@ -193,6 +207,18 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             })
             if not is_37:
                 expected_response['omimIntervals'] = mock.ANY
+            transcripts_by_id = {
+                transcript['transcriptId']: {
+                    'transcriptId': transcript['transcriptId'],
+                    'constraints': {
+                        **TRANSCRIPT_CONSTRAINTS[transcript['transcriptId']], 'transcriptId': transcript['transcriptId'], **CONSTRAINT_TOTALS,
+                    },
+                } for variant in expected_response['variantsById'].values()
+                for transcripts in variant.get('transcripts', {}).values() for transcript in transcripts
+                if transcript.get('transcriptId') in TRANSCRIPT_CONSTRAINTS
+            }
+            if transcripts_by_id:
+                expected_response['transcriptsById'] = transcripts_by_id
         self.assertDictEqual(response.json(), expected_response)
 
         if not skip_cache_check:
@@ -2249,7 +2275,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         sort = 'constraint'
         self._assert_expected_search(
-            [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT3, GCNV_VARIANT4, VARIANT4, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], sort=sort,
+            [GCNV_VARIANT3, GCNV_VARIANT4, MULTI_FAMILY_VARIANT, VARIANT4, VARIANT2, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], sort=sort,
         )
 
         self._assert_expected_search([VARIANT2, VARIANT3, VARIANT1, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], sort='prioritized_gene', project_families=SINGLE_FAMILY_PROJECT_FAMILIES)

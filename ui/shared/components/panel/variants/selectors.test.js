@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 
 import { STATE_WITH_2_FAMILIES } from 'pages/Project/fixtures'
+import { VARIANT_SORT_LOOKUP } from 'shared/utils/constants'
 import {
   getPairedSelectedSavedVariants,
   getVisibleSortedSavedVariants,
@@ -88,6 +89,32 @@ test('getVisibleSortedSavedVariants', () => {
   )
   expect(savedVariants.length).toEqual(1)
   expect(savedVariants[0].variantGuid).toEqual('SV0000002_1248367227_r0390_100')
+
+  const constraintSortedVariants = getVisibleSortedSavedVariants({
+    ...STATE_WITH_2_FAMILIES,
+    savedVariantTableState: { ...STATE_WITH_2_FAMILIES.savedVariantTableState, sort: 'CONSTRAINT' },
+    genesById: {
+      ...STATE_WITH_2_FAMILIES.genesById,
+      ENSG00000228198: { constraints: { misZRank: 50, louefRank: 50 } },
+      ENSG00000164458: { constraints: { misZRank: 1500, louefRank: 1500 } },
+    },
+  }, { match: { params: {} } })
+  expect(constraintSortedVariants[0].variantGuid).toEqual('SV0000002_1248367227_r0390_100')
+})
+
+test('constraint sort uses the summed misZ and LOEUF ranks of the most constrained gene on the row', () => {
+  const genesById = {
+    GENE_A: { constraints: { misZRank: 100, louefRank: 200 } },
+    GENE_B: { constraints: { misZRank: 10, louefRank: 500 } },
+    GENE_C: { constraints: {} },
+  }
+  const variants = [
+    { variantId: 'none', transcripts: { GENE_C: [] } },
+    { variantId: 'B', transcripts: { GENE_B: [], GENE_C: [] } },
+    { variantId: 'A', transcripts: { GENE_B: [], GENE_A: [] } },
+  ]
+  const sorted = variants.sort((a, b) => VARIANT_SORT_LOOKUP.CONSTRAINT(a, b, genesById))
+  expect(sorted.map(({ variantId }) => variantId)).toEqual(['A', 'B', 'none'])
 })
 
 test('getIndividualGeneDataByFamilyGene', () => {
