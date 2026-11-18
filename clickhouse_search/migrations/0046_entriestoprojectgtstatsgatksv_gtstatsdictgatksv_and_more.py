@@ -5,8 +5,14 @@ import clickhouse_search.backend.fields
 from django.db import migrations
 import django.db.models.deletion
 import django.db.models.manager
+import os
 
 from clickhouse_search.backend.table_models import conditionally_reload_dictionary
+
+CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
+    'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
+    ''
+).split(',')
 
 
 class Migration(migrations.Migration):
@@ -128,7 +134,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/GATK_SV/project_gt_stats_to_gt_stats_mv',
                 'to_table': 'GtStatsGatkSv',
                 'source_table': 'ProjectGtStatsGatkSv',
-                'source_sql': 'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
                 'column_selects': {'ac_affected': "sumIf((het_samples * 1) + (hom_samples * 2), affected = 'A')", 'ac_wgs': 'sum((het_samples * 1) + (hom_samples * 2))', 'hom_affected': "sumIf(hom_samples, affected = 'A')", 'hom_wgs': 'sum(hom_samples)'},
                 'refreshable': True,
             },
