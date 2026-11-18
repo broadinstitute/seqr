@@ -7,8 +7,14 @@ import clickhouse_search.backend.table_models
 from django.db import migrations, models
 import django.db.models.deletion
 import django.db.models.manager
+import os
 
 from settings import CLICKHOUSE_IN_MEMORY_DIR, CLICKHOUSE_DATA_DIR
+
+CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS  = os.environ.get(
+    'CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS',
+    ''
+).split(',')
 
 
 class Migration(migrations.Migration):
@@ -75,7 +81,7 @@ class Migration(migrations.Migration):
                 'db_table': 'GRCh38/SV/project_gt_stats_to_gt_stats_mv',
                 'to_table': 'GtStatsSv',
                 'source_table': 'ProjectGtStatsSv',
-                'source_sql': 'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
+                'source_sql': f'WHERE project_guid NOT IN {CLICKHOUSE_AC_EXCLUDED_PROJECT_GUIDS} GROUP BY key',
                 'column_selects': {'ac_affected': "sumIf((het_samples * 1) + (hom_samples * 2), affected = 'A')", 'ac_wes': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WES')", 'ac_wgs': "sumIf((het_samples * 1) + (hom_samples * 2), sample_type = 'WGS')", 'hom_affected': "sumIf(hom_samples, affected = 'A')", 'hom_wes': "sumIf(hom_samples, sample_type = 'WES')", 'hom_wgs': "sumIf(hom_samples, sample_type = 'WGS')"},
                 'refreshable': True,
             },
