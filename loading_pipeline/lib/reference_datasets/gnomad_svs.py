@@ -1,7 +1,13 @@
+import luigi
 import pandas as pd
 
+from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
+    BaseWriteParquetFromVcfTask,
+)
 
-def format_df(df: pd.DataFrame) -> pd.DataFrame:
+
+def get_df(input_target: luigi.Target) -> pd.DataFrame:
+    df = BaseWriteParquetFromVcfTask.import_vcf(input_target)
     fields = {
         'END': 'END',
         'SVLEN': 'SVLEN',
