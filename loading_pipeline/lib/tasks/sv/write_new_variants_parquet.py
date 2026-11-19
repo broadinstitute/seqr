@@ -28,8 +28,6 @@ from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
 )
 
-TRUVARI_INFO_COLS = ['TRUVARI_FILTER', 'CollapseId', 'NumCollapsed', 'NumConsolidated']
-
 
 @luigi.util.inherits(BaseLoadingRunParams)
 class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
