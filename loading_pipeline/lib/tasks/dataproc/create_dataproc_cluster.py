@@ -22,11 +22,7 @@ DISK_TYPE = 'hyperdisk-balanced'
 HAIL_VERSION = hl.version().split('-')[0]
 INSTANCE_TYPE = 'n4-highmem-8'
 PKGS = '|'.join(
-    [
-        x.replace('gnomad_qc @ ', '').replace('onnxconverter-common @ ', '')
-        for x in pip_freeze.freeze()
-        if 'hail @' not in x
-    ],
+    [x.replace('gnomad_qc @ ', '') for x in pip_freeze.freeze() if 'hail @' not in x],
 )
 TIMEOUT_S = 1200
 FAILURE_STATUSES = {

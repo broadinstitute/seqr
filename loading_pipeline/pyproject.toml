@@ -19,7 +19,6 @@ dependencies = [
 
     # Git/URL installs (PEP 508 direct references)
     "gnomad-qc @ git+https://github.com/broadinstitute/gnomad_qc.git@v4.1",
-    "onnxconverter-common @ git+https://github.com/microsoft/onnxconverter-common.git@f7a8eb699caa6f6a78d3bdfbcaf5dfbd43569ebd",
 
     # Dataproc
     "pip==26.2",
