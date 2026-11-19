@@ -198,7 +198,7 @@ def _segments(df):
             'segment_type': segment_type,
             'contig': df['#CHROM'],
             'start': df['POS'],
-            'end': df['END'].case_when(
+            'end': df['END'].astype(int).case_when(
                 [
                     (segment_type == 'INS', df['POS'] + 1),
                     (segment_type.isin(['BND', 'CTX']), df['POS']),
@@ -210,10 +210,10 @@ def _segments(df):
     primary_segments = primary[primary['segment_type'] != 'CPX']
 
     breakends = df[sv_type == 'BND']
-    same_chrom = breakends['end_chrom'] == breakends['#CHROM']
+    same_chrom = breakends['CHR2'].notna()
     sv_len = pd.to_numeric(breakends['SVLEN'])
     second_breakend = (
-        breakends['END2']
+        breakends['END2'].astype(int)
         .fillna(df['POS'])
         .case_when(
             [
@@ -228,7 +228,7 @@ def _segments(df):
         ~(same_chrom & (second_breakend == breakends['POS']))
     ]
     second_breakend_segments = primary.loc[second_breakend.index].assign(
-        contig=breakends['end_chrom'],
+        contig=breakends['CHR2'].fillna(df['#CHROM']),
         start=second_breakend,
         end=second_breakend,
     )
@@ -241,9 +241,9 @@ def _segments(df):
             end=position,
         )
         for contig, position in [
-            (translocations['#CHROM'], translocations['END']),
-            (translocations['end_chrom'], translocations['END2'].fillna(df['POS'])),
-            (translocations['end_chrom'], translocations['END2'].fillna(df['POS']) + 1),
+            (translocations['#CHROM'], translocations['END'].astype(int)),
+            (translocations['CHR2'], translocations['END2'].fillna(df['POS']).astype(int)),
+            (translocations['CHR2'], translocations['END2'].fillna(df['POS']).astype(int) + 1),
         ]
     ]
 
@@ -573,6 +573,7 @@ def run_strvctvre(df, phylop_file):
     df = df[['#CHROM', 'POS', 'END', 'SVTYPE']]
     df['DEL'] = df['SVTYPE'] == 'DEL'
     df = df[df['DEL'] | (df['SVTYPE'] == 'DUP')]
+    df['END'] = df['END'].astype(int)
     df['length'] = df['END'] - df['POS']
     df = df[df['length'] > MIN_STRVCTRE_LENGTH]
 

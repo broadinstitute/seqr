@@ -89,6 +89,45 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             .fillna(df['ID'])
         )
 
+        # TODO
+        df['END'] = df['END'].astype(int)
+        if 'END2' in df:
+            df['end_chrom'] = (
+                df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
+            )
+            df['END2'] = pd.to_numeric(df['END2'])
+        else:
+            df['end_chrom'] = df['#CHROM']
+            df['END2'] = None
+            if 'CHR2' in df:
+                df = df.drop(columns=['CHR2'])
+
+        # Run liftover
+        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
+        df[['lifted_over_chrom', 'lifted_over_pos']] = [
+            self._liftover(lo, c, p)
+            for c, p in zip(df['#CHROM'], df['POS'], strict=False)
+        ]
+
+        df['END'] = df.pop('END2').fillna(df['END']).astype(int)
+        df['rg37_locus_end'] = [
+            {'contig': chrom, 'position': pos} if chrom else None
+            for chrom, pos in (
+                self._liftover(lo, c, p)
+                for c, p in zip(df['end_chrom'], df['END'], strict=False)
+            )
+        ]
+
+        df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
+        df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
+        df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
+        df['end_chrom'] = df['end_chrom'].mask(df['SVTYPE'] == 'INS')
+        df['xpos'] = (
+            df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000
+            + df['POS']
+        )
+        # END TODO
+
         df = df.groupby(['variantId', 'family_guid'], as_index=False).agg(
             filters=(
                 'FILTER',
