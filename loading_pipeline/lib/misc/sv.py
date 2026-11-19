@@ -137,7 +137,7 @@ def _load_annotations(gencode_df):
 
 def _complex_segments(df):
     segments = (
-        df['CPX_INTERVALS']
+        df['cpxIntervals']
         .explode()
         .rename_axis('variant')
         .reset_index(name='interval')
@@ -147,7 +147,7 @@ def _complex_segments(df):
         contig='chr' + segments['interval'].str['chrom'],
         start=segments['interval'].str['start'],
         end=segments['interval'].str['end'],
-        complex_type=segments['variant'].map(df['sv_type_detail']),
+        complex_type=segments['variant'].map(df['svTypeDetail']),
     ).drop(columns='interval')
 
     segments = segments[
@@ -191,7 +191,7 @@ def _complex_segments(df):
 
 def _segments(df):
     sv_type = df['SVTYPE']
-    segment_type = sv_type.mask(df['sv_type_detail'] == 'dDUP', 'INS')
+    segment_type = sv_type.mask(df['svTypeDetail'] == 'dDUP', 'INS')
     primary = pd.DataFrame(
         {
             'variant': df.index,
@@ -206,7 +206,7 @@ def _segments(df):
                     (segment_type.isin(['BND', 'CTX']), df['POS']),
                 ],
             ),
-            'complex_type': df['sv_type_detail'],
+            'complex_type': df['svTypeDetail'],
         },
     )
     primary_segments = primary[primary['segment_type'] != 'CPX']

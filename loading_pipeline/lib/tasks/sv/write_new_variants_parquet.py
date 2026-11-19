@@ -72,6 +72,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             output_type='v',
         )
         df = self.import_vcf(filtered_target)
+        original_columns = df.columns
 
         # Annotate gene consequences
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
@@ -79,21 +80,21 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
             raise ValueError(msg)
 
-        df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(
+        df.loc[df['SVTYPE'] == 'INS', 'svTypeDetail'] = df.pop('ALT').str.extract(
             r'^<[^:]+:(.+)>$',
         )[0]
         if 'CPX_TYPE' in df:
-            df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
-        invalid_details = df['sv_type_detail'].dropna()[
-            ~df['sv_type_detail'].dropna().isin(SV_TYPE_DETAILS)
+            df.loc[df['SVTYPE'] == 'CPX', 'svTypeDetail'] = df.pop('CPX_TYPE')
+        invalid_details = df['svTypeDetail'].dropna()[
+            ~df['svTypeDetail'].dropna().isin(SV_TYPE_DETAILS)
         ]
         if not invalid_details.empty:
             msg = f'Unexpected enum value: {invalid_details.iloc[0]}'
             raise ValueError(msg)
 
-        if 'CPX_INTERVALS' in df.columns:
-            df['CPX_INTERVALS'] = (
-                df['CPX_INTERVALS']
+        if 'cpxIntervals' in df.columns:
+            df['cpxIntervals'] = (
+                df['cpxIntervals']
                 .str.split(',')
                 .map(
                     lambda intervals: [
@@ -103,21 +104,19 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
                 )
             )
         else:
-            df['CPX_INTERVALS'] = None
+            df['cpxIntervals'] = None
 
         if 'CHR2' in df:
             df.loc[
                 (df['SVTYPE'] == 'INS') & df['CHR2'].notna(),
-                'sv_source_detail',
+                'svSourceDetail',
             ] = df['CHR2'].map(
                 lambda chrom: {'chrom': chrom},
             )
-        else:
-            df['sv_source_detail'] = None
 
         gencode_df = self._read_parquet(self.input()[1])
         consequences_by_variant = annotate_gene_consequences(df, gencode_df)
-        df['sorted_gene_consequences'] = [
+        df['sortedGeneConsequences'] = [
             consequences_by_variant.get(variant, []) for variant in df.index
         ]
 
@@ -138,16 +137,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         curr_max_key = int(max_key_line.removeprefix('##maxKey=').strip())
         df['key'] = range(curr_max_key + 1, curr_max_key + 1 + len(df))
 
-        return (
-            df.drop(
-                columns=['REF', 'FILTER', 'QUAL', 'SVLEN', '#CHROM', 'POS', 'END', 'CHR2', 'END2', *TRUVARI_INFO_COLS],
-                errors='ignore',
-            )
-            .rename(
-                columns={'ID': 'variant_id', 'SVTYPE': 'sv_type'},
-            )
-            .rename(columns=self._to_camel_case)
-        )
+        added_columns = df.columns.difference(original_columns)
+        rename_cols = {'ID': 'variant_id', 'SVTYPE': 'sv_type'}
+        return df[[*added_columns, *rename_cols]].rename(columns=rename_cols)
 
     @staticmethod
     def _open_parquet(input_target: luigi.Target):
@@ -174,8 +166,3 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             'end': int(end),
             'type': sv_type,
         }
-
-    @staticmethod
-    def _to_camel_case(snake_case_str):
-        converted = snake_case_str.replace('_', ' ').title().replace(' ', '')
-        return converted[0].lower() + converted[1:]
