@@ -1,7 +1,6 @@
 import luigi
 import luigi.util
 import pandas as pd
-from pyliftover import LiftOver
 
 from loading_pipeline.lib.annotations.enums import (
     SV_TYPE_DETAILS,

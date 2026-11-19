@@ -3,6 +3,7 @@ import json
 import luigi
 import luigi.util
 import pandas as pd
+from pyliftover import LiftOver
 
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
