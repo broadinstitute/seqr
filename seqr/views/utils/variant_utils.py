@@ -13,7 +13,7 @@ from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
 from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Dataset, RnaSample, VariantTag, VariantTagType
-from seqr.utils.gene_utils import get_genes_for_variants
+from seqr.utils.gene_utils import get_genes_for_variants, get_transcript_constraints
 from seqr.utils.xpos_utils import parse_variant_id, get_chrom_pos
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_child_entities, get_json_for_locus_lists, \
@@ -244,14 +244,17 @@ def _get_variants_reference_data_response(variants, genome_versions, get_family_
         response['family_genes'] = defaultdict(set)
     gene_ids = set()
     transcript_ids = set()
+    constraint_transcript_ids = set()
     for variant in variants:
         if not isinstance(variant, list):
             variant = [variant]
         for var in variant:
             for gene_id, transcripts in var.get('transcripts', {}).items():
                 gene_ids.add(gene_id)
+                variant_transcript_ids = [t['transcriptId'] for t in transcripts if t.get('transcriptId')]
+                constraint_transcript_ids.update(variant_transcript_ids)
                 if _requires_transcript_metadata(variant):
-                    transcript_ids.update([t['transcriptId'] for t in transcripts if t.get('transcriptId')])
+                    transcript_ids.update(variant_transcript_ids)
             if get_family_genes:
                 for family_guid in var.get('familyGuids', []):
                     response['family_genes'][family_guid].update(var.get('transcripts', {}).keys())
@@ -268,7 +271,9 @@ def _get_variants_reference_data_response(variants, genome_versions, get_family_
             TranscriptInfo.objects.filter(transcript_id__in=transcript_ids),
             nested_fields=[{'fields': ('refseqtranscript', 'refseq_id'), 'key': 'refseqId'}]
         )
-    } if transcript_ids else None
+    } if transcript_ids else {}
+    for transcript_id, constraints in get_transcript_constraints(constraint_transcript_ids).items():
+        transcripts.setdefault(transcript_id, {'transcriptId': transcript_id})['constraints'] = constraints
     if transcripts:
         response['transcriptsById'] = transcripts
 

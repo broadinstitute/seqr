@@ -16,7 +16,7 @@ def download_file(url):
         logger.info("Re-using {} previously downloaded from {}".format(local_file_path, url))
         return local_file_path
 
-    is_gz = url.endswith(".gz")
+    is_gz = url.endswith((".gz", ".bgz"))
     response = requests.get(url, stream=is_gz, timeout=300)
     input_iter = tqdm(response, unit=" data") if is_gz else tqdm(response.iter_content(), unit=" lines")
     logger.info("Downloading {} to {}".format(url, local_file_path))

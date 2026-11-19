@@ -5,7 +5,7 @@ import gzip
 from django.core.management import call_command
 
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
-from reference_data.models import GeneInfo, TranscriptInfo, RefseqTranscript, DataVersions
+from reference_data.models import GeneInfo, TranscriptInfo, RefseqTranscript, GeneConstraint, DataVersions
 
 BAD_FIELDS_GTF_DATA = [
     'gene	11869	14412	.	+	.	gene_id "ENSG00000223972.4";\n',
@@ -51,6 +51,14 @@ REFSEQ_DATA = [
     'ENST00000342066.8	NM_152486.3	NP_689699.2\n',
 ]
 
+CONSTRAINT_URL = 'https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1.2/constraint/gnomad.v4.1.2.constraint_metrics.tsv.bgz'
+CONSTRAINT_DATA = [
+    'gene	gene_id	transcript	canonical	mane_select	constraint_flags	mis.z_score	lof.oe_ci.upper	lof.pLI\n',
+    'DDX11L1	ENSG00000223972	ENST00000624735	true	false	[]	1.4024e+00	8.4606e-01	1.5553e-07\n',
+    'OR4F16	ENSG00000284662	ENST00000332831	true	true	[]	4.1371e+00	8.1976e-01	7.1899e-01\n',
+    'OR4F29	ENSG00000235249	ENST00000235249	true	true	[]	-4.2203e-01	1.1120e+00	5.3605e-01\n',
+]
+
 
 class UpdateGencodeTest(ReferenceDataCommandTestCase):
 
@@ -91,6 +99,8 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.assertEqual(trans_info.gene.gencode_release, 39)
         self.assertFalse(trans_info.is_mane_select)
         self.assertEqual(trans_info.refseqtranscript.refseq_id, 'NM_015658.4')
+        self.assertEqual(trans_info.geneconstraint.mis_z, 1.4024)
+        self.assertEqual(trans_info.geneconstraint.mis_z_rank, 1)
         trans_info = TranscriptInfo.objects.get(transcript_id='ENST00000332831')
         self.assertEqual(trans_info.start_grch37, 621059)
         self.assertEqual(trans_info.end_grch37, 622053)
@@ -100,6 +110,8 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.assertEqual(trans_info.gene.gencode_release, 39)
         self.assertTrue(trans_info.is_mane_select)
         self.assertEqual(trans_info.refseqtranscript.refseq_id, 'NR_122045.1')
+        self.assertEqual(trans_info.geneconstraint.mis_z, 4.1371)
+        self.assertEqual(trans_info.geneconstraint.mis_z_rank, 0)
 
     def _add_latest_responses(self):
         url = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.annotation.gtf.gz'
@@ -110,6 +122,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         responses.add(responses.GET, url_lift, body=self.gzipped_gtf_data, stream=True)
         url_refseq = 'http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz'
         responses.add(responses.GET, url_refseq, body=gzip.compress(''.join(REFSEQ_DATA).encode()))
+        responses.add(responses.GET, CONSTRAINT_URL, body=gzip.compress(''.join(CONSTRAINT_DATA).encode()))
         return url, url_lift
 
     @responses.activate
@@ -154,7 +167,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             ('Done', None),
             ('Loaded 2 RefseqTranscript records', None),
             ('Skipped 2 records with unrecognized or duplicated transcripts', None),
-        ])
+        ] + self._gene_constraint_logs(deleted=0, created=3))
         self.mock_subprocess.assert_not_called()
 
         self._has_expected_new_genes()
@@ -181,6 +194,17 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             (f'Parsing file {self.tmp_dir}/gencode.v{version}.annotation.gtf.gz', None),
         ]
 
+    def _gene_constraint_logs(self, deleted, created, skipped=None):
+        return [
+            ('Updating GeneConstraint', None),
+            (f'Downloading {CONSTRAINT_URL} to {self.tmp_dir}/gnomad.v4.1.2.constraint_metrics.tsv.bgz', None),
+            (f'Parsing file {self.tmp_dir}/gnomad.v4.1.2.constraint_metrics.tsv.bgz', None),
+            (f'Deleted {deleted} GeneConstraint records', None),
+            (f'Created {created} GeneConstraint records', None),
+            ('Done', None),
+            (f'Loaded {created} GeneConstraint records', None),
+        ] + ([(f'Skipped {skipped} records with unrecognized or duplicated transcripts', None)] if skipped else [])
+
     @responses.activate
     def test_update_gencode_latest_command(self):
         # Test only update the latest version
@@ -193,7 +217,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             ('Updated 1 previously loaded GeneInfo records', None),
             ('Created 1 GeneInfo records', None),
             (f'==> gsutil mv {self.tmp_dir}/* gs://seqr-reference-data/gencode/', None),
-            ('Dropped 1 existing TranscriptInfo records', None),
+            ('Dropped 2 existing TranscriptInfo records', None),
             ('Created 2 TranscriptInfo records', None),
             ('Updating RefseqTranscript', None),
             (f'Downloading http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz to {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz', None),
@@ -203,6 +227,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             ('Done', None),
             ('Loaded 3 RefseqTranscript records', None),
             ('Skipped 1 records with unrecognized or duplicated transcripts', None),
+        ] + self._gene_constraint_logs(deleted=2, created=2, skipped=1) + [
             ('Updated GeneInfo reference data from version "31" to version "39"', None),
             ('Reloading dictionary seqrdb_gene_ids', None),
             ('Done', None),
@@ -211,10 +236,11 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
 
         self._has_expected_new_genes()
 
-        self.assertEqual(TranscriptInfo.objects.all().count(), 3)
+        self.assertEqual(TranscriptInfo.objects.all().count(), 4)
         self._has_expected_new_transcripts()
 
         self.assertEqual(RefseqTranscript.objects.count(), 3)
+        self.assertEqual(GeneConstraint.objects.count(), 2)
         self.assertEqual(
             RefseqTranscript.objects.get(transcript__transcript_id='ENST00000258436').refseq_id, 'NR_026874.2',
         )

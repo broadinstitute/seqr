@@ -4,6 +4,7 @@
 * Adds AlphaGenome in silico score to clickhouse (REQUIRES DB MIGRATION)
   * Note that for users with Clickhouse already enabled, this migration will enqueue tasks in the loading pipeline.
   You may want to monitor the pipeline for any failures and re-trigger them in the event of any failures.
+* Updates gene constraint metrics from gnomAD v2.1.1 to gnomAD v4.1.2, loaded by `update_all_reference_data`
 
 ## 3/1/26
 * Deprecate Elasticsearch support
