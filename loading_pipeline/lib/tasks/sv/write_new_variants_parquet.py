@@ -11,6 +11,7 @@ from loading_pipeline.lib.core import ReferenceGenome
 from loading_pipeline.lib.misc.sv import (
     annotate_gene_consequences,
     match_gnomad_af,
+    run_strvctvre,
 )
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
@@ -55,6 +56,11 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             self.clone(
                 UpdatedReferenceDatasetParquetNoHailTask,
                 reference_dataset=ReferenceDataset.gnomad_svs,
+                attempt_id=self.attempt_id,
+            ),
+            self.clone(
+                UpdatedReferenceDatasetParquetNoHailTask,
+                reference_dataset=ReferenceDataset.strvctre_phylop,
                 attempt_id=self.attempt_id,
             ),
         ]
@@ -156,6 +162,11 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             },
         )
 
+        # Add StrVCTVRE
+        with self._open_parquet(self.input()[3]) as f:
+            strvctvre = run_strvctvre(df, f)
+        df['predictions'] = df.index.map(lambda vid: {'strvctvre': strvctvre.get(vid)})
+
         # Format annotations
         df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
         df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
@@ -170,9 +181,6 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['xpos'] = (
             df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000
             + df['POS']
-        )
-        df['predictions'] = (
-            df.pop('StrVCTVRE').astype(float).map(lambda score: {'strvctvre': score})
         )
 
         # Add serial integer index
@@ -191,10 +199,13 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         )
 
     @staticmethod
-    def _read_parquet(input_target: luigi.Target, **kwargs) -> pd.DataFrame:
-        pq_input = input_target
-        pq_input.format = luigi.format.Nop
-        with pq_input.open() as f:
+    def _open_parquet(input_target: luigi.Target):
+        input_target.format = luigi.format.Nop
+        return input_target.open()
+
+    @classmethod
+    def _read_parquet(cls, input_target: luigi.Target, **kwargs) -> pd.DataFrame:
+        with cls._open_parquet(input_target) as f:
             return pd.read_parquet(f, **kwargs)
 
     @staticmethod
