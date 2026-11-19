@@ -6,7 +6,6 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPE_DETAILS,
     SV_TYPES,
 )
-from loading_pipeline.lib.core import ReferenceGenome
 from loading_pipeline.lib.misc.sv import (
     annotate_gene_consequences,
     match_gnomad_af,
@@ -29,7 +28,6 @@ from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
 )
 
-CONTIGS_37 = list(ReferenceGenome.GRCh37.contig_recoding().values())
 TRUVARI_INFO_COLS = ['TRUVARI_FILTER', 'CollapseId', 'NumCollapsed', 'NumConsolidated']
 
 
@@ -142,7 +140,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         return (
             df.drop(
-                columns=['REF', 'FILTER', 'QUAL', 'SVLEN', 'END', 'CHR2', 'END2', *TRUVARI_INFO_COLS],
+                columns=['REF', 'FILTER', 'QUAL', 'SVLEN', '#CHROM', 'POS', 'END', 'CHR2', 'END2', *TRUVARI_INFO_COLS],
                 errors='ignore',
             )
             .rename(
@@ -160,13 +158,6 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
     def _read_parquet(cls, input_target: luigi.Target, **kwargs) -> pd.DataFrame:
         with cls._open_parquet(input_target) as f:
             return pd.read_parquet(f, **kwargs)
-
-    @staticmethod
-    def _liftover(lo, chrom, pos):
-        result = lo.convert_coordinate(chrom, pos - 1)
-        if result and result[0][0] not in CONTIGS_37:
-            result = None
-        return (result[0][0], result[0][1] + 1) if result else (None, None)
 
     @staticmethod
     def _parse_cpx_interval(interval):

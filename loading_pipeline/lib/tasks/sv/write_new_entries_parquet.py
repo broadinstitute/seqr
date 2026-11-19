@@ -5,6 +5,7 @@ import luigi.util
 import pandas as pd
 from pyliftover import LiftOver
 
+from loading_pipeline.lib.core import ReferenceGenome
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
 )
@@ -20,6 +21,8 @@ from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
 from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
     WriteMetadataForSvRunTask,
 )
+
+CONTIGS_37 = list(ReferenceGenome.GRCh37.contig_recoding().values())
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
@@ -82,6 +85,8 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         df = self._parsed_sample_df(df, list(sample_id_to_family_guid.keys()))
         df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
+        df['sample_pos'] = df['sample'].str.get('pos')
+        df['sample_end'] = df['sample'].str.get('end')
         df['variantId'] = (
             df[['CollapseId', 'TRUVARI_FILTER']]
             .apply(tuple, axis=1)
@@ -89,45 +94,10 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             .fillna(df[['MatchId', 'TRUVARI_FILTER']].apply(tuple, axis=1).map(id_map))
             .fillna(df['ID'])
         )
-
-        # TODO
-        df['END'] = df['END'].astype(int)
-        if 'END2' in df:
-            df['end_chrom'] = (
-                df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
-            )
-            df['END2'] = pd.to_numeric(df['END2'])
+        if 'CHR2' in df:
+            df['CHR2'] = df['CHR2'].mask(df['SVTYPE'] == 'INS')
         else:
-            df['end_chrom'] = df['#CHROM']
-            df['END2'] = None
-            if 'CHR2' in df:
-                df = df.drop(columns=['CHR2'])
-
-        # Run liftover
-        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
-        df[['lifted_over_chrom', 'lifted_over_pos']] = [
-            self._liftover(lo, c, p)
-            for c, p in zip(df['#CHROM'], df['POS'], strict=False)
-        ]
-
-        df['END'] = df.pop('END2').fillna(df['END']).astype(int)
-        df['rg37_locus_end'] = [
-            {'contig': chrom, 'position': pos} if chrom else None
-            for chrom, pos in (
-                self._liftover(lo, c, p)
-                for c, p in zip(df['end_chrom'], df['END'], strict=False)
-            )
-        ]
-
-        df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
-        df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
-        df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
-        df['end_chrom'] = df['end_chrom'].mask(df['SVTYPE'] == 'INS')
-        df['xpos'] = (
-            df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000
-            + df['POS']
-        )
-        # END TODO
+            df['CHR2'] = None
 
         df = df.groupby(['variantId', 'family_guid'], as_index=False).agg(
             filters=(
@@ -135,9 +105,25 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
                 lambda values: sorted(set().union(*values.str.split(';')) - {'PASS'}),
             ),
             calls=('sample', list),
+            chrom=('#CHROM', 'first'),
+            end_chrom=('CHR2', 'first'),
+            pos=('sample_pos', 'min'),
+            end=('sample_end', 'max'),
         )
         df['project_guid'] = df['family_guid'].map(family_guid_to_project_guid)
         df['sign'] = 1
+        df['sample_type'] = self.sample_type.value
+
+        # Run liftover
+        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
+        df[['liftedOverChrom', 'liftedOverPos']] = self._liftover(lo, df['chrom'], df['pos'])
+        df['liftedOverEnd'] = [
+            pos if chrom else None
+            for chrom, pos in self._liftover(lo, df['end_chrom'], df['end'])
+        ]
+        df['xposEnd'] = self._xpos(df.pop('end_chrom').fillna(df['chrom']), df.pop('end'))
+        df['xpos'] = self._xpos (df.pop('chrom'), df.pop('pos'))
+
         # Add ref calls for missing family members
         df['calls'] = df.apply(
             lambda row: sorted(
@@ -160,6 +146,9 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             lambda row: [
                 {
                     'sampleId': s,
+                    'pos': row['POS'],
+                    'end': row.get('END2', row['END']),
+                    'qs': row['QUAL'],
                     **dict(
                         zip(
                             row['FORMAT'].lower().split(':'),
@@ -209,3 +198,18 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         if field == 'gt':
             return field, sum(map(int, value.split('/')))
         return field, int(value)
+
+    @classmethod
+    def _liftover(cls, lo, df_chrom, df_pos):
+        return [cls._liftover_coords(lo, c, p) for c, p in zip(df_chrom, df_pos, strict=False)]
+
+    @staticmethod
+    def _liftover_coords(lo, chrom, pos):
+        result = lo.convert_coordinate(chrom, pos - 1)
+        if result and result[0][0] not in CONTIGS_37:
+            result = None
+        return (result[0][0], result[0][1] + 1) if result else (None, None)
+
+    @staticmethod
+    def _xpos(chrom, pos):
+        return chrom.replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000 + pos
