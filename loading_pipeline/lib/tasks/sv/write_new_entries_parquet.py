@@ -116,13 +116,17 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         # Run liftover
         lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
-        df[['liftedOverChrom', 'liftedOverPos']] = self._liftover(lo, df['chrom'], df['pos'])
+        df[['liftedOverChrom', 'liftedOverPos']] = self._liftover(
+            lo, df['chrom'], df['pos'],
+        )
         df['liftedOverEnd'] = [
             pos if chrom else None
             for chrom, pos in self._liftover(lo, df['end_chrom'], df['end'])
         ]
-        df['xposEnd'] = self._xpos(df.pop('end_chrom').fillna(df['chrom']), df.pop('end'))
-        df['xpos'] = self._xpos (df.pop('chrom'), df.pop('pos'))
+        df['xposEnd'] = self._xpos(
+            df.pop('end_chrom').fillna(df['chrom']), df.pop('end'),
+        )
+        df['xpos'] = self._xpos(df.pop('chrom'), df.pop('pos'))
 
         # Add ref calls for missing family members
         df['calls'] = df.apply(
@@ -201,7 +205,10 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
     @classmethod
     def _liftover(cls, lo, df_chrom, df_pos):
-        return [cls._liftover_coords(lo, c, p) for c, p in zip(df_chrom, df_pos, strict=False)]
+        return [
+            cls._liftover_coords(lo, c, p)
+            for c, p in zip(df_chrom, df_pos, strict=False)
+        ]
 
     @staticmethod
     def _liftover_coords(lo, chrom, pos):

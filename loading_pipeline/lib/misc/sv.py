@@ -198,7 +198,9 @@ def _segments(df):
             'segment_type': segment_type,
             'contig': df['#CHROM'],
             'start': df['POS'],
-            'end': df['END'].astype(int).case_when(
+            'end': df['END']
+            .astype(int)
+            .case_when(
                 [
                     (segment_type == 'INS', df['POS'] + 1),
                     (segment_type.isin(['BND', 'CTX']), df['POS']),
@@ -213,7 +215,8 @@ def _segments(df):
     same_chrom = breakends['CHR2'].notna()
     sv_len = pd.to_numeric(breakends['SVLEN'])
     second_breakend = (
-        breakends['END2'].astype(int)
+        breakends['END2']
+        .astype(int)
         .fillna(df['POS'])
         .case_when(
             [
@@ -242,8 +245,14 @@ def _segments(df):
         )
         for contig, position in [
             (translocations['#CHROM'], translocations['END'].astype(int)),
-            (translocations['CHR2'], translocations['END2'].fillna(df['POS']).astype(int)),
-            (translocations['CHR2'], translocations['END2'].fillna(df['POS']).astype(int) + 1),
+            (
+                translocations['CHR2'],
+                translocations['END2'].fillna(df['POS']).astype(int),
+            ),
+            (
+                translocations['CHR2'],
+                translocations['END2'].fillna(df['POS']).astype(int) + 1,
+            ),
         ]
     ]
 
