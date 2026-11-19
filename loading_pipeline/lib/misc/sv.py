@@ -137,10 +137,7 @@ def _load_annotations(gencode_df):
 
 def _complex_segments(df):
     segments = (
-        df['cpxIntervals']
-        .explode()
-        .rename_axis('variant')
-        .reset_index(name='interval')
+        df['cpxIntervals'].explode().rename_axis('variant').reset_index(name='interval')
     )
     segments = segments.assign(
         segment_type=segments['interval'].str['type'],

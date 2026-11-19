@@ -117,14 +117,17 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         # Run liftover
         lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
         df[['liftedOverChrom', 'liftedOverPos']] = self._liftover(
-            lo, df['chrom'], df['pos'],
+            lo,
+            df['chrom'],
+            df['pos'],
         )
         df['liftedOverEnd'] = [
             pos if chrom else None
             for chrom, pos in self._liftover(lo, df['end_chrom'], df['end'])
         ]
         df['xposEnd'] = self._xpos(
-            df.pop('end_chrom').fillna(df['chrom']), df.pop('end'),
+            df.pop('end_chrom').fillna(df['chrom']),
+            df.pop('end'),
         )
         df['xpos'] = self._xpos(df.pop('chrom'), df.pop('pos'))
 
