@@ -33,7 +33,6 @@ class SingleSampleVCFTask(BaseVCFTask):
         'END2': ('1', 'Integer'),
         'SVLEN': ('1', 'Integer'),
         'SVTYPE': ('1', 'String'),
-        'GNOMAD_V4.1_TRUTH_VID': ('1', 'String'),
     }
 
     FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
@@ -102,7 +101,7 @@ class SingleSampleVCFTask(BaseVCFTask):
             reformatted_target = haploid_target
 
         annotated_target = luigi.LocalTarget(is_tmp=True)
-        rand_id = random.randint(100_000, 999_999)  # noqa: S311 # nosec
+        rand_id = random.randint(10_000_000, 99_999_999)  # noqa: S311 # nosec
         self.run_bcftools(
             [
                 'annotate',

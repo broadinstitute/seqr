@@ -1799,6 +1799,59 @@ class PromoterAIDict(Dictionary):
         source_table = 'PromoterAISeqrVariants'
         clickhouse_query_template = 'SELECT key, max(score) from {table} GROUP BY key'
 
+class AlphagenomeAllVariants(models.ClickhouseModel):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/alphagenome/all_variants'
+        engine = models.MergeTree(
+            primary_key=('variant_id'),
+            order_by=('variant_id'),
+        )
+
+class AlphagenomeSeqrVariants(models.ClickhouseModel):
+    key = UInt32FieldDeltaCodecField(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta:
+        db_table = 'GRCh38/SNV_INDEL/reference_data/alphagenome/seqr_variants'
+        engine = models.MergeTree(
+            primary_key=('key'),
+            order_by=('key'),
+        )
+
+class AlphagenomeAllMv(RefreshableMaterializedView):
+    variant_id = models.StringField(db_column='variantId', primary_key=True)
+    score = models.StringField(null=True, blank=True)
+
+    class Meta(RefreshableMaterializedViewMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/alphagenome/all_variants_mv'
+        to_table = 'AlphagenomeAllVariants'
+        # Converted from DeepMind's alphagenome_variant_impact_score_snvs.tsv.gz: chrom, pos, ref, alt, and PHRED as score
+        source_url = 'https://storage.googleapis.com/seqr-reference-data/clickhouse/GRCh38/alphagenome/alphagenome.parquet/*.parquet'
+        column_selects = {
+            'variantId': "assumeNotNull(concat(replaceOne(replaceOne(chrom, 'chr', ''), 'MT', 'M'), '-', pos, '-', ref, '-', alt))",
+        }
+        create_empty = True
+
+class AlphagenomeMv(RefreshableMaterializedView):
+    key = models.UInt32Field(primary_key=True)
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataMvMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/alphagenome/all_variants_to_seqr_variants_mv'
+        to_table = 'AlphagenomeSeqrVariants'
+        source_table = 'AlphagenomeAllVariants'
+
+class AlphagenomeDict(Dictionary):
+    key = DictKeyForeignKey('EntriesSnvIndel', related_name='alphagenome')
+    score = models.DecimalField(max_digits=9, decimal_places=5)
+
+    class Meta(ReferenceDataDictMeta):
+        db_table = 'GRCh38/SNV_INDEL/reference_data/alphagenome'
+        source_table = 'AlphagenomeSeqrVariants'
+
 class BaseEigen(models.ClickhouseModel):
     score = models.DecimalField(max_digits=9, decimal_places=5)
 

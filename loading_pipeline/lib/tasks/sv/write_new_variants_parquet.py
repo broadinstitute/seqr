@@ -8,7 +8,11 @@ from loading_pipeline.lib.annotations.enums import (
     SV_TYPES,
 )
 from loading_pipeline.lib.core import ReferenceGenome
-from loading_pipeline.lib.misc.sv import annotate_gene_consequences, run_strvctvre
+from loading_pipeline.lib.misc.sv import (
+    annotate_gene_consequences,
+    match_gnomad_af,
+    run_strvctvre,
+)
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
 )
@@ -146,14 +150,16 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         ]
 
         # Add gnomad frequency
-        gnomad_ids = df['GNOMAD_V4.1_TRUTH_VID'].dropna().unique().tolist()
-        gnomad_df = self._read_parquet(
-            self.input()[2],
-            filters=[('id', 'in', gnomad_ids)],
-        )
-        gnomad_lookup = gnomad_df.set_index('id', drop=False).to_dict('index')
-        df['populations'] = df.pop('GNOMAD_V4.1_TRUTH_VID').map(
-            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
+        gnomad_df = self._read_parquet(self.input()[2])
+        gnomad_lookup = match_gnomad_af(df, gnomad_df)
+        df['populations'] = df['ID'].map(
+            lambda vid: {
+                'gnomad_svs': {
+                    k: v for k, v in gnomad_lookup[vid].items() if k not in ('ac', 'an')
+                }
+                if vid in gnomad_lookup
+                else None,
+            },
         )
 
         # Add StrVCTVRE
