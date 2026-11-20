@@ -602,9 +602,6 @@ def insert_new_entries(
     ]
     common, overrides = [c for c in dst_cols if c in src_cols], {}
     common.insert(0, 'key')
-    if 'xpos' not in common:
-        common.append('xpos')
-        overrides['xpos'] = 'v.xpos'
 
     if 'geneId_ids' in dst_cols:
         common.append('geneId_ids')
