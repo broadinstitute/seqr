@@ -23,6 +23,11 @@ from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
 )
 
 CONTIGS_37 = list(ReferenceGenome.GRCh37.contig_recoding().values())
+INFO_ENTRY_FIELDS = {
+    'pos': 'POS',
+    'end': 'END',
+    'qs': 'QUAL',
+}
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
@@ -98,6 +103,8 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             df['CHR2'] = df['CHR2'].mask(df['SVTYPE'] == 'INS')
         else:
             df['CHR2'] = None
+        if 'END2' in df:
+            df['END'] = df['END2'].fillna(df['END'])
 
         df = df.groupby(['variantId', 'family_guid'], as_index=False).agg(
             filters=(
@@ -153,9 +160,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             lambda row: [
                 {
                     'sampleId': s,
-                    'pos': row['POS'],
-                    'end': row.get('END2', row['END']),
-                    'qs': row['QUAL'],
+                    **{k: row[field] for k, field in INFO_ENTRY_FIELDS.items()},
                     **dict(
                         zip(
                             row['FORMAT'].lower().split(':'),
@@ -222,4 +227,4 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
     @staticmethod
     def _xpos(chrom, pos):
-        return chrom.replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000 + pos
+        return chrom.str.removeprefix('chr').replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000 + pos
