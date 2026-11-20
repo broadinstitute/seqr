@@ -926,17 +926,15 @@ def export_existing_variants_to_parquet(
     )
     select_fields = 'key AS key_, variantId AS variant_id'
     if dataset_type == DatasetType.SV:
-        variants_table = (
-            f"""
-            (
-                SELECT key As groupKey, min(xpos) AS xpos, max(xposEnd) AS xpos_end
-                FROM {table_name_builder.dst_table(ClickHouseTable.ENTRIES)}
-                GROUP BY key
-            ) e
-            INNER JOIN {variants_table} v
-            ON e.groupKey = v.key
-            """
-        )
+        variants_table = f"""
+        (
+            SELECT key As groupKey, min(xpos) AS xpos, max(xposEnd) AS xpos_end
+            FROM {table_name_builder.dst_table(ClickHouseTable.ENTRIES)}
+            GROUP BY key
+        ) e
+        INNER JOIN {variants_table} v
+        ON e.groupKey = v.key
+        """  # nosec B608
         select_fields += ', xpos, xpos_end, svType'
     logged_query(
         f"""
