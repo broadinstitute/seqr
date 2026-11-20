@@ -162,10 +162,8 @@ const BaseVariantSearchResults = React.memo(({
     reloadOnIdUpdate
     errorMessage={errorMessage && <ErrorResults errorMessage={errorMessage} match={match} />}
   >
-    {React.createElement(
-      match.params.variantId ? DisplayVariants : VariantSearchResultsContent,
-      { match, displayVariants, ...props },
-    )}
+    {match.params.variantId ? <DisplayVariants displayVariants={displayVariants} /> :
+    <VariantSearchResultsContent match={match} displayVariants={displayVariants} {...props} />}
   </DataLoader>
 ))
 
