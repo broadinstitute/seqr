@@ -395,7 +395,12 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
             input_overrides={
                 **{(pos, end): {'END2': pos} for pos, end in list(expected)[:7]},
                 (1500, 1500): {'END2': 1500, 'SVLEN': 1000},
-                (500, 500): {'#CHROM': 'chr2', 'CHR2': 'chr1', 'END2': 250, 'SVLEN': 1000},
+                (500, 500): {
+                    '#CHROM': 'chr2',
+                    'CHR2': 'chr1',
+                    'END2': 250,
+                    'SVLEN': 1000,
+                },
                 (30, 30): {'END2': 3030},
                 (550, 550): {'CHR2': 'chr3', 'END2': 15050},
                 (520, 520): {'END2': 250},

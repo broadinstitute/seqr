@@ -227,4 +227,8 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
     @staticmethod
     def _xpos(chrom, pos):
-        return chrom.str.removeprefix('chr').replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000 + pos
+        return (
+            chrom.str.removeprefix('chr').replace({'X': '23', 'Y': '24'}).astype(int)
+            * 1_000_000_000
+            + pos
+        )

@@ -199,7 +199,11 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                     'predictions': {'strvctvre': None},
                     'populations': {'gnomad_svs': None},
                     'sortedGeneConsequences': [
-                        {'geneId': 'ENSG00000173662', 'majorConsequence': 'INTRONIC', 'transcriptId': 'ENST00000331433'},
+                        {
+                            'geneId': 'ENSG00000173662',
+                            'majorConsequence': 'INTRONIC',
+                            'transcriptId': 'ENST00000331433',
+                        },
                     ],
                 },
             ],

@@ -220,16 +220,13 @@ def _segments(df):
     else:
         breakends['END2'] = breakends['POS']
     sv_len = pd.to_numeric(breakends['SVLEN'])
-    second_breakend = (
-        breakends['END2']
-        .case_when(
-            [
-                (
-                    same_chrom & (sv_len > 0),
-                    breakends['POS'] + sv_len,
-                ),
-            ],
-        )
+    second_breakend = breakends['END2'].case_when(
+        [
+            (
+                same_chrom & (sv_len > 0),
+                breakends['POS'] + sv_len,
+            ),
+        ],
     )
     second_breakend = second_breakend[
         ~(same_chrom & (second_breakend == breakends['POS']))
@@ -243,11 +240,13 @@ def _segments(df):
     translocations = df[sv_type == 'CTX']
     translocations['CHR2'] = (
         translocations['CHR2'].fillna(translocations['#CHROM'])
-        if 'CHR2' in translocations else translocations['#CHROM']
+        if 'CHR2' in translocations
+        else translocations['#CHROM']
     )
     translocations['END2'] = (
         translocations['END2'].fillna(translocations['POS']).astype(int)
-        if 'END2' in translocations else translocations['POS']
+        if 'END2' in translocations
+        else translocations['POS']
     )
     translocation_segments = [
         primary.loc[translocations.index].assign(

@@ -106,7 +106,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         if 'CHR2' in df:
             df.loc[
-                (df['SVTYPE'] == 'INS') & df['CHR2'].notna() & (df['CHR2'] != df['#CHROM']),
+                (df['SVTYPE'] == 'INS')
+                & df['CHR2'].notna()
+                & (df['CHR2'] != df['#CHROM']),
                 'svSourceDetail',
             ] = df['CHR2'].map(
                 lambda chrom: {'chrom': chrom},
