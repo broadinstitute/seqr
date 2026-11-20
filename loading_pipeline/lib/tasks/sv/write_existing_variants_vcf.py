@@ -47,13 +47,13 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
         parquet.format = luigi.format.Nop
         with parquet.open() as f:
             df = pd.read_parquet(f)
-        for col in ['chrom', 'endChrom', 'svType']:
-            df[col] = df[col].str.decode('utf-8')
 
-        info = 'SVTYPE=' + df['svType']
+        df[['chrom', 'pos']] = self._chrom_pos(df['xpos'])
+        df[['endChrom', 'end']] = self._chrom_pos(df['xpos_end'])
+        info = 'SVTYPE=' + df['svType'].str.decode('utf-8')
         info += ';END=' + df['end'].astype(str)
         info += ';SVLEN=' + (df['end'] - df['pos']).astype(str)
-        has_end_chrom = df['endChrom'].notna()
+        has_end_chrom = df['endChrom'] != df['chrom']
         info[has_end_chrom] += ';CHR2=chr' + df.loc[has_end_chrom, 'endChrom']
         vcf_df = pd.DataFrame(
             {
@@ -79,3 +79,9 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
             vcf_df.to_csv(f, sep='\t', header=False, index=False)
 
         return [vcf_target]
+
+    @staticmethod
+    def _chrom_pos(xpos: pd.Series) -> tuple[pd.Series, pd.Series]:
+        chrom = (xpos // 1_000_000_000).astype(str).replace({'23': 'X', '24': 'Y'})
+        pos = xpos % 1_000_000_000
+        return chrom, pos

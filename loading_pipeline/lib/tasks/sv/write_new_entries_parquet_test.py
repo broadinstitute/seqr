@@ -47,10 +47,8 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
             {
                 'variant_id': ['BND_chr1_6'],
                 'key_': [727],
-                'chrom': [b'1'],
-                'end': [180928],
-                'endChrom': [b'5'],
-                'pos': [180928],
+                'xpos_end': [5000180928],
+                'xpos': [1000180928],
                 'svType': [b'BND'],
             },
         ).to_parquet(existing_variants_path)
