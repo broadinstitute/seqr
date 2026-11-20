@@ -48,9 +48,10 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
         with parquet.open() as f:
             df = pd.read_parquet(f)
 
+        df['svType'] = df['svType'].str.decode('utf-8')
         df['chrom'], df['pos'] = self._chrom_pos(df['xpos'])
         df['endChrom'], df['end'] = self._chrom_pos(df['xpos_end'])
-        info = 'SVTYPE=' + df['svType'].str.decode('utf-8')
+        info = 'SVTYPE=' + df['svType']
         info += ';END=' + df['end'].astype(str)
         info += ';SVLEN=' + (df['end'] - df['pos']).astype(str)
         has_end_chrom = df['endChrom'] != df['chrom']

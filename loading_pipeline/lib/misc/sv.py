@@ -209,12 +209,19 @@ def _segments(df):
     primary_segments = primary[primary['segment_type'] != 'CPX']
 
     breakends = df[sv_type == 'BND']
-    same_chrom = breakends['CHR2'].isna()
+    if 'CHR2' in breakends:
+        same_chrom = breakends['CHR2'].isna()
+        breakends['CHR2'] = breakends['CHR2'].fillna(breakends['#CHROM'])
+    else:
+        same_chrom = True
+        breakends['CHR2'] = breakends['#CHROM']
+    if 'END2' in breakends:
+        breakends['END2'] = breakends['END2'].fillna(df['POS']).astype(int)
+    else:
+        breakends['END2'] = breakends['POS']
     sv_len = pd.to_numeric(breakends['SVLEN'])
     second_breakend = (
         breakends['END2']
-        .fillna(df['POS'])
-        .astype(int)
         .case_when(
             [
                 (
@@ -228,12 +235,20 @@ def _segments(df):
         ~(same_chrom & (second_breakend == breakends['POS']))
     ]
     second_breakend_segments = primary.loc[second_breakend.index].assign(
-        contig=breakends['CHR2'].fillna(df['#CHROM']),
+        contig=breakends['CHR2'],
         start=second_breakend,
         end=second_breakend,
     )
 
     translocations = df[sv_type == 'CTX']
+    translocations['CHR2'] = (
+        translocations['CHR2'].fillna(translocations['#CHROM'])
+        if 'CHR2' in translocations else translocations['#CHROM']
+    )
+    translocations['END2'] = (
+        translocations['END2'].fillna(translocations['POS']).astype(int)
+        if 'END2' in translocations else translocations['POS']
+    )
     translocation_segments = [
         primary.loc[translocations.index].assign(
             contig=contig,

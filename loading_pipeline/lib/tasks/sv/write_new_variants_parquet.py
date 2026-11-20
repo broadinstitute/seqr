@@ -90,9 +90,9 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             msg = f'Unexpected enum value: {invalid_details.iloc[0]}'
             raise ValueError(msg)
 
-        if 'cpxIntervals' in df.columns:
+        if 'CPX_INTERVALS' in df.columns:
             df['cpxIntervals'] = (
-                df['cpxIntervals']
+                df['CPX_INTERVALS']
                 .str.split(',')
                 .map(
                     lambda intervals: [
@@ -106,7 +106,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
 
         if 'CHR2' in df:
             df.loc[
-                (df['SVTYPE'] == 'INS') & df['CHR2'].notna(),
+                (df['SVTYPE'] == 'INS') & df['CHR2'].notna() & (df['CHR2'] != df['#CHROM']),
                 'svSourceDetail',
             ] = df['CHR2'].map(
                 lambda chrom: {'chrom': chrom},
@@ -136,7 +136,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['key'] = range(curr_max_key + 1, curr_max_key + 1 + len(df))
 
         added_columns = df.columns.difference(original_columns)
-        rename_cols = {'ID': 'variant_id', 'SVTYPE': 'sv_type'}
+        rename_cols = {'ID': 'variantId', 'SVTYPE': 'svType'}
         return df[[*added_columns, *rename_cols]].rename(columns=rename_cols)
 
     @staticmethod
