@@ -209,12 +209,12 @@ def _segments(df):
     primary_segments = primary[primary['segment_type'] != 'CPX']
 
     breakends = df[sv_type == 'BND']
-    same_chrom = breakends['CHR2'].notna()
+    same_chrom = breakends['CHR2'].isna()
     sv_len = pd.to_numeric(breakends['SVLEN'])
     second_breakend = (
         breakends['END2']
-        .astype(int)
         .fillna(df['POS'])
+        .astype(int)
         .case_when(
             [
                 (
