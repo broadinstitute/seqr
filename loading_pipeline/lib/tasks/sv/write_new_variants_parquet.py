@@ -105,13 +105,13 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             df['cpxIntervals'] = None
 
         if 'CHR2' in df:
-            df.loc[
+            has_source = (
                 (df['SVTYPE'] == 'INS')
                 & df['CHR2'].notna()
-                & (df['CHR2'] != df['#CHROM']),
-                'svSourceDetail',
-            ] = df['CHR2'].map(
-                lambda chrom: {'chrom': chrom},
+                & (df['CHR2'] != df['#CHROM'])
+            )
+            df.loc[has_source, 'svSourceDetail'] = df.loc[has_source, 'CHR2'].map(
+                lambda chrom: {'chrom': chrom.removeprefix('chr')},
             )
 
         gencode_df = self._read_parquet(self.input()[1])

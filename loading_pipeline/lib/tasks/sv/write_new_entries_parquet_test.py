@@ -84,10 +84,10 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                     'family_guid': 'family_2_1',
                     'sample_type': 'WGS',
                     'xpos': 1000180929,
-                    'xposEnd': 5000180929,
+                    'xposEnd': 5000020404,
                     'liftedOverChrom': '1',
                     'liftedOverPos': 10368,
-                    'liftedOverEnd': 181044,
+                    'liftedOverEnd': 20404,
                     'filters': ['HIGH_SR_BACKGROUND', 'UNRESOLVED'],
                     'calls': [
                         {
@@ -105,7 +105,7 @@ class WriteNewEntriesParquetTest(MockedDatarootTestCase):
                             'cn': None,
                             'gq': 31,
                             'pos': 180929,
-                            'end': 180929,
+                            'end': 20404,
                             'qs': 657,
                         },
                         {

@@ -54,6 +54,12 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             output_type='v',
         )
         df = self.import_vcf(matched_target)
+        if 'CHR2' in df:
+            df['CHR2'] = df['CHR2'].mask(df['SVTYPE'] == 'INS')
+        else:
+            df['CHR2'] = None
+        if 'END2' in df:
+            df['END'] = df['END2'].fillna(df['END'])
 
         existing_id_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
@@ -99,12 +105,6 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             .fillna(df[['MatchId', 'TRUVARI_FILTER']].apply(tuple, axis=1).map(id_map))
             .fillna(df['ID'])
         )
-        if 'CHR2' in df:
-            df['CHR2'] = df['CHR2'].mask(df['SVTYPE'] == 'INS')
-        else:
-            df['CHR2'] = None
-        if 'END2' in df:
-            df['END'] = df['END2'].fillna(df['END'])
 
         df = df.groupby(['variantId', 'family_guid'], as_index=False).agg(
             filters=(
@@ -123,6 +123,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         # Run liftover
         lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
+        df['end_chrom'] = df['end_chrom'].fillna(df['chrom'])
         df[['liftedOverChrom', 'liftedOverPos']] = self._liftover(
             lo,
             df['chrom'],
@@ -132,10 +133,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             pos if chrom else None
             for chrom, pos in self._liftover(lo, df['end_chrom'], df['end'])
         ]
-        df['xposEnd'] = self._xpos(
-            df.pop('end_chrom').fillna(df['chrom']),
-            df.pop('end'),
-        )
+        df['xposEnd'] = self._xpos(df.pop('end_chrom'), df.pop('end'))
         df['xpos'] = self._xpos(df.pop('chrom'), df.pop('pos'))
 
         # Add ref calls for missing family members
