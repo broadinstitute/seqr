@@ -137,17 +137,14 @@ def _load_annotations(gencode_df):
 
 def _complex_segments(df):
     segments = (
-        df['CPX_INTERVALS']
-        .explode()
-        .rename_axis('variant')
-        .reset_index(name='interval')
+        df['cpxIntervals'].explode().rename_axis('variant').reset_index(name='interval')
     )
     segments = segments.assign(
         segment_type=segments['interval'].str['type'],
         contig='chr' + segments['interval'].str['chrom'],
         start=segments['interval'].str['start'],
         end=segments['interval'].str['end'],
-        complex_type=segments['variant'].map(df['sv_type_detail']),
+        complex_type=segments['variant'].map(df['svTypeDetail']),
     ).drop(columns='interval')
 
     segments = segments[
@@ -191,49 +188,66 @@ def _complex_segments(df):
 
 def _segments(df):
     sv_type = df['SVTYPE']
-    segment_type = sv_type.mask(df['sv_type_detail'] == 'dDUP', 'INS')
+    segment_type = sv_type.mask(df['svTypeDetail'] == 'dDUP', 'INS')
     primary = pd.DataFrame(
         {
             'variant': df.index,
             'segment_type': segment_type,
             'contig': df['#CHROM'],
             'start': df['POS'],
-            'end': df['END'].case_when(
+            'end': df['END']
+            .astype(int)
+            .case_when(
                 [
                     (segment_type == 'INS', df['POS'] + 1),
                     (segment_type.isin(['BND', 'CTX']), df['POS']),
                 ],
             ),
-            'complex_type': df['sv_type_detail'],
+            'complex_type': df['svTypeDetail'],
         },
     )
     primary_segments = primary[primary['segment_type'] != 'CPX']
 
     breakends = df[sv_type == 'BND']
-    same_chrom = breakends['end_chrom'] == breakends['#CHROM']
+    if 'CHR2' in breakends:
+        same_chrom = breakends['CHR2'].isna()
+        breakends['CHR2'] = breakends['CHR2'].fillna(breakends['#CHROM'])
+    else:
+        same_chrom = True
+        breakends['CHR2'] = breakends['#CHROM']
+    if 'END2' in breakends:
+        breakends['END2'] = breakends['END2'].fillna(df['POS']).astype(int)
+    else:
+        breakends['END2'] = breakends['POS']
     sv_len = pd.to_numeric(breakends['SVLEN'])
-    second_breakend = (
-        breakends['END2']
-        .fillna(df['POS'])
-        .case_when(
-            [
-                (
-                    same_chrom & (sv_len > 0),
-                    breakends['POS'] + sv_len,
-                ),
-            ],
-        )
+    second_breakend = breakends['END2'].case_when(
+        [
+            (
+                same_chrom & (sv_len > 0),
+                breakends['POS'] + sv_len,
+            ),
+        ],
     )
     second_breakend = second_breakend[
         ~(same_chrom & (second_breakend == breakends['POS']))
     ]
     second_breakend_segments = primary.loc[second_breakend.index].assign(
-        contig=breakends['end_chrom'],
+        contig=breakends['CHR2'],
         start=second_breakend,
         end=second_breakend,
     )
 
     translocations = df[sv_type == 'CTX']
+    translocations['CHR2'] = (
+        translocations['CHR2'].fillna(translocations['#CHROM'])
+        if 'CHR2' in translocations
+        else translocations['#CHROM']
+    )
+    translocations['END2'] = (
+        translocations['END2'].fillna(translocations['POS']).astype(int)
+        if 'END2' in translocations
+        else translocations['POS']
+    )
     translocation_segments = [
         primary.loc[translocations.index].assign(
             contig=contig,
@@ -241,9 +255,15 @@ def _segments(df):
             end=position,
         )
         for contig, position in [
-            (translocations['#CHROM'], translocations['END']),
-            (translocations['end_chrom'], translocations['END2'].fillna(df['POS'])),
-            (translocations['end_chrom'], translocations['END2'].fillna(df['POS']) + 1),
+            (translocations['#CHROM'], translocations['END'].astype(int)),
+            (
+                translocations['CHR2'],
+                translocations['END2'].fillna(df['POS']).astype(int),
+            ),
+            (
+                translocations['CHR2'],
+                translocations['END2'].fillna(df['POS']).astype(int) + 1,
+            ),
         ]
     ]
 
@@ -573,6 +593,7 @@ def run_strvctvre(df, phylop_file):
     df = df[['#CHROM', 'POS', 'END', 'SVTYPE']]
     df['DEL'] = df['SVTYPE'] == 'DEL'
     df = df[df['DEL'] | (df['SVTYPE'] == 'DUP')]
+    df['END'] = df['END'].astype(int)
     df['length'] = df['END'] - df['POS']
     df = df[df['length'] > MIN_STRVCTRE_LENGTH]
 

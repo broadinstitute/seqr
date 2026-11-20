@@ -3,7 +3,9 @@ import json
 import luigi
 import luigi.util
 import pandas as pd
+from pyliftover import LiftOver
 
+from loading_pipeline.lib.core import ReferenceGenome
 from loading_pipeline.lib.paths import (
     new_entries_parquet_path,
 )
@@ -19,6 +21,13 @@ from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
 from loading_pipeline.lib.tasks.sv.write_metadata_for_run import (
     WriteMetadataForSvRunTask,
 )
+
+CONTIGS_37 = list(ReferenceGenome.GRCh37.contig_recoding().values())
+INFO_ENTRY_FIELDS = {
+    'pos': 'POS',
+    'end': 'END',
+    'qs': 'QUAL',
+}
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
@@ -45,6 +54,12 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             output_type='v',
         )
         df = self.import_vcf(matched_target)
+        if 'CHR2' in df:
+            df['CHR2'] = df['CHR2'].mask(df['SVTYPE'] == 'INS')
+        else:
+            df['CHR2'] = None
+        if 'END2' in df:
+            df['END'] = df['END2'].fillna(df['END'])
 
         existing_id_target = luigi.LocalTarget(is_tmp=True)
         self.run_bcftools(
@@ -81,6 +96,8 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
 
         df = self._parsed_sample_df(df, list(sample_id_to_family_guid.keys()))
         df['family_guid'] = df['sample'].str['sampleId'].map(sample_id_to_family_guid)
+        df['sample_pos'] = df['sample'].str.get('pos')
+        df['sample_end'] = df['sample'].str.get('end')
         df['variantId'] = (
             df[['CollapseId', 'TRUVARI_FILTER']]
             .apply(tuple, axis=1)
@@ -95,9 +112,30 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
                 lambda values: sorted(set().union(*values.str.split(';')) - {'PASS'}),
             ),
             calls=('sample', list),
+            chrom=('#CHROM', 'first'),
+            end_chrom=('CHR2', 'first'),
+            pos=('sample_pos', 'min'),
+            end=('sample_end', 'max'),
         )
         df['project_guid'] = df['family_guid'].map(family_guid_to_project_guid)
         df['sign'] = 1
+        df['sample_type'] = self.sample_type.value
+
+        # Run liftover
+        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
+        df['end_chrom'] = df['end_chrom'].fillna(df['chrom'])
+        df[['liftedOverChrom', 'liftedOverPos']] = self._liftover(
+            lo,
+            df['chrom'],
+            df['pos'],
+        )
+        df['liftedOverEnd'] = [
+            pos if chrom else None
+            for chrom, pos in self._liftover(lo, df['end_chrom'], df['end'])
+        ]
+        df['xposEnd'] = self._xpos(df.pop('end_chrom'), df.pop('end'))
+        df['xpos'] = self._xpos(df.pop('chrom'), df.pop('pos'))
+
         # Add ref calls for missing family members
         df['calls'] = df.apply(
             lambda row: sorted(
@@ -120,6 +158,7 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
             lambda row: [
                 {
                     'sampleId': s,
+                    **{k: row[field] for k, field in INFO_ENTRY_FIELDS.items()},
                     **dict(
                         zip(
                             row['FORMAT'].lower().split(':'),
@@ -169,3 +208,25 @@ class WriteNewSvEntriesParquetTask(BaseWriteParquetFromVcfTask):
         if field == 'gt':
             return field, sum(map(int, value.split('/')))
         return field, int(value)
+
+    @classmethod
+    def _liftover(cls, lo, df_chrom, df_pos):
+        return [
+            cls._liftover_coords(lo, c, p)
+            for c, p in zip(df_chrom, df_pos, strict=False)
+        ]
+
+    @staticmethod
+    def _liftover_coords(lo, chrom, pos):
+        result = lo.convert_coordinate(chrom, pos - 1)
+        if result and result[0][0] not in CONTIGS_37:
+            result = None
+        return (result[0][0], result[0][1] + 1) if result else (None, None)
+
+    @staticmethod
+    def _xpos(chrom, pos):
+        return (
+            chrom.str.removeprefix('chr').replace({'X': '23', 'Y': '24'}).astype(int)
+            * 1_000_000_000
+            + pos
+        )
