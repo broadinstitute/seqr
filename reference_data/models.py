@@ -442,8 +442,8 @@ class RefseqTranscript(TranscriptMetadataModel):
 
 class GeneConstraint(TranscriptMetadataModel):
 
-    CURRENT_VERSION = 'gnomad.v4.1.2.constraint_metrics'
-    URL = f'https://storage.googleapis.com/gcp-public-data--gnomad/release/4.1.2/constraint/{CURRENT_VERSION}.tsv.bgz'
+    CURRENT_VERSION = '4.1.2'
+    URL = f'https://storage.googleapis.com/gcp-public-data--gnomad/release/{CURRENT_VERSION}/constraint/gnomad.v{CURRENT_VERSION}.constraint_metrics.tsv.bgz'
     SCORE_FIELDS = {
         'mis_z': ('mis.z_score', 'no_exp_mis'),
         'pLI': ('lof.pLI', 'no_exp_lof'),

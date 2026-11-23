@@ -14,7 +14,7 @@ class UpdateGeneConstraintTest(ReferenceDataCommandTestCase):
 
     def test_update_gene_constraint_command(self):
         self._test_update_command(
-            'GeneConstraint', 'gnomad.v4.1.2.constraint_metrics', existing_records=3, created_records=3, skipped_records=0,
+            'GeneConstraint', '4.1.2', existing_records=3, created_records=3, skipped_records=0,
             additional_logs=[(7, 'Skipped 1 records with unrecognized or duplicated transcripts', None)],
         )
 

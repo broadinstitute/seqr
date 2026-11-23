@@ -98,7 +98,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
         self.assertListEqual(sorted(DataVersions.objects.values_list('data_model_name', 'version')), [
             ('ClinGen', '2025-02-05'),
             ('GenCC', '2025-03-20'),
-            ('GeneConstraint', 'gnomad.v4.1.2.constraint_metrics'),
+            ('GeneConstraint', '4.1.2'),
             ('GeneCopyNumberSensitivity', 'Collins_rCNV_2022'),
             ('GeneInfo', '39'),
             ('GeneShet', '7939768'),
