@@ -19,16 +19,20 @@ ALL_EXPECTED_FORMAT_FIELDS ={
     **BASE_EXPECTED_FORMAT_FIELDS,
 }
 
+# TODO add file type specific column validation
 DATA_TYPE_FORMAT_FIELDS = {
-    Dataset.DATASET_TYPE_SV_CALLS: BASE_EXPECTED_FORMAT_FIELDS,
+    f'{Dataset.DATASET_TYPE_SV_CALLS}__sv': BASE_EXPECTED_FORMAT_FIELDS,
+    f'{Dataset.DATASET_TYPE_SV_CALLS}__cnv': BASE_EXPECTED_FORMAT_FIELDS,
 }
 
+SV_INFO_FIELDS = {
+    'END': 'Integer',
+    'SVLEN': 'Integer',
+    'SVTYPE': 'String',
+}
 DATA_TYPE_INFO_FIELDS = {
-    Dataset.DATASET_TYPE_SV_CALLS: {
-        'END': 'Integer',
-        'SVLEN': 'Integer',
-        'SVTYPE': 'String',
-    },
+    f'{Dataset.DATASET_TYPE_SV_CALLS}__sv': SV_INFO_FIELDS,
+    f'{Dataset.DATASET_TYPE_SV_CALLS}__cnv': SV_INFO_FIELDS,
 }
 
 DATA_TYPE_FILE_EXTS = {
@@ -38,6 +42,7 @@ DATA_TYPE_FILE_EXTS = {
 REQUIRED_HEADERS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT']
 
 VCF_FILE_EXTENSIONS = ('.vcf', '.vcf.gz', '.vcf.bgz')
+SV_FILE_TYPES = {'sv', 'cnv'}
 
 
 def _validate_vcf_header(header):
@@ -96,10 +101,22 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
         return None
 
     samples = set()
+    sample_file_types = defaultdict(set)
     for vcf_filename in vcf_filenames:
-        samples.update(
-            _validate_vcf_and_get_samples(vcf_filename, user, genome_version, dataset_type, data_path, path_name)
+        vcf_samples, file_type = _validate_vcf_and_get_samples(
+            vcf_filename, user, genome_version, dataset_type, data_path, path_name,
         )
+        samples.update(vcf_samples)
+        if file_type:
+            for s in samples:
+                sample_file_types[s].add(file_type)
+
+    missing_file_samples = [s for s, file_types in sample_file_types.items() if file_types != SV_FILE_TYPES]
+    if missing_file_samples:
+        raise ErrorsWarningsException(
+            [f'Samples do not have all required VCFs: {", ".join(missing_file_samples)}'], [],
+        )
+
     return samples
 
 
@@ -125,16 +142,20 @@ def _validate_vcf_and_get_samples(vcf_filename, user, genome_version, dataset_ty
     _validate_vcf_header(header)
     if not samples:
         raise ErrorsWarningsException(['No samples found in the provided VCF.'], [])
+
+    file_type = None
     if dataset_type == Dataset.DATASET_TYPE_SV_CALLS:
         if len(samples) > 1:
             raise ErrorsWarningsException([f'Multiple samples found in {vcf_filename}'], [])
         sample_id = next(iter(samples))
-        if data_path.replace('*', sample_id) != vcf_filename:
+        file_type = next((ft for ft in SV_FILE_TYPES if data_path.replace('*', f'{sample_id}.{ft}') == vcf_filename), None)
+        if not file_type:
             raise ErrorsWarningsException([f'VCF {vcf_filename} contains unexpected sample "{sample_id}"'])
+        dataset_type = f'{dataset_type}__{file_type}'
 
     _validate_vcf_meta(meta, genome_version, dataset_type)
 
-    return samples
+    return samples, file_type
 
 
 def _get_vcf_header_line(vcf_file, meta):
@@ -164,7 +185,10 @@ def _validate_valid_vcf_name(data_path, user, dataset_type, path_name):
         files_to_check = list_files(data_path, user)
         if not files_to_check:
             raise ErrorsWarningsException([f'Data file or path {path_name or data_path} is not found.'])
-        if dataset_type != Dataset.DATASET_TYPE_SV_CALLS:
+        if dataset_type == Dataset.DATASET_TYPE_SV_CALLS:
+            sv_file_extensions = tuple(f'{file_type}.{ext}' for ext in file_extensions for file_type in SV_FILE_TYPES)
+            files_to_check = [f for f in files_to_check if f.endswith(sv_file_extensions)]
+        else:
             files_to_check = files_to_check[:1]
     elif allowed_exts and data_path.endswith(allowed_exts):
         if not does_file_exist(data_path, user=user):
