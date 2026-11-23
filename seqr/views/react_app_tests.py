@@ -95,6 +95,7 @@ class AppPageTest(object):
         self.assertEqual(self.get_initial_page_window('userEmail', response), user_email)
         nonce = self.get_initial_page_window('__webpack_nonce__', response)
         self.assertIn('nonce-{}'.format(nonce), response.get('Content-Security-Policy'))
+        self.assertEqual(response.get('Strict-Transport-Security'), 'max-age=31536000')
 
         # test static assets are correctly loaded
         content = response.content.decode('utf-8')
