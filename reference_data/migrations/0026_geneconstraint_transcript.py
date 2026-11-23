@@ -6,7 +6,6 @@ import django.db.models.deletion
 
 def delete_existing_records(apps, schema_editor):
     db_alias = schema_editor.connection.alias
-    apps.get_model('reference_data', 'GeneConstraint').objects.using(db_alias).all().delete()
     # remove the loaded version so update_all_reference_data reloads the per-transcript records
     apps.get_model('reference_data', 'DataVersions').objects.using(db_alias).filter(data_model_name='GeneConstraint').delete()
 
@@ -19,54 +18,25 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(delete_existing_records, reverse_code=migrations.RunPython.noop),
-        migrations.RemoveField(
-            model_name='geneconstraint',
-            name='gene',
+        migrations.DeleteModel(
+            name='GeneConstraint',
         ),
-        migrations.AddField(
-            model_name='geneconstraint',
-            name='transcript',
-            field=models.OneToOneField(default=1, on_delete=django.db.models.deletion.CASCADE, to='reference_data.transcriptinfo'),
-            preserve_default=False,
-        ),
-        migrations.AddField(
-            model_name='geneconstraint',
-            name='canonical',
-            field=models.BooleanField(default=False),
-        ),
-        migrations.AddField(
-            model_name='geneconstraint',
-            name='mane_select',
-            field=models.BooleanField(default=False),
-        ),
-        migrations.AlterField(
-            model_name='geneconstraint',
-            name='mis_z',
-            field=models.FloatField(null=True),
-        ),
-        migrations.AlterField(
-            model_name='geneconstraint',
-            name='pLI',
-            field=models.FloatField(null=True),
-        ),
-        migrations.AlterField(
-            model_name='geneconstraint',
-            name='louef',
-            field=models.FloatField(null=True),
-        ),
-        migrations.AlterField(
-            model_name='geneconstraint',
-            name='mis_z_rank',
-            field=models.IntegerField(null=True),
-        ),
-        migrations.AlterField(
-            model_name='geneconstraint',
-            name='pLI_rank',
-            field=models.IntegerField(null=True),
-        ),
-        migrations.AlterField(
-            model_name='geneconstraint',
-            name='louef_rank',
-            field=models.IntegerField(null=True),
+        migrations.CreateModel(
+            name='GeneConstraint',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('transcript', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='reference_data.transcriptinfo')),
+                ('canonical', models.BooleanField(default=False)),
+                ('mane_select', models.BooleanField(default=False)),
+                ('mis_z', models.FloatField(null=True)),
+                ('mis_z_rank', models.IntegerField(null=True)),
+                ('pLI', models.FloatField(null=True)),
+                ('pLI_rank', models.IntegerField(null=True)),
+                ('louef', models.FloatField(null=True)),
+                ('louef_rank', models.IntegerField(null=True)),
+            ],
+            options={
+                'json_fields': ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank', 'canonical', 'mane_select'],
+            },
         ),
     ]
