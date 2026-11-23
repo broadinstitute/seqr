@@ -218,10 +218,6 @@ export const GENE = {
 }
 
 export const MISSENSE_CONSTRAINED_GENE = {
-  constraints: {
-    misZ: 4.1371, misZRank: 1348, louef: 0.81976, louefRank: 7626, pli: 0.71899, pliRank: 4059, totalGenes: 20076,
-    transcriptId: "ENST00000641515",
-  },
   cnSensitivity: {},
   sHet: {},
   omimPhenotypes: [],
@@ -231,10 +227,6 @@ export const MISSENSE_CONSTRAINED_GENE = {
 }
 
 export const LOF_CONSTRAINED_GENE = {
-  constraints: {
-    misZ: 0.78047, misZRank: 9990, louef: 0.3995, louefRank: 2224, pli: 0.99948, pliRank: 2444, totalGenes: 20076,
-    transcriptId: "ENST00000620225",
-  },
   cnSensitivity: {},
   sHet: {},
   omimPhenotypes: [],
@@ -245,23 +237,47 @@ export const LOF_CONSTRAINED_GENE = {
 export const CONSTRAINT_TRANSCRIPTS_BY_ID = {
   ENST00000335137: {
     transcriptId: "ENST00000335137",
+    geneId: "ENSG00000186092",
+    isManeSelect: false,
+    canonical: false,
     constraints: {
       misZ: 3.5, misZRank: 3200, louef: null, louefRank: null, pli: null, pliRank: null, totalGenes: 20076,
-      transcriptId: "ENST00000335137",
     },
   },
   ENST00000611883: {
     transcriptId: "ENST00000611883",
+    geneId: "ENSG00000277258",
+    isManeSelect: false,
+    canonical: false,
     constraints: {
       misZ: 0.78047, misZRank: 9990, louef: 0.3995, louefRank: 2224, pli: 0.99948, pliRank: 2444, totalGenes: 20076,
-      transcriptId: "ENST00000611883",
+    },
+  },
+  ENST00000641515: {
+    transcriptId: "ENST00000641515",
+    geneId: "ENSG00000186092",
+    isManeSelect: true,
+    canonical: true,
+    constraints: {
+      misZ: 4.1371, misZRank: 1348, louef: 0.81976, louefRank: 7626, pli: 0.71899, pliRank: 4059, totalGenes: 20076,
     },
   },
   ENST00000641999: {
     transcriptId: "ENST00000641999",
+    geneId: "ENSG00000186092",
+    isManeSelect: false,
+    canonical: true,
     constraints: {
       misZ: 5.2, misZRank: 812, louef: 0.3, louefRank: 1500, pli: 0.1, pliRank: 8000, totalGenes: 20076,
-      transcriptId: "ENST00000641999",
+    },
+  },
+  ENST00000620225: {
+    transcriptId: "ENST00000620225",
+    geneId: "ENSG00000277258",
+    isManeSelect: false,
+    canonical: true,
+    constraints: {
+      misZ: 0.78047, misZRank: 9990, louef: 0.3995, louefRank: 2224, pli: 0.99948, pliRank: 2444, totalGenes: 20076,
     },
   },
 }

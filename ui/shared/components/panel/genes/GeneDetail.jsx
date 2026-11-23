@@ -7,7 +7,7 @@ import { connect } from 'react-redux'
 import { Grid, Popup, Loader, Label } from 'semantic-ui-react'
 
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
-import { getGenesIsLoading, getGenesById, getUser } from 'redux/selectors'
+import { getGenesIsLoading, getGenesById, getUser, getGeneConstraintsByGeneId } from 'redux/selectors'
 import { getDecipherGeneLink, GENE_CONSTRAINT_VERSION } from 'shared/utils/constants'
 import { SectionHeader, ColoredLabel } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
@@ -287,7 +287,7 @@ export const GenCC = ({ genCc }) => genCc.classifications.sort(
   </div>
 ))
 
-const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpdateGeneNote }) => {
+const GeneDetailContent = React.memo(({ gene, geneConstraints, user, updateGeneNote: dispatchUpdateGeneNote }) => {
   if (!gene) {
     return null
   }
@@ -304,8 +304,9 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
   if (otherGeneNames.length > 0) {
     basicDetails.splice(1, 0, { title: 'Other Gene Names', content: otherGeneNames.join(', ') })
   }
+  const geneScores = { ...gene, constraints: geneConstraints }
   const statDetails = STAT_DETAILS.map(({ title, content, scoreField, ...props }) => ({
-    title, content: content ? content(gene) : <ScoreDetails scores={gene[scoreField]} {...props} />,
+    title, content: content ? content(gene) : <ScoreDetails scores={geneScores[scoreField]} {...props} />,
   }))
 
   const associationDetails = [
@@ -393,16 +394,22 @@ const GeneDetailContent = React.memo(({ gene, user, updateGeneNote: dispatchUpda
 
 GeneDetailContent.propTypes = {
   gene: PropTypes.object,
+  geneConstraints: PropTypes.object,
   updateGeneNote: PropTypes.func.isRequired,
   user: PropTypes.object,
 }
 
 const GeneDetail = React.memo((
-  { geneId, gene, user, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote },
+  { geneId, gene, geneConstraints, user, loading, loadGene: dispatchLoadGene, updateGeneNote: dispatchUpdateGeneNote },
 ) => (
   <div>
     <DataLoader contentId={geneId} content={gene} loading={loading} load={dispatchLoadGene}>
-      <GeneDetailContent gene={gene} updateGeneNote={dispatchUpdateGeneNote} user={user} />
+      <GeneDetailContent
+        gene={gene}
+        geneConstraints={geneConstraints}
+        updateGeneNote={dispatchUpdateGeneNote}
+        user={user}
+      />
     </DataLoader>
     <SectionHeader>Tissue-Specific Expression</SectionHeader>
     <React.Suspense fallback={<Loader />}>
@@ -414,6 +421,7 @@ const GeneDetail = React.memo((
 GeneDetail.propTypes = {
   geneId: PropTypes.string.isRequired,
   gene: PropTypes.object,
+  geneConstraints: PropTypes.object,
   loading: PropTypes.bool.isRequired,
   loadGene: PropTypes.func.isRequired,
   updateGeneNote: PropTypes.func.isRequired,
@@ -426,6 +434,7 @@ const mapDispatchToProps = {
 
 const mapStateToProps = (state, ownProps) => ({
   gene: getGenesById(state)[ownProps.geneId],
+  geneConstraints: getGeneConstraintsByGeneId(state)[ownProps.geneId],
   loading: getGenesIsLoading(state),
   user: getUser(state),
 })

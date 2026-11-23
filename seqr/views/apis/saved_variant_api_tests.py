@@ -33,9 +33,11 @@ SAVED_VARIANT_RESPONSE_KEYS = {
     'genesById', 'locusListsByGuid', 'rnaSeqData', 'mmeSubmissionsByGuid', 'transcriptsById', 'phenotypeGeneScores',
 }
 
-TRANSCRIPT_CONSTRAINTS = {
-    'louef': 0.9173, 'louefRank': 0, 'misZ': 2.1543, 'misZRank': 0,
-    'pli': 0.000001047, 'pliRank': 1, 'totalGenes': 2, 'transcriptId': 'ENST00000258436',
+CONSTRAINT_TRANSCRIPT = {
+    'transcriptId': 'ENST00000258436', 'geneId': 'ENSG00000135953', 'isManeSelect': True, 'canonical': False,
+    'constraints': {
+        'louef': 0.9173, 'louefRank': 0, 'misZ': 2.1543, 'misZRank': 0, 'pli': 0.000001047, 'pliRank': 1, 'totalGenes': 2,
+    },
 }
 
 COMPOUND_HET_3_JSON = {
@@ -222,10 +224,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
 
         self.assertDictEqual(
             response_json['transcriptsById'],
-            {'ENST00000258436': {
-                'isManeSelect': True, 'refseqId': 'NM_017900.2', 'transcriptId': 'ENST00000258436',
-                'constraints': TRANSCRIPT_CONSTRAINTS,
-            }},
+            {'ENST00000258436': {**CONSTRAINT_TRANSCRIPT, 'refseqId': 'NM_017900.2'}},
         )
 
         self.assertDictEqual(response_json['rnaSeqData'], {'I000001_na19675': {
@@ -387,12 +386,22 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         response = self.client.get(url.replace(PROJECT_GUID, 'R0003_test'))
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
-        self.assertSetEqual(set(response_json.keys()), {*no_families_response_keys, 'familiesByGuid'})
+        self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS)
 
         self.assertSetEqual(
             set(response_json['savedVariantsByGuid'].keys()),
             {'SV0000006_1248367227_r0003_tes', 'SV0000007_prefix_19107_DEL_r00'})
         self.assertSetEqual(set(response_json['genesById'].keys()), {'ENSG00000135953', 'ENSG00000240361'})
+        self.assertDictEqual(response_json['transcriptsById'], {
+            'ENST00000258436': CONSTRAINT_TRANSCRIPT,
+            'ENST00000456328': {
+                'transcriptId': 'ENST00000456328', 'geneId': 'ENSG00000223972', 'isManeSelect': False, 'canonical': True,
+                'constraints': {
+                    'louef': 1.606, 'louefRank': 0, 'misZ': -0.7773, 'misZRank': 1, 'pli': 0.00090576, 'pliRank': 1,
+                    'totalGenes': 2,
+                },
+            },
+        })
         self.assertDictEqual(response_json['omimIntervals'], {'3': {
             'chrom': '1',
             'start': 249044482,
@@ -421,9 +430,7 @@ class SavedVariantAPITest(ClickhouseSearchTestCase):
         self.assertEqual(response.status_code, 200)
         response_json = response.json()
         self.assertSetEqual(set(response_json.keys()), SAVED_VARIANT_RESPONSE_KEYS - {'omimIntervals'})
-        self.assertDictEqual(response_json['transcriptsById'], {
-            'ENST00000258436': {'transcriptId': 'ENST00000258436', 'constraints': TRANSCRIPT_CONSTRAINTS},
-        })
+        self.assertDictEqual(response_json['transcriptsById'], {'ENST00000258436': CONSTRAINT_TRANSCRIPT})
         self.assertSetEqual(set(response_json['savedVariantsByGuid']['SV0000002_1248367227_r0390_100'].keys()), fields)
         self.assertSetEqual(set(response_json['variantsById']['1-248367227-TC-T'].keys()), {
             *variant_fields, *SAVED_VARIANT_DETAIL_FIELDS, 'discoveryTags', 'noAccessDiscoveryFamilies', 'screenRegionType', 'sortedRegulatoryFeatureConsequences', 'sortedMotifFeatureConsequences',

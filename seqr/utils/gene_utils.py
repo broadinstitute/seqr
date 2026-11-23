@@ -96,7 +96,6 @@ def _add_mgi(gene):
     return {'mgiMarkerId': model.marker_id if model else None}
 
 OMIM = 'omim'
-CONSTRAINT = 'constraint'
 CN_SENSITIVITY = 'cn_sensitivity'
 SHET = 'shet'
 DBNSFP = 'dbnsfp'
@@ -107,7 +106,6 @@ CLINGEN = 'clingen'
 NOTES= 'notes'
 VARIANT_GENE_DISPLAY_FIELDS = {
     OMIM: (Omim, _add_omim),
-    CONSTRAINT: (None, None),
     CN_SENSITIVITY: (GeneCopyNumberSensitivity, _add_gene_model('genecopynumbersensitivity', 'cnSensitivity', dict)),
     SHET: (GeneShet, _add_gene_model('geneshet', 'sHet', dict)),
     GENCC: (GenCC, _add_gene_model('gencc', 'genCc', dict)),
@@ -128,9 +126,6 @@ def _get_json_for_genes(genes, user=None, gene_fields=None, **kwargs):
     if not gene_fields:
         gene_fields = {}
 
-    if CONSTRAINT in gene_fields:
-        gene_constraints = _get_gene_constraints([gene.gene_id for gene in genes])
-
     if NOTES in gene_fields:
         gene_notes_json = get_json_for_gene_notes_by_gene_id([gene.gene_id for gene in genes], user)
 
@@ -138,8 +133,6 @@ def _get_json_for_genes(genes, user=None, gene_fields=None, **kwargs):
         for field, (_, result_func) in gene_fields.items():
             if field == NOTES:
                 updates = {'notes': gene_notes_json.get(result['geneId'], [])}
-            elif field ==  CONSTRAINT:
-                updates = {'constraints': gene_constraints.get(result['geneId'], {})}
             else:
                 updates = result_func(gene)
             result.update(updates)
@@ -153,37 +146,28 @@ def _get_json_for_genes(genes, user=None, gene_fields=None, **kwargs):
     return _get_json_for_models(genes, process_result=_process_result, **kwargs)
 
 
-def _get_constraints_json(additional_values=None, **constraint_filter):
-    return get_json_for_queryset(
-        GeneConstraint.objects.filter(**constraint_filter), additional_values=additional_values,
-        nested_fields=[{'fields': ('transcript', 'transcript_id'), 'key': 'transcriptId'}],
-    )
+CONSTRAINT_TRANSCRIPT_FIELDS = {
+    'transcriptId': 'transcript__transcript_id',
+    'geneId': 'transcript__gene__gene_id',
+    'isManeSelect': 'transcript__is_mane_select',
+    'canonical': 'transcript__canonical',
+}
 
 
-def _get_constraint_totals():
-    return {
-        'totalGenes': GeneConstraint.objects.filter(PREFERRED_TRANSCRIPT_Q).values('transcript__gene_id').distinct().count(),
-    }
+def get_transcripts_with_constraints(genes, transcript_ids=None):
+    transcript_filter = PREFERRED_TRANSCRIPT_Q & Q(transcript__gene__in=genes)
+    if transcript_ids:
+        transcript_filter |= Q(transcript__transcript_id__in=transcript_ids)
+    total_genes = GeneConstraint.objects.filter(PREFERRED_TRANSCRIPT_Q).values('transcript__gene_id').distinct().count()
 
-
-def _get_gene_constraints(gene_ids):
-    totals = _get_constraint_totals()
-    return {
-        constraint.pop('geneId'): {**constraint, **totals} for constraint in _get_constraints_json(
-            transcript__gene__gene_id__in=gene_ids, transcript__canonical=True,
-            additional_values={'geneId': F('transcript__gene__gene_id')},
-        )
-    }
-
-
-def get_transcript_constraints(transcript_ids):
-    if not transcript_ids:
-        return {}
-    totals = _get_constraint_totals()
-    return {
-        constraint['transcriptId']: {**constraint, **totals}
-        for constraint in _get_constraints_json(transcript__transcript_id__in=transcript_ids)
-    }
+    transcripts = {}
+    for constraints in get_json_for_queryset(
+        GeneConstraint.objects.filter(transcript_filter),
+        additional_values={key: F(field) for key, field in CONSTRAINT_TRANSCRIPT_FIELDS.items()},
+    ):
+        transcript = {key: constraints.pop(key) for key in CONSTRAINT_TRANSCRIPT_FIELDS}
+        transcripts[transcript['transcriptId']] = {**transcript, 'constraints': {**constraints, 'totalGenes': total_genes}}
+    return transcripts
 
 
 def parse_locus_list_items(request_json, genome_version=None, get_genes_func=get_genes):

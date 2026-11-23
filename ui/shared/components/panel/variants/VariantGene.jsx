@@ -5,7 +5,9 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import { Label, Popup, List, Header, Segment, Divider, Table, Button, Loader } from 'semantic-ui-react'
 
-import { getGenesById, getLocusListsByGuid, getFamiliesByGuid, getTranscriptsById } from 'redux/selectors'
+import {
+  getGenesById, getLocusListsByGuid, getFamiliesByGuid, getTranscriptsById, getGeneConstraintsByGeneId,
+} from 'redux/selectors'
 import DataTable from 'shared/components/table/DataTable'
 import { panelAppUrl, moiToMoiInitials } from '../../../utils/panelAppUtils'
 import {
@@ -383,8 +385,6 @@ const formatRank = rank => `${rank.toLocaleString('en-US')}${ORDINAL_SUFFIXES[OR
 const hasValue = val => val !== null && val !== undefined
 const isLofConstrained = ({ louef }) => hasValue(louef) && louef < LOF_THRESHHOLD
 
-const constraintSubject = gene => (gene.isTranscriptConstraints ? 'transcript' : 'gene')
-
 const CONSTRAINT_DETAIL_SECTIONS = [
   {
     color: 'red',
@@ -396,7 +396,7 @@ const CONSTRAINT_DETAIL_SECTIONS = [
     ),
     detailsDisplay: gene => (
       <span>
-        {`This ${constraintSubject(gene)} ranks as the ${formatRank(gene.constraints.misZRank + 1)} most constrained against
+        {`This transcript ranks as the ${formatRank(gene.constraints.misZRank + 1)} most constrained against
         missense variation among the ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in
         ${GENE_CONSTRAINT_VERSION} (Z-score: ${gene.constraints.misZ.toPrecision(4)}).`}
         &nbsp;
@@ -419,7 +419,7 @@ const CONSTRAINT_DETAIL_SECTIONS = [
       <List bulleted>
         {isLofConstrained(gene.constraints) && (
           <List.Item>
-            {`This ${constraintSubject(gene)} ranks as the ${formatRank(gene.constraints.louefRank + 1)} most constrained
+            {`This transcript ranks as the ${formatRank(gene.constraints.louefRank + 1)} most constrained
             against loss-of-function (LoF) mutations by LOEUF among the
             ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in ${GENE_CONSTRAINT_VERSION}
             (LOEUF: ${gene.constraints.louef.toPrecision(4)}`}
@@ -558,7 +558,7 @@ const getDetailSections = (configs, gene, compact, labelProps, individualGeneDat
 ))
 
 export const TranscriptConstraintLabels = ({ constraints }) => getDetailSections(
-  CONSTRAINT_DETAIL_SECTIONS, { constraints, cnSensitivity: {}, sHet: {}, isTranscriptConstraints: true }, false, {},
+  CONSTRAINT_DETAIL_SECTIONS, { constraints, cnSensitivity: {}, sHet: {} }, false, {},
 )
 
 TranscriptConstraintLabels.propTypes = {
@@ -617,27 +617,30 @@ const getGeneConsequence = (geneId, variant) => {
     (geneTranscripts[0].majorConsequence || '').replace(/_/g, ' ')
 }
 
-const getConstraintGene = (gene, variant, mainTranscriptConstraints) => {
-  const mainGeneId = variant && !variant.svType && getVariantMainGeneId(variant)
+const getConstraintGene = (gene, variant, mainTranscriptConstraints, geneConstraintsByGeneId) => {
+  if (!variant) {
+    return { ...gene, constraints: {} }
+  }
+  const mainGeneId = !variant.svType && getVariantMainGeneId(variant)
   if (!mainGeneId) {
-    return gene
+    return { ...gene, constraints: geneConstraintsByGeneId[gene.geneId] || {} }
   }
   const isMainGene = mainGeneId === gene.geneId
-  return {
-    ...gene,
-    constraints: (isMainGene && mainTranscriptConstraints) || {},
-    hideConstraints: !isMainGene,
-    isTranscriptConstraints: true,
-  }
+  return { ...gene, constraints: (isMainGene && mainTranscriptConstraints) || {}, hideConstraints: !isMainGene }
 }
 
-const getMainTranscriptConstraints = (state, { variant }) => (
-  variant ? getTranscriptsById(state)?.[getVariantMainTranscript(variant).transcriptId]?.constraints : undefined
-)
+const getMainTranscriptConstraints = (state, { variant }) => {
+  if (!variant) {
+    return null
+  }
+  const { transcriptId } = getVariantMainTranscript(variant)
+  return transcriptId ? getTranscriptsById(state)?.[transcriptId]?.constraints :
+    getGeneConstraintsByGeneId(state)[getVariantMainGeneId(variant)]
+}
 
 export const BaseVariantGene = React.memo(({
   geneId, gene, variant, compact, showInlineDetails, compoundHetToggle, tpmGenes, individualGeneData, geneModalId,
-  noExpand, geneSearchFamily, hideLocusLists, mainTranscriptConstraints,
+  noExpand, geneSearchFamily, hideLocusLists, mainTranscriptConstraints, geneConstraintsByGeneId,
 }) => {
   const geneConsequence = variant && getGeneConsequence(geneId, variant)
 
@@ -649,7 +652,7 @@ export const BaseVariantGene = React.memo(({
 
   const geneDetails = (
     <GeneDetails
-      gene={getConstraintGene(gene, variant, mainTranscriptConstraints)}
+      gene={getConstraintGene(gene, variant, mainTranscriptConstraints, geneConstraintsByGeneId)}
       compact={compactDetails}
       showInlineDetails={showInlineDetails}
       noExpand={noExpand}
@@ -746,6 +749,7 @@ BaseVariantGene.propTypes = {
   geneSearchFamily: PropTypes.string,
   hideLocusLists: PropTypes.bool,
   mainTranscriptConstraints: PropTypes.object,
+  geneConstraintsByGeneId: PropTypes.object,
   ...RNA_SEQ_PROP_TYPES,
 }
 
@@ -754,9 +758,14 @@ const getRnaSeqProps = (state, ownProps) => ({
   individualGeneData: getIndividualGeneDataByFamilyGene(state)[(ownProps.variant.familyGuids || [])[0]],
 })
 
+const getConstraintProps = (state, ownProps) => ({
+  mainTranscriptConstraints: getMainTranscriptConstraints(state, ownProps),
+  geneConstraintsByGeneId: getGeneConstraintsByGeneId(state),
+})
+
 const mapStateToProps = (state, ownProps) => ({
   gene: getGenesById(state)[ownProps.geneId],
-  mainTranscriptConstraints: getMainTranscriptConstraints(state, ownProps),
+  ...getConstraintProps(state, ownProps),
   ...getRnaSeqProps(state, ownProps),
 })
 
@@ -769,6 +778,7 @@ class VariantGenes extends React.PureComponent {
     mainGeneId: PropTypes.string,
     genesById: PropTypes.object.isRequired,
     mainTranscriptConstraints: PropTypes.object,
+    geneConstraintsByGeneId: PropTypes.object.isRequired,
     showMainGene: PropTypes.bool,
     ...RNA_SEQ_PROP_TYPES,
   }
@@ -785,7 +795,8 @@ class VariantGenes extends React.PureComponent {
 
   render() {
     const {
-      variant, genesById, mainTranscriptConstraints, mainGeneId, showMainGene, individualGeneData, tpmGenes,
+      variant, genesById, mainTranscriptConstraints, geneConstraintsByGeneId, mainGeneId, showMainGene,
+      individualGeneData, tpmGenes,
     } = this.props
     const { showAll } = this.state
     const geneIds = Object.keys(variant.transcripts || {}).filter(geneId => geneId !== 'null')
@@ -808,6 +819,7 @@ class VariantGenes extends React.PureComponent {
               individualGeneData={individualGeneData}
               tpmGenes={tpmGenes}
               mainTranscriptConstraints={mainTranscriptConstraints}
+              geneConstraintsByGeneId={geneConstraintsByGeneId}
               showInlineDetails={!mainGeneId}
               compact
             />
@@ -821,7 +833,9 @@ class VariantGenes extends React.PureComponent {
       geneId => (variant.transcripts[geneId][0] || {}).majorConsequence,
     ).filter(consequence => consequence).map(consequence => consequence.replace(/_/g, ' '))))].join(', ')
 
-    const constraintGenes = genes.map(gene => getConstraintGene(gene, variant, mainTranscriptConstraints))
+    const constraintGenes = genes.map(
+      gene => getConstraintGene(gene, variant, mainTranscriptConstraints, geneConstraintsByGeneId),
+    )
 
     return (
       <div>
@@ -859,7 +873,7 @@ class VariantGenes extends React.PureComponent {
 
 const mapAllGenesStateToProps = (state, ownProps) => ({
   genesById: getGenesById(state),
-  mainTranscriptConstraints: getMainTranscriptConstraints(state, ownProps),
+  ...getConstraintProps(state, ownProps),
   ...getRnaSeqProps(state, ownProps),
 })
 

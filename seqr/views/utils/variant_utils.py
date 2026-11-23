@@ -10,10 +10,10 @@ import redis
 from clickhouse_search.backend.functions import ArrayDistinct, ArrayMap
 from clickhouse_search.search import get_variants_queryset, get_clickhouse_variant_annotations
 from matchmaker.models import MatchmakerSubmissionGenes, MatchmakerSubmission
-from reference_data.models import TranscriptInfo, Omim, GENOME_VERSION_GRCh38
+from reference_data.models import GeneInfo, TranscriptInfo, Omim, GENOME_VERSION_GRCh38
 from seqr.models import SavedVariant, VariantSearchResults, Family, LocusList, LocusListInterval, LocusListGene, \
     RnaSeqTpm, PhenotypePrioritization, Project, Dataset, RnaSample, VariantTag, VariantTagType
-from seqr.utils.gene_utils import get_genes_for_variants, get_transcript_constraints
+from seqr.utils.gene_utils import get_genes_for_variants, get_transcripts_with_constraints
 from seqr.utils.xpos_utils import parse_variant_id, get_chrom_pos
 from seqr.views.utils.json_to_orm_utils import create_model_from_json
 from seqr.views.utils.orm_to_json_utils import get_json_for_saved_variants_child_entities, get_json_for_locus_lists, \
@@ -272,8 +272,11 @@ def _get_variants_reference_data_response(variants, genome_versions, get_family_
             nested_fields=[{'fields': ('refseqtranscript', 'refseq_id'), 'key': 'refseqId'}]
         )
     } if transcript_ids else {}
-    for transcript_id, constraints in get_transcript_constraints(constraint_transcript_ids).items():
-        transcripts.setdefault(transcript_id, {'transcriptId': transcript_id})['constraints'] = constraints
+    constraint_transcripts = get_transcripts_with_constraints(
+        GeneInfo.objects.filter(gene_id__in=gene_ids), constraint_transcript_ids,
+    ) if gene_ids else {}
+    for transcript_id, transcript in constraint_transcripts.items():
+        transcripts.setdefault(transcript_id, {}).update(transcript)
     if transcripts:
         response['transcriptsById'] = transcripts
 

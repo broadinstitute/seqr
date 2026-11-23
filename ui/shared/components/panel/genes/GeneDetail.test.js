@@ -6,7 +6,7 @@ import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
 import GeneDetail from './GeneDetail'
 
-import { STATE1, MISSENSE_CONSTRAINED_GENE } from '../fixtures'
+import { STATE1, MISSENSE_CONSTRAINED_GENE, LOF_CONSTRAINED_GENE, CONSTRAINT_TRANSCRIPTS_BY_ID } from '../fixtures'
 
 jest.mock('../../graph/Gtex', () => () => <div>Gtex</div>)
 jest.mock('../view-fields/NoteListFieldView', () => () => <div>NoteListFieldView</div>)
@@ -19,9 +19,9 @@ test('shallow-render without crashing', () => {
   shallow(<GeneDetail store={store} geneId="TTN" />)
 })
 
-const mountGeneDetail = (gene) => {
+const mountGeneDetail = (gene, transcriptsById = CONSTRAINT_TRANSCRIPTS_BY_ID) => {
   const store = configureStore([thunk])({
-    ...STATE1, genesById: { [gene.geneId]: gene }, genesLoading: { isLoading: false },
+    ...STATE1, genesById: { [gene.geneId]: gene }, transcriptsById, genesLoading: { isLoading: false },
   })
   return mount(
     <Provider store={store}>
@@ -31,7 +31,11 @@ const mountGeneDetail = (gene) => {
 }
 
 const withConstraints = constraints => ({
-  ...MISSENSE_CONSTRAINED_GENE, constraints: { ...MISSENSE_CONSTRAINED_GENE.constraints, ...constraints },
+  ...CONSTRAINT_TRANSCRIPTS_BY_ID,
+  ENST00000641515: {
+    ...CONSTRAINT_TRANSCRIPTS_BY_ID.ENST00000641515,
+    constraints: { ...CONSTRAINT_TRANSCRIPTS_BY_ID.ENST00000641515.constraints, ...constraints },
+  },
 })
 
 test('constraint stats name gnomAD v4.1.2 and link to its constraint help', () => {
@@ -41,6 +45,7 @@ test('constraint stats name gnomAD v4.1.2 and link to its constraint help', () =
   expect(text).toContain('z-score: 4.137 (ranked 1349 most constrained out of 20076 genes under study)')
   expect(text).toContain('louef: 0.8198 (ranked 7627 most intolerant of LoF mutations out of 20076 genes under study)')
   expect(text).toContain('pLI-score: 0.7190 (ranked 4060 most intolerant of LoF mutations out of 20076 genes under study)')
+  expect(text).not.toContain('z-score: 5.200')
   expect(text).toContain('genes under study)NOTE: Missense')
   expect(text).toContain('NOTE: Missense constraint measures the depletion of missense variants observed in a gene')
   expect(text).toContain('observed in the gnomAD v4.1.2 data')
@@ -50,7 +55,19 @@ test('constraint stats name gnomAD v4.1.2 and link to its constraint help', () =
   expect(wrapper.find('a[href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4222185/"]').text()).toEqual('Samocha et al., 2014')
 
   const noScoreCount = geneText => (geneText.match(/No score available/g) || []).length
-  const nullConstraintsText = mountGeneDetail(withConstraints({ misZ: null, louef: null, pli: null })).text()
+  const nullConstraintsText = mountGeneDetail(
+    MISSENSE_CONSTRAINED_GENE, withConstraints({ misZ: null, louef: null, pli: null }),
+  ).text()
   expect(nullConstraintsText).not.toContain('ranked')
   expect(noScoreCount(nullConstraintsText)).toEqual(noScoreCount(text) + 2)
+
+  const noTranscriptsText = mountGeneDetail(MISSENSE_CONSTRAINED_GENE, {}).text()
+  expect(noTranscriptsText).not.toContain('ranked')
+  expect(noScoreCount(noTranscriptsText)).toEqual(noScoreCount(text) + 2)
+})
+
+test('constraint stats fall back to the canonical transcript when there is no MANE Select transcript', () => {
+  const text = mountGeneDetail(LOF_CONSTRAINED_GENE).text().replace(/\s+/g, ' ')
+
+  expect(text).toContain('louef: 0.3995 (ranked 2225 most intolerant of LoF mutations out of 20076 genes under study)')
 })

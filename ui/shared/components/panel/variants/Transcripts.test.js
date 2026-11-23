@@ -39,7 +39,7 @@ test('shows constraint labels only for main gene transcripts that have constrain
 
   const wrapper = mountTranscripts(NON_PREFERRED_TRANSCRIPT_VARIANT)
   const text = wrapper.text()
-  expect(text.match(/MISSENSE CONSTR/g)).toHaveLength(1)
+  expect(text.match(/MISSENSE CONSTR/g)).toHaveLength(2)
   expect(text).not.toContain('LOF CONSTR')
   const popupText = wrapper.find('Popup').map(popup => mount(<div>{popup.prop('content')}</div>).text()).join(' ')
   expect(popupText).toContain('This transcript ranks as the 3,201st')

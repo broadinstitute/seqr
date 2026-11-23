@@ -694,7 +694,7 @@ class FamilyAPITest(object):
             'genesById': {
                 'ENSG00000268903': {
                     'chromGrch37': '1', 'chromGrch38': '1', 'clinGen': None, 'cnSensitivity': {},
-                    'codingRegionSizeGrch37': 0, 'codingRegionSizeGrch38': 0, 'constraints': {},
+                    'codingRegionSizeGrch37': 0, 'codingRegionSizeGrch38': 0,
                     'endGrch37': 135895, 'endGrch38': 135895, 'genCc': {}, 'sHet': {},
                     'gencodeGeneType': 'processed_pseudogene', 'geneId': 'ENSG00000268903',
                     'geneSymbol': 'AL627309.7', 'mimNumber': None, 'omimPhenotypes': [],

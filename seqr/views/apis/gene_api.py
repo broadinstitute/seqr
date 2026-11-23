@@ -1,5 +1,6 @@
+from reference_data.models import GeneInfo
 from seqr.models import GeneNote
-from seqr.utils.gene_utils import get_gene, get_genes_with_detail
+from seqr.utils.gene_utils import get_gene, get_genes_with_detail, get_transcripts_with_constraints
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.note_utils import create_note_handler, update_note_handler, delete_note_handler
 from seqr.views.utils.orm_to_json_utils import get_json_for_gene_notes_by_gene_id
@@ -9,14 +10,20 @@ from seqr.views.utils.permissions_utils import login_and_policies_required
 @login_and_policies_required
 def genes_info(request):
     gene_ids = request.GET.get('geneIds', '').split(',')
-    return create_json_response({'genesById': get_genes_with_detail(gene_ids, request.user)})
+    return create_json_response({
+        'genesById': get_genes_with_detail(gene_ids, request.user),
+        'transcriptsById': get_transcripts_with_constraints(GeneInfo.objects.filter(gene_id__in=gene_ids)),
+    })
 
 
 @login_and_policies_required
 def gene_info(request, gene_id):
     gene = get_gene(gene_id, request.user)
 
-    return create_json_response({'genesById': {gene_id: gene}})
+    return create_json_response({
+        'genesById': {gene_id: gene},
+        'transcriptsById': get_transcripts_with_constraints(GeneInfo.objects.filter(gene_id=gene_id)),
+    })
 
 
 @login_and_policies_required

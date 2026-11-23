@@ -19,43 +19,54 @@ const renderedText = gene => mount(<GeneDetails gene={gene} compact />).text().r
 
 const withConstraints = (gene, constraints) => ({ ...gene, constraints: { ...gene.constraints, ...constraints } })
 
+const MISSENSE_GENE_WITH_CONSTRAINTS = {
+  ...MISSENSE_CONSTRAINED_GENE, constraints: CONSTRAINT_TRANSCRIPTS_BY_ID.ENST00000641515.constraints,
+}
+const LOF_GENE_WITH_CONSTRAINTS = {
+  ...LOF_CONSTRAINED_GENE, constraints: CONSTRAINT_TRANSCRIPTS_BY_ID.ENST00000620225.constraints,
+}
+
 test('shallow-render without crashing', () => {
   const store = configureStore()(STATE1)
 
   shallow(<VariantGenes store={store} gene={GENE} variant={VARIANT} />)
 })
 
-test('missense constraint details show the gene rank, z-score and constraint help', () => {
-  const wrapper = mount(<GeneDetails gene={MISSENSE_CONSTRAINED_GENE} compact />)
+test('missense constraint details show the transcript rank, z-score and constraint help', () => {
+  const wrapper = mount(<GeneDetails gene={MISSENSE_GENE_WITH_CONSTRAINTS} compact />)
 
   expect(wrapper.text().replace(/\s+/g, ' ')).toContain(
-    'This gene ranks as the 1,349th most constrained against missense variation among the 20,076 genes evaluated in gnomAD v4.1.2 (Z-score: 4.137).',
+    'This transcript ranks as the 1,349th most constrained against missense variation among the 20,076 genes evaluated in gnomAD v4.1.2 (Z-score: 4.137).',
   )
   expect(wrapper.find('a[href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4222185/"]').text()).toEqual('Samocha et al., 2014')
   expect(wrapper.find(GENE_CONSTRAINT_LINK).text()).toEqual('Gene Constraint')
 })
 
 test('LoF constraint details show for a louef under the gnomAD v4 cutoff of 0.45', () => {
-  const wrapper = mount(<GeneDetails gene={LOF_CONSTRAINED_GENE} compact />)
+  const wrapper = mount(<GeneDetails gene={LOF_GENE_WITH_CONSTRAINTS} compact />)
 
   expect(wrapper.text().replace(/\s+/g, ' ')).toContain(
-    'This gene ranks as the 2,225th most constrained against loss-of-function (LoF) mutations by LOEUF among the 20,076 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3995; pLI: 0.9995) [Karczewski et al., 2020].',
+    'This transcript ranks as the 2,225th most constrained against loss-of-function (LoF) mutations by LOEUF among the 20,076 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3995; pLI: 0.9995) [Karczewski et al., 2020].',
   )
   expect(wrapper.find('a[href="https://pubmed.ncbi.nlm.nih.gov/32461654/"]').text().trim()).toEqual('Karczewski et al., 2020')
   expect(wrapper.find(GENE_CONSTRAINT_LINK).text()).toEqual('Gene Constraint')
-  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { pli: 0 }))).toContain('(LOEUF: 0.3995) [Karczewski et al., 2020].')
+  expect(renderedText(withConstraints(LOF_GENE_WITH_CONSTRAINTS, { pli: 0 }))).toContain(
+    '(LOEUF: 0.3995) [Karczewski et al., 2020].',
+  )
 
   const badgeText = gene => mount(<GeneDetails gene={gene} />).text()
-  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.449 }))).toContain('by LOEUF')
-  expect(badgeText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.449 }))).toContain('LOF CONSTR')
-  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.45 }))).not.toContain('Loss of Function Constraint')
-  expect(badgeText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.45 }))).not.toContain('LOF CONSTR')
-  expect(renderedText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.5, pli: 0.9999 }))).not.toContain(
+  expect(renderedText(withConstraints(LOF_GENE_WITH_CONSTRAINTS, { louef: 0.449 }))).toContain('by LOEUF')
+  expect(badgeText(withConstraints(LOF_GENE_WITH_CONSTRAINTS, { louef: 0.449 }))).toContain('LOF CONSTR')
+  expect(renderedText(withConstraints(LOF_GENE_WITH_CONSTRAINTS, { louef: 0.45 }))).not.toContain(
     'Loss of Function Constraint',
   )
-  expect(badgeText(withConstraints(LOF_CONSTRAINED_GENE, { louef: 0.5, pli: 0.9999 }))).not.toContain('LOF CONSTR')
-  expect(renderedText(MISSENSE_CONSTRAINED_GENE)).not.toContain('Loss of Function Constraint')
-  expect(badgeText(withConstraints(LOF_CONSTRAINED_GENE, { louef: null }))).not.toContain('LOF CONSTR')
+  expect(badgeText(withConstraints(LOF_GENE_WITH_CONSTRAINTS, { louef: 0.45 }))).not.toContain('LOF CONSTR')
+  expect(renderedText(withConstraints(LOF_GENE_WITH_CONSTRAINTS, { louef: 0.5, pli: 0.9999 }))).not.toContain(
+    'Loss of Function Constraint',
+  )
+  expect(badgeText(withConstraints(LOF_GENE_WITH_CONSTRAINTS, { louef: 0.5, pli: 0.9999 }))).not.toContain('LOF CONSTR')
+  expect(renderedText(MISSENSE_GENE_WITH_CONSTRAINTS)).not.toContain('Loss of Function Constraint')
+  expect(badgeText(withConstraints(LOF_GENE_WITH_CONSTRAINTS, { louef: null }))).not.toContain('LOF CONSTR')
 })
 
 test('variant rows show constraints only for the main gene, from its main transcript', () => {
@@ -120,7 +131,9 @@ test('variant rows show constraints only for the main gene, from its main transc
   expect(detailsText(missenseGeneId, noEntryVariant)).toEqual('')
   expect(badgeText(missenseGeneId, noEntryVariant)).not.toContain('CONSTR')
   const selectedVariant = { ...NON_PREFERRED_TRANSCRIPT_VARIANT, selectedMainTranscriptId: 'ENST00000641515' }
-  expect(badgeText(missenseGeneId, selectedVariant)).not.toContain('CONSTR')
+  const selectedText = detailsText(missenseGeneId, selectedVariant)
+  expect(selectedText).toContain('This transcript ranks as the 1,349th most constrained')
+  expect(selectedText).not.toContain('3,201st')
   const selectedConstrainedVariant = {
     ...NON_PREFERRED_TRANSCRIPT_VARIANT, selectedMainTranscriptId: 'ENST00000641999',
     transcripts: {
@@ -133,14 +146,48 @@ test('variant rows show constraints only for the main gene, from its main transc
   }
   expect(detailsText(missenseGeneId, selectedConstrainedVariant)).toContain('ranks as the 813th most constrained')
 
-  const noMainTranscriptVariant = { ...NON_PREFERRED_TRANSCRIPT_VARIANT, mainTranscriptId: null }
-  expect(detailsText(missenseGeneId, noMainTranscriptVariant)).toContain('This gene ranks as the 1,349th most constrained')
-  expect(badgeText(overlappingGeneId, noMainTranscriptVariant)).toContain('LOF CONSTR')
+  const noMainTranscriptVariant = {
+    ...NON_PREFERRED_TRANSCRIPT_VARIANT, mainTranscriptId: null, transcripts: { [missenseGeneId]: [] },
+  }
+  const noMainTranscriptText = detailsText(missenseGeneId, noMainTranscriptVariant)
+  expect(noMainTranscriptText).toContain('This transcript ranks as the 1,349th most constrained')
+  expect(noMainTranscriptText).not.toContain('813th')
 
-  const svText = geneId => detailsText(geneId, SV_VARIANT_WITH_CONSTRAINED_GENES)
-  expect(svText(missenseGeneId)).toContain(
-    'This gene ranks as the 1,349th most constrained against missense variation among the 20,076 genes evaluated in gnomAD v4.1.2 (Z-score: 4.137).',
+  const noMainGeneVariant = { ...NON_PREFERRED_TRANSCRIPT_VARIANT, mainTranscriptId: null }
+  expect(detailsText(missenseGeneId, noMainGeneVariant)).toContain('This transcript ranks as the 1,349th most constrained')
+  expect(badgeText(overlappingGeneId, noMainGeneVariant)).toContain('LOF CONSTR')
+})
+
+test('structural variant rows show each gene\'s MANE Select, else canonical, transcript constraints', () => {
+  const store = configureStore()({
+    ...STATE1,
+    genesById: {
+      [MISSENSE_CONSTRAINED_GENE.geneId]: MISSENSE_CONSTRAINED_GENE,
+      [LOF_CONSTRAINED_GENE.geneId]: LOF_CONSTRAINED_GENE,
+    },
+    transcriptsById: CONSTRAINT_TRANSCRIPTS_BY_ID,
+    modal: {},
+  })
+  const svText = geneId => mount(mount(
+    <Provider store={store}>
+      <VariantGene geneId={geneId} variant={SV_VARIANT_WITH_CONSTRAINED_GENES} compact />
+    </Provider>,
+  ).find(BehindModalPopup).prop('content')).text().replace(/\s+/g, ' ')
+
+  const missenseText = svText(MISSENSE_CONSTRAINED_GENE.geneId)
+  expect(missenseText).toContain(
+    'This transcript ranks as the 1,349th most constrained against missense variation among the 20,076 genes evaluated in gnomAD v4.1.2 (Z-score: 4.137).',
   )
-  expect(svText(overlappingGeneId)).toContain('This gene ranks as the 2,225th most constrained against loss-of-function')
-  expect(badgeText(overlappingGeneId, SV_VARIANT_WITH_CONSTRAINED_GENES)).toContain('LOF CONSTR')
+  expect(missenseText).not.toContain('813th')
+  expect(svText(LOF_CONSTRAINED_GENE.geneId)).toContain(
+    'This transcript ranks as the 2,225th most constrained against loss-of-function',
+  )
+
+  const genesText = mount(
+    <Provider store={store}>
+      <VariantGenes variant={SV_VARIANT_WITH_CONSTRAINED_GENES} />
+    </Provider>,
+  ).text()
+  expect(genesText).toContain('MISSENSE CONSTR')
+  expect(genesText).toContain('LOF CONSTR')
 })

@@ -75,5 +75,6 @@ test('getSearchGeneBreakdownValues', () => {
     search: SEARCH.search,
     geneId: GENE_ID,
     geneSymbol: 'OR2M3',
+    constraints: {},
   }])
 })

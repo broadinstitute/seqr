@@ -1401,11 +1401,11 @@ const VARIANT_SORT_OPTONS = [
   {
     value: SORT_BY_CONSTRAINT,
     text: 'Constraint',
-    comparator: (a, b, genesById) => (
+    comparator: (a, b, genesById, _tag, _user, _family, _project, _geneData, geneConstraintsByGeneId) => (
       Math.min(...Object.keys(a.transcripts || {}).reduce(
-        (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
+        (acc, geneId) => [...acc, getGeneConstraintSortScore({ constraints: geneConstraintsByGeneId[geneId] })], [],
       )) - Math.min(...Object.keys(b.transcripts || {}).reduce(
-        (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
+        (acc, geneId) => [...acc, getGeneConstraintSortScore({ constraints: geneConstraintsByGeneId[geneId] })], [],
       ))),
   },
   {
