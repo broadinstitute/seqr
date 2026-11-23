@@ -18,7 +18,8 @@ from clickhouse_search.models.postgres_dicts import SexDict, AffectedDict, Indiv
 from clickhouse_search.models.reference_data_models import BaseClinvar, BaseHgmd
 from clickhouse_search.models.search_models import BaseVariants, BaseVariantsSvGcnv, EntriesSnvIndel,  \
     ENTRY_CLASS_MAP, VARIANTS_CLASS_MAP, VARIANT_DETAILS_CLASS_MAP
-from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37
+from reference_data.models import GeneInfo, GeneConstraint, Omim, GENOME_VERSION_LOOKUP, GENOME_VERSION_GRCh38, GENOME_VERSION_GRCh37, \
+    PREFERRED_TRANSCRIPT_Q
 from seqr.models import Dataset, PhenotypePrioritization, Family, Individual
 from seqr.utils.gene_utils import parse_locus_list_items
 from seqr.utils.logging_utils import SeqrLogger
@@ -753,8 +754,9 @@ OMIM_SORT = 'in_omim'
 GENE_SORTS = {
     'constraint': lambda gene_ids, _: {
         agg['transcript__gene__gene_id']: agg['mis_z_rank'] + agg['louef_rank'] for agg in GeneConstraint.objects.filter(
-            transcript__gene__gene_id__in=gene_ids, transcript__canonical=True,
-        ).values('transcript__gene__gene_id', 'mis_z_rank', 'louef_rank')
+            PREFERRED_TRANSCRIPT_Q, transcript__gene__gene_id__in=gene_ids,
+            mis_z_rank__isnull=False, louef_rank__isnull=False,
+        ).order_by('transcript__is_mane_select').values('transcript__gene__gene_id', 'mis_z_rank', 'louef_rank')
     },
     OMIM_SORT: lambda gene_ids, _: set(Omim.objects.filter(
         gene__gene_id__in=gene_ids, phenotype_mim_number__isnull=False,

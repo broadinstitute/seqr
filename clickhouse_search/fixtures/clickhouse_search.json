@@ -1809,7 +1809,7 @@
         "gene_id": 60,
         "transcript_id": "ENST00000383791",
         "is_mane_select": true,
-        "canonical": true,
+        "canonical": false,
         "chrom_grch38": "1",
         "start_grch38": 11785723,
         "end_grch38": 11806455,
@@ -1822,7 +1822,7 @@
         "gene_id": 60,
         "transcript_id": "ENST00000408919",
         "is_mane_select": false,
-        "canonical": false,
+        "canonical": true,
         "chrom_grch38": "1",
         "start_grch38": 11785723,
         "end_grch38": 11806455,
@@ -1896,9 +1896,9 @@
     "fields": {
         "transcript": 101,
         "mis_z": 2.1543,
-        "mis_z_rank": 0,
+        "mis_z_rank": 3,
         "louef": 0.1,
-        "louef_rank": 0,
+        "louef_rank": 3,
         "pLI": 0.99,
         "pLI_rank": 0
     }

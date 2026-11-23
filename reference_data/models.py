@@ -500,6 +500,9 @@ class GeneConstraint(TranscriptMetadataModel):
         return super().get_record_models(records, **kwargs)
 
 
+PREFERRED_TRANSCRIPT_Q = models.Q(transcript__is_mane_select=True) | models.Q(transcript__canonical=True)
+
+
 class GeneCopyNumberSensitivity(GeneMetadataModel):
 
     CURRENT_VERSION = 'Collins_rCNV_2022'

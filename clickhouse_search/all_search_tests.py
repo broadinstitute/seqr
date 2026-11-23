@@ -63,7 +63,7 @@ TRANSCRIPT_CONSTRAINTS = {
     'ENST00000383791': PREFERRED_TRANSCRIPT_CONSTRAINTS,
     'ENST00000234626': {**PREFERRED_TRANSCRIPT_CONSTRAINTS, 'misZRank': 3, 'louefRank': 0},
     'ENST00000408919': {
-        'misZ': 2.1543, 'misZRank': 0, 'louef': 0.1, 'louefRank': 0,
+        'misZ': 2.1543, 'misZRank': 3, 'louef': 0.1, 'louefRank': 3,
         'pli': 0.99, 'pliRank': 0,
     },
 }
