@@ -452,7 +452,6 @@ class GeneConstraint(TranscriptMetadataModel):
 
     canonical = models.BooleanField(default=False)
     mane_select = models.BooleanField(default=False)
-    constraint_flags = models.JSONField(default=list)
     mis_z = models.FloatField(null=True)
     mis_z_rank = models.IntegerField(null=True)
     pLI = models.FloatField(null=True)
@@ -475,7 +474,6 @@ class GeneConstraint(TranscriptMetadataModel):
                 'transcript_id': transcript,
                 'canonical': record['canonical'] == 'true',
                 'mane_select': record['mane_select'] == 'true',
-                'constraint_flags': constraint_flags,
                 **{
                     field: float(record[record_field]) if record[record_field] != 'NA' and flag not in constraint_flags else None
                     for field, (record_field, flag) in cls.SCORE_FIELDS.items()

@@ -39,11 +39,6 @@ class Migration(migrations.Migration):
             name='mane_select',
             field=models.BooleanField(default=False),
         ),
-        migrations.AddField(
-            model_name='geneconstraint',
-            name='constraint_flags',
-            field=models.JSONField(default=list),
-        ),
         migrations.AlterField(
             model_name='geneconstraint',
             name='mis_z',
