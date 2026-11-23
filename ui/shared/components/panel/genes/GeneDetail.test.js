@@ -71,3 +71,13 @@ test('constraint stats fall back to the canonical transcript when there is no MA
 
   expect(text).toContain('louef: 0.3995 (ranked 2225 most intolerant of LoF mutations out of 20076 genes under study)')
 })
+
+test('stats help popup says which transcript the stats are from', () => {
+  const statsHelp = mountGeneDetail(MISSENSE_CONSTRAINED_GENE).find('Popup').filterWhere(
+    popup => popup.find('HelpIcon').exists(),
+  )
+
+  expect(statsHelp.prop('content')).toEqual(
+    'Information here pertains to the MANE Select or canonical transcript for a given gene',
+  )
+})

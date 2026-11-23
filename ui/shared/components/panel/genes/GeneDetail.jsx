@@ -9,7 +9,7 @@ import { Grid, Popup, Loader, Label } from 'semantic-ui-react'
 import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById, getUser, getGeneConstraintsByGeneId } from 'redux/selectors'
 import { getDecipherGeneLink, GENE_CONSTRAINT_VERSION } from 'shared/utils/constants'
-import { SectionHeader, ColoredLabel } from '../../StyledComponents'
+import { SectionHeader, ColoredLabel, HelpIcon } from '../../StyledComponents'
 import DataLoader from '../../DataLoader'
 import NoteListFieldView from '../view-fields/NoteListFieldView'
 import { HorizontalSpacer } from '../../Spacers'
@@ -372,7 +372,15 @@ const GeneDetailContent = React.memo(({ gene, geneConstraints, user, updateGeneN
       ))}
       <SectionHeader>Basics</SectionHeader>
       {geneSection(basicDetails)}
-      <SectionHeader>Stats</SectionHeader>
+      <SectionHeader>
+        Stats
+        <Popup
+          position="right center"
+          trigger={<HelpIcon />}
+          content="Information here pertains to the MANE Select or canonical transcript for a given gene"
+          size="small"
+        />
+      </SectionHeader>
       {geneSection(statDetails)}
       <SectionHeader>Disease Associations</SectionHeader>
       {geneSection(associationDetails)}
