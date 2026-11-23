@@ -42,7 +42,7 @@ const PageHeader = React.memo(({ user, oauthLoginProvider, onSubmit, lastFeature
 
   return (
     <HeaderMenu borderless inverted attached>
-      <Menu.Item as={Link} to="/"><Header size="medium" inverted>seqr</Header></Menu.Item>
+      <Menu.Item as={Link} to="/"><Header size="medium" inverted><i>seqr</i></Header></Menu.Item>
       {Object.keys(user).length ? [
         <Menu.Item key="search" as={Link} to="/variant_search" content="Search" />,
         <Menu.Item key="variant_lookup" as={Link} to="/variant_lookup" content="Variant Lookup" />,
