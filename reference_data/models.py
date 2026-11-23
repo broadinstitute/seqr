@@ -1,4 +1,3 @@
-from bisect import bisect_left
 import csv
 
 from collections import defaultdict
@@ -482,20 +481,22 @@ class GeneConstraint(TranscriptMetadataModel):
 
     @classmethod
     def get_record_models(cls, records, **kwargs):
-        preferred_ids = set(TranscriptInfo.objects.filter(
-            canonical=True, id__in={record['transcript_id'] for record in records},
-        ).values_list('id', flat=True))
-        preferred = [record for record in records if record['transcript_id'] in preferred_ids]
-        others = [record for record in records if record['transcript_id'] not in preferred_ids]
+        preferred_ids = set(dict(TranscriptInfo.objects.filter(
+            models.Q(is_mane_select=True) | models.Q(canonical=True),
+            id__in={record['transcript_id'] for record in records},
+        ).order_by('is_mane_select').values_list('gene_id', 'id')).values())
         # add _rank fields
         for field, order in [('mis_z', -1), ('pLI', -1), ('louef', 1)]:
             rank_field = '{}_rank'.format(field)
-            sorted_records = sorted(preferred, key=lambda record: (record[field] is None, order * (record[field] or 0)))
-            for i, record in enumerate(sorted_records):
-                record[rank_field] = i
-            preferred_scores = sorted(order * record[field] for record in preferred if record[field] is not None)
-            for record in others:
-                record[rank_field] = None if record[field] is None else bisect_left(preferred_scores, order * record[field])
+            rank = 0
+            for record in sorted(records, key=lambda record: (
+                record[field] is None, order * (record[field] or 0), record['transcript_id'] in preferred_ids,
+            )):
+                if record['transcript_id'] in preferred_ids:
+                    record[rank_field] = rank
+                    rank += 1
+                else:
+                    record[rank_field] = None if record[field] is None else rank
         return super().get_record_models(records, **kwargs)
 
 
