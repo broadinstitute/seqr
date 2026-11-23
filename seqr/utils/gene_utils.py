@@ -161,7 +161,7 @@ def _get_constraints_json(additional_values=None, **constraint_filter):
 
 
 def _get_constraint_totals():
-    return GeneConstraint.objects.filter(canonical=True).aggregate(
+    return GeneConstraint.objects.filter(transcript__canonical=True).aggregate(
         misZTotal=Count('mis_z'), pliTotal=Count('pLI'), louefTotal=Count('louef'),
     )
 
@@ -170,7 +170,7 @@ def _get_gene_constraints(gene_ids):
     totals = _get_constraint_totals()
     return {
         constraint.pop('geneId'): {**constraint, **totals} for constraint in _get_constraints_json(
-            transcript__gene__gene_id__in=gene_ids, canonical=True,
+            transcript__gene__gene_id__in=gene_ids, transcript__canonical=True,
             additional_values={'geneId': F('transcript__gene__gene_id')},
         )
     }

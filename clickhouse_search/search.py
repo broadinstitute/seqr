@@ -753,7 +753,7 @@ OMIM_SORT = 'in_omim'
 GENE_SORTS = {
     'constraint': lambda gene_ids, _: {
         agg['transcript__gene__gene_id']: agg['mis_z_rank'] + agg['louef_rank'] for agg in GeneConstraint.objects.filter(
-            transcript__gene__gene_id__in=gene_ids, canonical=True,
+            transcript__gene__gene_id__in=gene_ids, transcript__canonical=True,
         ).values('transcript__gene__gene_id', 'mis_z_rank', 'louef_rank')
     },
     OMIM_SORT: lambda gene_ids, _: set(Omim.objects.filter(

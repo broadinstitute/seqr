@@ -24,7 +24,7 @@ GTF_DATA = [
     'chr1	HAVANA	gene	621059	622053	.	-	.	gene_id "ENSG00000284662.1_2"; gene_type "protein_coding"; gene_name "OR4F16"; level 2; hgnc_id "HGNC:15079"; havana_gene "OTTHUMG00000002581.3_2"; remap_status "full_contig"; remap_num_mappings 1; remap_target_status "overlap";\n',
     'chr1	HAVANA	transcript	621059	622053	.	-	.	gene_id "ENSG00000284662.1_2"; transcript_id "ENST00000332831.4_2"; '
     'gene_type "protein_coding"; gene_name "OR4F16"; transcript_type "protein_coding"; transcript_name "OR4F16-201"; level 2; '
-    'protein_id "ENSP00000329982.2"; transcript_support_level "NA"; hgnc_id "HGNC:15079"; tag "basic"; tag "MANE_Select"; tag "CCDS"; '
+    'protein_id "ENSP00000329982.2"; transcript_support_level "NA"; hgnc_id "HGNC:15079"; tag "basic"; tag "Ensembl_canonical"; tag "MANE_Select"; tag "CCDS"; '
     'ccdsid "CCDS41221.1"; havana_gene "OTTHUMG00000002581.3_2"; havana_transcript "OTTHUMT00000007334.3_2"; remap_num_mappings 1; '
     'remap_status "full_contig"; remap_target_status "overlap";\n',
     # feature_type is 'CDS'
@@ -98,6 +98,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000223972')
         self.assertEqual(trans_info.gene.gencode_release, 39)
         self.assertFalse(trans_info.is_mane_select)
+        self.assertFalse(trans_info.canonical)
         self.assertEqual(trans_info.refseqtranscript.refseq_id, 'NM_015658.4')
         self.assertEqual(trans_info.geneconstraint.mis_z, 1.4024)
         self.assertEqual(trans_info.geneconstraint.mis_z_rank, 1)
@@ -109,6 +110,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000284662')
         self.assertEqual(trans_info.gene.gencode_release, 39)
         self.assertTrue(trans_info.is_mane_select)
+        self.assertTrue(trans_info.canonical)
         self.assertEqual(trans_info.refseqtranscript.refseq_id, 'NR_122045.1')
         self.assertEqual(trans_info.geneconstraint.mis_z, 4.1371)
         self.assertEqual(trans_info.geneconstraint.mis_z_rank, 0)

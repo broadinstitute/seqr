@@ -34,7 +34,7 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 }
 
 TRANSCRIPT_CONSTRAINTS = {
-    'canonical': False, 'louef': 0.9173, 'louefRank': 0, 'maneSelect': False, 'misZ': 2.1543, 'misZRank': 0,
+    'louef': 0.9173, 'louefRank': 0, 'misZ': 2.1543, 'misZRank': 0,
     'pli': 0.000001047, 'pliRank': 1, 'louefTotal': 1, 'misZTotal': 1, 'pliTotal': 1, 'transcriptId': 'ENST00000258436',
 }
 

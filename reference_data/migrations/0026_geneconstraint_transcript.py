@@ -18,6 +18,11 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(delete_existing_records, reverse_code=migrations.RunPython.noop),
+        migrations.AddField(
+            model_name='transcriptinfo',
+            name='canonical',
+            field=models.BooleanField(default=False),
+        ),
         migrations.DeleteModel(
             name='GeneConstraint',
         ),
@@ -26,8 +31,6 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('transcript', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='reference_data.transcriptinfo')),
-                ('canonical', models.BooleanField(default=False)),
-                ('mane_select', models.BooleanField(default=False)),
                 ('mis_z', models.FloatField(null=True)),
                 ('mis_z_rank', models.IntegerField(null=True)),
                 ('pLI', models.FloatField(null=True)),
@@ -36,7 +39,7 @@ class Migration(migrations.Migration):
                 ('louef_rank', models.IntegerField(null=True)),
             ],
             options={
-                'json_fields': ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank', 'canonical', 'mane_select'],
+                'json_fields': ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank'],
             },
         ),
     ]

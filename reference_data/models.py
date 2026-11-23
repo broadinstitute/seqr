@@ -376,6 +376,7 @@ class TranscriptInfo(GeneMetadataModel):
 
     transcript_id = models.CharField(max_length=20, db_index=True, unique=True)  # without the version suffix
     is_mane_select = models.BooleanField(default=False)
+    canonical = models.BooleanField(default=False)
 
     chrom_grch37 = models.CharField(max_length=2, null=True, blank=True)
     start_grch37 = models.IntegerField(null=True, blank=True)
@@ -450,8 +451,6 @@ class GeneConstraint(TranscriptMetadataModel):
         'louef': ('lof.oe_ci.upper', 'no_exp_lof'),
     }
 
-    canonical = models.BooleanField(default=False)
-    mane_select = models.BooleanField(default=False)
     mis_z = models.FloatField(null=True)
     mis_z_rank = models.IntegerField(null=True)
     pLI = models.FloatField(null=True)
@@ -460,7 +459,7 @@ class GeneConstraint(TranscriptMetadataModel):
     louef_rank = models.IntegerField(null=True)
 
     class Meta:
-        json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank', 'canonical', 'mane_select']
+        json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
 
     @classmethod
     def parse_record(cls, record, transcript_id_map=None, skipped_transcripts=None, **kwargs):
@@ -472,8 +471,6 @@ class GeneConstraint(TranscriptMetadataModel):
             constraint_flags = json.loads(record['constraint_flags'])
             yield {
                 'transcript_id': transcript,
-                'canonical': record['canonical'] == 'true',
-                'mane_select': record['mane_select'] == 'true',
                 **{
                     field: float(record[record_field]) if record[record_field] != 'NA' and flag not in constraint_flags else None
                     for field, (record_field, flag) in cls.SCORE_FIELDS.items()
@@ -485,8 +482,11 @@ class GeneConstraint(TranscriptMetadataModel):
 
     @classmethod
     def get_record_models(cls, records, **kwargs):
-        preferred = [record for record in records if record['canonical']]
-        others = [record for record in records if not record['canonical']]
+        preferred_ids = set(TranscriptInfo.objects.filter(
+            canonical=True, id__in={record['transcript_id'] for record in records},
+        ).values_list('id', flat=True))
+        preferred = [record for record in records if record['transcript_id'] in preferred_ids]
+        others = [record for record in records if record['transcript_id'] not in preferred_ids]
         # add _rank fields
         for field, order in [('mis_z', -1), ('pLI', -1), ('louef', 1)]:
             rank_field = '{}_rank'.format(field)

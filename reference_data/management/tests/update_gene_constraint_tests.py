@@ -1,4 +1,4 @@
-from reference_data.models import GeneConstraint
+from reference_data.models import GeneConstraint, TranscriptInfo
 from reference_data.management.tests.test_utils import ReferenceDataCommandTestCase
 
 class UpdateGeneConstraintTest(ReferenceDataCommandTestCase):
@@ -13,17 +13,16 @@ class UpdateGeneConstraintTest(ReferenceDataCommandTestCase):
     ]
 
     def test_update_gene_constraint_command(self):
+        TranscriptInfo.objects.filter(transcript_id='ENST00000624735').update(canonical=True)
+
         self._test_update_command(
             'GeneConstraint', '4.1.2', existing_records=3, created_records=3, skipped_records=0,
             additional_logs=[(7, 'Skipped 2 records with unrecognized or duplicated transcripts', None)],
         )
 
         self.assertEqual(GeneConstraint.objects.count(), 3)
-        self.assertEqual(GeneConstraint.objects.filter(canonical=True).count(), 2)
         record = GeneConstraint.objects.get(transcript__transcript_id='ENST00000456328')
         self.assertEqual(record.transcript.gene.gene_id, 'ENSG00000223972')
-        self.assertTrue(record.canonical)
-        self.assertFalse(record.mane_select)
         self.assertEqual(record.mis_z, 1.4024)
         self.assertEqual(record.mis_z_rank, 0)
         self.assertEqual(record.louef, 0.84606)
@@ -32,8 +31,6 @@ class UpdateGeneConstraintTest(ReferenceDataCommandTestCase):
         self.assertEqual(record.pLI_rank, 0)
 
         record = GeneConstraint.objects.get(transcript__transcript_id='ENST00000624735')
-        self.assertTrue(record.canonical)
-        self.assertTrue(record.mane_select)
         self.assertEqual(record.mis_z, -0.42203)
         self.assertEqual(record.mis_z_rank, 1)
         self.assertIsNone(record.louef)
@@ -42,8 +39,6 @@ class UpdateGeneConstraintTest(ReferenceDataCommandTestCase):
         self.assertEqual(record.pLI_rank, 1)
 
         record = GeneConstraint.objects.get(transcript__transcript_id='ENST00000258436')
-        self.assertFalse(record.canonical)
-        self.assertFalse(record.mane_select)
         self.assertEqual(record.mis_z, 1.4024)
         self.assertEqual(record.mis_z_rank, 0)
         self.assertEqual(record.louef, 1.378)

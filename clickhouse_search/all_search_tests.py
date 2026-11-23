@@ -55,7 +55,7 @@ SEARCH_RESPONSE_KEYS = {
 }
 
 PREFERRED_TRANSCRIPT_CONSTRAINTS = {
-    'canonical': True, 'maneSelect': True, 'misZ': -0.7773, 'misZRank': 1, 'louef': 1.606, 'louefRank': 3,
+    'misZ': -0.7773, 'misZRank': 1, 'louef': 1.606, 'louefRank': 3,
     'pli': 0.00090576, 'pliRank': 1,
 }
 CONSTRAINT_TOTALS = {'misZTotal': 4, 'pliTotal': 3, 'louefTotal': 4}
@@ -63,7 +63,7 @@ TRANSCRIPT_CONSTRAINTS = {
     'ENST00000383791': PREFERRED_TRANSCRIPT_CONSTRAINTS,
     'ENST00000234626': {**PREFERRED_TRANSCRIPT_CONSTRAINTS, 'misZRank': 3, 'louefRank': 0},
     'ENST00000408919': {
-        'canonical': False, 'maneSelect': False, 'misZ': 2.1543, 'misZRank': 0, 'louef': 0.1, 'louefRank': 0,
+        'misZ': 2.1543, 'misZRank': 0, 'louef': 0.1, 'louefRank': 0,
         'pli': 0.99, 'pliRank': 0,
     },
 }
