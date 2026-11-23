@@ -58,8 +58,7 @@ class Command(BaseCommand):
             data_model_name = GeneInfo.__name__
             self._update_gencode(current_versions.get(data_model_name), options['gene_symbol_change_dir'])
             self._track_success_updates(data_model_name, latest_version, current_versions, updated)
-            if GeneConstraint in to_update:
-                self._track_success_updates(GeneConstraint.__name__, to_update.pop(GeneConstraint), current_versions, updated)
+            to_update.setdefault(GeneConstraint, latest_versions[GeneConstraint])
             GeneIdDict.reload()
 
 
@@ -122,4 +121,3 @@ class Command(BaseCommand):
             TranscriptInfo.bulk_create_for_genes(new_transcripts, gene_id_map)
 
         RefseqTranscript.update_records()
-        GeneConstraint.update_records()

@@ -169,7 +169,12 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             ('Done', None),
             ('Loaded 2 RefseqTranscript records', None),
             ('Skipped 2 records with unrecognized or duplicated transcripts', None),
-        ] + self._gene_constraint_logs(deleted=0, created=3))
+            ('Reloading dictionary seqrdb_gene_ids', None),
+        ] + self._gene_constraint_logs(deleted=0, created=3) + [
+            ('Updated GeneConstraint reference data from version "4.1.2" to version "4.1.2"', None),
+            ('Done', None),
+            ('Updated: GeneInfo, GeneConstraint', None),
+        ])
         self.mock_subprocess.assert_not_called()
 
         self._has_expected_new_genes()
@@ -229,11 +234,12 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             ('Done', None),
             ('Loaded 3 RefseqTranscript records', None),
             ('Skipped 1 records with unrecognized or duplicated transcripts', None),
-        ] + self._gene_constraint_logs(deleted=2, created=2, skipped=1) + [
             ('Updated GeneInfo reference data from version "31" to version "39"', None),
             ('Reloading dictionary seqrdb_gene_ids', None),
+        ] + self._gene_constraint_logs(deleted=2, created=2, skipped=1) + [
+            ('Updated GeneConstraint reference data from version "4.1.2" to version "4.1.2"', None),
             ('Done', None),
-            ('Updated: GeneInfo', None),
+            ('Updated: GeneInfo, GeneConstraint', None),
         ])
 
         self._has_expected_new_genes()
