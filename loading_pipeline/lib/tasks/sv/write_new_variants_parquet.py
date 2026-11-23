@@ -138,8 +138,10 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         df['key'] = range(curr_max_key + 1, curr_max_key + 1 + len(df))
 
         added_columns = df.columns.difference(original_columns)
+        id_cols = ['key', 'ID']
         rename_cols = {'ID': 'variantId', 'SVTYPE': 'svType'}
-        return df[[*added_columns, *rename_cols]].rename(columns=rename_cols)
+        cols = sorted({*added_columns, *rename_cols} - set(id_cols))
+        return df[[*id_cols, *cols]].rename(columns=rename_cols)
 
     @staticmethod
     def _open_parquet(input_target: luigi.Target):

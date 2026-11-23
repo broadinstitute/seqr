@@ -139,6 +139,20 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 TEST_RUN_ID,
             ),
         )
+        self.assertEqual(
+            list(df.columns),
+            [
+                'key',
+                'variantId',
+                'svType',
+                'cpxIntervals',
+                'populations',
+                'predictions',
+                'sortedGeneConsequences',
+                'svSourceDetail',
+                'svTypeDetail',
+            ],
+        )
         export_json = convert_ndarray_to_list(df.head(3).to_dict('records'))
         self.assertEqual(
             export_json,
