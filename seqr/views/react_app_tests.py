@@ -95,7 +95,6 @@ class AppPageTest(object):
         self.assertEqual(self.get_initial_page_window('userEmail', response), user_email)
         nonce = self.get_initial_page_window('__webpack_nonce__', response)
         self.assertIn('nonce-{}'.format(nonce), response.get('Content-Security-Policy'))
-        self.assertEqual(response.get('Strict-Transport-Security'), 'max-age=31536000')
 
         # test static assets are correctly loaded
         content = response.content.decode('utf-8')
@@ -113,8 +112,9 @@ class AppPageTest(object):
             'https://github.com/broadinstitute/seqr/discussions/categories/feature-updates.atom',
             body=FEATURE_UPDATE_FEED,
         )
-        response = self.client.get(url)
+        response = self.client.get(url, secure=True)
         self._check_page_html(response, 'test_user_no_policies', user_email='test_user_no_policy@test.com', ga_token_id=MOCK_GA_TOKEN, vlm_enabled=True, last_feature_update='2023-11-08T15:11:31+00:00')
+        self.assertEqual(response.get('Strict-Transport-Security'), 'max-age=31536000')
 
         mock_redis.return_value.set.assert_called_with('feature_updates_latest_date', '"2023-11-08T15:11:31+00:00"')
         mock_redis.return_value.expire.assert_called_with('feature_updates_latest_date', 10800)
