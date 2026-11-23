@@ -55,13 +55,13 @@ SEARCH_RESPONSE_KEYS = {
 }
 
 PREFERRED_TRANSCRIPT_CONSTRAINTS = {
-    'misZ': -0.7773, 'misZRank': 1, 'louef': 1.606, 'louefRank': 3,
+    'misZ': -0.7773, 'misZRank': 1, 'louef': 1.606, 'louefRank': 0,
     'pli': 0.00090576, 'pliRank': 1,
 }
 CONSTRAINT_TOTALS = {'misZTotal': 4, 'pliTotal': 3, 'louefTotal': 4}
 TRANSCRIPT_CONSTRAINTS = {
     'ENST00000383791': PREFERRED_TRANSCRIPT_CONSTRAINTS,
-    'ENST00000234626': {**PREFERRED_TRANSCRIPT_CONSTRAINTS, 'misZRank': 3, 'louefRank': 0},
+    'ENST00000234626': {**PREFERRED_TRANSCRIPT_CONSTRAINTS, 'misZRank': 3},
     'ENST00000408919': {
         'misZ': 2.1543, 'misZRank': 3, 'louef': 0.1, 'louefRank': 3,
         'pli': 0.99, 'pliRank': 0,
@@ -2276,7 +2276,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         sort = 'constraint'
         self._assert_expected_search(
-            [GCNV_VARIANT3, GCNV_VARIANT4, MULTI_FAMILY_VARIANT, VARIANT4, VARIANT2, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], sort=sort,
+            [VARIANT2, MULTI_FAMILY_VARIANT, GCNV_VARIANT3, GCNV_VARIANT4, VARIANT4, VARIANT1, GCNV_VARIANT1, GCNV_VARIANT2, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], sort=sort,
         )
 
         self._assert_expected_search([VARIANT2, VARIANT3, VARIANT1, VARIANT4, GCNV_VARIANT1, GCNV_VARIANT2, GCNV_VARIANT3, GCNV_VARIANT4, MITO_VARIANT1, MITO_VARIANT2, MITO_VARIANT3], sort='prioritized_gene', project_families=SINGLE_FAMILY_PROJECT_FAMILIES)
