@@ -42,7 +42,7 @@ class GeneAPITest(AuthenticationTestCase):
             'codingRegionSizeGrch38': 0,
             'constraints': {
                 'louef': 1.606, 'louefRank': 0, 'misZ': -0.7773, 'misZRank': 1,
-                'pli': 0.00090576, 'pliRank': 1, 'louefTotal': 1, 'misZTotal': 1, 'pliTotal': 1,
+                'pli': 0.00090576, 'pliRank': 1, 'totalGenes': 2,
                 'transcriptId': 'ENST00000456328',
             },
             'diseaseDesc': '',

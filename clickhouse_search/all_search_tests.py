@@ -58,7 +58,7 @@ PREFERRED_TRANSCRIPT_CONSTRAINTS = {
     'misZ': -0.7773, 'misZRank': 1, 'louef': 1.606, 'louefRank': 0,
     'pli': 0.00090576, 'pliRank': 1,
 }
-CONSTRAINT_TOTALS = {'misZTotal': 4, 'pliTotal': 3, 'louefTotal': 4}
+CONSTRAINT_TOTALS = {'totalGenes': 5}
 TRANSCRIPT_CONSTRAINTS = {
     'ENST00000383791': PREFERRED_TRANSCRIPT_CONSTRAINTS,
     'ENST00000234626': {**PREFERRED_TRANSCRIPT_CONSTRAINTS, 'misZRank': 3},

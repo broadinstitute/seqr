@@ -90,10 +90,10 @@ const ScoreDetails = ({ scores, fields, note, rankDescription }) => {
   )).filter(({ value }) => value)
   return fieldsToShow.length ? (
     <div>
-      {fieldsToShow.map(({ value, label, rankField, totalField }) => value && (
+      {fieldsToShow.map(({ value, label, rankField }) => value && (
         <span key={label}>
           {`${label}: ${value.toPrecision(4)} ${rankField && hasRank(scores[rankField]) ?
-            `(ranked ${scores[rankField] + 1} most ${rankDescription} out of ${scores[totalField]} genes under study)` : ''}`}
+            `(ranked ${scores[rankField] + 1} most ${rankDescription} out of ${scores.totalGenes} genes under study)` : ''}`}
           <br />
         </span>
       ))}
@@ -196,7 +196,7 @@ const STAT_DETAILS = [
   {
     title: 'Missense Constraint',
     scoreField: 'constraints',
-    fields: [{ field: 'misZ', rankField: 'misZRank', totalField: 'misZTotal', label: 'z-score' }],
+    fields: [{ field: 'misZ', rankField: 'misZRank', label: 'z-score' }],
     rankDescription: 'constrained',
     note: (
       <span>
@@ -210,8 +210,8 @@ const STAT_DETAILS = [
     title: 'LoF Constraint',
     scoreField: 'constraints',
     fields: [
-      { field: 'louef', rankField: 'louefRank', totalField: 'louefTotal', label: 'louef' },
-      { field: 'pli', rankField: 'pliRank', totalField: 'pliTotal', label: 'pLI-score' },
+      { field: 'louef', rankField: 'louefRank', label: 'louef' },
+      { field: 'pli', rankField: 'pliRank', label: 'pLI-score' },
     ],
     rankDescription: 'intolerant of LoF mutations',
     note: (

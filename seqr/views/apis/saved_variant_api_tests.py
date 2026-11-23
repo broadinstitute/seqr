@@ -35,7 +35,7 @@ SAVED_VARIANT_RESPONSE_KEYS = {
 
 TRANSCRIPT_CONSTRAINTS = {
     'louef': 0.9173, 'louefRank': 0, 'misZ': 2.1543, 'misZRank': 0,
-    'pli': 0.000001047, 'pliRank': 1, 'louefTotal': 1, 'misZTotal': 1, 'pliTotal': 1, 'transcriptId': 'ENST00000258436',
+    'pli': 0.000001047, 'pliRank': 1, 'totalGenes': 2, 'transcriptId': 'ENST00000258436',
 }
 
 COMPOUND_HET_3_JSON = {

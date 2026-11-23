@@ -219,8 +219,8 @@ export const GENE = {
 
 export const MISSENSE_CONSTRAINED_GENE = {
   constraints: {
-    misZ: 4.1371, misZRank: 1348, misZTotal: 20076, louef: 0.81976, louefRank: 7626, louefTotal: 19990,
-    pli: 0.71899, pliRank: 4059, pliTotal: 19950, transcriptId: "ENST00000641515", canonical: true, maneSelect: true,
+    misZ: 4.1371, misZRank: 1348, louef: 0.81976, louefRank: 7626, pli: 0.71899, pliRank: 4059, totalGenes: 20076,
+    transcriptId: "ENST00000641515",
   },
   cnSensitivity: {},
   sHet: {},
@@ -232,8 +232,8 @@ export const MISSENSE_CONSTRAINED_GENE = {
 
 export const LOF_CONSTRAINED_GENE = {
   constraints: {
-    misZ: 0.78047, misZRank: 9990, misZTotal: 20076, louef: 0.3995, louefRank: 2224, louefTotal: 19990,
-    pli: 0.99948, pliRank: 2444, pliTotal: 19950, transcriptId: "ENST00000620225", canonical: true, maneSelect: true,
+    misZ: 0.78047, misZRank: 9990, louef: 0.3995, louefRank: 2224, pli: 0.99948, pliRank: 2444, totalGenes: 20076,
+    transcriptId: "ENST00000620225",
   },
   cnSensitivity: {},
   sHet: {},
@@ -246,22 +246,22 @@ export const CONSTRAINT_TRANSCRIPTS_BY_ID = {
   ENST00000335137: {
     transcriptId: "ENST00000335137",
     constraints: {
-      misZ: 3.5, misZRank: 3200, misZTotal: 20076, louef: null, louefRank: null, louefTotal: 19990,
-      pli: null, pliRank: null, pliTotal: 19950, transcriptId: "ENST00000335137", canonical: false, maneSelect: false,
+      misZ: 3.5, misZRank: 3200, louef: null, louefRank: null, pli: null, pliRank: null, totalGenes: 20076,
+      transcriptId: "ENST00000335137",
     },
   },
   ENST00000611883: {
     transcriptId: "ENST00000611883",
     constraints: {
-      misZ: 0.78047, misZRank: 9990, misZTotal: 20076, louef: 0.3995, louefRank: 2224, louefTotal: 19990,
-      pli: 0.99948, pliRank: 2444, pliTotal: 19950, transcriptId: "ENST00000611883", canonical: false, maneSelect: false,
+      misZ: 0.78047, misZRank: 9990, louef: 0.3995, louefRank: 2224, pli: 0.99948, pliRank: 2444, totalGenes: 20076,
+      transcriptId: "ENST00000611883",
     },
   },
   ENST00000641999: {
     transcriptId: "ENST00000641999",
     constraints: {
-      misZ: 5.2, misZRank: 812, misZTotal: 20076, louef: 0.3, louefRank: 1500, louefTotal: 19990,
-      pli: 0.1, pliRank: 8000, pliTotal: 19950, transcriptId: "ENST00000641999", canonical: false, maneSelect: false,
+      misZ: 5.2, misZRank: 812, louef: 0.3, louefRank: 1500, pli: 0.1, pliRank: 8000, totalGenes: 20076,
+      transcriptId: "ENST00000641999",
     },
   },
 }

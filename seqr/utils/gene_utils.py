@@ -1,10 +1,10 @@
 import re
 from collections import defaultdict
-from django.db.models import Count, F, Q, prefetch_related_objects, Prefetch
+from django.db.models import F, Q, prefetch_related_objects, Prefetch
 from django.db.models.functions import Length
 
 from reference_data.models import GeneInfo, GeneConstraint, dbNSFPGene, Omim, MGI, PrimateAI, GeneCopyNumberSensitivity, \
-    GenCC, ClinGen, GeneShet
+    GenCC, ClinGen, GeneShet, PREFERRED_TRANSCRIPT_Q
 from seqr.utils.xpos_utils import get_xpos
 from seqr.views.utils.orm_to_json_utils import _get_json_for_model, _get_json_for_models, _get_empty_json_for_model, \
     get_json_for_gene_notes_by_gene_id, get_json_for_queryset
@@ -161,9 +161,9 @@ def _get_constraints_json(additional_values=None, **constraint_filter):
 
 
 def _get_constraint_totals():
-    return GeneConstraint.objects.filter(transcript__canonical=True).aggregate(
-        misZTotal=Count('mis_z'), pliTotal=Count('pLI'), louefTotal=Count('louef'),
-    )
+    return {
+        'totalGenes': GeneConstraint.objects.filter(PREFERRED_TRANSCRIPT_Q).values('transcript__gene_id').distinct().count(),
+    }
 
 
 def _get_gene_constraints(gene_ids):

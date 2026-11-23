@@ -39,7 +39,7 @@ test('LoF constraint details show for a louef under the gnomAD v4 cutoff of 0.45
   const wrapper = mount(<GeneDetails gene={LOF_CONSTRAINED_GENE} compact />)
 
   expect(wrapper.text().replace(/\s+/g, ' ')).toContain(
-    'This gene ranks as the 2,225th most constrained against loss-of-function (LoF) mutations by LOEUF among the 19,990 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3995; pLI: 0.9995) [Karczewski et al., 2020].',
+    'This gene ranks as the 2,225th most constrained against loss-of-function (LoF) mutations by LOEUF among the 20,076 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3995; pLI: 0.9995) [Karczewski et al., 2020].',
   )
   expect(wrapper.find('a[href="https://pubmed.ncbi.nlm.nih.gov/32461654/"]').text().trim()).toEqual('Karczewski et al., 2020')
   expect(wrapper.find(GENE_CONSTRAINT_LINK).text()).toEqual('Gene Constraint')
@@ -113,7 +113,7 @@ test('variant rows show constraints only for the main gene, from its main transc
     'This transcript ranks as the 813th most constrained against missense variation among the 20,076 genes evaluated in gnomAD v4.1.2 (Z-score: 5.200).',
   )
   expect(otherTranscriptText).toContain(
-    'This transcript ranks as the 1,501st most constrained against loss-of-function (LoF) mutations by LOEUF among the 19,990 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3000; pLI: 0.1000)',
+    'This transcript ranks as the 1,501st most constrained against loss-of-function (LoF) mutations by LOEUF among the 20,076 genes evaluated in gnomAD v4.1.2 (LOEUF: 0.3000; pLI: 0.1000)',
   )
 
   const noEntryVariant = withMainTranscript('ENST00000999999')

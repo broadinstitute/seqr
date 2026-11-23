@@ -397,7 +397,7 @@ const CONSTRAINT_DETAIL_SECTIONS = [
     detailsDisplay: gene => (
       <span>
         {`This ${constraintSubject(gene)} ranks as the ${formatRank(gene.constraints.misZRank + 1)} most constrained against
-        missense variation among the ${gene.constraints.misZTotal.toLocaleString('en-US')} genes evaluated in
+        missense variation among the ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in
         ${GENE_CONSTRAINT_VERSION} (Z-score: ${gene.constraints.misZ.toPrecision(4)}).`}
         &nbsp;
         {MISSENSE_CONSTRAINT_DESCRIPTION}
@@ -421,7 +421,7 @@ const CONSTRAINT_DETAIL_SECTIONS = [
           <List.Item>
             {`This ${constraintSubject(gene)} ranks as the ${formatRank(gene.constraints.louefRank + 1)} most constrained
             against loss-of-function (LoF) mutations by LOEUF among the
-            ${gene.constraints.louefTotal.toLocaleString('en-US')} genes evaluated in ${GENE_CONSTRAINT_VERSION}
+            ${gene.constraints.totalGenes.toLocaleString('en-US')} genes evaluated in ${GENE_CONSTRAINT_VERSION}
             (LOEUF: ${gene.constraints.louef.toPrecision(4)}`}
             {gene.constraints.pli ? `; pLI: ${gene.constraints.pli.toPrecision(4)}` : ''}
             ) [
