@@ -15,7 +15,7 @@ class UpdateGeneConstraintTest(ReferenceDataCommandTestCase):
     def test_update_gene_constraint_command(self):
         self._test_update_command(
             'GeneConstraint', '4.1.2', existing_records=3, created_records=3, skipped_records=0,
-            additional_logs=[(7, 'Skipped 1 records with unrecognized or duplicated transcripts', None)],
+            additional_logs=[(7, 'Skipped 2 records with unrecognized or duplicated transcripts', None)],
         )
 
         self.assertEqual(GeneConstraint.objects.count(), 3)

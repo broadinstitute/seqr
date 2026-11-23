@@ -465,28 +465,25 @@ class GeneConstraint(TranscriptMetadataModel):
 
     @classmethod
     def parse_record(cls, record, transcript_id_map=None, skipped_transcripts=None, **kwargs):
+        transcript = None
         # seqr annotates variants with Ensembl transcripts only, so RefSeq rows are not loaded
-        if not record['transcript'].startswith('ENST'):
-            yield None
-            return
-
-        transcript = transcript_id_map.pop(record['transcript'], None)
-        if not transcript:
+        if record['transcript'].startswith('ENST'):
+            transcript = transcript_id_map.pop(record['transcript'], None)
+        if transcript:
+            constraint_flags = json.loads(record['constraint_flags'])
+            yield {
+                'transcript_id': transcript,
+                'canonical': record['canonical'] == 'true',
+                'mane_select': record['mane_select'] == 'true',
+                'constraint_flags': constraint_flags,
+                **{
+                    field: float(record[record_field]) if record[record_field] != 'NA' and flag not in constraint_flags else None
+                    for field, (record_field, flag) in cls.SCORE_FIELDS.items()
+                },
+            }
+        else:
             skipped_transcripts[None] += 1
             yield None
-            return
-
-        constraint_flags = json.loads(record['constraint_flags'])
-        yield {
-            'transcript_id': transcript,
-            'canonical': record['canonical'] == 'true',
-            'mane_select': record['mane_select'] == 'true',
-            'constraint_flags': constraint_flags,
-            **{
-                field: float(record[record_field]) if record[record_field] != 'NA' and flag not in constraint_flags else None
-                for field, (record_field, flag) in cls.SCORE_FIELDS.items()
-            },
-        }
 
     @classmethod
     def get_record_models(cls, records, **kwargs):
