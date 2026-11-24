@@ -268,7 +268,6 @@ class BaseVariantsSv(BaseVariants):
         (12, 'INTRONIC'), (13, 'NEAREST_TSS'),
     ]
     SV_TYPES = [(1, 'BND'), (2, 'CPX'), (3, 'CTX'), (4, 'DEL'), (5, 'DUP'), (6, 'INS'), (7, 'INV'), (8, 'CNV')]
-    SV_TYPE_DETAILS = [(1, 'INS_iDEL'),(2, 'INVdel'),(3, 'INVdup'),(4, 'ME'),(5, 'ME:ALU'),(6, 'ME:LINE1'),(7, 'ME:SVA'),(8, 'dDUP'),(9, 'dDUP_iDEL'),(10, 'delINV'),(11, 'delINVdel'),(12, 'delINVdup'),(13, 'dupINV'),(14, 'dupINVdel'),(15, 'dupINVdup')]
     POPULATION_FIELDS = [
         ('gnomad_svs', NamedTupleField([
             ('ac', models.UInt32Field()),
@@ -292,19 +291,8 @@ class BaseVariantsSv(BaseVariants):
     populations = NamedTupleField(POPULATION_FIELDS)
     predictions = NamedTupleField(PREDICTION_FIELDS)
     sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences', group_by_key='geneId')
-    sv_source_detail = NamedTupleField(
-        [('chrom', models.Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES, null=True, blank=True))],
-        db_column='svSourceDetail',
-        null_if_empty=True
-    )
     sv_type = Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
-    sv_type_detail = models.Enum8Field(db_column='svTypeDetail', return_int=False, choices=SV_TYPE_DETAILS, null=True, blank=True)
-    cpx_intervals = NestedField([
-        ('chrom', models.Enum8Field(return_int=False, choices=CHROMOSOME_CHOICES)),
-        ('start', models.UInt32Field()),
-        ('end', models.UInt32Field()),
-        ('type', models.Enum8Field(return_int=False, choices=SV_TYPES)),
-    ], db_column='cpxIntervals', null_when_empty=True)
+    sv_detail = models.StringField(db_column='svDetail', default='{}')
 
     objects = SvVariantsQuerySet.as_manager()
 
