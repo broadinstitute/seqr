@@ -33,7 +33,6 @@ class SingleSampleVCFTask(BaseVCFTask):
         'END2': ('1', 'Integer'),
         'SVLEN': ('1', 'Integer'),
         'SVTYPE': ('1', 'String'),
-        'StrVCTVRE': ('1', 'String'),
     }
 
     FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
