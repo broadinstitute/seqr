@@ -1796,7 +1796,7 @@ Loading pipeline should be triggered with:
 
         vcf_header_row_2 = '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\n'
         vcf_file_rows[-1] = vcf_header_row_2
-        sv_vcfs = ['sv_callsets/NA19675_1.sv.vcf.gz', 'sv_callsets/HG00735.sv.vcf.gz']
+        sv_vcfs = ['sv_callsets/NA19675_1.sv.vcf.gz', 'sv_callsets/HG00735.cnv.vcf.gz']
         self._add_file_list_iter(sv_vcfs, vcf_file_rows)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
@@ -1836,7 +1836,7 @@ Loading pipeline should be triggered with:
             'Samples do not have all required VCFs: NA19675_1, HG00735',
         ])
 
-        sv_vcfs += ['sv_callsets/NA19675_1.cnv.vcf.gz', 'sv_callsets/HG00735.cnv.vcf.gz']
+        sv_vcfs += ['sv_callsets/NA19675_1.cnv.vcf.gz', 'sv_callsets/HG00735.sv.vcf.gz']
         self._add_file_list_iter(sv_vcfs, vcf_file_rows + [vcf_header_row_1])
         self.mock_subprocess.side_effect = [
             self.mock_does_file_exist, self.mock_does_file_exist, self.mock_file_iter,

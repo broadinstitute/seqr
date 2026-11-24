@@ -108,7 +108,7 @@ def validate_vcf_and_get_samples(data_path, user, genome_version, path_name=None
         )
         samples.update(vcf_samples)
         if file_type:
-            for s in samples:
+            for s in vcf_samples:
                 sample_file_types[s].add(file_type)
 
     missing_file_samples = [s for s, file_types in sample_file_types.items() if file_types != SV_FILE_TYPES]
