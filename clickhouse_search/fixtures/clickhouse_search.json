@@ -353,6 +353,12 @@
       "score": 0.11
     }
 }, {
+    "model": "clickhouse_search.alphagenomeallvariants",
+    "pk": "1-38724419-T-G",
+    "fields": {
+      "score": 18.6
+    }
+}, {
     "model": "clickhouse_search.gnomadnoncodingconstraintallvariantssnvindel",
     "pk": 1,
     "fields": {
@@ -1279,7 +1285,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.variantssv",
+    "model": "clickhouse_search.variantsgatksv",
     "pk": 12,
     "fields": {
       "key": 12,
@@ -1307,7 +1313,7 @@
       "sv_source_detail": [null]
     }
 }, {
-    "model": "clickhouse_search.variantssv",
+    "model": "clickhouse_search.variantsgatksv",
     "pk": 13,
     "fields": {
       "key": 13,
@@ -1335,7 +1341,7 @@
       "sv_source_detail": [4]
     }
 }, {
-    "model": "clickhouse_search.variantssv",
+    "model": "clickhouse_search.variantsgatksv",
     "pk": 14,
     "fields": {
       "key": 14,
@@ -1364,7 +1370,7 @@
       "sv_source_detail": [null]
     }
 }, {
-    "model": "clickhouse_search.variantssv",
+    "model": "clickhouse_search.variantsgatksv",
     "pk": 15,
     "fields": {
       "key": 15,
@@ -1392,7 +1398,7 @@
       "sv_source_detail": [null]
     }
 }, {
-    "model": "clickhouse_search.entriessv",
+    "model": "clickhouse_search.entriesgatksv",
     "pk": 24,
     "fields": {
       "key": 12,
@@ -1409,7 +1415,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessv",
+    "model": "clickhouse_search.entriesgatksv",
     "pk": 25,
     "fields": {
       "key": 13,
@@ -1426,7 +1432,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessv",
+    "model": "clickhouse_search.entriesgatksv",
     "pk": 26,
     "fields": {
       "key": 14,
@@ -1443,7 +1449,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.entriessv",
+    "model": "clickhouse_search.entriesgatksv",
     "pk": 27,
     "fields": {
       "key": 15,
@@ -1460,7 +1466,7 @@
       ]
     }
 }, {
-    "model": "clickhouse_search.keylookupsv",
+    "model": "clickhouse_search.keylookupgatksv",
     "pk": 1,
     "fields": {
       "key": 15,

@@ -183,7 +183,7 @@ class VariantsDiskMito(BaseVariantsMito):
         db_table = 'GRCh38/MITO/variants_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/variants', primary_key='key', flatten_nested=0)
 
-class BaseVariantsSv(BaseVariantsSvGcnv):
+class BaseVariantsGatkSv(BaseVariantsSvGcnv):
     POPULATION_FIELDS = [
         ('gnomad_svs', NamedTupleField([
             ('af', models.DecimalField(max_digits=9, decimal_places=8)),
@@ -214,16 +214,16 @@ class BaseVariantsSv(BaseVariantsSvGcnv):
     class Meta:
         abstract = True
 
-class VariantsSv(BaseVariantsSv):
+class VariantsGatkSv(BaseVariantsGatkSv):
 
     class Meta:
-        db_table = 'GRCh38/SV/variants_memory'
+        db_table = 'GRCh38/GATK_SV/variants_memory'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/variants', primary_key='key', flatten_nested=0)
 
-class VariantsDiskSv(BaseVariantsSv):
+class VariantsDiskGatkSv(BaseVariantsGatkSv):
 
     class Meta:
-        db_table = 'GRCh38/SV/variants_disk'
+        db_table = 'GRCh38/GATK_SV/variants_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/variants', primary_key='key', flatten_nested=0)
 
 class BaseVariantsGcnv(BaseVariantsSvGcnv):
@@ -261,6 +261,56 @@ class VariantsDiskGcnv(BaseVariantsGcnv):
         db_table = 'GRCh38/GCNV/variants_disk'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/variants', primary_key='key', flatten_nested=0)
 
+class BaseVariantsSv(BaseVariants):
+    SV_CONSEQUENCE_RANKS = [
+        (1, 'LOF'), (2, 'INTRAGENIC_EXON_DUP'), (3, 'PARTIAL_EXON_DUP'), (4, 'COPY_GAIN'), (5, 'DUP_PARTIAL'),
+        (6, 'MSV_EXON_OVERLAP'), (7, 'INV_SPAN'), (8, 'UTR'), (9, 'PROMOTER'), (10, 'TSS_DUP'), (11, 'BREAKEND_EXONIC'),
+        (12, 'INTRONIC'), (13, 'NEAREST_TSS'),
+    ]
+    SV_TYPES = [(1, 'BND'), (2, 'CPX'), (3, 'CTX'), (4, 'DEL'), (5, 'DUP'), (6, 'INS'), (7, 'INV'), (8, 'CNV')]
+    POPULATION_FIELDS = [
+        ('gnomad_svs', NamedTupleField([
+            ('ac', models.UInt32Field()),
+            ('af', models.DecimalField(max_digits=9, decimal_places=8)),
+            ('an', models.UInt32Field()),
+            ('het', models.UInt32Field()),
+            ('hom', models.UInt32Field()),
+            ('id', models.StringField()),
+        ])),
+    ]
+    PREDICTION_FIELDS = [
+        ('strvctvre', models.DecimalField(max_digits=9, decimal_places=5, null=True, blank=True)),
+    ]
+    SORTED_GENE_CONSQUENCES_FIELDS = [
+        ('geneId', models.StringField(null=True, blank=True)),
+        ('majorConsequence', models.Enum8Field(null=True, blank=True, return_int=False, choices=SV_CONSEQUENCE_RANKS)),
+        ('transcriptId', models.StringField()),
+    ]
+
+    variant_id = models.StringField(db_column='variantId')
+    populations = NamedTupleField(POPULATION_FIELDS)
+    predictions = NamedTupleField(PREDICTION_FIELDS)
+    sorted_gene_consequences = NestedField(SORTED_GENE_CONSQUENCES_FIELDS, db_column='sortedGeneConsequences', group_by_key='geneId')
+    sv_type = Enum8Field(db_column='svType', return_int=False, choices=SV_TYPES)
+    sv_detail = models.StringField(db_column='svDetail', default='{}')
+
+    objects = SvVariantsQuerySet.as_manager()
+
+    class Meta:
+        abstract = True
+
+class VariantsSv(BaseVariantsSv):
+
+    class Meta:
+        db_table = 'GRCh38/SV/variants_memory'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_IN_MEMORY_DIR}/GRCh38/SV/v2/variants', primary_key='key', flatten_nested=0)
+
+class VariantsDiskSv(BaseVariantsSv):
+
+    class Meta:
+        db_table = 'GRCh38/SV/variants_disk'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/v2/variants', primary_key='key', flatten_nested=0)
+
 class BaseEntries(FixtureLoadableClickhouseModel):
 
     project_guid = models.StringField(low_cardinality=True)
@@ -275,7 +325,7 @@ class BaseEntries(FixtureLoadableClickhouseModel):
         abstract = True
         engine = CollapsingMergeTree(
             'sign',
-            order_by=('project_guid', 'family_guid', 'key'),
+            order_by=('project_guid', 'family_guid', 'sample_type', 'key'),
             partition_by='project_guid',
             deduplicate_merge_projection_mode='rebuild',
             index_granularity=8192,
@@ -329,6 +379,7 @@ class EntriesSnvIndel(BaseEntriesSnvIndel):
     PREDICTIONS = {
         **BaseEntriesSnvIndel.PREDICTIONS,
         'absplice': {},
+        'alphagenome': {},
         'pext': {},
         'promoter_ai': {},
     }
@@ -396,15 +447,8 @@ class EntriesMito(BaseEntries):
 
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/MITO/entries'
-        engine = CollapsingMergeTree(
-            'sign',
-            order_by=('project_guid', 'family_guid', 'sample_type', 'key'),
-            partition_by='project_guid',
-            deduplicate_merge_projection_mode='rebuild',
-            index_granularity=8192,
-        )
 
-class EntriesSv(BaseEntries):
+class EntriesGatkSv(BaseEntries):
     SAMPLE_TYPE = SAMPLE_TYPE_WGS
     CALL_FIELDS = [
         ('sampleId', models.StringField()),
@@ -419,12 +463,19 @@ class EntriesSv(BaseEntries):
     objects = SvEntriesManager.as_manager()
 
     # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
-    key = ForeignKey('VariantsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+    key = ForeignKey('VariantsGatkSv', db_column='key', primary_key=True, on_delete=CASCADE)
     calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
     geneId_ids = models.ArrayField(models.UInt32Field())
 
     class Meta(BaseEntries.Meta):
-        db_table = 'GRCh38/SV/entries'
+        db_table = 'GRCh38/GATK_SV/entries'
+        engine = CollapsingMergeTree(
+            'sign',
+            order_by=('project_guid', 'family_guid', 'key'),
+            partition_by='project_guid',
+            deduplicate_merge_projection_mode='rebuild',
+            index_granularity=8192,
+        )
 
 class EntriesGcnv(BaseEntries):
     SAMPLE_TYPE = SAMPLE_TYPE_WES
@@ -451,6 +502,47 @@ class EntriesGcnv(BaseEntries):
 
     class Meta(BaseEntries.Meta):
         db_table = 'GRCh38/GCNV/entries'
+        engine = CollapsingMergeTree(
+            'sign',
+            order_by=('project_guid', 'family_guid', 'key'),
+            partition_by='project_guid',
+            deduplicate_merge_projection_mode='rebuild',
+            index_granularity=8192,
+        )
+
+class EntriesSv(BaseEntries):
+    CALL_FIELDS = [
+        ('sampleId', models.StringField()),
+        ('gt', models.Enum8Field(null=True, blank=True, choices=[(0, 'REF'), (1, 'HET'), (2, 'HOM')])),
+        ('cn', models.UInt8Field(null=True, blank=True)),
+        ('gq', models.UInt8Field(null=True, blank=True)),
+        ('qs', models.UInt16Field(null=True, blank=True)),
+        ('vaf', models.UInt16Field(null=True, blank=True)),
+        ('pr', models.UInt16Field(null=True, blank=True)),
+        ('sr', models.UInt16Field(null=True, blank=True)),
+        ('jq', models.UInt16Field(null=True, blank=True)),
+        ('bd', models.UInt16Field(null=True, blank=True)),
+        ('cipos', models.UInt16Field(null=True, blank=True)),
+        ('ciend', models.UInt16Field(null=True, blank=True)),
+        ('pos', models.UInt32Field(null=True, blank=True)),
+        ('end', models.UInt32Field(null=True, blank=True)),
+    ]
+
+    # primary_key is not enforced by clickhouse, but setting it here prevents django adding an id column
+    key = ForeignKey('VariantsSv', db_column='key', primary_key=True, on_delete=CASCADE)
+    sample_type = models.Enum8Field(choices=[(1, 'WES'), (2, 'WGS')])
+    calls = models.ArrayField(NamedTupleField(CALL_FIELDS))
+    geneId_ids = models.ArrayField(models.UInt32Field())
+
+    xpos_end = models.UInt64Field(db_column='xposEnd')
+    lifted_over_chrom = Enum8Field(db_column='liftedOverChrom', return_int=False, null=True, blank=True, choices=CHROMOSOME_CHOICES)
+    lifted_over_pos = models.UInt32Field(db_column='liftedOverPos', null=True, blank=True)
+    lifted_over_end = models.UInt32Field(db_column='liftedOverEnd', null=True, blank=True)
+
+    objects = SvEntriesManager.as_manager()
+
+    class Meta(BaseEntries.Meta):
+        db_table = 'GRCh38/SV/entries'
 
 class VariantDetailsGRCh37SnvIndel(FixtureLoadableClickhouseModel):
     ANNOTATION_CONSTANTS = VariantsGRCh37SnvIndel.ANNOTATION_CONSTANTS
@@ -572,11 +664,11 @@ class KeyLookupMito(BaseKeyLookup):
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/MITO/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
-class KeyLookupSv(BaseKeyLookup):
-    key = OneToOneField('VariantsSv', db_column='key', on_delete=CASCADE)
+class KeyLookupGatkSv(BaseKeyLookup):
+    key = OneToOneField('VariantsGatkSv', db_column='key', on_delete=CASCADE)
 
     class Meta:
-        db_table = 'GRCh38/SV/key_lookup'
+        db_table = 'GRCh38/GATK_SV/key_lookup'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/key_lookup', primary_key='variant_id', flatten_nested=0)
 
 
@@ -586,6 +678,15 @@ class KeyLookupGcnv(BaseKeyLookup):
     class Meta:
         db_table = 'GRCh38/GCNV/key_lookup'
         engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/GCNV/key_lookup', primary_key='variant_id', flatten_nested=0)
+
+
+class KeyLookupSv(BaseKeyLookup):
+    key = OneToOneField('VariantsSv', db_column='key', on_delete=CASCADE)
+
+    class Meta:
+        db_table = 'GRCh38/SV/key_lookup'
+        engine = EmbeddedRocksDB(0, f'{CLICKHOUSE_DATA_DIR}/GRCh38/SV/v2/key_lookup', primary_key='variant_id', flatten_nested=0)
+
 
 
 class ProjectPartitionsSnvIndel(FixtureLoadableClickhouseModel):
@@ -616,7 +717,7 @@ ENTRY_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         DATASET_TYPE_VARIANT_CALLS: EntriesSnvIndel,
         DATASET_TYPE_MITO_CALLS: EntriesMito,
-        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': EntriesSv,
+        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': EntriesGatkSv,
         f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WES}': EntriesGcnv,
     },
 }
@@ -625,7 +726,7 @@ VARIANTS_CLASS_MAP = {
     GENOME_VERSION_GRCh38: {
         DATASET_TYPE_VARIANT_CALLS: VariantsSnvIndel,
         DATASET_TYPE_MITO_CALLS: VariantsMito,
-        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': VariantsSv,
+        f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WGS}': VariantsGatkSv,
         f'{DATASET_TYPE_SV_CALLS}_{SAMPLE_TYPE_WES}': VariantsGcnv,
     },
 }

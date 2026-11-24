@@ -2,6 +2,11 @@
 
 ## dev
 
+## 11/24/26
+* Adds AlphaGenome in silico score to clickhouse (REQUIRES DB MIGRATION)
+  * Note that for users with Clickhouse already enabled, this migration will enqueue tasks in the loading pipeline.
+  You may want to monitor the pipeline for any failures and re-trigger them in the event of any failures.
+
 ## 3/1/26
 * Deprecate Elasticsearch support
 

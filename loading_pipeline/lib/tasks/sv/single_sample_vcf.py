@@ -24,8 +24,6 @@ class SingleSampleVCFTask(BaseVCFTask):
     vcf_sample_id = luigi.OptionalParameter(default=None)
 
     INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
-        'ALGORITHMS': ('.', 'String'),
-        'BOTHSIDES_SUPPORT': ('0', 'Flag'),
         'CHR2': ('1', 'String'),
         'CPX_INTERVALS': ('.', 'String'),
         'CPX_TYPE': ('1', 'String'),
@@ -33,29 +31,12 @@ class SingleSampleVCFTask(BaseVCFTask):
         'END2': ('1', 'Integer'),
         'SVLEN': ('1', 'Integer'),
         'SVTYPE': ('1', 'String'),
-        'StrVCTVRE': ('1', 'String'),
-        'GNOMAD_V4.1_TRUTH_VID': ('1', 'String'),
-        'SEQR_INTERNAL_TRUTH_VID': ('1', 'String'),
-        'PREDICTED_BREAKEND_EXONIC': ('.', 'String'),
-        'PREDICTED_COPY_GAIN': ('.', 'String'),
-        'PREDICTED_DUP_PARTIAL': ('.', 'String'),
-        'PREDICTED_INTRAGENIC_EXON_DUP': ('.', 'String'),
-        'PREDICTED_INTRONIC': ('.', 'String'),
-        'PREDICTED_INV_SPAN': ('.', 'String'),
-        'PREDICTED_LOF': ('.', 'String'),
-        'PREDICTED_MSV_EXON_OVERLAP': ('.', 'String'),
-        'PREDICTED_NEAREST_TSS': ('.', 'String'),
-        'PREDICTED_PARTIAL_EXON_DUP': ('.', 'String'),
-        'PREDICTED_PROMOTER': ('.', 'String'),
-        'PREDICTED_TSS_DUP': ('.', 'String'),
-        'PREDICTED_UTR': ('.', 'String'),
     }
 
     FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
         'GT': ('1', 'String'),
         'GQ': ('1', 'Integer'),
         'RD_CN': ('1', 'Integer'),
-        'CONC_ST': ('.', 'String'),
     }
 
     KEEP_FIELDS: ClassVar[str] = ','.join(
@@ -118,7 +99,7 @@ class SingleSampleVCFTask(BaseVCFTask):
             reformatted_target = haploid_target
 
         annotated_target = luigi.LocalTarget(is_tmp=True)
-        rand_id = random.randint(100_000, 999_999)  # noqa: S311 # nosec
+        rand_id = random.randint(10_000_000, 99_999_999)  # noqa: S311 # nosec
         self.run_bcftools(
             [
                 'annotate',

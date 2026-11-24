@@ -602,9 +602,6 @@ def insert_new_entries(
     ]
     common, overrides = [c for c in dst_cols if c in src_cols], {}
     common.insert(0, 'key')
-    if 'xpos' not in common:
-        common.append('xpos')
-        overrides['xpos'] = 'v.xpos'
 
     if 'geneId_ids' in dst_cols:
         common.append('geneId_ids')
@@ -926,7 +923,16 @@ def export_existing_variants_to_parquet(
     )
     select_fields = 'key AS key_, variantId AS variant_id'
     if dataset_type == DatasetType.SV:
-        select_fields += ', chrom, end, endChrom, pos, svType'
+        variants_table = f"""
+        (
+            SELECT key AS groupKey, min(xpos) AS xpos, max(xposEnd) AS xpos_end
+            FROM {table_name_builder.dst_table(ClickHouseTable.ENTRIES)}
+            GROUP BY key
+        ) e
+        INNER JOIN {variants_table} v
+        ON e.groupKey = v.key
+        """  # nosec B608
+        select_fields += ', xpos, xpos_end, svType'
     logged_query(
         f"""
         INSERT INTO FUNCTION {export_table}

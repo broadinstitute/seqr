@@ -2,7 +2,6 @@ import os
 from unittest import mock
 from unittest.mock import Mock
 
-import hail as hl
 import luigi.worker
 import pandas as pd
 
@@ -35,9 +34,7 @@ TEST_RUN_ID = 'manual__2024-04-03'
 EXISTING_SV_VARIANT_IDS = [
     'BND_chr1_6',
     'DUP_chr1_5',
-    'DEL_chr1_12',
     'BND_chr1_9',
-    'INS_chr1_65',
     'CPX_chr1_41',
     'INS_chr1_268',
     'CPX_chr1_54',
@@ -60,42 +57,34 @@ def _write_existing_variants_parquet_fixture() -> None:
         {
             'variant_id': EXISTING_SV_VARIANT_IDS,
             'key_': range(727 - n, 727),
-            'chrom': [b'1'] * (n - 2) + [b'X'] * 2,
-            'end': [
-                20404,
-                263666,
-                428500,
-                789481,
-                4228448,
-                16089601,
-                17465723,
-                21480419,
-                48963135,
-                181074952,
-                2781000,
-                2781900,
+            'xpos_end': [
+                5000020404,
+                1000263666,
+                1000789481,
+                1016089601,
+                1017465723,
+                1021480419,
+                1048963135,
+                1181074952,
+                2302781000,
+                2302781900,
             ],
-            'endChrom': [b'5'] + [None] * (n - 1),
-            'pos': [
-                180928,
-                257666,
-                413968,
-                789481,
-                4228405,
-                16088760,
-                17465707,
-                21427498,
-                48963084,
-                180540234,
-                3,
-                2781700,
+            'xpos': [
+                1000180928,
+                1000257666,
+                1000789481,
+                1016088760,
+                1017465707,
+                1021427498,
+                1048963084,
+                1180540234,
+                2300000003,
+                2302781700,
             ],
             'svType': [
                 b'BND',
                 b'DUP',
-                b'DEL',
                 b'BND',
-                b'INS',
                 b'CPX',
                 b'INS',
                 b'CPX',
@@ -112,17 +101,10 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
     @mock.patch(
         'loading_pipeline.lib.tasks.sv.single_sample_vcf.random',
     )
-    @mock.patch(
-        'loading_pipeline.lib.tasks.sv.write_new_variants_parquet.load_gencode_gene_symbol_to_gene_id',
-    )
     def test_sv_write_new_variants_parquet_test(
         self,
-        mock_load_gencode_gene_symbol_to_gene_id: Mock,
         mock_random: Mock,
     ) -> None:
-        mock_load_gencode_gene_symbol_to_gene_id.return_value = hl.dict(
-            {'TAS1R1': 'ENSG00000173662'},
-        )
         mock_random.randint.side_effect = range(1, 10)
         _write_existing_variants_parquet_fixture()
         copy_project_pedigree_to_mocked_dir(
@@ -143,6 +125,7 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
             ],
             validations_to_skip=[ALL_VALIDATIONS],
             run_id=TEST_RUN_ID,
+            attempt_id=1,
             skip_expect_tdr_metrics=True,
         )
         worker.add(task)
@@ -156,38 +139,74 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 TEST_RUN_ID,
             ),
         )
-        export_json = convert_ndarray_to_list(df.head(1).to_dict('records'))
-        export_json[0]['sortedGeneConsequences'] = [
-            export_json[0]['sortedGeneConsequences'][0],
-        ]
-        self.maxDiff = None
+        self.assertEqual(
+            list(df.columns),
+            [
+                'key',
+                'variantId',
+                'svType',
+                'populations',
+                'predictions',
+                'sortedGeneConsequences',
+                'svDetail',
+            ],
+        )
+        export_json = convert_ndarray_to_list(df.head(3).to_dict('records'))
         self.assertEqual(
             export_json,
             [
                 {
                     'key': 727,
-                    'xpos': 1006558902,
-                    'chrom': '1',
-                    'pos': 6558902,
-                    'end': 6559723,
-                    'rg37LocusEnd': {'contig': '1', 'position': 6619783},
-                    'variantId': 'CPX_chr1_22-1',
-                    'liftedOverChrom': '1',
-                    'liftedOverPos': 6618962,
-                    'algorithms': 'manta',
-                    'bothsidesSupport': True,
-                    'cpxIntervals': [
-                        {'chrom': '1', 'start': 6558902, 'end': 6559723, 'type': 'INV'},
-                        {'chrom': '1', 'start': 6559655, 'end': 6559723, 'type': 'DUP'},
+                    'variantId': 'DEL_chr1_12-1',
+                    'svType': 'DEL',
+                    'svDetail': '{}',
+                    'predictions': {'strvctvre': 0.103},
+                    'populations': {'gnomad_svs': None},
+                    'sortedGeneConsequences': [
+                        {
+                            'geneId': 'ENSG00000173662',
+                            'majorConsequence': 'NEAREST_TSS',
+                            'transcriptId': 'ENST00000331433',
+                        },
                     ],
-                    'endChrom': None,
-                    'svSourceDetail': None,
+                },
+                {
+                    'key': 728,
+                    'variantId': 'INS_chr1_65-1',
+                    'svType': 'INS',
+                    'svDetail': '{"typeDetail": "ME:ALU"}',
+                    'predictions': {'strvctvre': None},
+                    'populations': {
+                        'gnomad_svs': {
+                            'ac': 4.0,
+                            'af': 0.000032,
+                            'an': 125000.0,
+                            'het': 4.0,
+                            'hom': 63042.0,
+                            'id': 'gnomAD-SV_v3_BND_chr1_0001f5b7',
+                        },
+                    },
+                    'sortedGeneConsequences': [
+                        {
+                            'geneId': 'ENSG00000173662',
+                            'majorConsequence': 'NEAREST_TSS',
+                            'transcriptId': 'ENST00000331433',
+                        },
+                    ],
+                },
+                {
+                    'key': 729,
+                    'variantId': 'CPX_chr1_22-1',
                     'svType': 'CPX',
-                    'svTypeDetail': 'INVdup',
+                    'svDetail': '{"cpxIntervals": [{"chrom": "1", "start": 6558902, "end": 6559723, "type": "INV"}, {"chrom": "1", "start": 6559655, "end": 6559723, "type": "DUP"}], "typeDetail": "INVdup"}',
                     'predictions': {'strvctvre': None},
                     'populations': {'gnomad_svs': None},
                     'sortedGeneConsequences': [
-                        {'geneId': 'ENSG00000173662', 'majorConsequence': 'INTRONIC'},
+                        {
+                            'geneId': 'ENSG00000173662',
+                            'majorConsequence': 'INTRONIC',
+                            'transcriptId': 'ENST00000331433',
+                        },
                     ],
                 },
             ],

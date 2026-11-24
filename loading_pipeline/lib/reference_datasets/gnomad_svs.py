@@ -1,17 +1,22 @@
-import hail as hl
+import luigi
+import pandas as pd
 
-from loading_pipeline.lib.core import ReferenceGenome
-from loading_pipeline.lib.reference_datasets.misc import vcf_to_ht
+from loading_pipeline.lib.tasks.base.base_write_parquet_from_vcf import (
+    BaseWriteParquetFromVcfTask,
+)
 
 
-def get_ht(path: str, reference_genome: ReferenceGenome) -> hl.Table:
-    ht = vcf_to_ht(path, reference_genome)
-    ht = ht.select(
-        KEY=ht.rsid,
-        AF=ht.info.AF[0],
-        AC=ht.info.AC[0],
-        AN=ht.info.AN,
-        N_HET=ht.info.N_HET,
-        N_HOM=ht.info.N_HOMALT,
-    )
-    return ht.key_by('KEY')
+def get_df(input_target: luigi.Target) -> pd.DataFrame:
+    df = BaseWriteParquetFromVcfTask.import_vcf(input_target)
+    fields = {
+        'END': 'END',
+        'SVLEN': 'SVLEN',
+        'af': 'AF',
+        'ac': 'AC',
+        'an': 'AN',
+        'het': 'N_HET',
+        'hom': 'N_HOMALT',
+    }
+    for field, raw_field in fields.items():
+        df[field] = df[raw_field].astype(float)
+    return df[['ID', '#CHROM', 'POS', 'SVTYPE', *fields.keys()]]
