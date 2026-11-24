@@ -124,9 +124,12 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             strvctvre = run_strvctvre(df, f)
         df['predictions'] = df.index.map(lambda vid: {'strvctvre': strvctvre.get(vid)})
 
-        df['svDetail'] = df.pop('CPX_INTERVALS').map(lambda v: {'cpxIntervals': v} if isinstance(v, list) and v else {})
+        df['svDetail'] = df.pop('CPX_INTERVALS').map(
+            lambda v: {'cpxIntervals': v} if isinstance(v, list) and v else {},
+        )
         df['svDetail'] = df['svDetail'].combine(
-            df.pop('sv_type_detail'), lambda d, v: d | {'typeDetail': v} if pd.notna(v) else d,
+            df.pop('sv_type_detail'),
+            lambda d, v: d | {'typeDetail': v} if pd.notna(v) else d,
         )
         if 'CHR2' in df:
             has_source = (
