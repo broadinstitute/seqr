@@ -16,6 +16,44 @@ PAR1_END = 2781479
 PAR2_START = 155701383
 
 
+class SingleSampleVCFTask(BaseVCFTask):
+    path_template = luigi.Parameter()
+    output_dir = luigi.Parameter()
+    sample_id = luigi.Parameter()
+    is_male = luigi.BoolParameter()
+    vcf_sample_id = luigi.OptionalParameter(default=None)
+
+    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = ['concat']
+
+    def requires(self) -> list[luigi.Task]:
+        sample_id = self.vcf_sample_id or self.sample_id
+        return [
+            SingleSampleSvVCFTask(
+                pathname=self.path_template.replace('*', f'{sample_id}.sv'),
+                output_filename=self.output_filename(),
+                sample_id=self.sample_id,
+                is_male=self.is_male
+            ),
+        ]
+
+    def output_filename(self) -> str:
+        file_id = (
+            f'{self.vcf_sample_id}__{self.sample_id}'
+            if self.vcf_sample_id
+            else self.sample_id
+        )
+        return f'{self.output_dir}/{file_id}'
+
+    def vcf_path(self) -> str:
+        output_filename = self.output_filename()
+        if self.is_male:
+            output_filename = f'{output_filename}.male'
+        return f'{output_filename}.norm.vcf.gz'
+
+    def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
+        return self.input()
+
+
 class SingleSampleSvVCFTask(BaseVCFTask):
     pathname = luigi.Parameter()
     output_filename = luigi.Parameter()
@@ -39,14 +77,9 @@ class SingleSampleSvVCFTask(BaseVCFTask):
     }
 
     OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = [
-        'annotate',
-        '-x',
-        ','.join(
-            [
-                *(f'^INFO/{field}' for field in INFO_FIELDS),
-                *(f'^FORMAT/{field}' for field in FORMAT_FIELDS),
-            ],
-        ),
+        'view',
+        '--regions',
+        ','.join(CONTIGS),
     ]
 
     def requires(self) -> list[luigi.Task]:
@@ -86,6 +119,26 @@ class SingleSampleSvVCFTask(BaseVCFTask):
             )
             input_target = haploid_target
 
+        annotated_target = luigi.LocalTarget(is_tmp=True)
+        rand_id = random.randint(10_000_000, 99_999_999)  # noqa: S311 # nosec
+        self.run_bcftools(
+            [
+                'annotate',
+                '-x',
+                ','.join(
+                    [
+                        *(f'^INFO/{field}' for field in self.INFO_FIELDS),
+                        *(f'^FORMAT/{field}' for field in self.FORMAT_FIELDS),
+                    ],
+                ),
+                '--set-id',
+                f'%ID-{rand_id}',
+            ],
+            annotated_target,
+            [input_target],
+            output_type='v',
+        )
+
         df = self.import_vcf(input_target)
         # TODO process, format info fields back?
 
@@ -110,65 +163,3 @@ class SingleSampleSvVCFTask(BaseVCFTask):
                         header_rows.append(line.rstrip('\n'))
 
         return header_rows
-
-
-class SingleSampleVCFTask(BaseVCFTask):
-    path_template = luigi.Parameter()
-    output_dir = luigi.Parameter()
-    sample_id = luigi.Parameter()
-    is_male = luigi.BoolParameter()
-    vcf_sample_id = luigi.OptionalParameter(default=None)
-
-    OUTPUT_COMMAND_ARGS: ClassVar[list[str]] = [
-        'view',
-        '--regions',
-        ','.join(CONTIGS),
-    ]
-
-    def requires(self) -> list[luigi.Task]:
-        sample_id = self.vcf_sample_id or self.sample_id
-        return [
-            SingleSampleSvVCFTask(
-                pathname=self.path_template.replace('*', f'{sample_id}.sv'),
-                output_filename=self.output_filename(),
-                sample_id=self.sample_id,
-                is_male=self.is_male
-            ),
-        ]
-
-    def output_filename(self) -> str:
-        file_id = (
-            f'{self.vcf_sample_id}__{self.sample_id}'
-            if self.vcf_sample_id
-            else self.sample_id
-        )
-        return f'{self.output_dir}/{file_id}'
-
-    def vcf_path(self) -> str:
-        output_filename = self.output_filename()
-        if self.is_male:
-            output_filename = f'{output_filename}.male'
-        return f'{output_filename}.norm.vcf.gz'
-
-    def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
-        concat_target = luigi.LocalTarget(is_tmp=True)
-        self.run_bcftools(
-            ['concat'],
-            concat_target,
-            self.input(),
-            output_type='u',
-        )
-
-        annotated_target = luigi.LocalTarget(is_tmp=True)
-        rand_id = random.randint(10_000_000, 99_999_999)  # noqa: S311 # nosec
-        self.run_bcftools(
-            [
-                'annotate',
-                '--set-id',
-                f'%ID-{rand_id}',
-            ],
-            annotated_target,
-            [concat_target],
-        )
-
-        return [annotated_target]
