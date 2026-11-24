@@ -181,8 +181,8 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
                     '#CHROM': 'chr1',
                     'POS': start,
                     'END': end,
-                    'svTypeDetail': None,
-                    'cpxIntervals': None,
+                    'sv_type_detail': None,
+                    'CPX_INTERVALS': None,
                     'CHR2': None,
                     'END2': None,
                     'SVLEN': end - start,
@@ -245,8 +245,8 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
                     '#CHROM': 'chr4',
                     'POS': 900,
                     'END': 4000,
-                    'svTypeDetail': None,
-                    'cpxIntervals': None,
+                    'sv_type_detail': None,
+                    'CPX_INTERVALS': None,
                     'CHR2': None,
                     'END2': None,
                     'SVLEN': 3100,
@@ -366,7 +366,7 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
             },
             'INS',
             input_overrides={
-                (1300, 1800): {'svTypeDetail': 'ME:LINE1', 'SVLEN': 42},
+                (1300, 1800): {'sv_type_detail': 'ME:LINE1', 'SVLEN': 42},
             },
         )
 
@@ -470,37 +470,37 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
             'CPX',
             input_overrides={
                 (90, 1010): {
-                    'svTypeDetail': 'INVdup',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'INVdup',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 90, 'end': 1010, 'type': 'INV'},
                         {'chrom': '1', 'start': 890, 'end': 1010, 'type': 'DUP'},
                     ],
                 },
                 (250, 650): {
-                    'svTypeDetail': 'delINVdup',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'delINVdup',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 250, 'end': 450, 'type': 'DEL'},
                         {'chrom': '1', 'start': 450, 'end': 650, 'type': 'INV'},
                         {'chrom': '1', 'start': 610, 'end': 650, 'type': 'DUP'},
                     ],
                 },
                 (1100, 1100): {
-                    'svTypeDetail': 'dDUP',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dDUP',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 450, 'end': 1000, 'type': 'DUP'},
                     ],
                     'SVLEN': 550,
                 },
                 (450, 3100): {
-                    'svTypeDetail': 'dupINV',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dupINV',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 450, 'end': 2200, 'type': 'DUP'},
                         {'chrom': '1', 'start': 450, 'end': 3100, 'type': 'INV'},
                     ],
                 },
                 (1101, 1102): {
-                    'svTypeDetail': 'dDUP_iDEL',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dDUP_iDEL',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 10, 'end': 60, 'type': 'DUP'},
                         {'chrom': '1', 'start': 10, 'end': 60, 'type': 'INV'},
                         {'chrom': '1', 'start': 1100, 'end': 1700, 'type': 'DEL'},
@@ -508,23 +508,23 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
                     'SVLEN': 700,
                 },
                 (1400, 1900): {
-                    'svTypeDetail': 'delINV',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'delINV',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 1400, 'end': 1500, 'type': 'DEL'},
                         {'chrom': '1', 'start': 1500, 'end': 1900, 'type': 'INV'},
                     ],
                 },
                 (50, 2050): {
-                    'svTypeDetail': 'dupINVdel',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dupINVdel',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 50, 'end': 1050, 'type': 'DUP'},
                         {'chrom': '1', 'start': 50, 'end': 1900, 'type': 'INV'},
                         {'chrom': '1', 'start': 1900, 'end': 2050, 'type': 'DEL'},
                     ],
                 },
                 (2900, 3600): {
-                    'svTypeDetail': 'dupINVdel',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dupINVdel',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 2900, 'end': 3100, 'type': 'DUP'},
                         {'chrom': '1', 'start': 2900, 'end': 3500, 'type': 'INV'},
                         {'chrom': '1', 'start': 3500, 'end': 3600, 'type': 'DEL'},
@@ -533,85 +533,85 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
                 (14900, 15500): {
                     '#CHROM': 'chr3',
                     'CHR2': 'chr1',
-                    'svTypeDetail': 'INVdel',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'INVdel',
+                    'CPX_INTERVALS': [
                         {'chrom': '3', 'start': 14900, 'end': 15200, 'type': 'INV'},
                         {'chrom': '3', 'start': 15200, 'end': 15500, 'type': 'DEL'},
                     ],
                 },
                 (1100, 3200): {
-                    'svTypeDetail': 'delINVdel',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'delINVdel',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 1100, 'end': 2000, 'type': 'DEL'},
                         {'chrom': '1', 'start': 2000, 'end': 3100, 'type': 'INV'},
                         {'chrom': '1', 'start': 3100, 'end': 3200, 'type': 'DEL'},
                     ],
                 },
                 (1200, 1200): {
-                    'svTypeDetail': 'dDUP',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dDUP',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 450, 'end': 1000, 'type': 'INV'},
                         {'chrom': '1', 'start': 450, 'end': 1000, 'type': 'DUP'},
                     ],
                     'SVLEN': 550,
                 },
                 (1100, 3100): {
-                    'svTypeDetail': 'delINVdup',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'delINVdup',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 1100, 'end': 1200, 'type': 'DEL'},
                         {'chrom': '1', 'start': 1200, 'end': 3100, 'type': 'INV'},
                         {'chrom': '1', 'start': 2900, 'end': 3100, 'type': 'DUP'},
                     ],
                 },
                 (2900, 4500): {
-                    'svTypeDetail': 'dupINVdup',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dupINVdup',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 2900, 'end': 3100, 'type': 'DUP'},
                         {'chrom': '1', 'start': 2900, 'end': 4500, 'type': 'INV'},
                         {'chrom': '1', 'start': 4400, 'end': 4500, 'type': 'DUP'},
                     ],
                 },
                 (10, 11): {
-                    'svTypeDetail': 'dDUP',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dDUP',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 2000, 'end': 3500, 'type': 'DUP'},
                     ],
                     'SVLEN': 1500,
                 },
                 (20, 3500): {
-                    'svTypeDetail': 'dupINVdup',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dupINVdup',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 20, 'end': 70, 'type': 'DUP'},
                         {'chrom': '1', 'start': 20, 'end': 3500, 'type': 'INV'},
                         {'chrom': '1', 'start': 2000, 'end': 3500, 'type': 'DUP'},
                     ],
                 },
                 (1050, 1900): {
-                    'svTypeDetail': 'INVdel',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'INVdel',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 1050, 'end': 1300, 'type': 'INV'},
                         {'chrom': '1', 'start': 1300, 'end': 1900, 'type': 'DEL'},
                     ],
                 },
                 (1060, 1900): {
-                    'svTypeDetail': 'delINVdel',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'delINVdel',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 1060, 'end': 1100, 'type': 'DEL'},
                         {'chrom': '1', 'start': 1100, 'end': 1400, 'type': 'INV'},
                         {'chrom': '1', 'start': 1400, 'end': 1900, 'type': 'DEL'},
                     ],
                 },
                 (1020, 1900): {
-                    'svTypeDetail': 'dupINVdel',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'dupINVdel',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 1020, 'end': 1070, 'type': 'DUP'},
                         {'chrom': '1', 'start': 1020, 'end': 1400, 'type': 'INV'},
                         {'chrom': '1', 'start': 1400, 'end': 1900, 'type': 'DEL'},
                     ],
                 },
                 (1030, 2000): {
-                    'svTypeDetail': 'delINVdup',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'delINVdup',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 1030, 'end': 1300, 'type': 'DEL'},
                         {'chrom': '1', 'start': 1300, 'end': 2000, 'type': 'INV'},
                         {'chrom': '1', 'start': 1900, 'end': 2000, 'type': 'DUP'},
@@ -624,8 +624,8 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
             'CPX',
             input_overrides={
                 (1101, 1102): {
-                    'svTypeDetail': 'INS_iDEL',
-                    'cpxIntervals': [
+                    'sv_type_detail': 'INS_iDEL',
+                    'CPX_INTERVALS': [
                         {'chrom': '1', 'start': 10, 'end': 60, 'type': 'INV'},
                         {'chrom': '1', 'start': 1100, 'end': 1700, 'type': 'DEL'},
                         {'chrom': '1', 'start': 10, 'end': 60, 'type': 'INS'},

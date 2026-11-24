@@ -145,12 +145,10 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 'key',
                 'variantId',
                 'svType',
-                'cpxIntervals',
                 'populations',
                 'predictions',
                 'sortedGeneConsequences',
-                'svSourceDetail',
-                'svTypeDetail',
+                'svDetail',
             ],
         )
         export_json = convert_ndarray_to_list(df.head(3).to_dict('records'))
@@ -160,10 +158,8 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 {
                     'key': 727,
                     'variantId': 'DEL_chr1_12-1',
-                    'cpxIntervals': None,
-                    'svSourceDetail': None,
                     'svType': 'DEL',
-                    'svTypeDetail': None,
+                    'svDetail': '{}',
                     'predictions': {'strvctvre': 0.103},
                     'populations': {'gnomad_svs': None},
                     'sortedGeneConsequences': [
@@ -177,10 +173,8 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 {
                     'key': 728,
                     'variantId': 'INS_chr1_65-1',
-                    'cpxIntervals': None,
-                    'svSourceDetail': None,
                     'svType': 'INS',
-                    'svTypeDetail': 'ME:ALU',
+                    'svDetail': '{"typeDetail": "ME:ALU"}',
                     'predictions': {'strvctvre': None},
                     'populations': {
                         'gnomad_svs': {
@@ -203,13 +197,8 @@ class WriteNewVariantsParquetTest(MockedReferenceDatasetsTestCase):
                 {
                     'key': 729,
                     'variantId': 'CPX_chr1_22-1',
-                    'cpxIntervals': [
-                        {'chrom': '1', 'start': 6558902, 'end': 6559723, 'type': 'INV'},
-                        {'chrom': '1', 'start': 6559655, 'end': 6559723, 'type': 'DUP'},
-                    ],
-                    'svSourceDetail': None,
                     'svType': 'CPX',
-                    'svTypeDetail': 'INVdup',
+                    'svDetail': '{"cpxIntervals": [{"chrom": "1", "start": 6558902, "end": 6559723, "type": "INV"}, {"chrom": "1", "start": 6559655, "end": 6559723, "type": "DUP"}], "typeDetail": "INVdup"}',
                     'predictions': {'strvctvre': None},
                     'populations': {'gnomad_svs': None},
                     'sortedGeneConsequences': [

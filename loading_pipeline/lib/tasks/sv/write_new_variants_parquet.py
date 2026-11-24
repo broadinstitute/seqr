@@ -1,3 +1,5 @@
+import json
+
 import luigi
 import luigi.util
 import pandas as pd
@@ -78,20 +80,20 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             msg = f'Unexpected enum value: {invalid_sv_types.iloc[0]}'
             raise ValueError(msg)
 
-        df.loc[df['SVTYPE'] == 'INS', 'svTypeDetail'] = df.pop('ALT').str.extract(
+        df.loc[df['SVTYPE'] == 'INS', 'sv_type_detail'] = df.pop('ALT').str.extract(
             r'^<[^:]+:(.+)>$',
         )[0]
         if 'CPX_TYPE' in df:
-            df.loc[df['SVTYPE'] == 'CPX', 'svTypeDetail'] = df.pop('CPX_TYPE')
-        invalid_details = df['svTypeDetail'].dropna()[
-            ~df['svTypeDetail'].dropna().isin(SV_TYPE_DETAILS)
+            df.loc[df['SVTYPE'] == 'CPX', 'sv_type_detail'] = df.pop('CPX_TYPE')
+        invalid_details = df['sv_type_detail'].dropna()[
+            ~df['sv_type_detail'].dropna().isin(SV_TYPE_DETAILS)
         ]
         if not invalid_details.empty:
             msg = f'Unexpected enum value: {invalid_details.iloc[0]}'
             raise ValueError(msg)
 
         if 'CPX_INTERVALS' in df.columns:
-            df['cpxIntervals'] = (
+            df['CPX_INTERVALS'] = (
                 df['CPX_INTERVALS']
                 .str.split(',')
                 .map(
@@ -102,17 +104,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
                 )
             )
         else:
-            df['cpxIntervals'] = None
-
-        if 'CHR2' in df:
-            has_source = (
-                (df['SVTYPE'] == 'INS')
-                & df['CHR2'].notna()
-                & (df['CHR2'] != df['#CHROM'])
-            )
-            df.loc[has_source, 'svSourceDetail'] = df.loc[has_source, 'CHR2'].map(
-                lambda chrom: {'chrom': chrom.removeprefix('chr')},
-            )
+            df['CPX_INTERVALS'] = None
 
         gencode_df = self._read_parquet(self.input()[1])
         consequences_by_variant = annotate_gene_consequences(df, gencode_df)
@@ -131,6 +123,25 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         with self._open_parquet(self.input()[3]) as f:
             strvctvre = run_strvctvre(df, f)
         df['predictions'] = df.index.map(lambda vid: {'strvctvre': strvctvre.get(vid)})
+
+        df['svDetail'] = df.pop('CPX_INTERVALS').map(
+            lambda v: {'cpxIntervals': v} if isinstance(v, list) and v else {},
+        )
+        df['svDetail'] = df['svDetail'].combine(
+            df.pop('sv_type_detail'),
+            lambda d, v: d | {'typeDetail': v} if pd.notna(v) else d,
+        )
+        if 'CHR2' in df:
+            has_source = (
+                (df['SVTYPE'] == 'INS')
+                & df['CHR2'].notna()
+                & (df['CHR2'] != df['#CHROM'])
+            )
+            df.loc[has_source, 'svDetail'] = df.loc[has_source, 'svDetail'].combine(
+                df.loc[has_source, 'CHR2'],
+                lambda d, chrom: d | {'sourceChrom': chrom.removeprefix('chr')},
+            )
+        df['svDetail'] = df['svDetail'].map(json.dumps)
 
         # Add serial integer index
         max_key_line = self.find_vcf_header_line(self.input()[0][0], '##maxKey')

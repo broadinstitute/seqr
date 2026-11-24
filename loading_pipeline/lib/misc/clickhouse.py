@@ -925,7 +925,7 @@ def export_existing_variants_to_parquet(
     if dataset_type == DatasetType.SV:
         variants_table = f"""
         (
-            SELECT key As groupKey, min(xpos) AS xpos, max(xposEnd) AS xpos_end
+            SELECT key AS groupKey, min(xpos) AS xpos, max(xposEnd) AS xpos_end
             FROM {table_name_builder.dst_table(ClickHouseTable.ENTRIES)}
             GROUP BY key
         ) e
