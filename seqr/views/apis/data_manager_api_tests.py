@@ -1787,21 +1787,21 @@ Loading pipeline should be triggered with:
             '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">\n',
             '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\tNA19675_1\tNA19679\n'
         ]
-        self._add_file_list_iter(['sv_callsets/merged.vcf.gz'], vcf_file_rows)
+        self._add_file_list_iter(['sv_callsets/merged.sv.vcf.gz'], vcf_file_rows)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'], [
-            'Multiple samples found in gs://test_bucket/sv_callsets/merged.vcf.gz',
+            'Multiple samples found in gs://test_bucket/sv_callsets/merged.sv.vcf.gz',
         ])
 
         vcf_header_row_2 = '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tHG00735\n'
         vcf_file_rows[-1] = vcf_header_row_2
-        sv_vcfs = ['sv_callsets/NA19675_1.vcf.gz', 'sv_callsets/HG00735.vcf.gz']
+        sv_vcfs = ['sv_callsets/NA19675_1.sv.vcf.gz', 'sv_callsets/HG00735.sv.vcf.gz']
         self._add_file_list_iter(sv_vcfs, vcf_file_rows)
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))
         self.assertEqual(response.status_code, 400)
         self.assertListEqual(response.json()['errors'],[
-            'VCF gs://test_bucket/sv_callsets/NA19675_1.vcf.gz contains unexpected sample "HG00735"',
+            'VCF gs://test_bucket/sv_callsets/NA19675_1.sv.vcf.gz contains unexpected sample "HG00735"',
         ])
 
         vcf_header_row_1 = '#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tNA19675_1\n'
@@ -1828,6 +1828,19 @@ Loading pipeline should be triggered with:
         mock_file_iter_2.stdout = [row.encode('utf-8') for row in vcf_file_rows + [vcf_header_row_2]]
         self.mock_subprocess.side_effect = [
             self.mock_does_file_exist, self.mock_does_file_exist,  self.mock_file_iter,
+            self.mock_does_file_exist, mock_file_iter_2,
+        ]
+        response = self.client.post(url, content_type='application/json', data=json.dumps(body))
+        self.assertEqual(response.status_code, 400)
+        self.assertListEqual(response.json()['errors'], [
+            'Samples do not have all required VCFs: NA19675_1, HG00735',
+        ])
+
+        sv_vcfs += ['sv_callsets/NA19675_1.cnv.vcf.gz', 'sv_callsets/HG00735.cnv.vcf.gz']
+        self._add_file_list_iter(sv_vcfs, vcf_file_rows + [vcf_header_row_1])
+        self.mock_subprocess.side_effect = [
+            self.mock_does_file_exist, self.mock_does_file_exist, self.mock_file_iter,
+            self.mock_does_file_exist, mock_file_iter_2, self.mock_does_file_exist, self.mock_file_iter,
             self.mock_does_file_exist, mock_file_iter_2,
         ]
         response = self.client.post(url, content_type='application/json', data=json.dumps(body))

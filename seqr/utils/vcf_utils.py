@@ -186,7 +186,7 @@ def _validate_valid_vcf_name(data_path, user, dataset_type, path_name):
         if not files_to_check:
             raise ErrorsWarningsException([f'Data file or path {path_name or data_path} is not found.'])
         if dataset_type == Dataset.DATASET_TYPE_SV_CALLS:
-            sv_file_extensions = tuple(f'{file_type}.{ext}' for ext in file_extensions for file_type in SV_FILE_TYPES)
+            sv_file_extensions = tuple(f'.{file_type}{ext}' for ext in file_extensions for file_type in SV_FILE_TYPES)
             files_to_check = [f for f in files_to_check if f.endswith(sv_file_extensions)]
         else:
             files_to_check = files_to_check[:1]
