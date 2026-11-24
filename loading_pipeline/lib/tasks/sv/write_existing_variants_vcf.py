@@ -72,13 +72,7 @@ class WriteExistingVariantsVcfTask(BaseVCFTask):
         ).sort_values(['CHROM', 'POS'])
 
         max_key = df['key_'].max() if len(df) else 0
-        header = self.format_vcf_header(['seqr_existing'], [f'##maxKey={max_key}'])
-
-        vcf_target = luigi.LocalTarget(is_tmp=True, format=luigi.format.Nop)
-        with vcf_target.open('w') as f:
-            f.write(header.encode())
-            vcf_df.to_csv(f, sep='\t', header=False, index=False)
-
+        vcf_target = self.export_vcf(vcf_df, ['seqr_existing'], [f'##maxKey={max_key}'])
         return [vcf_target]
 
     @staticmethod

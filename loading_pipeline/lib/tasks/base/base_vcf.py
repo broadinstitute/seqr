@@ -2,6 +2,7 @@ from typing import ClassVar
 
 import luigi
 import luigi.format
+import pandas as pd
 
 from loading_pipeline.lib.misc.sv import run_command
 from loading_pipeline.lib.tasks.files import LocalizableTarget
@@ -105,3 +106,35 @@ class BaseVCFTask(luigi.Task):
                 if not line.startswith('#'):
                     break
         return ''
+
+    @staticmethod
+    def import_vcf(input_target: luigi.Target) -> pd.DataFrame:
+        if input_target.path.endswith('.gz'):
+            input_target.format = luigi.format.UTF8 >> luigi.format.Gzip
+        with input_target.open() as f:
+            num_header_rows = next(
+                i for i, line in enumerate(f) if not line.startswith('##')
+            )
+        df = pd.read_csv(input_target.path, sep='\t', skiprows=num_header_rows)
+
+        info = pd.DataFrame(
+            [
+                dict(
+                    field.split('=', 1) if '=' in field else (field, True)
+                    for field in entry.split(';')
+                )
+                for entry in df.pop('INFO')
+            ],
+            index=df.index,
+        )
+        return df.join(info)
+
+    def export_vcf(self, df: pd.DataFrame, sample_ids: list[str], header_rows: list[str]) -> luigi.Target:
+        header = self.format_vcf_header(sample_ids, header_rows)
+
+        vcf_target = luigi.LocalTarget(is_tmp=True, format=luigi.format.Nop)
+        with vcf_target.open('w') as f:
+            f.write(header.encode())
+            df.to_csv(f, sep='\t', header=False, index=False)
+
+        return vcf_target
