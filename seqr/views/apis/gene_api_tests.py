@@ -8,6 +8,11 @@ from seqr.views.utils.test_utils import AuthenticationTestCase, GENE_DETAIL_FIEL
 
 
 GENE_ID = 'ENSG00000223972'
+TRANSCRIPTS_BY_ID = {'ENST00000456328': {
+    'transcriptId': 'ENST00000456328', 'geneId': GENE_ID, 'isManeSelect': False, 'canonical': True, 'constraints': {
+        'louef': 1.606, 'louefRank': 0, 'misZ': -0.7773, 'misZRank': 1, 'pli': 0.00090576, 'pliRank': 1, 'totalGenes': 2,
+    },
+}}
 
 
 class GeneAPITest(AuthenticationTestCase):
@@ -20,8 +25,10 @@ class GeneAPITest(AuthenticationTestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
 
-        gene = response.json()['genesById'][GENE_ID]
+        response_json = response.json()
+        gene = response_json['genesById'][GENE_ID]
         self.assertSetEqual(set(gene.keys()), GENE_DETAIL_FIELDS)
+        self.assertDictEqual(response_json['transcriptsById'], TRANSCRIPTS_BY_ID)
 
     def test_genes_info(self):
         url = reverse(genes_info)
@@ -30,7 +37,9 @@ class GeneAPITest(AuthenticationTestCase):
         response = self.client.get('{}?geneIds={},ENSG00000269981,ENSG00000240361,ENSG00000227232,foo'.format(url, GENE_ID))
         self.assertEqual(response.status_code, 200)
 
-        genes = response.json()['genesById']
+        response_json = response.json()
+        self.assertDictEqual(response_json['transcriptsById'], TRANSCRIPTS_BY_ID)
+        genes = response_json['genesById']
         self.assertSetEqual(set(genes.keys()), {GENE_ID, 'ENSG00000269981', 'ENSG00000240361', 'ENSG00000227232'})
         self.assertSetEqual(set(genes[GENE_ID].keys()), GENE_DETAIL_FIELDS)
         self.assertDictEqual(genes[GENE_ID], {
@@ -40,7 +49,6 @@ class GeneAPITest(AuthenticationTestCase):
             'cnSensitivity': {'phi': 0.90576, 'pts': 0.7346},
             'codingRegionSizeGrch37': 0,
             'codingRegionSizeGrch38': 0,
-            'constraints': {'louef': 1.606, 'louefRank': 0, 'misZ': -0.7773, 'misZRank': 1, 'pli': 0.00090576, 'pliRank': 1, 'totalGenes': 1},
             'diseaseDesc': '',
             'endGrch37': None,
             'endGrch38': 14409,
@@ -74,7 +82,6 @@ class GeneAPITest(AuthenticationTestCase):
             'cnSensitivity': {},
             'codingRegionSizeGrch37': 0,
             'codingRegionSizeGrch38': 0,
-            'constraints': {},
             'diseaseDesc': '',
             'endGrch37': 29570,
             'endGrch38': 29570,

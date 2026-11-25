@@ -90,4 +90,6 @@ def _parse_transcript_record(record, genome_version):
     }
     if 'MANE_Select' in record.get('tag', []):
         transcript['is_mane_select'] = True
+    if 'Ensembl_canonical' in record.get('tag', []):
+        transcript['canonical'] = True
     return transcript

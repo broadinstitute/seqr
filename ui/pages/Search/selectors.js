@@ -280,8 +280,9 @@ export const getSearchGeneBreakdownValues = createSelector(
     ),
     search: searchesByHash[searchHash].search,
     ...(genesById[geneId] || {
-      geneId, geneSymbol: geneId, omimPhenotypes: [], constraints: {}, cnSensitivity: {}, sHet: {},
+      geneId, geneSymbol: geneId, omimPhenotypes: [], cnSensitivity: {}, sHet: {},
     }),
+    constraints: {},
   })),
 )
 

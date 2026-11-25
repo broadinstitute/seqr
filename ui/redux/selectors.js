@@ -125,6 +125,15 @@ export const getActiveDatasetsByIndividual = createSelector(
   }), {}),
 )
 
+export const getGeneConstraintsByGeneId = createSelector(
+  getTranscriptsById,
+  transcriptsById => Object.values(transcriptsById || {}).filter(
+    ({ constraints, isManeSelect, canonical }) => constraints && (isManeSelect || canonical),
+  ).sort((a, b) => (a.isManeSelect ? 1 : 0) - (b.isManeSelect ? 1 : 0)).reduce(
+    (acc, { geneId, constraints }) => ({ ...acc, [geneId]: constraints }), {},
+  ),
+)
+
 export const getNotesByFamilyType = createSelector(
   getFamilyNotesByGuid,
   notesByGuid => Object.values(notesByGuid).reduce((acc, note) => {

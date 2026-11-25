@@ -10,6 +10,8 @@ import { VerticalSpacer } from '../../Spacers'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import ShowGeneModal from '../../buttons/ShowGeneModal'
 import { ProteinSequence, TranscriptLink } from './VariantUtils'
+import { TranscriptConstraintLabels } from './VariantGene'
+import { getVariantMainGeneId } from '../../../utils/constants'
 import { toCamelcase, camelcaseToTitlecase } from '../../../utils/stringUtils'
 
 const AnnotationSection = styled.div`
@@ -135,6 +137,12 @@ const transcriptIdDetails = (transcript, variant, { transcriptsById, project, up
         <Label key={labelProps.content} size="small" horizontal {...labelProps} />
       )
     ))}
+    {!variant.svType && transcript.geneId === getVariantMainGeneId(variant) &&
+      transcriptsById[transcript.transcriptId]?.constraints && (
+      <div>
+        <TranscriptConstraintLabels constraints={transcriptsById[transcript.transcriptId].constraints} />
+      </div>
+    )}
     {
       variant.variantGuid && project?.canEdit && (
         <span>

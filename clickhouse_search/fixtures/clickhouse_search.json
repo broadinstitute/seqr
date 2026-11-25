@@ -1803,10 +1803,62 @@
       "phenotype_map_method": "3"
   }
 }, {
+    "model": "reference_data.transcriptinfo",
+    "pk": 100,
+    "fields": {
+        "gene_id": 60,
+        "transcript_id": "ENST00000383791",
+        "is_mane_select": true,
+        "canonical": false,
+        "chrom_grch38": "1",
+        "start_grch38": 11785723,
+        "end_grch38": 11806455,
+        "strand_grch38": "-"
+    }
+}, {
+    "model": "reference_data.transcriptinfo",
+    "pk": 101,
+    "fields": {
+        "gene_id": 60,
+        "transcript_id": "ENST00000408919",
+        "is_mane_select": false,
+        "canonical": true,
+        "chrom_grch38": "1",
+        "start_grch38": 11785723,
+        "end_grch38": 11806455,
+        "strand_grch38": "-"
+    }
+}, {
+    "model": "reference_data.transcriptinfo",
+    "pk": 102,
+    "fields": {
+        "gene_id": 61,
+        "transcript_id": "ENST00000234626",
+        "is_mane_select": true,
+        "canonical": true,
+        "chrom_grch38": "1",
+        "start_grch38": 91500851,
+        "end_grch38": 91525764,
+        "strand_grch38": "+"
+    }
+}, {
+    "model": "reference_data.transcriptinfo",
+    "pk": 103,
+    "fields": {
+        "gene_id": 70,
+        "transcript_id": "ENST00000619216",
+        "is_mane_select": true,
+        "canonical": true,
+        "chrom_grch38": "17",
+        "start_grch38": 38717636,
+        "end_grch38": 38724781,
+        "strand_grch38": "+"
+    }
+}, {
     "model": "reference_data.geneconstraint",
     "pk": 100,
     "fields": {
-        "gene": 60,
+        "transcript": 100,
         "mis_z": -0.7773,
         "mis_z_rank": 1,
         "louef": 1.606,
@@ -1818,7 +1870,7 @@
     "model": "reference_data.geneconstraint",
     "pk": 101,
     "fields": {
-        "gene": 61,
+        "transcript": 102,
         "mis_z": -0.7773,
         "mis_z_rank": 3,
         "louef": 1.606,
@@ -1830,13 +1882,25 @@
     "model": "reference_data.geneconstraint",
     "pk": 102,
     "fields": {
-        "gene": 70,
+        "transcript": 103,
         "mis_z": -0.7773,
         "mis_z_rank": 2,
         "louef": 1.606,
         "louef_rank": 0,
-        "pLI": 0.00090576,
-        "pLI_rank": 1
+        "pLI": null,
+        "pLI_rank": 3
+    }
+}, {
+    "model": "reference_data.geneconstraint",
+    "pk": 103,
+    "fields": {
+        "transcript": 101,
+        "mis_z": 2.1543,
+        "mis_z_rank": 3,
+        "louef": 0.1,
+        "louef_rank": 3,
+        "pLI": 0.99,
+        "pLI_rank": 0
     }
 }, {
     "model": "seqr.phenotypeprioritization",

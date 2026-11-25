@@ -779,7 +779,7 @@ GENE_FIELDS = {
     'gencodeGeneType', 'geneId', 'geneSymbol', 'startGrch37', 'startGrch38',
 }
 GENE_VARIANT_DISPLAY_FIELDS = {
-    'constraints', 'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc', 'clinGen', 'sHet',
+    'omimPhenotypes', 'mimNumber', 'cnSensitivity', 'genCc', 'clinGen', 'sHet',
 }
 GENE_VARIANT_DISPLAY_FIELDS.update(GENE_FIELDS)
 GENE_VARIANT_FIELDS = {

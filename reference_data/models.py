@@ -101,8 +101,8 @@ class LoadableModel(models.Model):
         file_path = download_file(cls.get_url(**kwargs))
 
         logger.info(f'Parsing file {file_path}')
-        open_file = gzip.open if file_path.endswith('.gz') else open
-        open_mode = 'rt' if file_path.endswith('.gz') else 'r'
+        open_file = gzip.open if file_path.endswith(('.gz', '.bgz')) else open
+        open_mode = 'rt' if file_path.endswith(('.gz', '.bgz')) else 'r'
         with open_file(file_path, open_mode) as f:
             header_fields = cls.get_file_header(f)
             for line in cls.get_file_iterator(f):
@@ -375,6 +375,7 @@ class TranscriptInfo(GeneMetadataModel):
 
     transcript_id = models.CharField(max_length=20, db_index=True, unique=True)  # without the version suffix
     is_mane_select = models.BooleanField(default=False)
+    canonical = models.BooleanField(default=False)
 
     chrom_grch37 = models.CharField(max_length=2, null=True, blank=True)
     start_grch37 = models.IntegerField(null=True, blank=True)
@@ -400,11 +401,26 @@ class TranscriptInfo(GeneMetadataModel):
         logger.info(f'Created {len(records)} {cls.__name__} records')
 
 
-class RefseqTranscript(LoadableModel):
+class TranscriptMetadataModel(LoadableModel):
+
+    transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
+
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def update_records(cls, **kwargs):
+        transcript_id_map = dict(TranscriptInfo.objects.values_list('transcript_id', 'id'))
+        skipped_transcripts = {None: 0}
+        super().update_records(transcript_id_map=transcript_id_map, skipped_transcripts=skipped_transcripts, **kwargs)
+        if skipped_transcripts[None]:
+            logger.info(f'Skipped {skipped_transcripts[None]} records with unrecognized or duplicated transcripts')
+
+
+class RefseqTranscript(TranscriptMetadataModel):
 
     URL = GENCODE_URL_TEMPLATE.format(path='', file='.metadata.RefSeq.gz', gencode_release=GeneInfo.CURRENT_VERSION)
 
-    transcript = models.OneToOneField(TranscriptInfo, on_delete=models.CASCADE)
     refseq_id = models.CharField(max_length=20)
 
     @staticmethod
@@ -423,45 +439,68 @@ class RefseqTranscript(LoadableModel):
             'refseq_id': record['refseq_id'],
         } if transcript else None
 
-    @classmethod
-    def update_records(cls, **kwargs):
-        transcript_id_map = dict(TranscriptInfo.objects.values_list('transcript_id', 'id'))
-        skipped_transcripts = {None: 0}
-        super().update_records(transcript_id_map=transcript_id_map, skipped_transcripts=skipped_transcripts, **kwargs)
-        if skipped_transcripts[None]:
-            logger.info(f'Skipped {skipped_transcripts[None]} records with unrecognized or duplicated transcripts')
 
+class GeneConstraint(TranscriptMetadataModel):
 
-# based on # ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3.1/functional_gene_constraint/fordist_cleaned_exac_r03_march16_z_pli_rec_null_data.txt
-class GeneConstraint(GeneMetadataModel):
-
-    CURRENT_VERSION = 'gnomad.v2.1.1.lof_metrics.by_gene'
-    URL = f'http://storage.googleapis.com/seqr-reference-data/gene_constraint/{CURRENT_VERSION}.txt'
-    RECORD_FIELDS = {
-        'gene_id': ('gene_id', lambda gene_id: gene_id.split(".")[0]),
-        'gene_symbol': ('gene', None),
-        'mis_z': ('mis_z', lambda value: float(value) if value != 'NaN' else -100),
-        'pLI': ('pLI', lambda value: float(value) if value != 'NA' else 0),
-        'louef': ('oe_lof_upper', lambda value: float(value) if value != 'NA' else 100),
+    CURRENT_VERSION = '4.1.2'
+    URL = f'https://storage.googleapis.com/gcp-public-data--gnomad/release/{CURRENT_VERSION}/constraint/gnomad.v{CURRENT_VERSION}.constraint_metrics.tsv.bgz'
+    SCORE_FIELDS = {
+        'mis_z': ('mis.z_score', 'no_exp_mis'),
+        'pLI': ('lof.pLI', 'no_exp_lof'),
+        'louef': ('lof.oe_ci.upper', 'no_exp_lof'),
     }
 
-    mis_z = models.FloatField()
-    mis_z_rank = models.IntegerField()
-    pLI = models.FloatField()
-    pLI_rank = models.IntegerField()
-    louef = models.FloatField()
-    louef_rank = models.IntegerField()
+    mis_z = models.FloatField(null=True)
+    mis_z_rank = models.IntegerField(null=True)
+    pLI = models.FloatField(null=True)
+    pLI_rank = models.IntegerField(null=True)
+    louef = models.FloatField(null=True)
+    louef_rank = models.IntegerField(null=True)
 
     class Meta:
         json_fields = ['mis_z', 'mis_z_rank', 'pLI', 'pLI_rank', 'louef', 'louef_rank']
 
     @classmethod
+    def parse_record(cls, record, transcript_id_map=None, skipped_transcripts=None, **kwargs):
+        transcript = None
+        # seqr annotates variants with Ensembl transcripts only, so RefSeq rows are not loaded
+        if record['transcript'].startswith('ENST'):
+            transcript = transcript_id_map.pop(record['transcript'], None)
+        if transcript:
+            constraint_flags = json.loads(record['constraint_flags'])
+            yield {
+                'transcript_id': transcript,
+                **{
+                    field: float(record[record_field]) if record[record_field] != 'NA' and flag not in constraint_flags else None
+                    for field, (record_field, flag) in cls.SCORE_FIELDS.items()
+                },
+            }
+        else:
+            skipped_transcripts[None] += 1
+            yield None
+
+    @classmethod
     def get_record_models(cls, records, **kwargs):
+        preferred_ids = set(dict(TranscriptInfo.objects.filter(
+            models.Q(is_mane_select=True) | models.Q(canonical=True),
+            id__in={record['transcript_id'] for record in records},
+        ).order_by('is_mane_select').values_list('gene_id', 'id')).values())
         # add _rank fields
         for field, order in [('mis_z', -1), ('pLI', -1), ('louef', 1)]:
-            for i, record in enumerate(sorted(records, key=lambda record: order * record[field])):
-                record['{}_rank'.format(field)] = i
+            rank_field = '{}_rank'.format(field)
+            rank = 0
+            for record in sorted(records, key=lambda record: (
+                record[field] is None, order * (record[field] or 0), record['transcript_id'] in preferred_ids,
+            )):
+                if record['transcript_id'] in preferred_ids:
+                    record[rank_field] = rank
+                    rank += 1
+                else:
+                    record[rank_field] = None if record[field] is None else rank
         return super().get_record_models(records, **kwargs)
+
+
+PREFERRED_TRANSCRIPT_Q = models.Q(transcript__is_mane_select=True) | models.Q(transcript__canonical=True)
 
 
 class GeneCopyNumberSensitivity(GeneMetadataModel):

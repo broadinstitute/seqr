@@ -65,7 +65,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
             (RefseqTranscript, {'transcript_id_map': {}, 'skipped_transcripts': {None: 0}}),
             (Omim, {**kwargs, 'omim_key': 'test_key'}),
             (dbNSFPGene, gene_kwargs),
-            (GeneConstraint, gene_kwargs),
+            (GeneConstraint, {**kwargs, 'transcript_id_map': {}, 'skipped_transcripts': {None: 0}}),
             (GeneCopyNumberSensitivity, gene_kwargs),
             (PrimateAI, gene_kwargs),
             (MGI, {**gene_kwargs, 'entrez_id_to_gene': {}}),
@@ -98,7 +98,7 @@ class NewDbUpdateAllReferenceDataTest(BaseUpdateAllReferenceDataTest):
         self.assertListEqual(sorted(DataVersions.objects.values_list('data_model_name', 'version')), [
             ('ClinGen', '2025-02-05'),
             ('GenCC', '2025-03-20'),
-            ('GeneConstraint', 'gnomad.v2.1.1.lof_metrics.by_gene'),
+            ('GeneConstraint', '4.1.2'),
             ('GeneCopyNumberSensitivity', 'Collins_rCNV_2022'),
             ('GeneInfo', '39'),
             ('GeneShet', '7939768'),

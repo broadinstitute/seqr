@@ -8,7 +8,9 @@ import {
   getLocusListIntervalsByChromProject,
   getSpliceOutliersByChromFamily,
   getProjectAnalysisGroupFamilyGuidsByGuid,
+  getGeneConstraintsByGeneId,
 } from './selectors'
+import { CONSTRAINT_TRANSCRIPTS_BY_ID } from '../shared/components/panel/fixtures'
 import {DYNAMIC_ANALYSIS_GROUP_GUID, FAMILY_GUID, GENE_ID, SEARCH, SEARCH_HASH, STATE} from "../pages/Search/fixtures";
 
 test('getVariantTagNotesByByFamilyVariants', () => {
@@ -84,4 +86,15 @@ test('getProjectAnalysisGroupFamilyGuidsByGuid', () => {
   expect(getProjectAnalysisGroupFamilyGuidsByGuid(STATE, {})).toEqual({
     DAG0000183_test: [],
   })
+})
+
+test('getGeneConstraintsByGeneId', () => {
+  expect(getGeneConstraintsByGeneId({ transcriptsById: CONSTRAINT_TRANSCRIPTS_BY_ID })).toEqual({
+    ENSG00000186092: CONSTRAINT_TRANSCRIPTS_BY_ID.ENST00000641515.constraints,
+    ENSG00000277258: CONSTRAINT_TRANSCRIPTS_BY_ID.ENST00000620225.constraints,
+  })
+  expect(getGeneConstraintsByGeneId({
+    transcriptsById: { ENST00000641515: { transcriptId: 'ENST00000641515', isManeSelect: true } },
+  })).toEqual({})
+  expect(getGeneConstraintsByGeneId({})).toEqual({})
 })

@@ -1312,22 +1312,20 @@ const clinsigSeverity = (variant, user, familiesByGuid, projectByGuid) => {
   return clinvarSeverity + hgmdSeverity
 }
 
+export const GENE_CONSTRAINT_VERSION = 'gnomAD v4.1.2'
 export const MISSENSE_THRESHHOLD = 3
-export const LOF_THRESHHOLD = 0.35
+export const LOF_THRESHHOLD = 0.45
 
 const PRIORITIZED_GENE_MAX_RANK = 1000
 
 export const getDecipherGeneLink = ({ geneId }) => `https://www.deciphergenomics.org/gene/${geneId}/overview/protein-genomic-info`
 
 const getGeneConstraintSortScore = ({ constraints }) => {
-  if (!constraints || constraints.louef === undefined) {
+  const { misZRank, louefRank } = constraints || {}
+  if ([misZRank, louefRank].some(rank => rank === undefined || rank === null)) {
     return Infinity
   }
-  let missenseOffset = constraints.misZ > MISSENSE_THRESHHOLD ? constraints.misZ : 0
-  if (constraints.louef > LOF_THRESHHOLD) {
-    missenseOffset /= MISSENSE_THRESHHOLD
-  }
-  return constraints.louef - missenseOffset
+  return misZRank + louefRank
 }
 
 const populationComparator =
@@ -1403,11 +1401,11 @@ const VARIANT_SORT_OPTONS = [
   {
     value: SORT_BY_CONSTRAINT,
     text: 'Constraint',
-    comparator: (a, b, genesById) => (
+    comparator: (a, b, genesById, _tag, _user, _family, _project, _geneData, geneConstraintsByGeneId) => (
       Math.min(...Object.keys(a.transcripts || {}).reduce(
-        (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
+        (acc, geneId) => [...acc, getGeneConstraintSortScore({ constraints: geneConstraintsByGeneId[geneId] })], [],
       )) - Math.min(...Object.keys(b.transcripts || {}).reduce(
-        (acc, geneId) => [...acc, getGeneConstraintSortScore(genesById[geneId] || {})], [],
+        (acc, geneId) => [...acc, getGeneConstraintSortScore({ constraints: geneConstraintsByGeneId[geneId] })], [],
       ))),
   },
   {

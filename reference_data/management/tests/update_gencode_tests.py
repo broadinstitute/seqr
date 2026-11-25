@@ -24,7 +24,7 @@ GTF_DATA = [
     'chr1	HAVANA	gene	621059	622053	.	-	.	gene_id "ENSG00000284662.1_2"; gene_type "protein_coding"; gene_name "OR4F16"; level 2; hgnc_id "HGNC:15079"; havana_gene "OTTHUMG00000002581.3_2"; remap_status "full_contig"; remap_num_mappings 1; remap_target_status "overlap";\n',
     'chr1	HAVANA	transcript	621059	622053	.	-	.	gene_id "ENSG00000284662.1_2"; transcript_id "ENST00000332831.4_2"; '
     'gene_type "protein_coding"; gene_name "OR4F16"; transcript_type "protein_coding"; transcript_name "OR4F16-201"; level 2; '
-    'protein_id "ENSP00000329982.2"; transcript_support_level "NA"; hgnc_id "HGNC:15079"; tag "basic"; tag "MANE_Select"; tag "CCDS"; '
+    'protein_id "ENSP00000329982.2"; transcript_support_level "NA"; hgnc_id "HGNC:15079"; tag "basic"; tag "Ensembl_canonical"; tag "MANE_Select"; tag "CCDS"; '
     'ccdsid "CCDS41221.1"; havana_gene "OTTHUMG00000002581.3_2"; havana_transcript "OTTHUMT00000007334.3_2"; remap_num_mappings 1; '
     'remap_status "full_contig"; remap_target_status "overlap";\n',
     # feature_type is 'CDS'
@@ -70,6 +70,9 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.mock_subprocess = patcher.start()
         self.mock_subprocess.return_value.wait.return_value = 0
         self.addCleanup(patcher.stop)
+        patcher = mock.patch('reference_data.models.GeneConstraint.update_records')
+        self.mock_update_constraint = patcher.start()
+        self.addCleanup(patcher.stop)
 
         self.gzipped_gtf_data = gzip.compress(''.join(GTF_DATA).encode())
         self._add_latest_responses()
@@ -90,6 +93,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000223972')
         self.assertEqual(trans_info.gene.gencode_release, 39)
         self.assertFalse(trans_info.is_mane_select)
+        self.assertFalse(trans_info.canonical)
         self.assertEqual(trans_info.refseqtranscript.refseq_id, 'NM_015658.4')
         trans_info = TranscriptInfo.objects.get(transcript_id='ENST00000332831')
         self.assertEqual(trans_info.start_grch37, 621059)
@@ -99,6 +103,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
         self.assertEqual(trans_info.gene.gene_id, 'ENSG00000284662')
         self.assertEqual(trans_info.gene.gencode_release, 39)
         self.assertTrue(trans_info.is_mane_select)
+        self.assertTrue(trans_info.canonical)
         self.assertEqual(trans_info.refseqtranscript.refseq_id, 'NR_122045.1')
 
     def _add_latest_responses(self):
@@ -154,8 +159,13 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             ('Done', None),
             ('Loaded 2 RefseqTranscript records', None),
             ('Skipped 2 records with unrecognized or duplicated transcripts', None),
+            ('Reloading dictionary seqrdb_gene_ids', None),
+            ('Updated GeneConstraint reference data from version "4.1.2" to version "4.1.2"', None),
+            ('Done', None),
+            ('Updated: GeneInfo, GeneConstraint', None),
         ])
         self.mock_subprocess.assert_not_called()
+        self.mock_update_constraint.assert_called_once_with(gene_ids_to_gene=mock.ANY, gene_symbols_to_gene=mock.ANY)
 
         self._has_expected_new_genes()
         gene_info = GeneInfo.objects.get(gene_id='ENSG00000235249')
@@ -193,7 +203,7 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             ('Updated 1 previously loaded GeneInfo records', None),
             ('Created 1 GeneInfo records', None),
             (f'==> gsutil mv {self.tmp_dir}/* gs://seqr-reference-data/gencode/', None),
-            ('Dropped 1 existing TranscriptInfo records', None),
+            ('Dropped 2 existing TranscriptInfo records', None),
             ('Created 2 TranscriptInfo records', None),
             ('Updating RefseqTranscript', None),
             (f'Downloading http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_39/gencode.v39.metadata.RefSeq.gz to {self.tmp_dir}/gencode.v39.metadata.RefSeq.gz', None),
@@ -205,13 +215,15 @@ class UpdateGencodeTest(ReferenceDataCommandTestCase):
             ('Skipped 1 records with unrecognized or duplicated transcripts', None),
             ('Updated GeneInfo reference data from version "31" to version "39"', None),
             ('Reloading dictionary seqrdb_gene_ids', None),
+            ('Updated GeneConstraint reference data from version "4.1.2" to version "4.1.2"', None),
             ('Done', None),
-            ('Updated: GeneInfo', None),
+            ('Updated: GeneInfo, GeneConstraint', None),
         ])
+        self.mock_update_constraint.assert_called_once_with(gene_ids_to_gene=mock.ANY, gene_symbols_to_gene=mock.ANY)
 
         self._has_expected_new_genes()
 
-        self.assertEqual(TranscriptInfo.objects.all().count(), 3)
+        self.assertEqual(TranscriptInfo.objects.all().count(), 4)
         self._has_expected_new_transcripts()
 
         self.assertEqual(RefseqTranscript.objects.count(), 3)

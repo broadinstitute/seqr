@@ -54,6 +54,30 @@ SEARCH_RESPONSE_KEYS = {
     'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid', 'totalSampleCounts',
 }
 
+CONSTRAINTS = {
+    'misZ': -0.7773, 'misZRank': 1, 'louef': 1.606, 'louefRank': 0, 'pli': 0.00090576, 'pliRank': 1, 'totalGenes': 5,
+}
+CONSTRAINT_TRANSCRIPTS = {
+    'ENST00000383791': {
+        'transcriptId': 'ENST00000383791', 'geneId': 'ENSG00000177000', 'isManeSelect': True, 'canonical': False,
+        'constraints': CONSTRAINTS,
+    },
+    'ENST00000408919': {
+        'transcriptId': 'ENST00000408919', 'geneId': 'ENSG00000177000', 'isManeSelect': False, 'canonical': True,
+        'constraints': {
+            **CONSTRAINTS, 'misZ': 2.1543, 'misZRank': 3, 'louef': 0.1, 'louefRank': 3, 'pli': 0.99, 'pliRank': 0,
+        },
+    },
+    'ENST00000234626': {
+        'transcriptId': 'ENST00000234626', 'geneId': 'ENSG00000097046', 'isManeSelect': True, 'canonical': True,
+        'constraints': {**CONSTRAINTS, 'misZRank': 3},
+    },
+    'ENST00000619216': {
+        'transcriptId': 'ENST00000619216', 'geneId': 'ENSG00000275023', 'isManeSelect': True, 'canonical': True,
+        'constraints': {**CONSTRAINTS, 'misZRank': 2, 'pli': None, 'pliRank': 3},
+    },
+}
+
 
 class ClickhouseSearchTestCase(AnvilAuthenticationTestCase):
 
@@ -194,6 +218,20 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
             })
             if not is_37:
                 expected_response['omimIntervals'] = mock.ANY
+            variant_transcripts = [
+                variant.get('transcripts', {}) for variant in expected_response['variantsById'].values()
+            ]
+            gene_ids = {gene_id for transcripts in variant_transcripts for gene_id in transcripts}
+            transcript_ids = {
+                transcript.get('transcriptId') for transcripts in variant_transcripts
+                for gene_transcripts in transcripts.values() for transcript in gene_transcripts
+            }
+            transcripts_by_id = {
+                transcript_id: transcript for transcript_id, transcript in CONSTRAINT_TRANSCRIPTS.items()
+                if transcript_id in transcript_ids or transcript['geneId'] in gene_ids
+            }
+            if transcripts_by_id:
+                expected_response['transcriptsById'] = transcripts_by_id
         self.assertDictEqual(response.json(), expected_response)
 
         if not skip_cache_check:
@@ -1155,11 +1193,13 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         sv_genes = {
             'ENSG00000184986': mock.ANY, 'ENSG00000275023': mock.ANY, 'ENSG00000277258': mock.ANY,
         }
+        sv_transcripts = {'ENST00000619216': CONSTRAINT_TRANSCRIPTS['ENST00000619216']}
         self._assert_expected_lookup(
             'phase2_DEL_chr14_4640', expected_sv_variant, 'variant_lookup_results__phase2_DEL_chr14_4640__38',
             additional_variant=expected_gcnv_variant, cached_variants=[SV_VARIANT4, GCNV_VARIANT4], skip_fields={
                 'variantFunctionalDataByGuid', 'variantNotesByGuid', 'variantTagsByGuid',
             }, expected_individuals=expected_sv_individuals, sample_type='WGS', locusListsByGuid={}, genesById=sv_genes,
+            transcriptsById=sv_transcripts,
         )
 
         self.login_manager()
@@ -1301,7 +1341,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
 
         self._assert_expected_lookup(
             'phase2_DEL_chr14_4640', SV_VARIANT4, 'variant_lookup_results__phase2_DEL_chr14_4640__38',
-            additional_variant=GCNV_VARIANT4,  sample_type='WGS', genesById=sv_genes,
+            additional_variant=GCNV_VARIANT4,  sample_type='WGS', genesById=sv_genes, transcriptsById=sv_transcripts,
             project_guids=['R0001_1kg', 'R0004_non_analyst_project'], family_guids=['F000002_2', 'F000014_14'],
             individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733', 'I000018_na21234', 'I000019_na21987', 'I000021_na21654'],
         )
@@ -1310,7 +1350,7 @@ class ClickhouseSearchTests(ClickhouseSearchTestCase):
         self._assert_expected_lookup(
             'suffix_140608_DUP', GCNV_VARIANT4, 'variant_lookup_results__suffix_140608_DUP__38',
             sample_type='WES', genesById={'ENSG00000275023': mock.ANY, 'ENSG00000277258': mock.ANY},
-            project_guids=['R0001_1kg'], family_guids=['F000002_2'],
+            transcriptsById=sv_transcripts, project_guids=['R0001_1kg'], family_guids=['F000002_2'],
             individual_guids=['I000004_hg00731', 'I000005_hg00732', 'I000006_hg00733'],
         )
 

@@ -1023,6 +1023,7 @@
         "gene_id": 48,
         "transcript_id": "ENST00000258436",
         "is_mane_select": true,
+        "canonical": false,
         "chrom_grch37": "1",
         "start_grch37": 696291,
         "end_grch37": 697369,
@@ -1041,6 +1042,7 @@
         "gene_id": 2,
         "transcript_id": "ENST00000624735",
         "is_mane_select": false,
+        "canonical": false,
         "chrom_grch37": "1",
         "start_grch37": 696291,
         "end_grch37": 697369,
@@ -1049,6 +1051,25 @@
         "chrom_grch38": "1",
         "start_grch38": 760911,
         "end_grch38": 761989,
+        "strand_grch38": "+",
+        "coding_region_size_grch38": 0
+    }
+}, {
+    "model": "reference_data.transcriptinfo",
+    "pk": 3,
+    "fields": {
+        "gene_id": 1,
+        "transcript_id": "ENST00000456328",
+        "is_mane_select": false,
+        "canonical": true,
+        "chrom_grch37": "1",
+        "start_grch37": 11869,
+        "end_grch37": 14409,
+        "strand_grch37": "+",
+        "coding_region_size_grch37": 0,
+        "chrom_grch38": "1",
+        "start_grch38": 11869,
+        "end_grch38": 14409,
         "strand_grch38": "+",
         "coding_region_size_grch38": 0
     }
@@ -1158,12 +1179,38 @@
     "model": "reference_data.geneconstraint",
     "pk": 1,
     "fields": {
-        "gene": 1,
+        "transcript": 3,
         "mis_z": -0.7773,
         "mis_z_rank": 1,
         "louef": 1.606,
         "louef_rank": 0,
         "pLI": 0.00090576,
+        "pLI_rank": 1
+    }
+},
+{
+    "model": "reference_data.geneconstraint",
+    "pk": 2,
+    "fields": {
+        "transcript": 2,
+        "mis_z": 0.4870,
+        "mis_z_rank": 0,
+        "louef": 1.378,
+        "louef_rank": 0,
+        "pLI": 0.0000014221,
+        "pLI_rank": 1
+    }
+},
+{
+    "model": "reference_data.geneconstraint",
+    "pk": 3,
+    "fields": {
+        "transcript": 1,
+        "mis_z": 2.1543,
+        "mis_z_rank": 0,
+        "louef": 0.9173,
+        "louef_rank": 0,
+        "pLI": 0.000001047,
         "pLI_rank": 1
     }
 },
@@ -1470,7 +1517,7 @@
     "model": "reference_data.dataversions",
     "pk": "GeneConstraint",
     "fields": {
-        "version": "gnomad.v2.1.1.lof_metrics.by_gene"
+        "version": "4.1.2"
     }
 },
 {

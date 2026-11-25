@@ -58,6 +58,7 @@ class Command(BaseCommand):
             data_model_name = GeneInfo.__name__
             self._update_gencode(current_versions.get(data_model_name), options['gene_symbol_change_dir'])
             self._track_success_updates(data_model_name, latest_version, current_versions, updated)
+            to_update.setdefault(GeneConstraint, latest_versions[GeneConstraint])
             GeneIdDict.reload()
 
 
@@ -97,7 +98,7 @@ class Command(BaseCommand):
     @staticmethod
     def _update_gencode(current_data_version, gene_symbol_change_dir):
         # Download latest version first, and then add any genes from old releases not included in the latest release
-        # Old gene ids are used in the gene constraint table and other datasets, as well as older sequencing data
+        # Old gene ids are used in other datasets, as well as older sequencing data
         new_versions = GeneInfo.ALL_GENCODE_VERSIONS
         if current_data_version:
             new_versions = new_versions[:new_versions.index(current_data_version.version)]
