@@ -3,6 +3,7 @@ from typing import ClassVar
 
 import luigi
 import luigi.format
+import pandas as pd
 
 from loading_pipeline.lib.core import ReferenceGenome
 from loading_pipeline.lib.tasks.base.base_vcf import (
@@ -98,8 +99,14 @@ class SingleSampleSvVCFTask(BaseVCFTask):
         for target in self.input():
             target.localize()
 
-        input_target = self.input()[0]
+        vcf_target = self.preprocess_vcf(self.input()[0])
+        df = self.import_vcf(vcf_target)
+        df = self.process_vcf_df(df)
 
+        header_rows = self._get_header_rows(self.input()[0])
+        return [self.export_vcf(df, [self.sample_id], header_rows)]
+
+    def preprocess_vcf(self, input_target: luigi.LocalTarget) -> luigi.LocalTarget:
         if self.is_male:
             haploid_target = luigi.LocalTarget(is_tmp=True)
             self.run_bcftools(
@@ -138,12 +145,12 @@ class SingleSampleSvVCFTask(BaseVCFTask):
             [input_target],
             output_type='v',
         )
+        return annotated_target
 
-        df = self.import_vcf(input_target)
+    @staticmethod
+    def process_vcf_df(df: pd.DataFrame) -> pd.DataFrame:
         # TODO process, format info fields back?
-
-        header_rows = self._get_header_rows(self.input()[0])
-        return [self.export_vcf(df, [self.sample_id], header_rows)]
+        return df
 
     @staticmethod
     def _get_header_rows(vcf_target: LocalizableTarget) -> list[str]:
