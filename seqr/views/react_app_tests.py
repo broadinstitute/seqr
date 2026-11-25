@@ -112,8 +112,9 @@ class AppPageTest(object):
             'https://github.com/broadinstitute/seqr/discussions/categories/feature-updates.atom',
             body=FEATURE_UPDATE_FEED,
         )
-        response = self.client.get(url)
+        response = self.client.get(url, secure=True)
         self._check_page_html(response, 'test_user_no_policies', user_email='test_user_no_policy@test.com', ga_token_id=MOCK_GA_TOKEN, vlm_enabled=True, last_feature_update='2023-11-08T15:11:31+00:00')
+        self.assertEqual(response.get('Strict-Transport-Security'), 'max-age=31536000')
 
         mock_redis.return_value.set.assert_called_with('feature_updates_latest_date', '"2023-11-08T15:11:31+00:00"')
         mock_redis.return_value.expire.assert_called_with('feature_updates_latest_date', 10800)
