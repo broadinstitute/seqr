@@ -1,6 +1,7 @@
 # _seqr_ Changes
 
 ## dev
+* Adds Strict-Transport-Security header to restrict all traffic to HTTPS
 
 ## 11/24/26
 * Adds AlphaGenome in silico score to clickhouse (REQUIRES DB MIGRATION)
