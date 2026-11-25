@@ -183,7 +183,7 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
                     'END': end,
                     'sv_type_detail': None,
                     'CPX_INTERVALS': None,
-                    'end_chrom': 'chr1',
+                    'CHR2': None,
                     'END2': None,
                     'SVLEN': end - start,
                     **input_fields,
@@ -235,7 +235,7 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
                 (10500, 11000): [(NEAREST_TSS, 'TBX30')],
             },
             'DEL',
-            input_overrides={(10500, 11000): {'#CHROM': 'chr3', 'end_chrom': 'chr3'}},
+            input_overrides={(10500, 11000): {'#CHROM': 'chr3', 'CHR2': 'chr1'}},
         )
 
         df = pd.DataFrame.from_dict(
@@ -247,7 +247,7 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
                     'END': 4000,
                     'sv_type_detail': None,
                     'CPX_INTERVALS': None,
-                    'end_chrom': 'chr4',
+                    'CHR2': None,
                     'END2': None,
                     'SVLEN': 3100,
                 },
@@ -395,9 +395,14 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
             input_overrides={
                 **{(pos, end): {'END2': pos} for pos, end in list(expected)[:7]},
                 (1500, 1500): {'END2': 1500, 'SVLEN': 1000},
-                (500, 500): {'#CHROM': 'chr2', 'END2': 250, 'SVLEN': 1000},
+                (500, 500): {
+                    '#CHROM': 'chr2',
+                    'CHR2': 'chr1',
+                    'END2': 250,
+                    'SVLEN': 1000,
+                },
                 (30, 30): {'END2': 3030},
-                (550, 550): {'end_chrom': 'chr3', 'END2': 15050},
+                (550, 550): {'CHR2': 'chr3', 'END2': 15050},
                 (520, 520): {'END2': 250},
                 (1400, 1400): {'END2': 4600},
             },
@@ -421,12 +426,12 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
             },
             'CTX',
             input_overrides={
-                (5000, 5000): {'#CHROM': 'chr2', 'end_chrom': 'chr1', 'END2': 2099},
-                (6000, 6000): {'#CHROM': 'chr2', 'end_chrom': 'chr1', 'END2': 3000},
-                (700, 700): {'end_chrom': 'chr3', 'END2': 15050},
-                (12000, 12000): {'#CHROM': 'chr3', 'end_chrom': 'chr1', 'END2': None},
+                (5000, 5000): {'#CHROM': 'chr2', 'CHR2': 'chr1', 'END2': 2099},
+                (6000, 6000): {'#CHROM': 'chr2', 'CHR2': 'chr1', 'END2': 3000},
+                (700, 700): {'CHR2': 'chr3', 'END2': 15050},
+                (12000, 12000): {'#CHROM': 'chr3', 'CHR2': 'chr1', 'END2': None},
             },
-            end_chrom='chr2',
+            CHR2='chr2',
             END2=1,
             SVLEN=-1,
         )
@@ -527,12 +532,12 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
                 },
                 (14900, 15500): {
                     '#CHROM': 'chr3',
+                    'CHR2': 'chr1',
                     'sv_type_detail': 'INVdel',
                     'CPX_INTERVALS': [
                         {'chrom': '3', 'start': 14900, 'end': 15200, 'type': 'INV'},
                         {'chrom': '3', 'start': 15200, 'end': 15500, 'type': 'DEL'},
                     ],
-                    'end_chrom': 'chr3',
                 },
                 (1100, 3200): {
                     'sv_type_detail': 'delINVdel',

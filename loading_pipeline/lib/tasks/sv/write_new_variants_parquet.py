@@ -1,16 +1,17 @@
+import json
+
 import luigi
 import luigi.util
 import pandas as pd
-from pyliftover import LiftOver
 
 from loading_pipeline.lib.annotations.enums import (
     SV_TYPE_DETAILS,
     SV_TYPES,
 )
-from loading_pipeline.lib.core import ReferenceGenome
 from loading_pipeline.lib.misc.sv import (
     annotate_gene_consequences,
     match_gnomad_af,
+    run_strvctvre,
 )
 from loading_pipeline.lib.paths import (
     new_variants_parquet_path,
@@ -28,9 +29,6 @@ from loading_pipeline.lib.tasks.reference_data.updated_reference_dataset_parquet
 from loading_pipeline.lib.tasks.sv.write_deduplicated_vcf import (
     WriteDeduplicatedSvVcfTask,
 )
-
-CONTIGS_37 = list(ReferenceGenome.GRCh37.contig_recoding().values())
-TRUVARI_INFO_COLS = ['TRUVARI_FILTER', 'CollapseId', 'NumCollapsed', 'NumConsolidated']
 
 
 @luigi.util.inherits(BaseLoadingRunParams)
@@ -57,6 +55,11 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
                 reference_dataset=ReferenceDataset.gnomad_svs,
                 attempt_id=self.attempt_id,
             ),
+            self.clone(
+                UpdatedReferenceDatasetParquetNoHailTask,
+                reference_dataset=ReferenceDataset.strvctre_phylop,
+                attempt_id=self.attempt_id,
+            ),
         ]
 
     def create_data_frame(self) -> pd.DataFrame:
@@ -69,6 +72,7 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             output_type='v',
         )
         df = self.import_vcf(filtered_target)
+        original_columns = df.columns
 
         # Annotate gene consequences
         invalid_sv_types = df['SVTYPE'][~df['SVTYPE'].isin(SV_TYPES)]
@@ -102,107 +106,63 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
         else:
             df['CPX_INTERVALS'] = None
 
-        df['END'] = df['END'].astype(int)
-        if 'END2' in df:
-            df['end_chrom'] = (
-                df.pop('CHR2').where(df['END2'].notna()).fillna(df['#CHROM'])
-            )
-            df['END2'] = pd.to_numeric(df['END2'])
-        else:
-            df['end_chrom'] = df['#CHROM']
-            df['END2'] = None
-            if 'CHR2' in df:
-                df = df.drop(columns=['CHR2'])
-
         gencode_df = self._read_parquet(self.input()[1])
         consequences_by_variant = annotate_gene_consequences(df, gencode_df)
-        df['sorted_gene_consequences'] = [
-            [
-                {
-                    'geneId': consequence['geneId'],
-                    'majorConsequence': consequence['majorConsequence'],
-                }
-                for consequence in consequences_by_variant.get(variant, [])
-            ]
-            for variant in df.index
-        ]
-
-        # Run liftover
-        lo = LiftOver('loading_pipeline/var/liftover/grch38_to_grch37.over.chain.gz')
-        df[['lifted_over_chrom', 'lifted_over_pos']] = [
-            self._liftover(lo, c, p)
-            for c, p in zip(df['#CHROM'], df['POS'], strict=False)
-        ]
-
-        df['END'] = df.pop('END2').fillna(df['END']).astype(int)
-        df['rg37_locus_end'] = [
-            {'contig': chrom, 'position': pos} if chrom else None
-            for chrom, pos in (
-                self._liftover(lo, c, p)
-                for c, p in zip(df['end_chrom'], df['END'], strict=False)
-            )
+        df['sortedGeneConsequences'] = [
+            consequences_by_variant.get(variant, []) for variant in df.index
         ]
 
         # Add gnomad frequency
         gnomad_df = self._read_parquet(self.input()[2])
         gnomad_lookup = match_gnomad_af(df, gnomad_df)
         df['populations'] = df['ID'].map(
-            lambda vid: {
-                'gnomad_svs': {
-                    k: v for k, v in gnomad_lookup[vid].items() if k not in ('ac', 'an')
-                }
-                if vid in gnomad_lookup
-                else None,
-            },
+            lambda vid: {'gnomad_svs': gnomad_lookup.get(vid)},
         )
 
-        # Format annotations
-        df['chrom'] = df.pop('#CHROM').str.removeprefix('chr')
-        df['end_chrom'] = df['end_chrom'].str.removeprefix('chr')
-        df['end_chrom'] = df['end_chrom'].mask(df['end_chrom'] == df['chrom'])
-        df.loc[
-            (df['SVTYPE'] == 'INS') & df['end_chrom'].notna(),
-            'sv_source_detail',
-        ] = df['end_chrom'].map(
-            lambda chrom: {'chrom': chrom},
+        # Add StrVCTVRE
+        with self._open_parquet(self.input()[3]) as f:
+            strvctvre = run_strvctvre(df, f)
+        df['predictions'] = df.index.map(lambda vid: {'strvctvre': strvctvre.get(vid)})
+
+        df['svDetail'] = df.pop('CPX_INTERVALS').map(
+            lambda v: {'cpxIntervals': v} if isinstance(v, list) and v else {},
         )
-        df['end_chrom'] = df['end_chrom'].mask(df['SVTYPE'] == 'INS')
-        df['xpos'] = (
-            df['chrom'].replace({'X': '23', 'Y': '24'}).astype(int) * 1_000_000_000
-            + df['POS']
+        df['svDetail'] = df['svDetail'].combine(
+            df.pop('sv_type_detail'),
+            lambda d, v: d | {'typeDetail': v} if pd.notna(v) else d,
         )
-        df['predictions'] = (
-            df.pop('StrVCTVRE').astype(float).map(lambda score: {'strvctvre': score})
-        )
+        if 'CHR2' in df:
+            has_source = (
+                (df['SVTYPE'] == 'INS')
+                & df['CHR2'].notna()
+                & (df['CHR2'] != df['#CHROM'])
+            )
+            df.loc[has_source, 'svDetail'] = df.loc[has_source, 'svDetail'].combine(
+                df.loc[has_source, 'CHR2'],
+                lambda d, chrom: d | {'sourceChrom': chrom.removeprefix('chr')},
+            )
+        df['svDetail'] = df['svDetail'].map(json.dumps)
 
         # Add serial integer index
         max_key_line = self.find_vcf_header_line(self.input()[0][0], '##maxKey')
         curr_max_key = int(max_key_line.removeprefix('##maxKey=').strip())
         df['key'] = range(curr_max_key + 1, curr_max_key + 1 + len(df))
 
-        return (
-            df.drop(
-                columns=['REF', 'FILTER', 'QUAL', 'SVLEN', *TRUVARI_INFO_COLS],
-            )
-            .rename(
-                columns={'ID': 'variant_id', 'SVTYPE': 'sv_type'},
-            )
-            .rename(columns=self._to_camel_case)
-        )
+        added_columns = df.columns.difference(original_columns)
+        id_cols = ['key', 'ID']
+        rename_cols = {'ID': 'variantId', 'SVTYPE': 'svType'}
+        cols = sorted({*added_columns, *rename_cols} - set(id_cols))
+        return df[[*id_cols, *cols]].rename(columns=rename_cols)
 
     @staticmethod
-    def _read_parquet(input_target: luigi.Target, **kwargs) -> pd.DataFrame:
-        pq_input = input_target
-        pq_input.format = luigi.format.Nop
-        with pq_input.open() as f:
+    def _open_parquet(input_target: luigi.Target):
+        input_target.format = luigi.format.Nop
+        return input_target.open()
+
+    @classmethod
+    def _read_parquet(cls, input_target: luigi.Target, **kwargs) -> pd.DataFrame:
+        with cls._open_parquet(input_target) as f:
             return pd.read_parquet(f, **kwargs)
-
-    @staticmethod
-    def _liftover(lo, chrom, pos):
-        result = lo.convert_coordinate(chrom, pos - 1)
-        if result and result[0][0] not in CONTIGS_37:
-            result = None
-        return (result[0][0], result[0][1] + 1) if result else (None, None)
 
     @staticmethod
     def _parse_cpx_interval(interval):
@@ -219,8 +179,3 @@ class WriteNewSvVariantsParquetTask(BaseWriteParquetFromVcfTask):
             'end': int(end),
             'type': sv_type,
         }
-
-    @staticmethod
-    def _to_camel_case(snake_case_str):
-        converted = snake_case_str.replace('_', ' ').title().replace(' ', '')
-        return converted[0].lower() + converted[1:]

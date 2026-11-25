@@ -173,14 +173,14 @@
       "vest": null
     }
 }, {
-    "model": "clickhouse_search.keylookupsv",
+    "model": "clickhouse_search.keylookupgatksv",
     "pk": 101,
     "fields": {
       "key": 101,
       "variant_id": "suffix_19107_DEL_013746"
     }
 }, {
-    "model": "clickhouse_search.variantssv",
+    "model": "clickhouse_search.variantsgatksv",
     "pk": 101,
     "fields": {
       "key": 101,

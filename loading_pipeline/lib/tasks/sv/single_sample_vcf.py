@@ -24,8 +24,6 @@ class SingleSampleVCFTask(BaseVCFTask):
     vcf_sample_id = luigi.OptionalParameter(default=None)
 
     INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
-        'ALGORITHMS': ('.', 'String'),
-        'BOTHSIDES_SUPPORT': ('0', 'Flag'),
         'CHR2': ('1', 'String'),
         'CPX_INTERVALS': ('.', 'String'),
         'CPX_TYPE': ('1', 'String'),
@@ -33,7 +31,6 @@ class SingleSampleVCFTask(BaseVCFTask):
         'END2': ('1', 'Integer'),
         'SVLEN': ('1', 'Integer'),
         'SVTYPE': ('1', 'String'),
-        'StrVCTVRE': ('1', 'String'),
     }
 
     FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
