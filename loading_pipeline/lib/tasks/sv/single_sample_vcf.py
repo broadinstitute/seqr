@@ -28,12 +28,18 @@ class SingleSampleVCFTask(BaseVCFTask):
 
     def requires(self) -> list[luigi.Task]:
         sample_id = self.vcf_sample_id or self.sample_id
+        output_filename = self.output_filename()
         return [
             SingleSampleSvVCFTask(
                 pathname=self.path_template.replace('*', f'{sample_id}.sv'),
-                output_filename=self.output_filename(),
+                output_filename=output_filename,
                 sample_id=self.sample_id,
                 is_male=self.is_male
+            ),
+            SingleSampleCnvVCFTask(
+                pathname=self.path_template.replace('*', f'{sample_id}.sv'),
+                output_filename=output_filename,
+                sample_id=self.sample_id,
             ),
         ]
 
@@ -55,11 +61,10 @@ class SingleSampleVCFTask(BaseVCFTask):
         return self.input()
 
 
-class SingleSampleSvVCFTask(BaseVCFTask):
+class BaseSingleSampleVCFTask(BaseVCFTask):
     pathname = luigi.Parameter()
     output_filename = luigi.Parameter()
     sample_id = luigi.Parameter()
-    is_male = luigi.BoolParameter()
 
     INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
         'CHR2': ('1', 'String'),
@@ -90,10 +95,7 @@ class SingleSampleSvVCFTask(BaseVCFTask):
         ]
 
     def vcf_path(self) -> str:
-        suffix = 'sv_norm'
-        if self.is_male:
-            suffix = f'male.{suffix}'
-        return f'{self.output_filename}.{suffix}.vcf.gz'
+        return f'{self.output_filename}.{self.output_suffix()}.vcf.gz'
 
     def prepare_vcf_inputs(self) -> list[luigi.LocalTarget]:
         for target in self.input():
@@ -107,25 +109,6 @@ class SingleSampleSvVCFTask(BaseVCFTask):
         return [self.export_vcf(df, [self.sample_id], header_rows)]
 
     def preprocess_vcf(self, input_target: luigi.LocalTarget) -> luigi.LocalTarget:
-        if self.is_male:
-            haploid_target = luigi.LocalTarget(is_tmp=True)
-            self.run_bcftools(
-                ['+setGT'],
-                haploid_target,
-                [input_target],
-                output_type='u',
-                plugin_options=[
-                    '--',
-                    '--target-gt',
-                    'q',
-                    '--new-gt',
-                    'c:1',
-                    '--include',
-                    f'CHROM="chrY" || (CHROM="chrX" && ((POS>{PAR1_END} && POS<{PAR2_START}) || (POS<={PAR1_END} && INFO/END>{PAR1_END})))',
-                ],
-            )
-            input_target = haploid_target
-
         annotated_target = luigi.LocalTarget(is_tmp=True)
         rand_id = random.randint(10_000_000, 99_999_999)  # noqa: S311 # nosec
         self.run_bcftools(
@@ -170,3 +153,72 @@ class SingleSampleSvVCFTask(BaseVCFTask):
                         header_rows.append(line.rstrip('\n'))
 
         return header_rows
+
+
+@luigi.util.inherits(BaseSingleSampleVCFTask)
+class SingleSampleSvVCFTask(BaseSingleSampleVCFTask):
+    is_male = luigi.BoolParameter()
+
+    INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
+        **BaseSingleSampleVCFTask.INFO_FIELDS,
+    }
+
+    FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
+        **BaseSingleSampleVCFTask.FORMAT_FIELDS,
+    }
+
+    def output_suffix(self) -> str:
+        suffix = 'sv_norm'
+        if self.is_male:
+            suffix = f'male.{suffix}'
+        return suffix
+
+    def preprocess_vcf(self, input_target: luigi.LocalTarget) -> luigi.LocalTarget:
+        if self.is_male:
+            haploid_target = luigi.LocalTarget(is_tmp=True)
+            self.run_bcftools(
+                ['+setGT'],
+                haploid_target,
+                [input_target],
+                output_type='u',
+                plugin_options=[
+                    '--',
+                    '--target-gt',
+                    'q',
+                    '--new-gt',
+                    'c:1',
+                    '--include',
+                    f'CHROM="chrY" || (CHROM="chrX" && ((POS>{PAR1_END} && POS<{PAR2_START}) || (POS<={PAR1_END} && INFO/END>{PAR1_END})))',
+                ],
+            )
+            input_target = haploid_target
+
+        return super().process_vcf(input_target)
+
+    @staticmethod
+    def process_vcf_df(df: pd.DataFrame) -> pd.DataFrame:
+        # TODO
+        return super().process_vcf_df()
+
+
+@luigi.util.inherits(BaseSingleSampleVCFTask)
+class SingleSampleCnvVCFTask(BaseSingleSampleVCFTask):
+    INFO_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
+        **BaseSingleSampleVCFTask.INFO_FIELDS,
+    }
+
+    FORMAT_FIELDS: ClassVar[dict[str, tuple[str, str]]] = {
+        **BaseSingleSampleVCFTask.FORMAT_FIELDS,
+    }
+
+    def output_suffix(self) -> str:
+        return 'cnv_norm'
+
+    def preprocess_vcf(self, input_target: luigi.LocalTarget) -> luigi.LocalTarget:
+        # TODO
+        return super().process_vcf(input_target)
+
+    @staticmethod
+    def process_vcf_df(df: pd.DataFrame) -> pd.DataFrame:
+        # TODO
+        return super().process_vcf_df()
