@@ -54,7 +54,12 @@ CreateLocusList.propTypes = {
   value: PropTypes.oneOfType([PropTypes.object, PropTypes.string]),
 }
 
-const redirectGeneLists = history => () => history.push('/gene_lists')
+const GENE_LISTS_PATH = '/summary_data/gene_lists'
+
+const redirectGeneLists = history => () => (
+  history.location.pathname.startsWith(GENE_LISTS_PATH) ?
+    history.replace(GENE_LISTS_PATH) : history.push(GENE_LISTS_PATH)
+)
 
 const DeleteLocusList = React.memo(({ locusList, onSubmit, size, iconOnly, history }) => (
   <DeleteButton

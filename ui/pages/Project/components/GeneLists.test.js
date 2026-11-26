@@ -4,8 +4,11 @@ import Adapter from '@wojtekmaj/enzyme-adapter-react-17'
 import configureStore from 'redux-mock-store'
 import thunk from 'redux-thunk'
 import { Provider } from 'react-redux'
+import { MemoryRouter } from 'react-router-dom'
 
-import { getLastFetchUrl, getLastFetchOptions, getLastFetchBody, flushAll } from 'shared/utils/testHelpers'
+import {
+  getLastFetchUrl, getLastFetchOptions, getLastFetchBody, flushAll, mockFetchResponse,
+} from 'shared/utils/testHelpers'
 import { GeneLists, AddGeneListsButton } from './GeneLists'
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -48,6 +51,41 @@ test('dispatches an update when a gene list is removed', () => {
   expect(getLastFetchUrl()).toEqual(`/api/project/${STATE_WITH_2_FAMILIES.currentProjectGuid}/delete_locus_lists`)
   expect(getLastFetchOptions().method).toEqual('POST')
   expect(getLastFetchBody()).toEqual({ locusListGuids: ['LL00001_locus_list'], delete: true })
+})
+
+test('removes a deleted gene list from the project and redirects to the gene lists page', async () => {
+  const state = {
+    ...STATE_WITH_2_FAMILIES,
+    locusListsByGuid: {
+      LL00001_locus_list: { ...STATE_WITH_2_FAMILIES.locusListsByGuid.LL00001_locus_list, canEdit: true, items: [] },
+    },
+    locusListLoading: { isLoading: false },
+    modal: { 'R0237_1000_genomes_demo-Known Genes-genes': { open: true } },
+  }
+  const store = configureStore([thunk])(state)
+  const wrapper = mount(
+    <Provider store={store}>
+      <MemoryRouter>
+        <GeneLists />
+      </MemoryRouter>
+    </Provider>,
+  )
+
+  mockFetchResponse({ locusListsByGuid: { LL00001_locus_list: null } })
+  wrapper.find('DispatchRequestButton[buttonContent="Delete Gene List"]').find('Confirm').prop('onConfirm')()
+  await flushAll()
+
+  expect(getLastFetchUrl()).toEqual('/api/locus_lists/LL00001_locus_list/delete')
+  expect(store.getActions()).toContainEqual({
+    type: 'RECEIVE_DATA',
+    updatesById: {
+      locusListsByGuid: { LL00001_locus_list: null },
+      projectsByGuid: { R0237_1000_genomes_demo: { locusListGuids: [] } },
+    },
+  })
+  expect(wrapper.find('Router').prop('history').entries.map(({ pathname }) => pathname)).toEqual(
+    ['/', '/summary_data/gene_lists'],
+  )
 })
 
 test('renders no gene lists when the project has no locusListGuids', () => {
