@@ -13,8 +13,6 @@ from seqr.utils.xpos_utils import get_chrom_pos
 
 MAX_GUID_SIZE = 30
 
-liftover_to_38 = LiftOver('hg19', 'hg38')
-
 
 def _get_model_id(chrom, pos, end, ref, alt):
     return f'{chrom}-{pos}-{f"{ref}-{alt}" if ref else end}'
@@ -30,7 +28,7 @@ def _is_match(model, variant_json):
     return model_id == json_id
 
 
-def _get_linked_variant(submission, variant, family_variants):
+def _get_linked_variant(submission, variant, family_variants, liftover_to_38):
     # Fix malformed submissions
     if variant['referenceName'] == 'GRCh37':
         variant['referenceName'] = variant['assembly']
@@ -93,13 +91,14 @@ def update_mme_variant_links(apps, schema_editor):
         variants_by_family[sv.family_id].append(sv)
 
     models = []
+    liftover_to_38 = LiftOver('hg19', 'hg38')
     print('Mapping variants')
     for family_id, submissions in tqdm(submissions_by_family.items()):
         for submission in submissions:
             for f in submission.genomic_features:
                 models.append(MatchmakerSubmissionGenes(
                     matchmaker_submission=submission,
-                    saved_variant=_get_linked_variant(submission, f['variant'], variants_by_family[family_id]),
+                    saved_variant=_get_linked_variant(submission, f['variant'], variants_by_family[family_id], liftover_to_38),
                     gene_id=f['gene']['id'],
                 ))
 
