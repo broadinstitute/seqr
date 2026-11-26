@@ -232,7 +232,12 @@ export const updateVariantMainTranscript = (variantGuid, transcript) => dispatch
   },
 ).post(transcript)
 
-export const updateLocusList = values => (dispatch) => {
+const removeProjectsLocusList = (projectsByGuid, locusListGuid) => Object.entries(projectsByGuid).reduce(
+  (acc, [projectGuid, { locusListGuids }]) => (locusListGuids?.includes(locusListGuid) ?
+    { ...acc, [projectGuid]: { locusListGuids: locusListGuids.filter(guid => guid !== locusListGuid) } } : acc), {},
+)
+
+export const updateLocusList = values => (dispatch, getState) => {
   let action = 'create'
   if (values.locusListGuid) {
     action = `${values.locusListGuid}/${values.delete ? 'delete' : 'update'}`
@@ -240,7 +245,10 @@ export const updateLocusList = values => (dispatch) => {
 
   return new HttpRequestHelper(`/api/locus_lists/${action}`,
     (responseJson) => {
-      dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+      const updatesById = values.delete ?
+        { ...responseJson, projectsByGuid: removeProjectsLocusList(getState().projectsByGuid, values.locusListGuid) } :
+        responseJson
+      dispatch({ type: RECEIVE_DATA, updatesById })
     },
     (e) => {
       let error = e.message.replace('(400)', '')
