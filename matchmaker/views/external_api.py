@@ -6,13 +6,13 @@ from django.views.decorators.csrf import csrf_exempt
 
 from matchmaker.models import MatchmakerResult
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, get_mme_metrics, get_mme_matches, \
-    validate_patient_data, MME_DISCLAIMER
+    validate_patient_data
 
 from seqr.utils.communication_utils import safe_post_to_slack
 from seqr.views.utils.json_utils import create_json_response
 
 from settings import MME_ACCEPT_HEADER, MME_NODES, MME_SLACK_MATCH_NOTIFICATION_CHANNEL, MME_DEFAULT_CONTACT_EMAIL, \
-    BASE_URL
+    MME_DISCLAIMER, BASE_URL
 
 logger = logging.getLogger(__name__)
 

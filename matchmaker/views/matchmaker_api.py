@@ -9,7 +9,7 @@ from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, Matchmak
     MatchmakerIncomingQuery
 from matchmaker.matchmaker_utils import get_mme_genes_phenotypes_for_results, parse_mme_patient, \
     get_submission_json_for_external_match, parse_mme_features, get_submission_gene_variants, get_mme_matches, \
-    get_gene_ids_for_feature, validate_patient_data, get_hpo_terms_by_id, MME_DISCLAIMER
+    get_gene_ids_for_feature, validate_patient_data, get_hpo_terms_by_id
 from seqr.models import Individual, SavedVariant
 from seqr.utils.communication_utils import safe_post_to_slack, set_email_message_stream
 from seqr.utils.logging_utils import SeqrLogger
@@ -23,7 +23,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_model, get_json_for
 from seqr.views.utils.permissions_utils import check_mme_permissions, check_family_view_permission, analyst_required, \
     has_family_view_permission, login_and_policies_required, get_project_and_check_edit_permission
 
-from settings import BASE_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, \
+from settings import BASE_URL, MME_ACCEPT_HEADER, MME_NODES, MME_DEFAULT_CONTACT_EMAIL, MME_DISCLAIMER, \
     MME_SLACK_SEQR_MATCH_NOTIFICATION_CHANNEL, MME_SLACK_ALERT_NOTIFICATION_CHANNEL, VLM_SEND_EMAIL
 
 logger = SeqrLogger(__name__)
