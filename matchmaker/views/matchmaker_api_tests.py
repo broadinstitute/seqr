@@ -7,12 +7,12 @@ from datetime import datetime
 from django.urls.base import reverse
 
 from matchmaker.models import MatchmakerResult, MatchmakerContactNotes, MatchmakerSubmission
-from matchmaker.matchmaker_utils import MME_DISCLAIMER
 from matchmaker.views.matchmaker_api import get_individual_mme_matches, search_individual_mme_matches, \
     update_mme_submission, delete_mme_submission, update_mme_result_status, send_mme_contact_email, \
     get_mme_nodes, search_local_individual_mme_matches, finalize_mme_search, send_vlm_email, \
     update_mme_contact_note, update_mme_project_contact
 from seqr.views.utils.test_utils import AuthenticationTestCase, SAVED_VARIANT_FIELDS
+from settings import MME_DISCLAIMER
 
 INDIVIDUAL_GUID = 'I000001_na19675'
 SUBMISSION_GUID = 'MS000001_na19675'
