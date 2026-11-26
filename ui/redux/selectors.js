@@ -378,7 +378,9 @@ export const getLocusListIntervalsByChromProject = createSelector(
   (projectsByGuid, locusListsByGuid) => Object.entries(projectsByGuid).reduce(
     (acc, [projectGuid, { locusListGuids = [] }]) => {
       const projectIntervals = locusListGuids.map(locusListGuid => locusListsByGuid[locusListGuid]).reduce(
-        (acc2, { intervals = [] }) => [...acc2, ...intervals], [],
+        (acc2, { intervals = [], name, description }) => [
+          ...acc2, ...intervals.map(interval => ({ ...interval, name, description })),
+        ], [],
       )
       return groupDataNestedByChrom(acc, projectIntervals, projectGuid)
     }, {},

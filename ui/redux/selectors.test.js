@@ -43,12 +43,12 @@ test('getLocusListIntervalsByChromProject', () => {
   expect(getLocusListIntervalsByChromProject(STATE, {})).toEqual({
     ['1']: {
       'R0237_1000_genomes_demo': [
-        {'chrom': '1', 'end': 7300, 'genomeVersion': '37', 'locusListGuid': 'LL00132_2017_monogenic_ibd_gen', 'locusListIntervalGuid': 'LLI0000012_test_list_edit4545_', 'start': 7200},
+        {'chrom': '1', 'end': 7300, 'genomeVersion': '37', 'locusListGuid': 'LL00132_2017_monogenic_ibd_gen', 'locusListIntervalGuid': 'LLI0000012_test_list_edit4545_', 'start': 7200, 'name': '2017 Monogenic IBD Gene List', 'description': ''},
       ],
     },
     ['3']: {
       'R0237_1000_genomes_demo': [
-        {'chrom': '3', 'end': 3000, 'genomeVersion': '37', 'locusListGuid': 'LL00132_2017_monogenic_ibd_gen', 'locusListIntervalGuid': 'LLI0000013_a_new_list325_3000', 'start': 25},
+        {'chrom': '3', 'end': 3000, 'genomeVersion': '37', 'locusListGuid': 'LL00132_2017_monogenic_ibd_gen', 'locusListIntervalGuid': 'LLI0000013_a_new_list325_3000', 'start': 25, 'name': '2017 Monogenic IBD Gene List', 'description': ''},
       ],
     }
   })

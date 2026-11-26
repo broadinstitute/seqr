@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { NavLink } from 'react-router-dom'
 import styled from 'styled-components'
 import { Popup, Label, Icon, Table } from 'semantic-ui-react'
+import uniqBy from 'lodash/uniqBy'
 
 import {
   getGenesById,
@@ -422,7 +423,7 @@ const mapStateToProps = state => ({
 
 const SearchLinks = connect(mapStateToProps)(BaseSearchLinks)
 
-const getLocusListLabels = locusLists => locusLists.map(({ locusListGuid, name, description }) => ({
+const getLocusListLabels = locusLists => uniqBy(locusLists, 'locusListGuid').map(({ locusListGuid, name, description }) => ({
   color: 'teal',
   maxWidth: '8em',
   key: locusListGuid,
@@ -432,7 +433,7 @@ const getLocusListLabels = locusLists => locusLists.map(({ locusListGuid, name, 
 
 const mapLocusListStateToProps = (state, ownProps) => ({
   groupedIntervals: getLocusListIntervalsByChromProject(state, ownProps),
-  getOverlapArgs: [fGuid => getFamiliesByGuid(state)[fGuid].projectId],
+  getOverlapArgs: [fGuid => getFamiliesByGuid(state)[fGuid].projectGuid],
   getLabels: getLocusListLabels,
 })
 
