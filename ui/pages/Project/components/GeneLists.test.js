@@ -83,7 +83,9 @@ test('removes a deleted gene list from the project and redirects to the gene lis
       projectsByGuid: { R0237_1000_genomes_demo: { locusListGuids: [] } },
     },
   })
-  expect(wrapper.find('Router').prop('history').location.pathname).toEqual('/summary_data/gene_lists')
+  expect(wrapper.find('Router').prop('history').entries.map(({ pathname }) => pathname)).toEqual(
+    ['/', '/summary_data/gene_lists'],
+  )
 })
 
 test('renders no gene lists when the project has no locusListGuids', () => {
