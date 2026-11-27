@@ -17,6 +17,7 @@ from loading_pipeline.lib.misc.sv import (
     TSS_DUP,
     UTR,
     annotate_gene_consequences,
+    match_gnomad_af,
 )
 
 GENCODE_ROWS = [
@@ -633,4 +634,89 @@ class AnnotateGeneConsequencesTest(unittest.TestCase):
                     'SVLEN': 700,
                 },
             },
+        )
+
+
+class MatchGnomadAfTest(unittest.TestCase):
+    def test_overlap_match_with_string_info_fields(self):
+        variants_df = pd.DataFrame(
+            {
+                '#CHROM': ['chr1'],
+                'POS': [1000],
+                'END': ['1500'],
+                'ID': ['DEL_1'],
+                'SVTYPE': ['DEL'],
+                'SVLEN': ['500'],
+            },
+        )
+        gnomad_df = pd.DataFrame(
+            {
+                '#CHROM': ['chr1'],
+                'POS': [1000],
+                'END': [1500.0],
+                'ID': ['gnomAD_DEL_1'],
+                'SVTYPE': ['DEL'],
+                'SVLEN': [500.0],
+                'af': [0.01],
+            },
+        )
+        self.assertEqual(
+            match_gnomad_af(variants_df, gnomad_df),
+            {'DEL_1': {'id': 'gnomAD_DEL_1', 'af': 0.01}},
+        )
+
+    def test_breakpoint_match_with_missing_svlen(self):
+        variants_df = pd.DataFrame(
+            {
+                '#CHROM': ['chr1', 'chr1'],
+                'POS': [1000, 5000],
+                'END': ['1500', '5000'],
+                'ID': ['DEL_1', 'BND_1'],
+                'SVTYPE': ['DEL', 'BND'],
+                'SVLEN': ['500', None],
+            },
+        )
+        gnomad_df = pd.DataFrame(
+            {
+                '#CHROM': ['chr1', 'chr1'],
+                'POS': [1000, 5010],
+                'END': [1500.0, 5011.0],
+                'ID': ['gnomAD_DEL_1', 'gnomAD_BND_1'],
+                'SVTYPE': ['DEL', 'BND'],
+                'SVLEN': [500.0, -1.0],
+                'af': [0.01, 0.02],
+            },
+        )
+        self.assertEqual(
+            match_gnomad_af(variants_df, gnomad_df),
+            {
+                'DEL_1': {'id': 'gnomAD_DEL_1', 'af': 0.01},
+                'BND_1': {'id': 'gnomAD_BND_1', 'af': 0.02},
+            },
+        )
+
+    def test_breakpoint_match_without_svlen_column(self):
+        variants_df = pd.DataFrame(
+            {
+                '#CHROM': ['chr1'],
+                'POS': [5000],
+                'END': ['5000'],
+                'ID': ['BND_1'],
+                'SVTYPE': ['BND'],
+            },
+        )
+        gnomad_df = pd.DataFrame(
+            {
+                '#CHROM': ['chr1'],
+                'POS': [5010],
+                'END': [5011.0],
+                'ID': ['gnomAD_BND_1'],
+                'SVTYPE': ['BND'],
+                'SVLEN': [-1.0],
+                'af': [0.02],
+            },
+        )
+        self.assertEqual(
+            match_gnomad_af(variants_df, gnomad_df),
+            {'BND_1': {'id': 'gnomAD_BND_1', 'af': 0.02}},
         )
